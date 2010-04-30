@@ -1,0 +1,15 @@
+#! /usr/bin/make -f
+
+#export DH_VERBOSE=1
+#export DEB_BUILD_OPTIONS="nostrip"
+
+override_dh_auto_configure:
+	dh_auto_configure -- --with-rootdir=/
+
+override_dh_auto_install:
+	dh_auto_install
+	rm debian/systemd/etc/systemd/system/runlevel5.target
+	dh_link /lib/systemd/system/multi-user.target etc/systemd/system/runlevel5.target
+
+%:
+	dh --parallel $@
