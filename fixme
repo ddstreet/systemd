@@ -1,0 +1,73 @@
+* timer
+
+* enforce max number of concurrent connection limit in sockets.
+
+* complete dbus exposure
+
+* make conf parser work more like .desktop parsers
+
+* implicitly import "defaults" settings file into all types
+
+* write .service file install tool
+    [Install]
+    WantedBy=graphical.target
+    Names=prefdm.service
+
+* service startup should be delayed if the matching socket is being started
+
+* add #ifdefs for non-redhat builds in sysv parser
+
+* add #ifdefs for non-sysv builds
+
+* bootchart hookup
+
+* reinvestigate random seed, hwclock
+
+* "disabled" load state?
+
+* uid are 32bit
+
+* %m in printf() instead of strerror();
+
+* gc: don't reap broken services
+
+* iCalendar semantics for the timer stuff (RFC2445)
+
+* provide sysv-like command line utilities
+
+* ability to kill services? i.e. in contrast to stopping them, go directly
+  into killing mode?
+
+* port over to LISTEN_FDS/LISTEN_PID:
+
+   - uuidd    DONE
+   - nscd     DONE
+   - dbus     DONE
+   - rsyslog  DONE
+   - rpcbind (/var/run/rpcbind.sock!) DONE
+   - cups     DONE
+   - avahi-daemon (/var/run/avahi-daemon/socket) DONE
+   - ssh      CLASSIC
+   - postfix, saslauthd
+   - apache/samba
+   - libvirtd (/var/run/libvirt/libvirt-sock-ro)
+   - bluetoothd (/var/run/sdp! @/org/bluez/audio!)
+   - distccd
+
+* teach dbus to talk to systemd when autospawning services
+
+* regnerate unit/sysv search paths on daemon reload
+
+* write utmp record a la upstart for processes
+
+* run PAM session stuff
+
+* tcpwrap
+
+* use setproctitle() when forking, before exec() (waiting for (PR_SET_PROCTITLE_AREA to enter the kernel)
+
+Regularly:
+
+* look for close() vs. close_nointr() vs. close_nointr_nofail()
+
+* check for strerror(r) instead of strerror(-r)

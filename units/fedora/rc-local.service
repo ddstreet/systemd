@@ -1,0 +1,24 @@
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+
+[Unit]
+Description=/etc/rc.local Compatibility
+Requires=basic.target
+After=basic.target
+Conflicts=shutdown.target
+Before=getty@tty1.service
+
+# The rcN.d symlink uses the name "local" while the script itself is
+# called "rc.local", hence carry both names here.
+Names=rc-local.service local.service
+
+[Service]
+ExecStart=/etc/rc.local start
+TimeoutSec=0
+StandardInput=tty
+ValidNoProcess=yes
+SysVStartPriority=99
