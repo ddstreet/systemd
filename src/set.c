@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -35,6 +35,10 @@ Set *set_new(hash_func_t hash_func, compare_func_t compare_func) {
 
 void set_free(Set* s) {
         hashmap_free(MAKE_HASHMAP(s));
+}
+
+void set_free_free(Set *s) {
+        hashmap_free_free(MAKE_HASHMAP(s));
 }
 
 int set_ensure_allocated(Set **s, hash_func_t hash_func, compare_func_t compare_func) {

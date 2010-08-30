@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -79,12 +79,16 @@ int unit_load_dropin(Unit *u) {
                 char *path;
                 char **p;
 
-                STRV_FOREACH(p, u->meta.manager->unit_path) {
+                STRV_FOREACH(p, u->meta.manager->lookup_paths.unit_path) {
 
                         if (asprintf(&path, "%s/%s.wants", *p, t) < 0)
                                 return -ENOMEM;
 
-                        r = iterate_dir(u, path);
+                        if (u->meta.manager->unit_path_cache &&
+                            !set_get(u->meta.manager->unit_path_cache, path))
+                                r = 0;
+                        else
+                                r = iterate_dir(u, path);
                         free(path);
 
                         if (r < 0)
@@ -103,7 +107,11 @@ int unit_load_dropin(Unit *u) {
                                 if (r < 0)
                                         return -ENOMEM;
 
-                                r = iterate_dir(u, path);
+                                if (u->meta.manager->unit_path_cache &&
+                                    !set_get(u->meta.manager->unit_path_cache, path))
+                                        r = 0;
+                                else
+                                        r = iterate_dir(u, path);
                                 free(path);
 
                                 if (r < 0)

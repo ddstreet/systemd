@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -33,17 +33,22 @@
         BUS_UNIT_INTERFACE                                              \
         BUS_DEVICE_INTERFACE                                            \
         BUS_PROPERTIES_INTERFACE                                        \
+        BUS_PEER_INTERFACE                                              \
         BUS_INTROSPECTABLE_INTERFACE                                    \
         "</node>\n"
 
 const char bus_device_interface[] = BUS_DEVICE_INTERFACE;
 
-DBusHandlerResult bus_device_message_handler(Unit *u, DBusMessage *message) {
+const char bus_device_invalidating_properties[] =
+        "SysFSPath\0"
+        "\0";
+
+DBusHandlerResult bus_device_message_handler(Unit *u, DBusConnection *c, DBusMessage *message) {
         const BusProperty properties[] = {
                 BUS_UNIT_PROPERTIES,
                 { "org.freedesktop.systemd1.Device", "SysFSPath", bus_property_append_string, "s", u->device.sysfs },
                 { NULL, NULL, NULL, NULL, NULL }
         };
 
-        return bus_default_message_handler(u->meta.manager, message, INTROSPECTION, properties);
+        return bus_default_message_handler(u->meta.manager, c, message, INTROSPECTION, properties);
 }

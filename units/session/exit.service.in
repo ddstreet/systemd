@@ -1,8 +1,9 @@
 [Unit]
 Description=Exit
+DefaultDependencies=no
 Requires=shutdown.target
 After=shutdown.target
 
 [Service]
-Type=finish
+Type=oneshot
 ExecStart=@SYSTEMCTL@ --session daemon-exit

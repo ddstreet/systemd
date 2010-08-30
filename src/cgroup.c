@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -25,32 +25,11 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/mount.h>
+#include <fcntl.h>
 
 #include "cgroup.h"
+#include "cgroup-util.h"
 #include "log.h"
-
-static int translate_error(int error, int _errno) {
-
-        switch (error) {
-
-        case ECGROUPNOTCOMPILED:
-        case ECGROUPNOTMOUNTED:
-        case ECGROUPNOTEXIST:
-        case ECGROUPNOTCREATED:
-                return -ENOENT;
-
-        case ECGINVAL:
-                return -EINVAL;
-
-        case ECGROUPNOTALLOWED:
-                return -EPERM;
-
-        case ECGOTHER:
-                return -_errno;
-        }
-
-        return -EIO;
-}
 
 int cgroup_bonding_realize(CGroupBonding *b) {
         int r;
@@ -59,44 +38,27 @@ int cgroup_bonding_realize(CGroupBonding *b) {
         assert(b->path);
         assert(b->controller);
 
-        if (b->cgroup)
+        if (b->realized)
                 return 0;
 
-        if (!(b->cgroup = cgroup_new_cgroup(b->path)))
-                return -ENOMEM;
+        if ((r = cg_create(b->controller, b->path)) < 0)
+                return r;
 
-        if (!cgroup_add_controller(b->cgroup, b->controller)) {
-                r = -ENOMEM;
-                goto fail;
-        }
+        b->realized = true;
 
-        if (b->inherit)
-                r = cgroup_create_cgroup_from_parent(b->cgroup, true);
-        else
-                r = cgroup_create_cgroup(b->cgroup, true);
-
-        if (r != 0) {
-                r = translate_error(r, errno);
-                goto fail;
-        }
+        if (b->only_us && b->clean_up)
+                cg_trim(b->controller, b->path, false);
 
         return 0;
-
-fail:
-        cgroup_free(&b->cgroup);
-        b->cgroup = NULL;
-        return r;
 }
 
 int cgroup_bonding_realize_list(CGroupBonding *first) {
         CGroupBonding *b;
+        int r;
 
-        LIST_FOREACH(by_unit, b, first) {
-                int r;
-
+        LIST_FOREACH(by_unit, b, first)
                 if ((r = cgroup_bonding_realize(b)) < 0)
                         return r;
-        }
 
         return 0;
 }
@@ -118,11 +80,12 @@ void cgroup_bonding_free(CGroupBonding *b) {
                         hashmap_remove(b->unit->meta.manager->cgroup_bondings, b->path);
         }
 
-        if (b->cgroup) {
-                if (b->only_us && b->clean_up && cgroup_bonding_is_empty(b) > 0)
-                        cgroup_delete_cgroup_ext(b->cgroup, true);
+        if (b->realized && b->only_us && b->clean_up) {
 
-                cgroup_free(&b->cgroup);
+                if (cgroup_bonding_is_empty(b) > 0)
+                        cg_delete(b->controller, b->path);
+                else
+                        cg_trim(b->controller, b->path, false);
         }
 
         free(b->controller);
@@ -137,115 +100,56 @@ void cgroup_bonding_free_list(CGroupBonding *first) {
                 cgroup_bonding_free(b);
 }
 
+void cgroup_bonding_trim(CGroupBonding *b, bool delete_root) {
+        assert(b);
+
+        if (b->realized && b->only_us && b->clean_up)
+                cg_trim(b->controller, b->path, delete_root);
+}
+
+void cgroup_bonding_trim_list(CGroupBonding *first, bool delete_root) {
+        CGroupBonding *b;
+
+        LIST_FOREACH(by_unit, b, first)
+                cgroup_bonding_trim(b, delete_root);
+}
+
 int cgroup_bonding_install(CGroupBonding *b, pid_t pid) {
         int r;
 
         assert(b);
         assert(pid >= 0);
 
-        if (pid == 0)
-                pid = getpid();
+        if ((r = cg_create_and_attach(b->controller, b->path, pid)) < 0)
+                return r;
 
-        if (!b->cgroup)
-                return -ENOENT;
-
-        if ((r = cgroup_attach_task_pid(b->cgroup, pid)))
-                return translate_error(r, errno);
-
+        b->realized = true;
         return 0;
 }
 
 int cgroup_bonding_install_list(CGroupBonding *first, pid_t pid) {
         CGroupBonding *b;
+        int r;
 
-        LIST_FOREACH(by_unit, b, first) {
-                int r;
-
+        LIST_FOREACH(by_unit, b, first)
                 if ((r = cgroup_bonding_install(b, pid)) < 0)
                         return r;
-        }
 
         return 0;
 }
 
 int cgroup_bonding_kill(CGroupBonding *b, int sig) {
         int r;
-        Set *s;
-        bool done;
-        bool killed = false;
 
         assert(b);
-        assert(sig > 0);
+        assert(sig >= 0);
 
-        if (!b->only_us)
-                return -EAGAIN;
-
-        if (!(s = set_new(trivial_hash_func, trivial_compare_func)))
-                return -ENOMEM;
-
-        do {
-                void *iterator;
-                pid_t pid;
-
-                done = true;
-
-                if ((r = cgroup_get_task_begin(b->path, b->controller, &iterator, &pid)) != 0) {
-                        if (r == ECGEOF) {
-                                r = 0;
-                                goto kill_done;
-                        } else {
-                                if (r == ECGOTHER && errno == ENOENT)
-                                        r = ESRCH;
-                                else
-                                        r = translate_error(r, errno);
-                                break;
-                        }
-                }
-
-                for (;;) {
-                        if (set_get(s, INT_TO_PTR(pid)) != INT_TO_PTR(pid)) {
-
-                                /* If we haven't killed this process
-                                 * yet, kill it */
-
-                                if (kill(pid, sig) < 0 && errno != ESRCH) {
-                                        r = -errno;
-                                        break;
-                                }
-
-                                killed = true;
-                                done = false;
-
-                                if ((r = set_put(s, INT_TO_PTR(pid))) < 0)
-                                    break;
-                        }
-
-                        if ((r = cgroup_get_task_next(&iterator, &pid)) != 0) {
-
-                                if (r == ECGEOF)
-                                        r = 0;
-                                else
-                                        r = translate_error(r, errno);
-
-                                break;
-                        }
-                }
-
-        kill_done:
-                assert_se(cgroup_get_task_end(&iterator) == 0);
-
-                /* To avoid racing against processes which fork
-                 * quicker than we can kill them we repeat this until
-                 * no new pids need to be killed. */
-
-        } while (!done && r >= 0);
-
-        set_free(s);
-
-        if (r < 0)
+        if ((r = cgroup_bonding_realize(b)) < 0)
                 return r;
 
-        return killed ? 0 : -ESRCH;
+        assert(b->realized);
+
+        return cg_kill_recursive(b->controller, b->path, sig, true, false);
 }
 
 int cgroup_bonding_kill_list(CGroupBonding *first, int sig) {
@@ -254,7 +158,7 @@ int cgroup_bonding_kill_list(CGroupBonding *first, int sig) {
 
         LIST_FOREACH(by_unit, b, first) {
                 if ((r = cgroup_bonding_kill(b, sig)) < 0) {
-                        if (r == -EAGAIN || -ESRCH)
+                        if (r == -EAGAIN || r == -ESRCH)
                                 continue;
 
                         return r;
@@ -269,33 +173,19 @@ int cgroup_bonding_kill_list(CGroupBonding *first, int sig) {
 /* Returns 1 if the group is empty, 0 if it is not, -EAGAIN if we
  * cannot know */
 int cgroup_bonding_is_empty(CGroupBonding *b) {
-        void *iterator;
-        pid_t pid;
         int r;
 
         assert(b);
 
-        r = cgroup_get_task_begin(b->path, b->controller, &iterator, &pid);
+        if ((r = cg_is_empty_recursive(b->controller, b->path, true)) < 0)
+                return r;
 
-        if (r == 0 || r == ECGEOF)
-                cgroup_get_task_end(&iterator);
-
-        /* Hmm, no PID in this group? Then it is definitely empty */
-        if (r == ECGEOF)
+        /* If it is empty it is empty */
+        if (r > 0)
                 return 1;
 
-        /* Some error? Let's return it */
-        if (r != 0)
-                return translate_error(r, errno);
-
-        /* It's not empty, and we are the only user, then it is
-         * definitely not empty */
-        if (b->only_us)
-                return 0;
-
-        /* There are PIDs in the group but we aren't the only users,
-         * hence we cannot say */
-        return -EAGAIN;
+        /* It's not only us using this cgroup, so we just don't know */
+        return b->only_us ? 0 : -EAGAIN;
 }
 
 int cgroup_bonding_is_empty_list(CGroupBonding *first) {
@@ -318,194 +208,86 @@ int cgroup_bonding_is_empty_list(CGroupBonding *first) {
         return -EAGAIN;
 }
 
-static int install_release_agent(Manager *m, const char *mount_point) {
-        char *p, *c, *sc;
-        int r;
-
-        assert(m);
-        assert(mount_point);
-
-        if (asprintf(&p, "%s/release_agent", mount_point) < 0)
-                return -ENOMEM;
-
-        if ((r = read_one_line_file(p, &c)) < 0) {
-                free(p);
-                return r;
-        }
-
-        sc = strstrip(c);
-
-        if (sc[0] == 0) {
-                if ((r = write_one_line_file(p, CGROUP_AGENT_PATH "\n" )) < 0) {
-                        free(p);
-                        free(c);
-                        return r;
-                }
-        } else if (!streq(sc, CGROUP_AGENT_PATH)) {
-                free(p);
-                free(c);
-                return -EEXIST;
-        }
-
-        free(c);
-        free(p);
-
-        if (asprintf(&p, "%s/notify_on_release", mount_point) < 0)
-                return -ENOMEM;
-
-        if ((r = read_one_line_file(p, &c)) < 0) {
-                free(p);
-                return r;
-        }
-
-        sc = strstrip(c);
-
-        if (streq(sc, "0")) {
-                if ((r = write_one_line_file(p, "1\n")) < 0) {
-                        free(p);
-                        free(c);
-                        return r;
-                }
-        } else if (!streq(sc, "1")) {
-                free(p);
-                free(c);
-                return -EIO;
-        }
-
-        free(p);
-        free(c);
-
-        return 0;
-}
-
-static int create_hierarchy_cgroup(Manager *m) {
-        struct cgroup *cg;
-        int r;
-
-        assert(m);
-
-        if (!(cg = cgroup_new_cgroup(m->cgroup_hierarchy)))
-                return -ENOMEM;
-
-        if (!(cgroup_add_controller(cg, m->cgroup_controller))) {
-                r = -ENOMEM;
-                goto finish;
-        }
-
-        if ((r = cgroup_create_cgroup(cg, true)) != 0) {
-                log_error("Failed to create cgroup hierarchy group: %s", cgroup_strerror(r));
-                r = translate_error(r, errno);
-                goto finish;
-        }
-
-        if ((r = cgroup_attach_task(cg)) != 0) {
-                log_error("Failed to add ourselves to hierarchy group: %s", cgroup_strerror(r));
-                r = translate_error(r, errno);
-                goto finish;
-        }
-
-        r = 0;
-
-finish:
-        cgroup_free(&cg);
-        return r;
-}
-
 int manager_setup_cgroup(Manager *m) {
-        char *mp, *cp;
+        char *current = NULL, *path = NULL;
         int r;
-        pid_t pid;
         char suffix[32];
 
         assert(m);
 
-        if ((r = cgroup_init()) != 0) {
-                log_error("Failed to initialize libcg: %s", cgroup_strerror(r));
-                return translate_error(r, errno);
-        }
+        /* 1. Determine hierarchy */
+        if ((r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 0, &current)) < 0)
+                goto finish;
 
-        free(m->cgroup_controller);
-        if (!(m->cgroup_controller = strdup("name=systemd")))
-                return -ENOMEM;
-
-        if ((r = cgroup_get_subsys_mount_point(m->cgroup_controller, &mp)))
-                return translate_error(r, errno);
-
-        pid = getpid();
-
-        if ((r = cgroup_get_current_controller_path(pid, m->cgroup_controller, &cp))) {
-                free(mp);
-                return translate_error(r, errno);
-        }
-
-        snprintf(suffix, sizeof(suffix), "/systemd-%u", (unsigned) pid);
+        snprintf(suffix, sizeof(suffix), "/systemd-%lu", (unsigned long) getpid());
         char_array_0(suffix);
 
         free(m->cgroup_hierarchy);
-
-        if (endswith(cp, suffix))
+        if (endswith(current, suffix)) {
                 /* We probably got reexecuted and can continue to use our root cgroup */
-                m->cgroup_hierarchy = cp;
-        else {
+                m->cgroup_hierarchy = current;
+                current = NULL;
+
+        } else {
                 /* We need a new root cgroup */
-
                 m->cgroup_hierarchy = NULL;
-                r = asprintf(&m->cgroup_hierarchy, "%s%s", streq(cp, "/") ? "" : cp, suffix);
-                free(cp);
-
-                if (r < 0) {
-                        free(mp);
-                        return -ENOMEM;
+                if (asprintf(&m->cgroup_hierarchy, "%s%s", streq(current, "/") ? "" : current, suffix) < 0) {
+                        r = -ENOMEM;
+                        goto finish;
                 }
         }
 
-        log_debug("Using cgroup controller <%s>, hierarchy mounted at <%s>, using root group <%s>.",
-                  m->cgroup_controller,
-                  mp,
-                  m->cgroup_hierarchy);
+        /* 2. Show data */
+        if ((r = cg_get_path(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, NULL, &path)) < 0)
+                goto finish;
 
-        if ((r = install_release_agent(m, mp)) < 0)
+        log_debug("Using cgroup controller " SYSTEMD_CGROUP_CONTROLLER ". File system hierarchy is at %s.", path);
+
+        /* 3. Install agent */
+        if ((r = cg_install_release_agent(SYSTEMD_CGROUP_CONTROLLER, CGROUP_AGENT_PATH)) < 0)
                 log_warning("Failed to install release agent, ignoring: %s", strerror(-r));
+        else if (r > 0)
+                log_debug("Installed release agent.");
         else
-                log_debug("Installed release agent, or already installed.");
+                log_debug("Release agent already installed.");
 
-        free(mp);
-
-        if ((r = create_hierarchy_cgroup(m)) < 0)
+        /* 4. Realize the group */
+        if ((r = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, 0)) < 0) {
                 log_error("Failed to create root cgroup hierarchy: %s", strerror(-r));
-        else
-                log_debug("Created root group.");
+                goto finish;
+        }
+
+        /* 5. And pin it, so that it cannot be unmounted */
+        if (m->pin_cgroupfs_fd >= 0)
+                close_nointr_nofail(m->pin_cgroupfs_fd);
+
+        if ((m->pin_cgroupfs_fd = open(path, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY|O_NONBLOCK)) < 0) {
+                r = -errno;
+                goto finish;
+        }
+
+        log_debug("Created root group.");
+
+finish:
+        free(current);
+        free(path);
 
         return r;
 }
 
-int manager_shutdown_cgroup(Manager *m, bool delete) {
-        struct cgroup *cg;
-        int r;
-
+void manager_shutdown_cgroup(Manager *m, bool delete) {
         assert(m);
 
-        if (!m->cgroup_hierarchy)
-                return 0;
+        if (delete && m->cgroup_hierarchy)
+                cg_delete(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy);
 
-        if (!(cg = cgroup_new_cgroup(m->cgroup_hierarchy)))
-                return -ENOMEM;
-
-        if (!(cgroup_add_controller(cg, m->cgroup_controller))) {
-                r = -ENOMEM;
-                goto finish;
+        if (m->pin_cgroupfs_fd >= 0) {
+                close_nointr_nofail(m->pin_cgroupfs_fd);
+                m->pin_cgroupfs_fd = -1;
         }
 
-        /* Often enough we won't be able to delete the cgroup we
-         * ourselves are in, hence ignore all errors here */
-        if (delete)
-                cgroup_delete_cgroup_ext(cg, CGFLAG_DELETE_IGNORE_MIGRATION|CGFLAG_DELETE_RECURSIVE);
-        r = 0;
-
-finish:
-        cgroup_free(&cg);
-        return r;
-
+        free(m->cgroup_hierarchy);
+        m->cgroup_hierarchy = NULL;
 }
 
 int cgroup_notify_empty(Manager *m, const char *group) {
@@ -538,6 +320,48 @@ int cgroup_notify_empty(Manager *m, const char *group) {
         }
 
         return 0;
+}
+
+Unit* cgroup_unit_by_pid(Manager *m, pid_t pid) {
+        CGroupBonding *l, *b;
+        char *group = NULL;
+
+        assert(m);
+
+        if (pid <= 1)
+                return NULL;
+
+        if (cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, pid, &group) < 0)
+                return NULL;
+
+        l = hashmap_get(m->cgroup_bondings, group);
+
+        if (!l) {
+                char *slash;
+
+                while ((slash = strrchr(group, '/'))) {
+                        if (slash == group)
+                                break;
+
+                        *slash = 0;
+
+                        if ((l = hashmap_get(m->cgroup_bondings, group)))
+                                break;
+                }
+        }
+
+        free(group);
+
+        LIST_FOREACH(by_path, b, l) {
+
+                if (!b->unit)
+                        continue;
+
+                if (b->only_us)
+                        return b->unit;
+        }
+
+        return NULL;
 }
 
 CGroupBonding *cgroup_bonding_find_list(CGroupBonding *first, const char *controller) {

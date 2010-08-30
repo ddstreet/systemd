@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foosnapshothfoo
 #define foosnapshothfoo
@@ -39,11 +39,12 @@ struct Snapshot {
         SnapshotState state, deserialized_state;
 
         bool cleanup;
+        bool by_snapshot_create:1;
 };
 
 extern const UnitVTable snapshot_vtable;
 
-int snapshot_create(Manager *m, const char *name, bool cleanup, Snapshot **s);
+int snapshot_create(Manager *m, const char *name, bool cleanup, DBusError *e, Snapshot **s);
 void snapshot_remove(Snapshot *s);
 
 const char* snapshot_state_to_string(SnapshotState i);

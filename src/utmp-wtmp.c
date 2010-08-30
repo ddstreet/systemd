@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -24,6 +24,9 @@
 #include <assert.h>
 #include <string.h>
 #include <sys/utsname.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/poll.h>
 
 #include "macro.h"
 #include "utmp-wtmp.h"
@@ -199,10 +202,10 @@ int utmp_put_runlevel(usec_t t, int runlevel, int previous) {
 
                         previous = 0;
                 }
-
-                if (previous == runlevel)
-                        return 0;
         }
+
+        if (previous == runlevel)
+                return 0;
 
         init_entry(&store, t);
 
@@ -211,4 +214,140 @@ int utmp_put_runlevel(usec_t t, int runlevel, int previous) {
         strncpy(store.ut_user, "runlevel", sizeof(store.ut_user));
 
         return write_entry_both(&store);
+}
+
+#define TIMEOUT_MSEC 50
+
+static int write_to_terminal(const char *tty, const char *message) {
+        int fd, r;
+        const char *p;
+        size_t left;
+        usec_t end;
+
+        assert(tty);
+        assert(message);
+
+        if ((fd = open(tty, O_WRONLY|O_NDELAY|O_NOCTTY|O_CLOEXEC)) < 0)
+                return -errno;
+
+        if (!isatty(fd)) {
+                r = -errno;
+                goto finish;
+        }
+
+        p = message;
+        left = strlen(message);
+
+        end = now(CLOCK_MONOTONIC) + TIMEOUT_MSEC*USEC_PER_MSEC;
+
+        while (left > 0) {
+                ssize_t n;
+                struct pollfd pollfd;
+                usec_t t;
+                int k;
+
+                t = now(CLOCK_MONOTONIC);
+
+                if (t >= end) {
+                        r = -ETIME;
+                        goto finish;
+                }
+
+                zero(pollfd);
+                pollfd.fd = fd;
+                pollfd.events = POLLOUT;
+
+                if ((k = poll(&pollfd, 1, (end - t) / USEC_PER_MSEC)) < 0)
+                        return -errno;
+
+                if (k <= 0) {
+                        r = -ETIME;
+                        goto finish;
+                }
+
+                if ((n = write(fd, p, left)) < 0) {
+
+                        if (errno == EAGAIN)
+                                continue;
+
+                        r = -errno;
+                        goto finish;
+                }
+
+                assert((size_t) n <= left);
+
+                p += n;
+                left -= n;
+        }
+
+        r = 0;
+
+finish:
+        close_nointr_nofail(fd);
+
+        return r;
+}
+
+int utmp_wall(const char *message) {
+        struct utmpx *u;
+        char date[FORMAT_TIMESTAMP_MAX];
+        char *text = NULL, *hn = NULL, *un = NULL, *tty = NULL;
+        int r;
+
+        if (!(hn = gethostname_malloc()) ||
+            !(un = getlogname_malloc())) {
+                r = -ENOMEM;
+                goto finish;
+        }
+
+        getttyname_malloc(&tty);
+
+        if (asprintf(&text,
+                     "\a\r\n"
+                     "Broadcast message from %s@%s%s%s (%s):\r\n\r\n"
+                     "%s\r\n\r\n",
+                     un, hn,
+                     tty ? " on " : "", strempty(tty),
+                     format_timestamp(date, sizeof(date), now(CLOCK_REALTIME)),
+                     message) < 0) {
+                r = -ENOMEM;
+                goto finish;
+        }
+
+        setutxent();
+
+        r = 0;
+
+        while ((u = getutxent())) {
+                int q;
+                const char *path;
+                char *buf = NULL;
+
+                if (u->ut_type != USER_PROCESS || u->ut_user[0] == 0)
+                        continue;
+
+                if (path_startswith(u->ut_line, "/dev/"))
+                        path = u->ut_line;
+                else {
+                        if (asprintf(&buf, "/dev/%s", u->ut_line) < 0) {
+                                r = -ENOMEM;
+                                goto finish;
+                        }
+
+                        path = buf;
+                }
+
+                if ((q = write_to_terminal(path, text)) < 0)
+                        r = q;
+
+                free(buf);
+        }
+
+finish:
+        free(hn);
+        free(un);
+        free(tty);
+        free(text);
+
+        return r;
 }

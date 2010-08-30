@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -25,13 +25,15 @@
 #include "unit-name.h"
 #include "timer.h"
 #include "dbus-timer.h"
+#include "special.h"
+#include "bus-errors.h"
 
 static const UnitActiveState state_translation_table[_TIMER_STATE_MAX] = {
         [TIMER_DEAD] = UNIT_INACTIVE,
         [TIMER_WAITING] = UNIT_ACTIVE,
         [TIMER_RUNNING] = UNIT_ACTIVE,
         [TIMER_ELAPSED] = UNIT_ACTIVE,
-        [TIMER_MAINTAINANCE] = UNIT_INACTIVE
+        [TIMER_MAINTENANCE] = UNIT_MAINTENANCE
 };
 
 static void timer_init(Unit *u) {
@@ -60,7 +62,7 @@ static void timer_done(Unit *u) {
 static int timer_verify(Timer *t) {
         assert(t);
 
-        if (UNIT(t)->meta.load_state != UNIT_LOADED)
+        if (t->meta.load_state != UNIT_LOADED)
                 return 0;
 
         if (!t->values) {
@@ -69,6 +71,18 @@ static int timer_verify(Timer *t) {
         }
 
         return 0;
+}
+
+static int timer_add_default_dependencies(Timer *t) {
+        int r;
+
+        assert(t);
+
+        if (t->meta.manager->running_as == MANAGER_SYSTEM)
+                if ((r = unit_add_two_dependencies_by_name(UNIT(t), UNIT_AFTER, UNIT_REQUIRES, SPECIAL_SYSINIT_TARGET, NULL, true)) < 0)
+                        return r;
+
+        return unit_add_two_dependencies_by_name(UNIT(t), UNIT_BEFORE, UNIT_CONFLICTED_BY, SPECIAL_SHUTDOWN_TARGET, NULL, true);
 }
 
 static int timer_load(Unit *u) {
@@ -89,6 +103,10 @@ static int timer_load(Unit *u) {
 
                 if ((r = unit_add_dependency(u, UNIT_BEFORE, t->unit, true)) < 0)
                         return r;
+
+                if (t->meta.default_dependencies)
+                        if ((r = timer_add_default_dependencies(t)) < 0)
+                                return r;
         }
 
         return timer_verify(t);
@@ -96,14 +114,9 @@ static int timer_load(Unit *u) {
 
 static void timer_dump(Unit *u, FILE *f, const char *prefix) {
         Timer *t = TIMER(u);
-        const char *prefix2;
-        char *p2;
         TimerValue *v;
         char
                 timespan1[FORMAT_TIMESPAN_MAX];
-
-        p2 = strappend(prefix, "\t");
-        prefix2 = p2 ? p2 : prefix;
 
         fprintf(f,
                 "%sTimer State: %s\n"
@@ -117,8 +130,6 @@ static void timer_dump(Unit *u, FILE *f, const char *prefix) {
                         prefix,
                         timer_base_to_string(v->base),
                         strna(format_timespan(timespan1, sizeof(timespan1), v->value)));
-
-        free(p2);
 }
 
 static void timer_set_state(Timer *t, TimerState state) {
@@ -167,7 +178,7 @@ static void timer_enter_dead(Timer *t, bool success) {
         if (!success)
                 t->failure = true;
 
-        timer_set_state(t, t->failure ? TIMER_MAINTAINANCE : TIMER_DEAD);
+        timer_set_state(t, t->failure ? TIMER_MAINTENANCE : TIMER_DEAD);
 }
 
 static void timer_enter_waiting(Timer *t, bool initial) {
@@ -255,25 +266,34 @@ fail:
 }
 
 static void timer_enter_running(Timer *t) {
+        DBusError error;
         int r;
-        assert(t);
 
-        if ((r = manager_add_job(UNIT(t)->meta.manager, JOB_START, t->unit, JOB_REPLACE, true, NULL)) < 0)
+        assert(t);
+        dbus_error_init(&error);
+
+        /* Don't start job if we are supposed to go down */
+        if (t->meta.job && t->meta.job->type == JOB_STOP)
+                return;
+
+        if ((r = manager_add_job(t->meta.manager, JOB_START, t->unit, JOB_REPLACE, true, &error, NULL)) < 0)
                 goto fail;
 
         timer_set_state(t, TIMER_RUNNING);
         return;
 
 fail:
-        log_warning("%s failed to queue unit startup job: %s", t->meta.id, strerror(-r));
+        log_warning("%s failed to queue unit startup job: %s", t->meta.id, bus_error(&error, r));
         timer_enter_dead(t, false);
+
+        dbus_error_free(&error);
 }
 
 static int timer_start(Unit *u) {
         Timer *t = TIMER(u);
 
         assert(t);
-        assert(t->state == TIMER_DEAD || t->state == TIMER_MAINTAINANCE);
+        assert(t->state == TIMER_DEAD || t->state == TIMER_MAINTENANCE);
 
         if (t->unit->meta.load_state != UNIT_LOADED)
                 return -ENOENT;
@@ -401,7 +421,7 @@ void timer_unit_notify(Unit *u, UnitActiveState new_state) {
 
                 case TIMER_RUNNING:
 
-                        if (new_state == UNIT_INACTIVE) {
+                        if (UNIT_IS_INACTIVE_OR_MAINTENANCE(new_state)) {
                                 log_debug("%s got notified about unit deactivation.", t->meta.id);
                                 timer_enter_waiting(t, false);
                         }
@@ -409,7 +429,7 @@ void timer_unit_notify(Unit *u, UnitActiveState new_state) {
                         break;
 
                 case TIMER_DEAD:
-                case TIMER_MAINTAINANCE:
+                case TIMER_MAINTENANCE:
                         ;
 
                 default:
@@ -423,22 +443,33 @@ fail:
         log_error("Failed find timer unit: %s", strerror(-r));
 }
 
+static void timer_reset_maintenance(Unit *u) {
+        Timer *t = TIMER(u);
+
+        assert(t);
+
+        if (t->state == TIMER_MAINTENANCE)
+                timer_set_state(t, TIMER_DEAD);
+
+        t->failure = false;
+}
+
 static const char* const timer_state_table[_TIMER_STATE_MAX] = {
         [TIMER_DEAD] = "dead",
         [TIMER_WAITING] = "waiting",
         [TIMER_RUNNING] = "running",
         [TIMER_ELAPSED] = "elapsed",
-        [TIMER_MAINTAINANCE] = "maintainance"
+        [TIMER_MAINTENANCE] = "maintenance"
 };
 
 DEFINE_STRING_TABLE_LOOKUP(timer_state, TimerState);
 
 static const char* const timer_base_table[_TIMER_BASE_MAX] = {
-        [TIMER_ACTIVE] = "OnActive",
-        [TIMER_BOOT] = "OnBoot",
-        [TIMER_STARTUP] = "OnStartup",
-        [TIMER_UNIT_ACTIVE] = "OnUnitActive",
-        [TIMER_UNIT_INACTIVE] = "OnUnitInactive"
+        [TIMER_ACTIVE] = "OnActiveSec",
+        [TIMER_BOOT] = "OnBootSec",
+        [TIMER_STARTUP] = "OnStartupSec",
+        [TIMER_UNIT_ACTIVE] = "OnUnitActiveSec",
+        [TIMER_UNIT_INACTIVE] = "OnUnitInactiveSec"
 };
 
 DEFINE_STRING_TABLE_LOOKUP(timer_base, TimerBase);
@@ -465,5 +496,9 @@ const UnitVTable timer_vtable = {
 
         .timer_event = timer_timer_event,
 
-        .bus_message_handler = bus_timer_message_handler
+        .reset_maintenance = timer_reset_maintenance,
+
+        .bus_interface = "org.freedesktop.systemd1.Timer",
+        .bus_message_handler = bus_timer_message_handler,
+        .bus_invalidating_properties =  bus_timer_invalidating_properties
 };

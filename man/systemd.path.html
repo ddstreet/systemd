@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.path</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.path"><a id="systemd.path"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.path — systemd path configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.path</code></p></div><div class="refsect1" title="Description"><a id="id2503046"/><h2>Description</h2><p>A unit configuration file whose name ends in
+                <code class="filename">.path</code> encodes information about
+                a path monitored by systemd, for
+                path-based activation.</p><p>This man page lists the configuration options
+                specific to this unit type. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                for the common options of all unit configuration
+                files. The common configuration items are configured
+                in the generic [Unit] and [Install] sections. The
+                path specific configuration options are configured in
+                the [Path] section.</p><p>For each path file, a matching unit file must
+                exist, describing the unit to activate when the path
+                changes. By default, a service by the same name as the
+                path (except for the suffix) is activated. Example: a
+                path file <code class="filename">foo.path</code> activates a
+                matching service <code class="filename">foo.service</code>. The
+                unit to activate may be controlled by
+                <code class="varname">Unit=</code> (see below).</p><p>Internally, path units use the
+                <span class="citerefentry"><span class="refentrytitle">inotify</span>(7)</span>
+                API to monitor file systems. Due to that, it suffers by the
+                same limitations as inotify, and for example cannot be
+                used to monitor files or directories changed by other
+                machines on remote NFS file systems.</p><p>If an path unit is beneath another mount
+                point in the file system hierarchy, a dependency
+                between both units is created automatically.</p><p>Unless <code class="varname">DefaultDependencies=</code>
+                is set to <code class="option">false</code>, path units will
+                implicitly have dependencies of type
+                <code class="varname">Conflicts=</code> and
+                <code class="varname">Before=</code> on
+                <code class="filename">shutdown.target</code>. These ensure
+                that path units are terminated cleanly prior to system
+                shutdown. Only path units involved with early boot or
+                late system shutdown should disable this
+                option.</p></div><div class="refsect1" title="Options"><a id="id2502738"/><h2>Options</h2><p>Path files must include a [Path] section,
+                which carries information about the path(s) it
+                monitors. The options specific to the [Path] section
+                of path units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PathExists=</code>, </span><span class="term"><code class="varname">PathChanged=</code>, </span><span class="term"><code class="varname">DirectoryNotEmpty=</code></span></dt><dd><p>Defines paths to
+                                monitor for certain changes:
+                                <code class="varname">PathExists=</code> may be
+                                used to watch the mere existence of a
+                                file or directory. If the file
+                                specified exists the configured unit
+                                is
+                                activated. <code class="varname">PathChanged=</code>
+                                may be used to watch a file or
+                                directory and activate the configured
+                                unit whenever it changes or is
+                                modified. <code class="varname">DirectoryNotEmpty=</code>
+                                may be used to watch a directory and
+                                activate the configured unit whenever
+                                it contains at least one file.</p><p>The arguments of these
+                                directives must be absolute file
+                                system paths.</p><p>Multiple directives may be
+                                combined, of the same and of different
+                                types, to watch multiple paths.</p><p>If a path is already existing
+                                (in case of
+                                <code class="varname">PathExists=</code>) or a
+                                directory already is not empty (in
+                                case of
+                                <code class="varname">DirectoryNotEmpty=</code>)
+                                at the time the path unit is activated,
+                                then the configured unit is
+                                immediately activated as
+                                well. Something similar does not apply
+                                to <code class="varname">PathChanged=</code>.
+                                </p></dd><dt><span class="term"><code class="varname">Unit=</code></span></dt><dd><p>The unit to activate
+                                when any of the configured paths
+                                changes. The argument is a unit name,
+                                whose suffix is not
+                                <code class="filename">.path</code>. If not
+                                specified, this value defaults to a
+                                service that has the same name as the
+                                path unit, except for the suffix. (See
+                                above.) It is recommended that the
+                                unit name that is activated and the
+                                unit name of the path unit are named
+                                identical, except for the
+                                suffix.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id2501390"/><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">inotify</span>(7)</span>
+                  </p></div></div></body></html>

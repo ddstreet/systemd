@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -28,7 +28,6 @@
 #define BUS_JOB_INTERFACE                                             \
         " <interface name=\"org.freedesktop.systemd1.Job\">\n"        \
         "  <method name=\"Cancel\"/>\n"                               \
-        "  <signal name=\"Changed\"/>\n"                              \
         "  <property name=\"Id\" type=\"u\" access=\"read\"/>\n"      \
         "  <property name=\"Unit\" type=\"(so)\" access=\"read\"/>\n" \
         "  <property name=\"JobType\" type=\"s\" access=\"read\"/>\n" \
@@ -40,10 +39,15 @@
         "<node>\n"                                                    \
         BUS_JOB_INTERFACE                                             \
         BUS_PROPERTIES_INTERFACE                                      \
+        BUS_PEER_INTERFACE                                            \
         BUS_INTROSPECTABLE_INTERFACE                                  \
         "</node>\n"
 
 const char bus_job_interface[] = BUS_JOB_INTERFACE;
+
+#define INVALIDATING_PROPERTIES                 \
+        "State\0"                               \
+        "\0"                                    \
 
 static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_job_append_state, job_state, JobState);
 static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_job_append_type, job_type, JobType);
@@ -78,7 +82,7 @@ static int bus_job_append_unit(Manager *m, DBusMessageIter *i, const char *prope
         return 0;
 }
 
-static DBusHandlerResult bus_job_message_dispatch(Job *j, DBusMessage *message) {
+static DBusHandlerResult bus_job_message_dispatch(Job *j, DBusConnection *connection, DBusMessage *message) {
         const BusProperty properties[] = {
                 { "org.freedesktop.systemd1.Job", "Id",      bus_property_append_uint32, "u",    &j->id    },
                 { "org.freedesktop.systemd1.Job", "State",   bus_job_append_state,       "s",    &j->state },
@@ -88,7 +92,6 @@ static DBusHandlerResult bus_job_message_dispatch(Job *j, DBusMessage *message) 
         };
 
         DBusMessage *reply = NULL;
-        Manager *m = j->manager;
 
         if (dbus_message_is_method_call(message, "org.freedesktop.systemd1.Job", "Cancel")) {
                 if (!(reply = dbus_message_new_method_return(message)))
@@ -97,10 +100,10 @@ static DBusHandlerResult bus_job_message_dispatch(Job *j, DBusMessage *message) 
                 job_free(j);
 
         } else
-                return bus_default_message_handler(j->manager, message, INTROSPECTION, properties);
+                return bus_default_message_handler(j->manager, connection, message, INTROSPECTION, properties);
 
         if (reply) {
-                if (!dbus_connection_send(m->api_bus, reply, NULL))
+                if (!dbus_connection_send(connection, reply, NULL))
                         goto oom;
 
                 dbus_message_unref(reply);
@@ -115,7 +118,7 @@ oom:
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
 }
 
-static DBusHandlerResult bus_job_message_handler(DBusConnection  *connection, DBusMessage  *message, void *data) {
+static DBusHandlerResult bus_job_message_handler(DBusConnection *connection, DBusMessage  *message, void *data) {
         Manager *m = data;
         Job *j;
         int r;
@@ -123,11 +126,6 @@ static DBusHandlerResult bus_job_message_handler(DBusConnection  *connection, DB
         assert(connection);
         assert(message);
         assert(m);
-
-        log_debug("Got D-Bus request: %s.%s() on %s",
-                  dbus_message_get_interface(message),
-                  dbus_message_get_member(message),
-                  dbus_message_get_path(message));
 
         if ((r = manager_get_job_from_dbus_path(m, dbus_message_get_path(message), &j)) < 0) {
 
@@ -137,27 +135,54 @@ static DBusHandlerResult bus_job_message_handler(DBusConnection  *connection, DB
                 if (r == -ENOENT)
                         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-                return bus_send_error_reply(m, message, NULL, r);
+                return bus_send_error_reply(m, connection, message, NULL, r);
         }
 
-        return bus_job_message_dispatch(j, message);
+        return bus_job_message_dispatch(j, connection, message);
 }
 
 const DBusObjectPathVTable bus_job_vtable = {
         .message_function = bus_job_message_handler
 };
 
+static int job_send_message(Job *j, DBusMessage *m) {
+        int r;
+
+        assert(j);
+        assert(m);
+
+        if (bus_has_subscriber(j->manager)) {
+                if ((r = bus_broadcast(j->manager, m)) < 0)
+                        return r;
+
+        } else  if (j->bus_client) {
+                /* If nobody is subscribed, we just send the message
+                 * to the client which created the job */
+
+                assert(j->bus);
+
+                if (!dbus_message_set_destination(m, j->bus_client))
+                        return -ENOMEM;
+
+                if (!dbus_connection_send(j->bus, m, NULL))
+                        return -ENOMEM;
+        }
+
+        return 0;
+}
+
 void bus_job_send_change_signal(Job *j) {
         char *p = NULL;
         DBusMessage *m = NULL;
 
         assert(j);
-        assert(j->in_dbus_queue);
 
-        LIST_REMOVE(Job, dbus_queue, j->manager->dbus_job_queue, j);
-        j->in_dbus_queue = false;
+        if (j->in_dbus_queue) {
+                LIST_REMOVE(Job, dbus_queue, j->manager->dbus_job_queue, j);
+                j->in_dbus_queue = false;
+        }
 
-        if (set_isempty(j->manager->subscribed)) {
+        if (!bus_has_subscriber(j->manager) && !j->bus_client) {
                 j->sent_dbus_new_signal = true;
                 return;
         }
@@ -166,10 +191,11 @@ void bus_job_send_change_signal(Job *j) {
                 goto oom;
 
         if (j->sent_dbus_new_signal) {
-                /* Send a change signal */
+                /* Send a properties changed signal */
 
-                if (!(m = dbus_message_new_signal(p, "org.freedesktop.systemd1.Job", "Changed")))
+                if (!(m = bus_properties_changed_new(p, "org.freedesktop.systemd1.Job", INVALIDATING_PROPERTIES)))
                         goto oom;
+
         } else {
                 /* Send a new signal */
 
@@ -183,7 +209,7 @@ void bus_job_send_change_signal(Job *j) {
                         goto oom;
         }
 
-        if (!dbus_connection_send(j->manager->api_bus, m, NULL))
+        if (job_send_message(j, m) < 0)
                 goto oom;
 
         free(p);
@@ -209,7 +235,7 @@ void bus_job_send_removed_signal(Job *j, bool success) {
 
         assert(j);
 
-        if (set_isempty(j->manager->subscribed))
+        if (!bus_has_subscriber(j->manager) && !j->bus_client)
                 return;
 
         if (!j->sent_dbus_new_signal)
@@ -228,7 +254,7 @@ void bus_job_send_removed_signal(Job *j, bool success) {
                                       DBUS_TYPE_INVALID))
                 goto oom;
 
-        if (!dbus_connection_send(j->manager->api_bus, m, NULL))
+        if (job_send_message(j, m) < 0)
                 goto oom;
 
         free(p);

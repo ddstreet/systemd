@@ -50,10 +50,11 @@
         <refsynopsisdiv>
                 <para><filename>basic.target</filename>,
                 <filename>ctrl-alt-del.target</filename>,
-                <filename>@SPECIAL_DBUS_SERVICE@</filename>,
+                <filename>dbus.service</filename>,
+                <filename>dbus.target</filename>,
                 <filename>default.target</filename>,
                 <filename>display-manager.service</filename>,
-                <filename>emergency.service</filename>,
+                <filename>emergency.target</filename>,
                 <filename>exit.service</filename>,
                 <filename>graphical.target</filename>,
                 <filename>halt.target</filename>,
@@ -69,24 +70,22 @@
                 <filename>rescue.target</filename>,
                 <filename>rpcbind.target</filename>,
                 <filename>rtc-set.target</filename>,
-                <filename>runlevel0.target</filename>,
-                <filename>runlevel1.target</filename>,
                 <filename>runlevel2.target</filename>,
                 <filename>runlevel3.target</filename>,
                 <filename>runlevel4.target</filename>,
                 <filename>runlevel5.target</filename>,
-                <filename>runlevel6.target</filename>
                 <filename>shutdown.target</filename>,
                 <filename>sigpwr.target</filename>,
                 <filename>sockets.target</filename>,
                 <filename>swap.target</filename>,
                 <filename>sysinit.target</filename>,
-                <filename>syslog.target</filename>,
                 <filename>@SPECIAL_SYSLOG_SERVICE@</filename>,
+                <filename>syslog.target</filename>,
                 <filename>systemd-initctl.service</filename>,
                 <filename>systemd-initctl.socket</filename>,
                 <filename>systemd-logger.service</filename>,
-                <filename>systemd-logger.socket</filename></para>
+                <filename>systemd-logger.socket</filename>,
+                <filename>umount.target</filename></para>
         </refsynopsisdiv>
 
         <refsect1>
@@ -112,12 +111,12 @@
                                         target unit to all SysV
                                         service units configured for
                                         runlevel 1 to 5.</para>
-                                        <para>Usually this should pull
-                                        in all sockets, mount points,
+                                        <para>Usually this should pull-in
+                                        all sockets, mount points,
                                         swap devices and other basic
                                         initialization necessary for
                                         the general purpose
-                                        daemons. Most normal daemon
+                                        daemons. Most normal daemons
                                         should have dependencies of
                                         type After and Requires on
                                         this unit.</para>
@@ -136,7 +135,7 @@
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
-                                <term><filename>@SPECIAL_DBUS_SERVICE@</filename></term>
+                                <term><filename>dbus.service</filename></term>
                                 <listitem>
                                         <para>A special unit for the
                                         D-Bus system bus. As soon as
@@ -144,6 +143,28 @@
                                         up systemd will connect to it
                                         and register its
                                         service.</para>
+
+                                        <para>Units should generally
+                                        avoid depending on this unit
+                                        directly and instead refer to
+                                        the
+                                        <filename>dbus.target</filename>
+                                        unit instead, which pulls this
+                                        one in directly or indirectly
+                                        via socket-based activation.</para>
+                                </listitem>
+                        </varlistentry>
+                        <varlistentry>
+                                <term><filename>dbus.target</filename></term>
+                                <listitem>
+                                        <para>Administrators should
+                                        ensure that this target pulls
+                                        in a service unit with the
+                                        name or alias of
+                                        <filename>dbus.service</filename>
+                                        (or a socket unit that
+                                        activates this
+                                        service).</para>
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
@@ -169,14 +190,14 @@
                                         <para>The display manager
                                         service. Usually this should
                                         be aliased (symlinked) to
-                                        <filename>gdm.service</filename>
+                                        <filename>xdm.service</filename>
                                         or a similar display manager
                                         service.</para>
                                         <para>systemd automatically
                                         adds dependencies of type
                                         After for this target unit to
                                         all SysV init script service
-                                        units with an LSB header
+                                        units with a LSB header
                                         referring to the
                                         <literal>$x-display-manager</literal>
                                         facility, for compatibility
@@ -184,9 +205,9 @@
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
-                                <term><filename>emergency.service</filename></term>
+                                <term><filename>emergency.target</filename></term>
                                 <listitem>
-                                        <para>A special service unit
+                                        <para>A special target unit
                                         that starts an emergency
                                         shell on the main
                                         console. This unit is supposed
@@ -249,8 +270,8 @@
                                         mounts listed in
                                         <filename>/etc/fstab</filename>
                                         that have the
-                                        <literal>auto</literal> and
-                                        <literal>comment=systemd.mount</literal>
+                                        <option>auto</option> and
+                                        <option>comment=systemd.mount</option>
                                         mount options set.</para>
 
                                         <para>systemd automatically
@@ -268,7 +289,7 @@
                                 <listitem>
                                         <para>The mail transfer agent
                                         (MTA) service. Usually this
-                                        should pull in all units
+                                        should pull-in all units
                                         necessary for
                                         sending/receiving mails on the
                                         local host.</para>
@@ -415,32 +436,6 @@
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
-                                <term><filename>runlevel0.target</filename></term>
-                                <listitem>
-                                        <para>This is a target that is
-                                        called whever the SysV
-                                        compatibility code asks for
-                                        runlevel 0. This is an alias
-                                        for
-                                        <filename>poweroff.target</filename>,
-                                        for compatibility with
-                                        SysV.</para>
-                                </listitem>
-                        </varlistentry>
-                        <varlistentry>
-                                <term><filename>runlevel1.target</filename></term>
-                                <listitem>
-                                        <para>This is a target that is
-                                        called whever the SysV
-                                        compatibility code asks for
-                                        runlevel 1. This is an alias
-                                        for
-                                        <filename>rescue.target</filename>,
-                                        for compatibility with
-                                        SysV.</para>
-                                </listitem>
-                        </varlistentry>
-                        <varlistentry>
                                 <term><filename>runlevel2.target</filename></term>
                                 <listitem>
                                         <para>This is a target that is
@@ -495,19 +490,6 @@
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
-                                <term><filename>runlevel6.target</filename></term>
-                                <listitem>
-                                        <para>This is a target that is
-                                        called whever the SysV
-                                        compatibility code asks for
-                                        runlevel 6. This is an alias
-                                        for
-                                        <filename>reboot.target</filename>,
-                                        for compatibility with
-                                        SysV.</para>
-                                </listitem>
-                        </varlistentry>
-                        <varlistentry>
                                 <term><filename>shutdown.target</filename></term>
                                 <listitem>
                                         <para>A special target unit
@@ -518,8 +500,10 @@
                                         terminated on system shutdown
                                         shall add Conflicts
                                         dependencies to this unit for
-                                        their service unit during
-                                        installation.</para>
+                                        their service unit, which is
+                                        implicitly done when
+                                        <varname>DefaultDependencies=yes</varname>
+                                        is set (the default).</para>
 
                                         <para>systemd automatically
                                         adds dependencies of type
@@ -565,28 +549,6 @@
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
-                                <term><filename>syslog.target</filename></term>
-                                <listitem>
-                                        <para>systemd automatically
-                                        adds dependencies of type
-                                        After for this target unit to
-                                        all SysV init script service
-                                        units with an LSB header
-                                        referring to the
-                                        <literal>$syslog</literal>
-                                        facility.</para>
-
-                                        <para>Administrators should
-                                        ensure that this target pulls
-                                        in a service unit with the
-                                        name or alias of
-                                        <filename>@SPECIAL_SYSLOG_SERVICE@</filename>
-                                        (or a socket unit that
-                                        activates this
-                                        service).</para>
-                                </listitem>
-                        </varlistentry>
-                        <varlistentry>
                                 <term><filename>sysinit.target</filename></term>
                                 <listitem>
                                         <para>A special target unit
@@ -613,11 +575,37 @@
                                         and use it for logging if it
                                         has been configured for
                                         that.</para>
-                                        <para>Applications should
-                                        generally not depend on this
-                                        service, and depend on
+
+                                        <para>Units should generally
+                                        avoid depending on this unit
+                                        directly and instead refer to
+                                        the
                                         <filename>syslog.target</filename>
-                                        instead.</para>
+                                        unit instead, which pulls this
+                                        one in directly or indirectly
+                                        via socket-based activation.</para>
+                                </listitem>
+                        </varlistentry>
+                        <varlistentry>
+                                <term><filename>syslog.target</filename></term>
+                                <listitem>
+                                        <para>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <literal>$syslog</literal>
+                                        facility.</para>
+
+                                        <para>Administrators should
+                                        ensure that this target pulls
+                                        in a service unit with the
+                                        name or alias of
+                                        <filename>@SPECIAL_SYSLOG_SERVICE@</filename>
+                                        (or a socket unit that
+                                        activates this
+                                        service).</para>
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
@@ -666,6 +654,44 @@
                                         stdout or stderr to be
                                         connected to syslog or the
                                         kernel log buffer.</para>
+                                </listitem>
+                        </varlistentry>
+                         <varlistentry>
+                                <term><filename>systemd-shutdownd.service</filename></term>
+                                <listitem>
+                                        <para>This is internally used
+                                        by
+                                        <citerefentry><refentrytitle>shutdown</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+                                        to implement delayed shutdowns.</para>
+                                        <para>This is a
+                                        socket-activated service, see
+                                        <filename>system-shutdownd.socket</filename>.</para>
+                                </listitem>
+                        </varlistentry>
+                        <varlistentry>
+                                <term><filename>systemd-shutdownd.socket</filename></term>
+                                <listitem>
+                                        <para>Socket activation unit
+                                        for
+                                        <filename>system-shutdownd.service</filename>.</para>
+                                </listitem>
+                        </varlistentry>
+                        <varlistentry>
+                                <term><filename>umount.target</filename></term>
+                                <listitem>
+                                        <para>A special target unit
+                                        that umounts all mount and
+                                        automount points on system
+                                        shutdown.</para>
+
+                                        <para>Mounts that shall be
+                                        unmounted on system shutdown
+                                        shall add Conflicts
+                                        dependencies to this unit for
+                                        their mount unit, which is
+                                        implicitly done when
+                                        <varname>DefaultDependencies=yes</varname>
+                                        is set (the default).</para>
                                 </listitem>
                         </varlistentry>
                 </variablelist>
@@ -717,9 +743,9 @@
         <refsect1>
                   <title>See Also</title>
                   <para>
-                          <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry>
-                          <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>
-                          <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+                          <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+                          <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+                          <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
                           <citerefentry><refentrytitle>systemd.target</refentrytitle><manvolnum>5</manvolnum></citerefentry>
                   </para>
         </refsect1>

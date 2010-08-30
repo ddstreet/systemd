@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef fooutilhfoo
 #define fooutilhfoo
@@ -29,13 +29,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <signal.h>
+#include <sched.h>
+#include <limits.h>
+
+#include "macro.h"
 
 typedef uint64_t usec_t;
 
-typedef struct timestamp {
+typedef struct dual_timestamp {
         usec_t realtime;
         usec_t monotonic;
-} timestamp;
+} dual_timestamp;
 
 #define MSEC_PER_SEC  1000ULL
 #define USEC_PER_SEC  1000000ULL
@@ -48,17 +52,24 @@ typedef struct timestamp {
 #define USEC_PER_HOUR (60ULL*USEC_PER_MINUTE)
 #define USEC_PER_DAY (24ULL*USEC_PER_HOUR)
 #define USEC_PER_WEEK (7ULL*USEC_PER_DAY)
+#define USEC_PER_MONTH (2629800ULL*USEC_PER_SEC)
+#define USEC_PER_YEAR (31557600ULL*USEC_PER_SEC)
 
 /* What is interpreted as whitespace? */
 #define WHITESPACE " \t\n\r"
 #define NEWLINE "\n\r"
 
 #define FORMAT_TIMESTAMP_MAX 64
+#define FORMAT_TIMESTAMP_PRETTY_MAX 256
 #define FORMAT_TIMESPAN_MAX 64
+
+#define ANSI_HIGHLIGHT_ON "\x1B[1;31m"
+#define ANSI_HIGHLIGHT_GREEN_ON "\x1B[1;32m"
+#define ANSI_HIGHLIGHT_OFF "\x1B[0m"
 
 usec_t now(clockid_t clock);
 
-timestamp* timestamp_get(timestamp *ts);
+dual_timestamp* dual_timestamp_get(dual_timestamp *ts);
 
 usec_t timespec_load(const struct timespec *ts);
 struct timespec *timespec_store(struct timespec *ts, usec_t u);
@@ -104,18 +115,57 @@ bool first_word(const char *s, const char *word);
 
 int close_nointr(int fd);
 void close_nointr_nofail(int fd);
+void close_many(const int fds[], unsigned n_fd);
 
 int parse_boolean(const char *v);
 int parse_usec(const char *t, usec_t *usec);
+int parse_pid(const char *s, pid_t* ret_pid);
 
 int safe_atou(const char *s, unsigned *ret_u);
 int safe_atoi(const char *s, int *ret_i);
 
-int safe_atolu(const char *s, unsigned long *ret_u);
-int safe_atoli(const char *s, long int *ret_i);
-
 int safe_atollu(const char *s, unsigned long long *ret_u);
 int safe_atolli(const char *s, long long int *ret_i);
+
+#if __WORDSIZE == 32
+static inline int safe_atolu(const char *s, unsigned long *ret_u) {
+        assert_cc(sizeof(unsigned long) == sizeof(unsigned));
+        return safe_atou(s, (unsigned*) ret_u);
+}
+static inline int safe_atoli(const char *s, long int *ret_u) {
+        assert_cc(sizeof(long int) == sizeof(int));
+        return safe_atoi(s, (int*) ret_u);
+}
+#else
+static inline int safe_atolu(const char *s, unsigned long *ret_u) {
+        assert_cc(sizeof(unsigned long) == sizeof(unsigned long long));
+        return safe_atollu(s, (unsigned long long*) ret_u);
+}
+static inline int safe_atoli(const char *s, long int *ret_u) {
+        assert_cc(sizeof(long int) == sizeof(long long int));
+        return safe_atolli(s, (long long int*) ret_u);
+}
+#endif
+
+static inline int safe_atou32(const char *s, uint32_t *ret_u) {
+        assert_cc(sizeof(uint32_t) == sizeof(unsigned));
+        return safe_atou(s, (unsigned*) ret_u);
+}
+
+static inline int safe_atoi32(const char *s, int32_t *ret_i) {
+        assert_cc(sizeof(int32_t) == sizeof(int));
+        return safe_atoi(s, (int*) ret_i);
+}
+
+static inline int safe_atou64(const char *s, uint64_t *ret_u) {
+        assert_cc(sizeof(uint64_t) == sizeof(unsigned long long));
+        return safe_atollu(s, (unsigned long long*) ret_u);
+}
+
+static inline int safe_atoi64(const char *s, int64_t *ret_i) {
+        assert_cc(sizeof(int64_t) == sizeof(long long int));
+        return safe_atolli(s, (long long int*) ret_i);
+}
 
 char *split(const char *c, size_t *l, const char *separator, char **state);
 char *split_quoted(const char *c, size_t *l, char **state);
@@ -137,8 +187,13 @@ int write_one_line_file(const char *fn, const char *line);
 int read_one_line_file(const char *fn, char **line);
 
 char *strappend(const char *s, const char *suffix);
+char *strnappend(const char *s, const char *suffix, size_t length);
+
+char *replace_env(const char *format, char **env);
+char **replace_env_argv(char **argv, char **env);
 
 int readlink_malloc(const char *p, char **r);
+int readlink_and_make_absolute(const char *p, char **r);
 
 char *file_name_from_path(const char *p);
 bool is_path(const char *p);
@@ -157,10 +212,16 @@ char *delete_chars(char *s, const char *bad);
 char *truncate_nl(char *s);
 
 char *file_in_same_dir(const char *path, const char *filename);
+int safe_mkdir(const char *path, mode_t mode, uid_t uid, gid_t gid);
 int mkdir_parents(const char *path, mode_t mode);
 int mkdir_p(const char *path, mode_t mode);
 
+int parent_of_path(const char *path, char **parent);
+
+int rmdir_parents(const char *path, const char *stop);
+
 int get_process_name(pid_t pid, char **name);
+int get_process_cmdline(pid_t pid, size_t max_length, char **line);
 
 char hexchar(int x);
 int unhexchar(char c);
@@ -171,6 +232,12 @@ int undecchar(char c);
 
 char *cescape(const char *s);
 char *cunescape(const char *s);
+char *cunescape_length(const char *s, size_t length);
+
+char *xescape(const char *s, const char *bad);
+
+char *bus_path_escape(const char *s);
+char *bus_path_unescape(const char *s);
 
 char *path_kill_slashes(char *path);
 
@@ -179,21 +246,20 @@ bool path_equal(const char *a, const char *b);
 
 char *ascii_strlower(char *path);
 
-char *xescape(const char *s, const char *bad);
-
-char *bus_path_escape(const char *s);
-char *bus_path_unescape(const char *s);
-
 bool ignore_file(const char *filename);
 
 bool chars_intersect(const char *a, const char *b);
 
 char *format_timestamp(char *buf, size_t l, usec_t t);
+char *format_timestamp_pretty(char *buf, size_t l, usec_t t);
 char *format_timespan(char *buf, size_t l, usec_t t);
 
 int make_stdio(int fd);
 
 bool is_clean_exit(int code, int status);
+bool is_clean_exit_lsb(int code, int status);
+
+unsigned long long random_ull(void);
 
 #define DEFINE_STRING_TABLE_LOOKUP(name,type)                           \
         const char *name##_to_string(type i) {                          \
@@ -206,7 +272,8 @@ bool is_clean_exit(int code, int status);
                 unsigned u = 0;                                         \
                 assert(s);                                              \
                 for (i = 0; i < (type)ELEMENTSOF(name##_table); i++)    \
-                        if (streq(name##_table[i], s))                  \
+                        if (name##_table[i] &&                          \
+                            streq(name##_table[i], s))                  \
                                 return i;                               \
                 if (safe_atou(s, &u) >= 0 &&                            \
                     u < ELEMENTSOF(name##_table))                       \
@@ -241,7 +308,8 @@ int sigaction_many(const struct sigaction *sa, ...);
 
 int close_pipe(int p[]);
 
-ssize_t loop_read(int fd, void *buf, size_t nbytes);
+ssize_t loop_read(int fd, void *buf, size_t nbytes, bool do_poll);
+ssize_t loop_write(int fd, const void *buf, size_t nbytes, bool do_poll);
 
 int path_is_mount_point(const char *path);
 
@@ -249,7 +317,36 @@ bool is_device_path(const char *path);
 
 int dir_is_empty(const char *path);
 
-extern char * __progname;
+void rename_process(const char name[8]);
+
+void sigset_add_many(sigset_t *ss, ...);
+
+char* gethostname_malloc(void);
+char* getlogname_malloc(void);
+int getttyname_malloc(char **r);
+
+int chmod_and_chown(const char *path, mode_t mode, uid_t uid, gid_t gid);
+
+int rm_rf(const char *path, bool only_dirs, bool delete_root);
+
+cpu_set_t* cpu_set_malloc(unsigned *ncpus);
+
+void status_vprintf(const char *format, va_list ap);
+void status_printf(const char *format, ...);
+void status_welcome(void);
+
+int columns(void);
+
+int running_in_chroot(void);
+
+char *ellipsize(const char *s, unsigned length, unsigned percent);
+
+int touch(const char *path);
+
+char *unquote(const char *s, const char quote);
+
+#define NULSTR_FOREACH(i, l) \
+        for ((i) = (l); (i) && *(i); (i) = strchr((i), 0)+1)
 
 const char *ioprio_class_to_string(int i);
 int ioprio_class_from_string(const char *s);
@@ -268,5 +365,11 @@ int sched_policy_from_string(const char *s);
 
 const char *rlimit_to_string(int i);
 int rlimit_from_string(const char *s);
+
+const char *ip_tos_to_string(int i);
+int ip_tos_from_string(const char *s);
+
+const char *signal_to_string(int i);
+int signal_from_string(const char *s);
 
 #endif

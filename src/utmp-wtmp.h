@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef fooutmpwtmphfoo
 #define fooutmpwtmphfoo
@@ -29,5 +29,7 @@ int utmp_get_runlevel(int *runlevel, int *previous);
 int utmp_put_shutdown(usec_t timestamp);
 int utmp_put_reboot(usec_t timestamp);
 int utmp_put_runlevel(usec_t timestamp, int runlevel, int previous);
+
+int utmp_wall(const char *message);
 
 #endif

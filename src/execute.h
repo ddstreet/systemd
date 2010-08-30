@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef fooexecutehfoo
 #define fooexecutehfoo
@@ -45,6 +45,15 @@ struct CGroupBonding;
 #define SIGNALS_CRASH_HANDLER SIGSEGV,SIGILL,SIGFPE,SIGBUS,SIGQUIT,SIGABRT
 #define SIGNALS_IGNORE SIGKILL,SIGPIPE
 
+typedef enum KillMode {
+        KILL_CONTROL_GROUP = 0,
+        KILL_PROCESS_GROUP,
+        KILL_PROCESS,
+        KILL_NONE,
+        _KILL_MODE_MAX,
+        _KILL_MODE_INVALID = -1
+} KillMode;
+
 typedef enum ExecInput {
         EXEC_INPUT_NULL,
         EXEC_INPUT_TTY,
@@ -67,8 +76,8 @@ typedef enum ExecOutput {
 } ExecOutput;
 
 struct ExecStatus {
-        usec_t start_timestamp;
-        usec_t exit_timestamp;
+        dual_timestamp start_timestamp;
+        dual_timestamp exit_timestamp;
         pid_t pid;
         int code;     /* as in siginfo_t::si_code */
         int status;   /* as in sigingo_t::si_status */
@@ -79,6 +88,7 @@ struct ExecCommand {
         char **argv;
         ExecStatus exec_status;
         LIST_FIELDS(ExecCommand, command); /* useful for chaining commands */
+        bool ignore;
 };
 
 struct ExecContext {
@@ -93,16 +103,16 @@ struct ExecContext {
         int cpu_sched_policy;
         int cpu_sched_priority;
 
-        cpu_set_t cpu_affinity;
-        unsigned long timer_slack_ns;
+        cpu_set_t *cpuset;
+        unsigned cpuset_ncpus;
 
         ExecInput std_input;
         ExecOutput std_output;
         ExecOutput std_error;
 
-        int syslog_priority;
-        char *syslog_identifier;
-        bool syslog_no_prefix;
+        unsigned long timer_slack_nsec;
+
+        char *tcpwrap_name;
 
         char *tty_path;
 
@@ -114,74 +124,41 @@ struct ExecContext {
         char *group;
         char **supplementary_groups;
 
+        char *pam_name;
+
         char **read_write_dirs, **read_only_dirs, **inaccessible_dirs;
         unsigned long mount_flags;
 
         uint64_t capability_bounding_set_drop;
 
+        /* Not relevant for spawning processes, just for killing */
+        KillMode kill_mode;
+        int kill_signal;
+
         cap_t capabilities;
         int secure_bits;
+
+        int syslog_priority;
+        char *syslog_identifier;
+        bool syslog_level_prefix;
 
         bool cpu_sched_reset_on_fork;
         bool non_blocking;
         bool private_tmp;
-
-        bool oom_adjust_set:1;
-        bool nice_set:1;
-        bool ioprio_set:1;
-        bool cpu_sched_set:1;
-        bool cpu_affinity_set:1;
-        bool timer_slack_ns_set:1;
 
         /* This is not exposed to the user but available
          * internally. We need it to make sure that whenever we spawn
          * /bin/mount it is run in the same process group as us so
          * that the autofs logic detects that it belongs to us and we
          * don't enter a trigger loop. */
-        bool no_setsid:1;
+        bool same_pgrp;
+
+        bool oom_adjust_set:1;
+        bool nice_set:1;
+        bool ioprio_set:1;
+        bool cpu_sched_set:1;
+        bool timer_slack_nsec_set:1;
 };
-
-typedef enum ExitStatus {
-        /* EXIT_SUCCESS defined by libc */
-        /* EXIT_FAILURE defined by libc */
-        EXIT_INVALIDARGUMENT = 2,
-        EXIT_NOTIMPLEMENTED = 3,
-        EXIT_NOPERMISSION = 4,
-        EXIT_NOTINSTALLED = 5,
-        EXIT_NOTCONFIGURED = 6,
-        EXIT_NOTRUNNING = 7,
-
-        /* The LSB suggests that error codes >= 200 are "reserved". We
-         * use them here under the assumption that they hence are
-         * unused by init scripts.
-         *
-         * http://refspecs.freestandards.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html */
-
-        EXIT_CHDIR = 200,
-        EXIT_NICE,
-        EXIT_FDS,
-        EXIT_EXEC,
-        EXIT_MEMORY,
-        EXIT_LIMITS,
-        EXIT_OOM_ADJUST,
-        EXIT_SIGNAL_MASK,
-        EXIT_STDIN,
-        EXIT_STDOUT,
-        EXIT_CHROOT,   /* 210 */
-        EXIT_IOPRIO,
-        EXIT_TIMERSLACK,
-        EXIT_SECUREBITS,
-        EXIT_SETSCHEDULER,
-        EXIT_CPUAFFINITY,
-        EXIT_GROUP,
-        EXIT_USER,
-        EXIT_CAPABILITIES,
-        EXIT_CGROUP,
-        EXIT_SETSID,   /* 220 */
-        EXIT_CONFIRM,
-        EXIT_STDERR
-
-} ExitStatus;
 
 int exec_spawn(ExecCommand *command,
                char **argv,
@@ -190,6 +167,7 @@ int exec_spawn(ExecCommand *command,
                char **environment,
                bool apply_permissions,
                bool apply_chroot,
+               bool apply_tty_stdin,
                bool confirm_spawn,
                struct CGroupBonding *cgroup_bondings,
                pid_t *ret);
@@ -211,7 +189,8 @@ void exec_context_init(ExecContext *c);
 void exec_context_done(ExecContext *c);
 void exec_context_dump(ExecContext *c, FILE* f, const char *prefix);
 
-void exec_status_fill(ExecStatus *s, pid_t pid, int code, int status);
+void exec_status_start(ExecStatus *s, pid_t pid);
+void exec_status_exit(ExecStatus *s, pid_t pid, int code, int status);
 void exec_status_dump(ExecStatus *s, FILE *f, const char *prefix);
 
 const char* exec_output_to_string(ExecOutput i);
@@ -219,7 +198,5 @@ int exec_output_from_string(const char *s);
 
 const char* exec_input_to_string(ExecInput i);
 int exec_input_from_string(const char *s);
-
-const char* exit_status_to_string(ExitStatus status);
 
 #endif

@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -39,8 +39,9 @@
 #include "log.h"
 #include "list.h"
 #include "initreq.h"
-#include "manager.h"
+#include "special.h"
 #include "sd-daemon.h"
+#include "dbus-common.h"
 
 #define SERVER_FD_MAX 16
 #define TIMEOUT ((int) (10*MSEC_PER_SEC))
@@ -72,15 +73,15 @@ static const char *translate_runlevel(int runlevel) {
                 const int runlevel;
                 const char *special;
         } table[] = {
-                { '0', SPECIAL_RUNLEVEL0_TARGET },
-                { '1', SPECIAL_RUNLEVEL1_TARGET },
-                { 's', SPECIAL_RUNLEVEL1_TARGET },
-                { 'S', SPECIAL_RUNLEVEL1_TARGET },
+                { '0', SPECIAL_POWEROFF_TARGET },
+                { '1', SPECIAL_RESCUE_TARGET },
+                { 's', SPECIAL_RESCUE_TARGET },
+                { 'S', SPECIAL_RESCUE_TARGET },
                 { '2', SPECIAL_RUNLEVEL2_TARGET },
                 { '3', SPECIAL_RUNLEVEL3_TARGET },
                 { '4', SPECIAL_RUNLEVEL4_TARGET },
                 { '5', SPECIAL_RUNLEVEL5_TARGET },
-                { '6', SPECIAL_RUNLEVEL6_TARGET },
+                { '6', SPECIAL_REBOOT_TARGET },
         };
 
         unsigned i;
@@ -118,12 +119,12 @@ static void change_runlevel(Server *s, int runlevel) {
                                       DBUS_TYPE_STRING, &target,
                                       DBUS_TYPE_STRING, &replace,
                                       DBUS_TYPE_INVALID)) {
-                log_error("Could not attach target and flag information to signal message.");
+                log_error("Could not attach target and flag information to message.");
                 goto finish;
         }
 
         if (!(reply = dbus_connection_send_with_reply_and_block(s->bus, m, -1, &error))) {
-                log_error("Failed to start unit: %s", error.message);
+                log_error("Failed to start unit: %s", bus_error_message(&error));
                 goto finish;
         }
 
@@ -230,8 +231,10 @@ static void server_done(Server *s) {
         if (s->epoll_fd >= 0)
                 close_nointr_nofail(s->epoll_fd);
 
-        if (s->bus)
-                dbus_connection_unref(s->bus);
+        if (s->bus) {
+               dbus_connection_close(s->bus);
+               dbus_connection_unref(s->bus);
+        }
 }
 
 static int server_init(Server *s, unsigned n_sockets) {
@@ -288,14 +291,14 @@ static int server_init(Server *s, unsigned n_sockets) {
                         goto fail;
                 }
 
-                f->fd = SD_LISTEN_FDS_START+i;
+                f->fd = fd;
                 LIST_PREPEND(Fifo, fifo, s->fifos, f);
                 f->server = s;
                 s->n_fifos ++;
         }
 
-        if (!(s->bus = dbus_bus_get(DBUS_BUS_SYSTEM, &error))) {
-                log_error("Failed to get D-Bus connection: %s", error.message);
+        if (bus_connect(DBUS_BUS_SYSTEM, &s->bus, NULL, &error) < 0) {
+                log_error("Failed to get D-Bus connection: %s", bus_error_message(&error));
                 goto fail;
         }
 
@@ -334,10 +337,19 @@ int main(int argc, char *argv[]) {
         Server server;
         int r = 3, n;
 
+        if (getppid() != 1) {
+                log_error("This program should be invoked by init only.");
+                return 1;
+        }
+
+        if (argc > 1) {
+                log_error("This program does not take arguments.");
+                return 1;
+        }
+
         log_set_target(LOG_TARGET_SYSLOG_OR_KMSG);
         log_parse_environment();
-
-        log_info("systemd-initctl running as pid %llu", (unsigned long long) getpid());
+        log_open();
 
         if ((n = sd_listen_fds(true)) < 0) {
                 log_error("Failed to read listening file descriptors from environment: %s", strerror(-r));
@@ -351,6 +363,12 @@ int main(int argc, char *argv[]) {
 
         if (server_init(&server, (unsigned) n) < 0)
                 return 2;
+
+        log_debug("systemd-initctl running as pid %lu", (unsigned long) getpid());
+
+        sd_notify(false,
+                  "READY=1\n"
+                  "STATUS=Processing requests...");
 
         for (;;) {
                 struct epoll_event event;
@@ -370,15 +388,19 @@ int main(int argc, char *argv[]) {
                 if (k <= 0)
                         break;
 
-                if ((k = process_event(&server, &event)) < 0)
+                if (process_event(&server, &event) < 0)
                         goto fail;
         }
+
         r = 0;
 
-fail:
-        server_done(&server);
+        log_debug("systemd-initctl stopped as pid %lu", (unsigned long) getpid());
 
-        log_info("systemd-initctl stopped as pid %llu", (unsigned long long) getpid());
+fail:
+        sd_notify(false,
+                  "STATUS=Shutting down...");
+
+        server_done(&server);
 
         dbus_shutdown();
 
