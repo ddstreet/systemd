@@ -1,0 +1,85 @@
+'\" t
+.\"     Title: systemd.swap
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 08/25/2010
+.\"    Manual: systemd.swap
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\&.SWAP" "5" "08/25/2010" "systemd" "systemd.swap"
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd.swap \- systemd swap configuration files
+.SH "SYNOPSIS"
+.PP
+systemd\&.swap
+.SH "DESCRIPTION"
+.PP
+A unit configuration file whose name ends in
+\&.swap
+encodes information about a swap device or file for memory paging controlled and supervised by systemd\&.
+.PP
+This man page lists the configuration options specific to this unit type\&. See
+\fBsystemd.unit\fR(5)
+for the common options of all unit configuration files\&. The common configuration items are configured in the generic [Unit] and [Install] sections\&. The swap specific configuration options are configured in the [Swap] section\&.
+.PP
+Swap units must be named after the devices they control\&. Example: the swap device
+/dev/sda5
+must be configured in a unit file
+dev\-sda5\&.swap\&. For details about the escaping logic used to convert a file system path to a unit name see
+\fBsystemd.unit\fR(5)\&.
+.SH "FSTAB"
+.PP
+Swap units may either be configured via unit files, or via
+/etc/fstab
+(see
+\fBfstab\fR(5)
+for details)\&.
+.PP
+If a swap device or file is configured in both
+/etc/fstab
+and a unit file the configuration in the latter takes precedence\&.
+.SH "OPTIONS"
+.PP
+Swap files must include a [Swap] section, which carries information about the swap device it supervises\&. The options specific to the [Swap] section of swap units are the following:
+.PP
+\fIWhat=\fR
+.RS 4
+Takes an absolute path of a device node or file to use for paging\&. See
+\fBswapon\fR(8)
+for details\&. If this refers to a device node, a dependency on the respective device unit is automatically created\&. (See
+\fBsystemd.device\fR(5)
+for more information\&.) If this refers to a file, a dependency on the respective mount unit is automatically created\&. (See
+\fBsystemd.mount\fR(5)
+for more information\&.) This option is mandatory\&.
+.RE
+.PP
+\fIPriority=\fR
+.RS 4
+Swap priority to use when activating the swap device or file\&. This takes an integer\&. This setting is optional\&.
+.RE
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBsystemctl\fR(8),
+\fBsystemd.unit\fR(5),
+\fBsystemd.device\fR(5),
+\fBsystemd.mount\fR(5),
+\fBswapon\fR(8)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

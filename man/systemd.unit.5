@@ -1,0 +1,349 @@
+'\" t
+.\"     Title: systemd.unit
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 08/25/2010
+.\"    Manual: systemd.unit
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\&.UNIT" "5" "08/25/2010" "systemd" "systemd.unit"
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd.unit \- systemd unit configuration files
+.SH "SYNOPSIS"
+.PP
+systemd\&.service,
+systemd\&.socket,
+systemd\&.device,
+systemd\&.mount,
+systemd\&.automount,
+systemd\&.swap,
+systemd\&.target,
+systemd\&.path,
+systemd\&.timer,
+systemd\&.snapshot
+.SH "DESCRIPTION"
+.PP
+A unit configuration file encodes information about a service, a socket, a device, a mount point, an automount point, a swap file or partition, a start\-up target, a file system path or a timer controlled and supervised by
+\fBsystemd\fR(1)\&. The syntax is inspired by
+\m[blue]\fBXDG Desktop Entry Specification\fR\m[]\&\s-2\u[1]\d\s+2
+\&.desktop
+files, which are in turn inspired by Microsoft Windows
+\&.ini
+files\&.
+.PP
+This man pages lists the common configuration options of all the unit types\&. These options need to be configured in the [Unit] resp\&. [Install] section of the unit files\&.
+.PP
+In addition to the generic [Unit] and [Install] sections described here, each unit should have a type\-specific section, e\&.g\&. [Service] for a service unit\&. See the respective man pages for more information\&.
+.PP
+Unit files may contain additional options on top of those listed here\&. If systemd encounters an unknown option it will write a warning log message but continue loading the unit\&. If an option is prefixed with
+\fBX\-\fR
+it is ignored completely by systemd\&. Applications may use this to include additional information in the unit files\&.
+.PP
+Boolean arguments used in unit files can be written in various formats\&. For positive settings the strings
+\fB1\fR,
+\fByes\fR,
+\fBtrue\fR
+and
+\fBon\fR
+are equivalent\&. For negative settings the strings
+\fB0\fR,
+\fBno\fR,
+\fBfalse\fR
+and
+\fBoff\fR
+are equivalent\&.
+.PP
+Time span values encoded in unit files can be written in various formats\&. A stand\-alone number specifies a time in seconds\&. If suffixed with a time unit, the unit is honored\&. A concatenation of multiple values with units is supported, in which case the values are added up\&. Example: "50" refers to 50 seconds; "2min 200ms" refers to 2 minutes plus 200 milliseconds, i\&.e\&. 120200ms\&. The following time units are understood: s, min, h, d, w, ms, us\&.
+.PP
+Empty lines and lines starting with # or ; are ignored\&. This may be used for commenting\&. Lines ending in a backslash are concatenated with the following line while reading and the backslash is replaced by a space character\&. This may be used to wrap long lines\&.
+.PP
+If a line starts with
+\fB\&.include\fR
+followed by a file name, the specified file will be read as if its contents were listed in place of the
+\fB\&.include\fR
+directive\&.
+.PP
+Along with a unit file
+foo\&.service
+a directory
+foo\&.service\&.wants/
+may exist\&. All units symlinked from such a directory are implicitly added as dependencies of type
+\fIWanted=\fR
+to the unit\&. This is useful to hook units into the start\-up of other units, without having to modify their unit configuration files\&. For details about the semantics of
+\fIWanted=\fR
+see below\&. The preferred way to create symlinks in the
+\&.wants/
+directory of a service is with the
+\fBenable\fR
+command of the
+\fBsystemctl\fR(1)
+tool which reads information from the [Install] section of unit files\&. (See below\&.)
+.PP
+Note that while systemd offers a flexible dependency system between units it is recommended to use this functionality only sparsely and instead rely on techniques such as bus\-based or socket\-based activation which makes dependencies implicit, which both results in a simpler and more flexible system\&.
+.PP
+Some unit names reflect paths existing in the file system name space\&. Example: a device unit
+dev\-sda\&.device
+refers to a device with the device node
+/dev/sda
+in the file system namespace\&. If this applies a special way to escape the path name is used, so that the result is usable as part of a file name\&. Basically, given a path, "/" is replaced by "\-", and all unprintable characters and the "\-" are replaced by C\-style "\ex20" escapes\&. The root directory "/" is encoded as single dash, while otherwise the initial and ending "/" is removed from all paths during transformation\&. This escaping is reversible\&.
+.PP
+Optionally, units may be instantiated from a template file at runtime\&. This allows creation of multiple units from a single configuration file\&. If systemd looks for a unit configuration file it will first search for the literal unit name in the filesystem\&. If that yields no success and the unit name contains an @ character, systemd will look for a unit template that shares the same name but with the instance string (i\&.e\&. the part between the @ character and the suffix) removed\&. Example: if a service
+getty@tty3\&.service
+is requested and no file by that name is found, systemd will look for
+getty@\&.service
+and instantiate a service from that configuration file if it is found\&. To refer to the instance string from within the configuration file you may use the special
+%i
+specifier in many of the configuration options\&. Other specifiers that may be used are
+%n,
+%N,
+%p,
+%P
+and
+%I, for the full unit name, the unescaped unit name, the prefix name, the unescaped prefix name and the unescaped instance name, respectively\&. The prefix name here refers to the string before the @, i\&.e\&. "getty" in the example above, where "tty3" is the instance name\&.
+.SH "OPTIONS"
+.PP
+Unit file may include a [Unit] section, which carries generic information about the unit that is not dependent on the type of unit:
+.PP
+\fINames=\fR
+.RS 4
+Additional names for this unit\&. The names listed here must have the same suffix (i\&.e\&. type) as the unit file name\&. This option may be specified more than once, in which case all listed names are used\&. Note that this option is different from the
+\fIAlias=\fR
+option from the [Install] section mentioned below\&. See below for details\&.
+.RE
+.PP
+\fIDescription=\fR
+.RS 4
+A free\-form string describing the unit\&. This is intended for use in UIs to show descriptive information along with the unit name\&.
+.RE
+.PP
+\fIRequires=\fR
+.RS 4
+Configures requirement dependencies on other units\&. If this unit gets activated, the units listed here will be activated as well\&. If one of the other units gets deactivated or its activation fails, this unit will be deactivated\&. This option may be specified more than once, in which case requirement dependencies for all listed names are created\&. Note that requirement dependencies do not influence the order in which services are started or stopped\&. This has to be configured independently with the
+\fIAfter=\fR
+or
+\fIBefore=\fR
+options\&. If a unit
+foo\&.service
+requires a unit
+bar\&.service
+as configured with
+\fIRequires=\fR
+and no ordering is configured with
+\fIAfter=\fR
+or
+\fIBefore=\fR, then both units will be started simultaneously and without any delay between them if
+foo\&.service
+is activated\&. Often it is a better choice to use
+\fIWants=\fR
+instead of
+\fIRequires=\fR
+in order to achieve a system that is more robust when dealing with failing services\&.
+.RE
+.PP
+\fIRequiresOverridable=\fR
+.RS 4
+Similar to
+\fIRequires=\fR\&. Dependencies listed in
+\fIRequiresOverridable=\fR
+which cannot be fulfilled or fail to start are ignored if the startup was explicitly requested by the user\&. If the start\-up was pulled in indirectly by some dependency or automatic start\-up of units that is not requested by the user this dependency must be fulfilled and otherwise the transaction fails\&. Hence, this option may be used to configure dependencies that are normally honored unless the user explicitly starts up the unit, in which case whether they failed or not is irrelevant\&.
+.RE
+.PP
+\fIRequisite=\fR, \fIRequisiteOverridable=\fR
+.RS 4
+Similar to
+\fIRequires=\fR
+resp\&.
+\fIRequiresOverridable=\fR\&. However, if a unit listed here is not started already it will not be started and the transaction fails immediately\&.
+.RE
+.PP
+\fIWants=\fR
+.RS 4
+A weaker version of
+\fIRequires=\fR\&. A unit listed in this option will be started if the configuring unit is\&. However, if the listed unit fails to start up or cannot be added to the transaction this has no impact on the validity of the transaction as a whole\&. This is the recommended way to hook start\-up of one unit to the start\-up of another unit\&. Note that dependencies of this type may also be configured outside of the unit configuration file by adding a symlink to a
+\&.wants/
+directory accompanying the unit file\&. For details see above\&.
+.RE
+.PP
+\fIConflicts=\fR
+.RS 4
+Configures negative requirement dependencies\&. If a unit has a
+\fIConflicts=\fR
+setting on another unit, starting the former will stop the latter and vice versa\&. Note that this setting is independent of and orthogonal to the
+\fIAfter=\fR
+and
+\fIBefore=\fR
+ordering dependencies\&.
+.sp
+If a unit A that conflicts with a unit B is scheduled to be started at the same time as B, the transaction will either fail (in case both are required part of the transaction) or be modified to be fixed (in case one or both jobs are not a required part of the transaction)\&. In the latter case the job that is not the required will be removed, or in case both are not required the unit that conflicts will be started and the unit that is conflicted is stopped\&.
+.RE
+.PP
+\fIBefore=\fR, \fIAfter=\fR
+.RS 4
+Configures ordering dependencies between units\&. If a unit
+foo\&.service
+contains a setting
+\fBBefore=bar\&.service\fR
+and both units are being started,
+bar\&.service\'s start\-up is delayed until
+foo\&.service
+is started up\&. Note that this setting is independent of and orthogonal to the requirement dependencies as configured by
+\fIRequires=\fR\&. It is a common pattern to include a unit name in both the
+\fIAfter=\fR
+and
+\fIRequires=\fR
+option in which case the unit listed will be started before the unit that is configured with these options\&. This option may be specified more than once, in which case ordering dependencies for all listed names are created\&.
+\fIAfter=\fR
+is the inverse of
+\fIBefore=\fR, i\&.e\&. while
+\fIAfter=\fR
+ensures that the configured unit is started after the listed unit finished starting up,
+\fIBefore=\fR
+ensures the opposite, i\&.e\&. that the configured unit is fully started up before the listed unit is started\&. Note that when two units with an ordering dependency between them are shut down, the inverse of the start\-up order is applied\&. i\&.e\&. if a unit is configured with
+\fIAfter=\fR
+on another unit, the former is stopped before the latter if both are shut down\&. If one unit with an ordering dependency on another unit is shut down while the latter is started up, the shut down is ordered before the start\-up regardless whether the ordering dependency is actually of type
+\fIAfter=\fR
+or
+\fIBefore=\fR\&. If two units have no ordering dependencies between them they are shut down resp\&. started up simultaneously, and no ordering takes place\&.
+.RE
+.PP
+\fIOnFailure=\fR
+.RS 4
+Lists one or more units that are activated when this unit fails (i\&.e\&. enters maintenance state)\&.
+.RE
+.PP
+\fIRecursiveStop=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+and the unit stops without being requested by the user, all units depending on it will be stopped as well\&. (e\&.g\&. if a service exits or crashes on its own behalf, units using it will be stopped) Note that normally if a unit stops without a user request, units depending on it will not be terminated\&. Only if the user requested shutdown of a unit, all units depending on that unit will be shut down as well and at the same time\&. Defaults to
+\fBfalse\fR\&.
+.RE
+.PP
+\fIStopWhenUnneeded=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+this unit will be stopped when it is no longer used\&. Note that in order to minimize the work to be executed, systemd will not stop units by default unless they are conflicting with other units, or the user explicitly requested their shut down\&. If this option is set, a unit will be automatically cleaned up if no other active unit requires it\&. Defaults to
+\fBfalse\fR\&.
+.RE
+.PP
+\fIRefuseManualStart=\fR, \fIRefuseManualStop=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+this unit can only be activated (resp\&. deactivated) indirectly\&. In this case explicit start\-up (resp\&. termination) requested by the user is denied, however if it is started (resp\&. stopped) as a dependency of another unit, start\-up (resp\&. termination) will succeed\&. This is mostly a safety feature to ensure that the user does not accidentally activate units that are not intended to be activated explicitly, and not accidentally deactivate units that are not intended to be deactivated\&. These options default to
+\fBfalse\fR\&.
+.RE
+.PP
+\fIDefaultDependencies=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+(the default), a few default dependencies will implicitly be created for the unit\&. The actual dependencies created depend on the unit type\&. For example, for service units, these dependencies ensure that the service is started only after basic system initialization is completed and is properly terminated on system shutdown\&. See the respective man pages for details\&. Generally, only services involved with early boot or late shutdown should set this option to
+\fBfalse\fR\&. It is highly recommended to leave this option enabled for the majority of common units\&. If set to
+\fBfalse\fR
+this option does not disable all implicit dependencies, just non\-essential ones\&.
+.RE
+.PP
+\fIIgnoreDependencyFailure=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+and a requirement dependency of this unit fails to start up this unit will be started nonetheless, ignoring that failure\&. If
+\fBfalse\fR
+(the default) and a dependency unit fails the unit will immediately fail too and the job is removed\&.
+.RE
+.PP
+\fIJobTimeoutSec=\fR
+.RS 4
+When clients are waiting for a job of this unit to complete, time out after the specified time\&. If this time limit is reached the job will be cancelled, the unit however will not change state or even enter maintenance mode\&. This value defaults to 0 (job timeouts disabled), except for device units\&. NB: this timeout is independent from any unit\-specific timeout (for example, the timeout set with
+\fITimeout=\fR
+in service units) as the job timeout has no effect on the unit itself, only on the job that might be pending for it\&. Or in other words: unit\-specific timeouts are useful to abort unit state changes, and revert them\&. The job timeout set with this option however is useful to abort only the job waiting for the unit state to change\&.
+.RE
+.PP
+Unit file may include a [Install] section, which carries installation information for the unit\&. This section is not interpreted by
+\fBsystemd\fR(1)
+during runtime\&. It is used exclusively by the
+\fBenable\fR
+and
+\fBdisable\fR
+commands of the
+\fBsystemctl\fR(1)
+tool during installation of a unit:
+.PP
+\fIAlias=\fR
+.RS 4
+Additional names this unit shall be installed under\&. The names listed here must have the same suffix (i\&.e\&. type) as the unit file name\&. This option may be specified more than once, in which case all listed names are used\&. At installation time,
+\fBsystemctl enable\fR
+will create symlinks from these names to the unit file name\&. Note that this is different from the
+\fINames=\fR
+option from the [Unit] section mentioned above: The names from
+\fINames=\fR
+apply unconditionally if the unit is loaded\&. The names from
+\fIAlias=\fR
+apply only if the unit has actually been installed with the
+\fBsystemctl enable\fR
+command\&. Also, if systemd searches for a unit, it will discover symlinked alias names as configured with
+\fIAlias=\fR, but not names configured with
+\fINames=\fR
+only\&. It is a common pattern to list a name in both options\&. In this case, a unit will be active under all names if installed, but also if not installed but requested explicitly under its main name\&.
+.RE
+.PP
+\fIWantedBy=\fR
+.RS 4
+Installs a symlink in the
+\&.wants/
+subdirectory for a unit\&. This has the effect that when the listed unit name is activated the unit listing it is activated too\&.
+\fBWantedBy=foo\&.service\fR
+in a service
+bar\&.service
+is mostly equivalent to
+\fBAlias=foo\&.service\&.wants/bar\&.service\fR
+in the same file\&.
+.RE
+.PP
+\fIAlso=\fR
+.RS 4
+Additional units to install when this unit is installed\&. If the user requests installation of a unit with this option configured,
+\fBsystemctl enable\fR
+will automatically install units listed in this option as well\&.
+.RE
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBsystemctl\fR(8),
+\fBsystemd.special\fR(7),
+\fBsystemd.service\fR(5),
+\fBsystemd.socket\fR(5),
+\fBsystemd.device\fR(5),
+\fBsystemd.mount\fR(5),
+\fBsystemd.automount\fR(5),
+\fBsystemd.swap\fR(5),
+\fBsystemd.target\fR(5),
+\fBsystemd.path\fR(5),
+\fBsystemd.timer\fR(5),
+\fBsystemd.snapshot\fR(5)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE
+.SH "NOTES"
+.IP " 1." 4
+XDG Desktop Entry Specification
+.RS 4
+\%http://standards.freedesktop.org/desktop-entry-spec/latest/
+.RE

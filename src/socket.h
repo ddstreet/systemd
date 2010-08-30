@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foosockethfoo
 #define foosockethfoo
@@ -41,7 +41,7 @@ typedef enum SocketState {
         SOCKET_STOP_POST,
         SOCKET_FINAL_SIGTERM,
         SOCKET_FINAL_SIGKILL,
-        SOCKET_MAINTAINANCE,
+        SOCKET_MAINTENANCE,
         _SOCKET_STATE_MAX,
         _SOCKET_STATE_INVALID = -1
 } SocketState;
@@ -78,34 +78,51 @@ struct Socket {
 
         LIST_HEAD(SocketPort, ports);
 
-        /* Only for INET6 sockets: issue IPV6_V6ONLY sockopt */
-        SocketAddressBindIPv6Only bind_ipv6_only;
-        unsigned backlog;
+        unsigned n_accepted;
+        unsigned n_connections;
+        unsigned max_connections;
 
+        unsigned backlog;
         usec_t timeout_usec;
 
         ExecCommand* exec_command[_SOCKET_EXEC_COMMAND_MAX];
         ExecContext exec_context;
 
+        /* For Accept=no sockets refers to the one service we'll
+        activate. For Accept=yes sockets is either NULL, or filled
+        when the next service we spawn. */
         Service *service;
 
         SocketState state, deserialized_state;
 
-        KillMode kill_mode;
+        Watch timer_watch;
 
         ExecCommand* control_command;
         SocketExecCommand control_command_id;
         pid_t control_pid;
 
-        char *bind_to_device;
+        /* Only for INET6 sockets: issue IPV6_V6ONLY sockopt */
+        SocketAddressBindIPv6Only bind_ipv6_only;
+
         mode_t directory_mode;
         mode_t socket_mode;
 
-        bool accept;
-        unsigned n_accepted;
-
         bool failure;
-        Watch timer_watch;
+
+        bool accept;
+
+        /* Socket options */
+        bool keep_alive;
+        bool free_bind;
+        int priority;
+        int mark;
+        size_t receive_buffer;
+        size_t send_buffer;
+        int ip_tos;
+        int ip_ttl;
+        size_t pipe_size;
+        char *bind_to_device;
+        char *tcp_congestion;
 };
 
 /* Called from the service code when collecting fds */
@@ -117,6 +134,9 @@ void socket_notify_service_dead(Socket *s);
 /* Called from the mount code figure out if a mount is a dependency of
  * any of the sockets of this socket */
 int socket_add_one_mount_link(Socket *s, Mount *m);
+
+/* Called from the service code when a per-connection service ended */
+void socket_connection_unref(Socket *s);
 
 extern const UnitVTable socket_vtable;
 

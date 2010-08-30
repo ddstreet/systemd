@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -29,12 +29,14 @@
 #include "unit-name.h"
 #include "path.h"
 #include "dbus-path.h"
+#include "special.h"
+#include "bus-errors.h"
 
 static const UnitActiveState state_translation_table[_PATH_STATE_MAX] = {
         [PATH_DEAD] = UNIT_INACTIVE,
         [PATH_WAITING] = UNIT_ACTIVE,
         [PATH_RUNNING] = UNIT_ACTIVE,
-        [PATH_MAINTAINANCE] = UNIT_INACTIVE
+        [PATH_MAINTENANCE] = UNIT_MAINTENANCE
 };
 
 static void path_done(Unit *u) {
@@ -65,10 +67,7 @@ int path_add_one_mount_link(Path *p, Mount *m) {
                 if (!path_startswith(s->path, m->where))
                         continue;
 
-                if ((r = unit_add_dependency(UNIT(m), UNIT_BEFORE, UNIT(p), true)) < 0)
-                        return r;
-
-                if ((r = unit_add_dependency(UNIT(p), UNIT_REQUIRES, UNIT(m), true)) < 0)
+                if ((r = unit_add_two_dependencies(UNIT(p), UNIT_AFTER, UNIT_REQUIRES, UNIT(m), true)) < 0)
                         return r;
         }
 
@@ -91,7 +90,7 @@ static int path_add_mount_links(Path *p) {
 static int path_verify(Path *p) {
         assert(p);
 
-        if (UNIT(p)->meta.load_state != UNIT_LOADED)
+        if (p->meta.load_state != UNIT_LOADED)
                 return 0;
 
         if (!p->specs) {
@@ -100,6 +99,18 @@ static int path_verify(Path *p) {
         }
 
         return 0;
+}
+
+static int path_add_default_dependencies(Path *p) {
+        int r;
+
+        assert(p);
+
+        if (p->meta.manager->running_as == MANAGER_SYSTEM)
+                if ((r = unit_add_two_dependencies_by_name(UNIT(p), UNIT_AFTER, UNIT_REQUIRES, SPECIAL_SYSINIT_TARGET, NULL, true)) < 0)
+                        return r;
+
+        return unit_add_two_dependencies_by_name(UNIT(p), UNIT_BEFORE, UNIT_CONFLICTED_BY, SPECIAL_SHUTDOWN_TARGET, NULL, true);
 }
 
 static int path_load(Unit *u) {
@@ -123,6 +134,10 @@ static int path_load(Unit *u) {
 
                 if ((r = path_add_mount_links(p)) < 0)
                         return r;
+
+                if (p->meta.default_dependencies)
+                        if ((r = path_add_default_dependencies(p)) < 0)
+                                return r;
         }
 
         return path_verify(p);
@@ -130,12 +145,10 @@ static int path_load(Unit *u) {
 
 static void path_dump(Unit *u, FILE *f, const char *prefix) {
         Path *p = PATH(u);
-        const char *prefix2;
-        char *p2;
         PathSpec *s;
 
-        p2 = strappend(prefix, "\t");
-        prefix2 = p2 ? p2 : prefix;
+        assert(p);
+        assert(f);
 
         fprintf(f,
                 "%sPath State: %s\n"
@@ -149,8 +162,6 @@ static void path_dump(Unit *u, FILE *f, const char *prefix) {
                         prefix,
                         path_type_to_string(s->type),
                         s->path);
-
-        free(p2);
 }
 
 static void path_unwatch_one(Path *p, PathSpec *s) {
@@ -290,22 +301,31 @@ static void path_enter_dead(Path *p, bool success) {
         if (!success)
                 p->failure = true;
 
-        path_set_state(p, p->failure ? PATH_MAINTAINANCE : PATH_DEAD);
+        path_set_state(p, p->failure ? PATH_MAINTENANCE : PATH_DEAD);
 }
 
 static void path_enter_running(Path *p) {
         int r;
-        assert(p);
+        DBusError error;
 
-        if ((r = manager_add_job(UNIT(p)->meta.manager, JOB_START, p->unit, JOB_REPLACE, true, NULL)) < 0)
+        assert(p);
+        dbus_error_init(&error);
+
+        /* Don't start job if we are supposed to go down */
+        if (p->meta.job && p->meta.job->type == JOB_STOP)
+                return;
+
+        if ((r = manager_add_job(p->meta.manager, JOB_START, p->unit, JOB_REPLACE, true, &error, NULL)) < 0)
                 goto fail;
 
         path_set_state(p, PATH_RUNNING);
         return;
 
 fail:
-        log_warning("%s failed to queue unit startup job: %s", p->meta.id, strerror(-r));
+        log_warning("%s failed to queue unit startup job: %s", p->meta.id, bus_error(&error, r));
         path_enter_dead(p, false);
+
+        dbus_error_free(&error);
 }
 
 
@@ -363,7 +383,7 @@ static int path_start(Unit *u) {
         Path *p = PATH(u);
 
         assert(p);
-        assert(p->state == PATH_DEAD || p->state == PATH_MAINTAINANCE);
+        assert(p->state == PATH_DEAD || p->state == PATH_MAINTENANCE);
 
         if (p->unit->meta.load_state != UNIT_LOADED)
                 return -ENOENT;
@@ -536,11 +556,22 @@ fail:
         log_error("Failed find path unit: %s", strerror(-r));
 }
 
+static void path_reset_maintenance(Unit *u) {
+        Path *p = PATH(u);
+
+        assert(p);
+
+        if (p->state == PATH_MAINTENANCE)
+                path_set_state(p, PATH_DEAD);
+
+        p->failure = false;
+}
+
 static const char* const path_state_table[_PATH_STATE_MAX] = {
         [PATH_DEAD] = "dead",
         [PATH_WAITING] = "waiting",
         [PATH_RUNNING] = "running",
-        [PATH_MAINTAINANCE] = "maintainance"
+        [PATH_MAINTENANCE] = "maintenance"
 };
 
 DEFINE_STRING_TABLE_LOOKUP(path_state, PathState);
@@ -574,5 +605,8 @@ const UnitVTable path_vtable = {
 
         .fd_event = path_fd_event,
 
+        .reset_maintenance = path_reset_maintenance,
+
+        .bus_interface = "org.freedesktop.systemd1.Path",
         .bus_message_handler = bus_path_message_handler
 };

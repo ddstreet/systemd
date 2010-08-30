@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.target</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.target"><a id="systemd.target"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.target — systemd target configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.target</code></p></div><div class="refsect1" title="Description"><a id="id2815843"/><h2>Description</h2><p>A unit configuration file whose name ends in
+                <code class="filename">.target</code> encodes information about
+                a target unit of systemd, which is used for grouping
+                units and as well-known synchronization points during
+                start-up.</p><p>This unit type has no specific options. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                for the common options of all unit configuration
+                files. The common configuration items are configured
+                in the generic [Unit] and [Install] sections. A
+                separate [Target] section does not exist, since no
+                target-specific options may be configured.</p><p>Target units do not offer any additional
+                functionality on top of the generic functionality
+                provided by units. They exist merely to group units via dependencies
+                (useful as boot targets), and to establish
+                standardized names for synchronization points used in
+                dependencies between units. Among other things, target
+                units are a more flexible replacement for SysV
+                runlevels in the classic SysV init system. (And for
+                compatibility reasons special
+                target units such as
+                <code class="filename">runlevel3.target</code> exist which are used by
+                the SysV runlevel compatibility code in systemd. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>
+                for details).</p><p>Unless
+                <code class="varname">DefaultDependencies=</code> is set to
+                <code class="option">false</code>, target units will
+                implicitly complement all configured dependencies of type
+                <code class="varname">Wants=</code>,
+                <code class="varname">Requires=</code>,
+                <code class="varname">RequiresOverridable=</code> with
+                dependencies of type <code class="varname">After=</code>.
+                </p></div><div class="refsect1" title="See Also"><a id="id2815516"/><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>
+                  </p></div></div></body></html>

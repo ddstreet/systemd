@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foomissinghfoo
 #define foomissinghfoo
@@ -26,13 +26,41 @@
 
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include "macro.h"
 
 #ifndef RLIMIT_RTTIME
 #define RLIMIT_RTTIME 15
 #endif
 
+#ifndef F_LINUX_SPECIFIC_BASE
+#define F_LINUX_SPECIFIC_BASE 1024
+#endif
+
+#ifndef F_SETPIPE_SZ
+#define F_SETPIPE_SZ (F_LINUX_SPECIFIC_BASE + 7)
+#endif
+
+#ifndef F_GETPIPE_SZ
+#define F_GETPIPE_SZ (F_LINUX_SPECIFIC_BASE + 8)
+#endif
+
+#ifndef IP_FREEBIND
+#define IP_FREEBIND 15
+#endif
+
 static inline int pivot_root(const char *new_root, const char *put_old) {
         return syscall(SYS_pivot_root, new_root, put_old);
 }
+
+#ifndef AUDIT_SERVICE_START
+#define AUDIT_SERVICE_START     1130    /* Service (daemon) start */
+#endif
+
+#ifndef AUDIT_SERVICE_STOP
+#define AUDIT_SERVICE_STOP      1131    /* Service (daemon) stop */
+#endif
 
 #endif

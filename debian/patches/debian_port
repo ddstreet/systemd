@@ -1,0 +1,194 @@
+diff --git a/Makefile.am b/Makefile.am
+index 725685d..9ebc17c 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -232,6 +232,13 @@ dist_systemunit_DATA += \
+ 	units/fedora/plymouth-poweroff.service \
+ 	units/fedora/plymouth-halt.service
+ endif
++if TARGET_DEBIAN
++dist_systemunit_DATA += \
++	units/debian/halt.service \
++	units/debian/killall.service \
++	units/debian/poweroff.service \
++	units/debian/reboot.service
++endif
+ 
+ if TARGET_SUSE
+ dist_systemunit_DATA += \
+--- /dev/null
++++ b/units/debian/halt.service
+@@ -0,0 +1,30 @@
++#  This file is part of systemd.
++#
++#  Copyright 2010 Lennart Poettering
++#
++#  systemd is free software; you can redistribute it and/or modify it
++#  under the terms of the GNU General Public License as published by
++#  the Free Software Foundation; either version 2 of the License, or
++#  (at your option) any later version.
++#
++#  systemd is distributed in the hope that it will be useful, but
++#  WITHOUT ANY WARRANTY; without even the implied warranty of
++#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++#  General Public License for more details.
++#
++#  You should have received a copy of the GNU General Public License
++#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
++
++[Unit]
++Description=Halt
++DefaultDependencies=no
++Requires=shutdown.target umount.target killall.service
++After=shutdown.target umount.target killall.service
++
++[Service]
++Type=oneshot
++RemainAfterExit=yes
++Environment=INIT_HALT=HALT
++Environment=RUNLEVEL=0
++ExecStart=/etc/init.d/halt stop
++StandardOutput=tty
+diff --git a/units/debian/killall.service b/units/debian/killall.service
+new file mode 100644
+index 0000000..76cd240
+--- /dev/null
++++ b/units/debian/killall.service
+@@ -0,0 +1,28 @@
++#  This file is part of systemd.
++#
++#  Copyright 2010 Lennart Poettering
++#
++#  systemd is free software; you can redistribute it and/or modify it
++#  under the terms of the GNU General Public License as published by
++#  the Free Software Foundation; either version 2 of the License, or
++#  (at your option) any later version.
++#
++#  systemd is distributed in the hope that it will be useful, but
++#  WITHOUT ANY WARRANTY; without even the implied warranty of
++#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++#  General Public License for more details.
++#
++#  You should have received a copy of the GNU General Public License
++#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
++
++[Unit]
++Description=Kill All Processes
++DefaultDependencies=no
++After=shutdown.target
++RefuseManualStart=yes
++
++[Service]
++Type=oneshot
++RemainAfterExit=yes
++ExecStart=/etc/init.d/sendsigs stop
++StandardOutput=tty
+diff --git a/units/debian/poweroff.service b/units/debian/poweroff.service
+new file mode 100644
+index 0000000..bff7dc3
+--- /dev/null
++++ b/units/debian/poweroff.service
+@@ -0,0 +1,29 @@
++#  This file is part of systemd.
++#
++#  Copyright 2010 Lennart Poettering
++#
++#  systemd is free software; you can redistribute it and/or modify it
++#  under the terms of the GNU General Public License as published by
++#  the Free Software Foundation; either version 2 of the License, or
++#  (at your option) any later version.
++#
++#  systemd is distributed in the hope that it will be useful, but
++#  WITHOUT ANY WARRANTY; without even the implied warranty of
++#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++#  General Public License for more details.
++#
++#  You should have received a copy of the GNU General Public License
++#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
++
++[Unit]
++Description=Power-Off
++DefaultDependencies=no
++Requires=shutdown.target umount.target killall.service
++After=shutdown.target umount.target killall.service
++
++[Service]
++Type=oneshot
++RemainAfterExit=yes
++Environment=RUNLEVEL=0
++ExecStart=/etc/init.d/halt stop
++StandardOutput=tty
+diff --git a/units/debian/reboot.service b/units/debian/reboot.service
+new file mode 100644
+index 0000000..5f9fe98
+--- /dev/null
++++ b/units/debian/reboot.service
+@@ -0,0 +1,29 @@
++#  This file is part of systemd.
++#
++#  Copyright 2010 Lennart Poettering
++#
++#  systemd is free software; you can redistribute it and/or modify it
++#  under the terms of the GNU General Public License as published by
++#  the Free Software Foundation; either version 2 of the License, or
++#  (at your option) any later version.
++#
++#  systemd is distributed in the hope that it will be useful, but
++#  WITHOUT ANY WARRANTY; without even the implied warranty of
++#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++#  General Public License for more details.
++#
++#  You should have received a copy of the GNU General Public License
++#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
++
++[Unit]
++Description=Reboot
++DefaultDependencies=no
++Requires=shutdown.target umount.target killall.service
++After=shutdown.target umount.target killall.service
++
++[Service]
++Type=oneshot
++RemainAfterExit=yes
++Environment=RUNLEVEL=6
++ExecStart=/etc/init.d/reboot stop
++StandardOutput=tty
+diff --git a/units/multi-user.target.m4 b/units/multi-user.target.m4
+index 6f384fe..0991f4c 100644
+--- a/units/multi-user.target.m4
++++ b/units/multi-user.target.m4
+@@ -17,6 +17,11 @@ m4_ifdef(`TARGET_FEDORA',
+ m4_dnl On Fedora Runlevel 3 is multi-user
+ Names=runlevel3.target
+ )m4_dnl
++m4_dnl
++m4_ifdef(`TARGET_DEBIAN',
++m4_dnl On Debian Runlevel 2, 3, 4 and 5 are multi-user
++Names=runlevel2.target runlevel3.target runlevel4.target runlevel5.target
++)m4_dnl
+ m4_ifdef(`TARGET_SUSE',
+ Names=runlevel3.target
+ )m4_dnl
+diff --git a/units/local-fs.target b/units/local-fs.target
+index 52d0e68..3c6d11a 100644
+--- a/units/local-fs.target
++++ b/units/local-fs.target
+@@ -9,3 +9,5 @@
+ 
+ [Unit]
+ Description=Local File Systems
++Wants=mountall.service mountoverflowtmp.service
++After=mountall.service mountoverflowtmp.service
+diff --git a/units/remote-fs.target.m4 b/units/remote-fs.target.m4
+index f70fda4..586efe6 100644
+--- a/units/remote-fs.target.m4
++++ b/units/remote-fs.target.m4
+@@ -13,7 +13,7 @@ m4_dnl
+ m4_ifdef(`FOR_SYSTEM',
+ m4_dnl When running in system mode we need the network up
+ Requires=network.target
+-After=network.target
++After=network.target local-fs.target mountnfs.service mountnfs-bootclean.service
+ )m4_dnl
+ 
+ [Install]

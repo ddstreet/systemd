@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -35,12 +35,15 @@
 #include "load-dropin.h"
 #include "unit-name.h"
 #include "dbus-automount.h"
+#include "bus-errors.h"
+#include "special.h"
+#include "label.h"
 
 static const UnitActiveState state_translation_table[_AUTOMOUNT_STATE_MAX] = {
         [AUTOMOUNT_DEAD] = UNIT_INACTIVE,
         [AUTOMOUNT_WAITING] = UNIT_ACTIVE,
         [AUTOMOUNT_RUNNING] = UNIT_ACTIVE,
-        [AUTOMOUNT_MAINTAINANCE] = UNIT_INACTIVE,
+        [AUTOMOUNT_MAINTENANCE] = UNIT_MAINTENANCE
 };
 
 static int open_dev_autofs(Manager *m);
@@ -53,6 +56,8 @@ static void automount_init(Unit *u) {
 
         a->pipe_watch.fd = a->pipe_fd = -1;
         a->pipe_watch.type = WATCH_INVALID;
+
+        a->directory_mode = 0755;
 }
 
 static void repeat_unmout(const char *path) {
@@ -87,8 +92,8 @@ static void unmount_autofs(Automount *a) {
         /* If we reload/reexecute things we keep the mount point
          * around */
         if (a->where &&
-            (UNIT(a)->meta.manager->exit_code != MANAGER_RELOAD &&
-             UNIT(a)->meta.manager->exit_code != MANAGER_REEXECUTE))
+            (a->meta.manager->exit_code != MANAGER_RELOAD &&
+             a->meta.manager->exit_code != MANAGER_REEXECUTE))
                 repeat_unmout(a->where);
 }
 
@@ -123,10 +128,7 @@ int automount_add_one_mount_link(Automount *a, Mount *m) {
         if (path_equal(a->where, m->where))
                 return 0;
 
-        if ((r = unit_add_dependency(UNIT(m), UNIT_BEFORE, UNIT(a), true)) < 0)
-                return r;
-
-        if ((r = unit_add_dependency(UNIT(a), UNIT_REQUIRES, UNIT(m), true)) < 0)
+        if ((r = unit_add_two_dependencies(UNIT(a), UNIT_AFTER, UNIT_REQUIRES, UNIT(m), true)) < 0)
                 return r;
 
         return 0;
@@ -145,13 +147,35 @@ static int automount_add_mount_links(Automount *a) {
         return 0;
 }
 
+static int automount_add_default_dependencies(Automount *a) {
+        int r;
+
+        assert(a);
+
+        if (a->meta.manager->running_as == MANAGER_SYSTEM) {
+
+                if ((r = unit_add_dependency_by_name(UNIT(a), UNIT_AFTER, SPECIAL_FSCK_TARGET, NULL, true)) < 0)
+                        return r;
+
+                if ((r = unit_add_two_dependencies_by_name(UNIT(a), UNIT_BEFORE, UNIT_CONFLICTED_BY, SPECIAL_UMOUNT_TARGET, NULL, true)) < 0)
+                        return r;
+        }
+
+        return 0;
+}
+
 static int automount_verify(Automount *a) {
         bool b;
         char *e;
         assert(a);
 
-        if (UNIT(a)->meta.load_state != UNIT_LOADED)
+        if (a->meta.load_state != UNIT_LOADED)
                 return 0;
+
+        if (path_equal(a->where, "/")) {
+                log_error("Cannot have an automount unit for the root directory. Refusing.");
+                return -EINVAL;
+        }
 
         if (!(e = unit_name_from_path(a->where, ".automount")))
                 return -ENOMEM;
@@ -160,7 +184,7 @@ static int automount_verify(Automount *a) {
         free(e);
 
         if (!b) {
-                log_error("%s's Where setting doesn't match unit name. Refusing.", UNIT(a)->meta.id);
+                log_error("%s's Where setting doesn't match unit name. Refusing.", a->meta.id);
                 return -EINVAL;
         }
 
@@ -194,6 +218,10 @@ static int automount_load(Unit *u) {
 
                 if ((r = unit_add_dependency(u, UNIT_BEFORE, UNIT(a->mount), true)) < 0)
                         return r;
+
+                if (a->meta.default_dependencies)
+                        if ((r = automount_add_default_dependencies(a)) < 0)
+                                return r;
         }
 
         return automount_verify(a);
@@ -212,7 +240,7 @@ static void automount_set_state(Automount *a, AutomountState state) {
 
         if (state != old_state)
                 log_debug("%s changed %s -> %s",
-                          UNIT(a)->meta.id,
+                          a->meta.id,
                           automount_state_to_string(old_state),
                           automount_state_to_string(state));
 
@@ -253,9 +281,11 @@ static void automount_dump(Unit *u, FILE *f, const char *prefix) {
 
         fprintf(f,
                 "%sAutomount State: %s\n"
-                "%sWhere: %s\n",
+                "%sWhere: %s\n"
+                "%sDirectoryMode: %04o\n",
                 prefix, automount_state_to_string(a->state),
-                prefix, a->where);
+                prefix, a->where,
+                prefix, a->directory_mode);
 }
 
 static void automount_enter_dead(Automount *a, bool success) {
@@ -264,7 +294,7 @@ static void automount_enter_dead(Automount *a, bool success) {
         if (!success)
                 a->failure = true;
 
-        automount_set_state(a, a->failure ? AUTOMOUNT_MAINTAINANCE : AUTOMOUNT_DEAD);
+        automount_set_state(a, a->failure ? AUTOMOUNT_MAINTENANCE : AUTOMOUNT_DEAD);
 }
 
 static int open_dev_autofs(Manager *m) {
@@ -274,6 +304,8 @@ static int open_dev_autofs(Manager *m) {
 
         if (m->dev_autofs_fd >= 0)
                 return m->dev_autofs_fd;
+
+	label_fix("/dev/autofs");
 
         if ((m->dev_autofs_fd = open("/dev/autofs", O_CLOEXEC|O_RDONLY)) < 0) {
                 log_error("Failed to open /dev/autofs: %s", strerror(errno));
@@ -403,7 +435,7 @@ int automount_send_ready(Automount *a, int status) {
         if (set_isempty(a->tokens))
                 return 0;
 
-        if ((ioctl_fd = open_ioctl_fd(UNIT(a)->meta.manager->dev_autofs_fd, a->where, a->dev_id)) < 0) {
+        if ((ioctl_fd = open_ioctl_fd(a->meta.manager->dev_autofs_fd, a->where, a->dev_id)) < 0) {
                 r = ioctl_fd;
                 goto fail;
         }
@@ -412,6 +444,8 @@ int automount_send_ready(Automount *a, int status) {
                 log_debug("Sending failure: %s", strerror(-status));
         else
                 log_debug("Sending success.");
+
+        r = 0;
 
         /* Autofs thankfully does not hand out 0 as a token */
         while ((token = PTR_TO_UINT(set_steal_first(a->tokens)))) {
@@ -422,14 +456,12 @@ int automount_send_ready(Automount *a, int status) {
                  * if you pass a positive status code here, the kernel will
                  * freeze! Yay! */
 
-                if ((k = autofs_send_ready(UNIT(a)->meta.manager->dev_autofs_fd,
+                if ((k = autofs_send_ready(a->meta.manager->dev_autofs_fd,
                                            ioctl_fd,
                                            token,
                                            status)) < 0)
                         r = k;
         }
-
-        r = 0;
 
 fail:
         if (ioctl_fd >= 0)
@@ -452,7 +484,7 @@ static void automount_enter_waiting(Automount *a) {
         if (a->tokens)
                 set_clear(a->tokens);
 
-        if ((dev_autofs_fd = open_dev_autofs(UNIT(a)->meta.manager)) < 0) {
+        if ((dev_autofs_fd = open_dev_autofs(a->meta.manager)) < 0) {
                 r = dev_autofs_fd;
                 goto fail;
         }
@@ -532,21 +564,32 @@ fail:
 static void automount_enter_runnning(Automount *a) {
         int r;
         struct stat st;
+        DBusError error;
 
         assert(a);
         assert(a->mount);
 
-        /* Before we do anything, let's see if somebody is playing games with us? */
+        dbus_error_init(&error);
 
-        if (stat(a->where, &st) < 0) {
+        /* We don't take mount requests anymore if we are supposed to
+         * shut down anyway */
+        if (a->meta.job && a->meta.job->type == JOB_STOP) {
+                automount_send_ready(a, -EHOSTDOWN);
+                return;
+        }
+
+        mkdir_p(a->where, a->directory_mode);
+
+        /* Before we do anything, let's see if somebody is playing games with us? */
+        if (lstat(a->where, &st) < 0) {
                 log_warning("%s failed stat automount point: %m", a->meta.id);
                 goto fail;
         }
 
         if (!S_ISDIR(st.st_mode) || st.st_dev != a->dev_id)
                 log_info("%s's automount point already active?", a->meta.id);
-        else if ((r = manager_add_job(UNIT(a)->meta.manager, JOB_START, UNIT(a->mount), JOB_REPLACE, true, NULL)) < 0) {
-                log_warning("%s failed to queue mount startup job: %s", a->meta.id, strerror(-r));
+        else if ((r = manager_add_job(a->meta.manager, JOB_START, UNIT(a->mount), JOB_REPLACE, true, &error, NULL)) < 0) {
+                log_warning("%s failed to queue mount startup job: %s", a->meta.id, bus_error(&error, r));
                 goto fail;
         }
 
@@ -555,6 +598,7 @@ static void automount_enter_runnning(Automount *a) {
 
 fail:
         automount_enter_dead(a, false);
+        dbus_error_free(&error);
 }
 
 static int automount_start(Unit *u) {
@@ -562,7 +606,7 @@ static int automount_start(Unit *u) {
 
         assert(a);
 
-        assert(a->state == AUTOMOUNT_DEAD || a->state == AUTOMOUNT_MAINTAINANCE);
+        assert(a->state == AUTOMOUNT_DEAD || a->state == AUTOMOUNT_MAINTENANCE);
 
         if (path_is_mount_point(a->where)) {
                 log_error("Path %s is already a mount point, refusing start for %s", a->where, u->meta.id);
@@ -708,7 +752,7 @@ static void automount_fd_event(Unit *u, int fd, uint32_t events, Watch *w) {
                 goto fail;
         }
 
-        if ((l = loop_read(a->pipe_fd, &packet, sizeof(packet))) != sizeof(packet)) {
+        if ((l = loop_read(a->pipe_fd, &packet, sizeof(packet), true)) != sizeof(packet)) {
                 log_error("Invalid read from pipe: %s", l < 0 ? strerror(-l) : "short read");
                 goto fail;
         }
@@ -750,11 +794,22 @@ static void automount_shutdown(Manager *m) {
                 close_nointr_nofail(m->dev_autofs_fd);
 }
 
+static void automount_reset_maintenance(Unit *u) {
+        Automount *a = AUTOMOUNT(u);
+
+        assert(a);
+
+        if (a->state == AUTOMOUNT_MAINTENANCE)
+                automount_set_state(a, AUTOMOUNT_DEAD);
+
+        a->failure = false;
+}
+
 static const char* const automount_state_table[_AUTOMOUNT_STATE_MAX] = {
         [AUTOMOUNT_DEAD] = "dead",
         [AUTOMOUNT_WAITING] = "waiting",
         [AUTOMOUNT_RUNNING] = "running",
-        [AUTOMOUNT_MAINTAINANCE] = "maintainance"
+        [AUTOMOUNT_MAINTENANCE] = "maintenance"
 };
 
 DEFINE_STRING_TABLE_LOOKUP(automount_state, AutomountState);
@@ -786,6 +841,9 @@ const UnitVTable automount_vtable = {
 
         .fd_event = automount_fd_event,
 
+        .reset_maintenance = automount_reset_maintenance,
+
+        .bus_interface = "org.freedesktop.systemd1.Automount",
         .bus_message_handler = bus_automount_message_handler,
 
         .shutdown = automount_shutdown

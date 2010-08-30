@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -32,9 +32,12 @@
         "  <property name=\"Options\" type=\"s\" access=\"read\"/>\n"   \
         "  <property name=\"Type\" type=\"s\" access=\"read\"/>\n"      \
         "  <property name=\"TimeoutUSec\" type=\"t\" access=\"read\"/>\n" \
+        BUS_EXEC_COMMAND_INTERFACE("ExecMount")                         \
+        BUS_EXEC_COMMAND_INTERFACE("ExecUnmount")                       \
+        BUS_EXEC_COMMAND_INTERFACE("ExecRemount")                       \
         BUS_EXEC_CONTEXT_INTERFACE                                      \
-        "  <property name=\"KillMode\" type=\"s\" access=\"read\"/>\n"  \
         "  <property name=\"ControlPID\" type=\"u\" access=\"read\"/>\n" \
+        "  <property name=\"DirectoryMode\" type=\"u\" access=\"read\"/>\n" \
         " </interface>\n"
 
 #define INTROSPECTION                                                   \
@@ -43,10 +46,21 @@
         BUS_UNIT_INTERFACE                                              \
         BUS_MOUNT_INTERFACE                                             \
         BUS_PROPERTIES_INTERFACE                                        \
+        BUS_PEER_INTERFACE                                              \
         BUS_INTROSPECTABLE_INTERFACE                                    \
         "</node>\n"
 
 const char bus_mount_interface[] = BUS_MOUNT_INTERFACE;
+
+const char bus_mount_invalidating_properties[] =
+        "What\0"
+        "Options\0"
+        "Type\0"
+        "ExecMount\0"
+        "ExecUnmount\0"
+        "ExecRemount\0"
+        "ControlPID\0"
+        "\0";
 
 static int bus_mount_append_what(Manager *n, DBusMessageIter *i, const char *property, void *data) {
         Mount *m = data;
@@ -120,20 +134,22 @@ static int bus_mount_append_type(Manager *n, DBusMessageIter *i, const char *pro
         return 0;
 }
 
-DBusHandlerResult bus_mount_message_handler(Unit *u, DBusMessage *message) {
+DBusHandlerResult bus_mount_message_handler(Unit *u, DBusConnection *c, DBusMessage *message) {
         const BusProperty properties[] = {
                 BUS_UNIT_PROPERTIES,
-                { "org.freedesktop.systemd1.Mount", "Where",       bus_property_append_string, "s", u->mount.where         },
-                { "org.freedesktop.systemd1.Mount", "What",        bus_mount_append_what,      "s", u                      },
-                { "org.freedesktop.systemd1.Mount", "Options",     bus_mount_append_options,   "s", u                      },
-                { "org.freedesktop.systemd1.Mount", "Type",        bus_mount_append_type,      "s", u                      },
-                { "org.freedesktop.systemd1.Mount", "TimeoutUSec", bus_property_append_usec,   "t", &u->mount.timeout_usec },
-                /* ExecCommand */
+                { "org.freedesktop.systemd1.Mount", "Where",         bus_property_append_string, "s", u->mount.where         },
+                { "org.freedesktop.systemd1.Mount", "What",          bus_mount_append_what,      "s", u                      },
+                { "org.freedesktop.systemd1.Mount", "Options",       bus_mount_append_options,   "s", u                      },
+                { "org.freedesktop.systemd1.Mount", "Type",          bus_mount_append_type,      "s", u                      },
+                { "org.freedesktop.systemd1.Mount", "TimeoutUSec",   bus_property_append_usec,   "t", &u->mount.timeout_usec },
+                BUS_EXEC_COMMAND_PROPERTY("org.freedesktop.systemd1.Mount", u->mount.exec_command+MOUNT_EXEC_MOUNT,   "ExecMount"),
+                BUS_EXEC_COMMAND_PROPERTY("org.freedesktop.systemd1.Mount", u->mount.exec_command+MOUNT_EXEC_UNMOUNT, "ExecUnmount"),
+                BUS_EXEC_COMMAND_PROPERTY("org.freedesktop.systemd1.Mount", u->mount.exec_command+MOUNT_EXEC_REMOUNT, "ExecRemount"),
                 BUS_EXEC_CONTEXT_PROPERTIES("org.freedesktop.systemd1.Mount", u->mount.exec_context),
-                { "org.freedesktop.systemd1.Mount", "KillMode",    bus_unit_append_kill_mode,  "s", &u->mount.kill_mode    },
-                { "org.freedesktop.systemd1.Mount", "ControlPID",  bus_property_append_pid,    "u", &u->mount.control_pid  },
+                { "org.freedesktop.systemd1.Mount", "ControlPID",    bus_property_append_pid,    "u", &u->mount.control_pid  },
+                { "org.freedesktop.systemd1.Mount", "DirectoryMode", bus_property_append_mode,   "u", &u->mount.directory_mode },
                 { NULL, NULL, NULL, NULL, NULL }
         };
 
-        return bus_default_message_handler(u->meta.manager, message, INTROSPECTION, properties);
+        return bus_default_message_handler(u->meta.manager, c, message, INTROSPECTION, properties);
 }

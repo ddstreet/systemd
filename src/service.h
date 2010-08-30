@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef fooservicehfoo
 #define fooservicehfoo
@@ -33,7 +33,7 @@ typedef enum ServiceState {
         SERVICE_START,
         SERVICE_START_POST,
         SERVICE_RUNNING,
-        SERVICE_EXITED,            /* Nothing is running anymore, but ValidNoProcess is true, ehnce this is OK */
+        SERVICE_EXITED,            /* Nothing is running anymore, but RemainAfterExit is true, ehnce this is OK */
         SERVICE_RELOAD,
         SERVICE_STOP,              /* No STOP_PRE state, instead just register multiple STOP executables */
         SERVICE_STOP_SIGTERM,
@@ -41,7 +41,7 @@ typedef enum ServiceState {
         SERVICE_STOP_POST,
         SERVICE_FINAL_SIGTERM,     /* In case the STOP_POST executable hangs, we shoot that down, too */
         SERVICE_FINAL_SIGKILL,
-        SERVICE_MAINTAINANCE,
+        SERVICE_MAINTENANCE,
         SERVICE_AUTO_RESTART,
         _SERVICE_STATE_MAX,
         _SERVICE_STATE_INVALID = -1
@@ -58,8 +58,9 @@ typedef enum ServiceRestart {
 typedef enum ServiceType {
         SERVICE_SIMPLE,   /* we fork and go on right-away (i.e. modern socket activated daemons) */
         SERVICE_FORKING,  /* forks by itself (i.e. traditional daemons) */
-        SERVICE_FINISH,   /* we fork and wait until the program finishes (i.e. programs like fsck which run and need to finish before we continue) */
+        SERVICE_ONESHOT,  /* we fork and wait until the program finishes (i.e. programs like fsck which run and need to finish before we continue) */
         SERVICE_DBUS,     /* we fork and wait until a specific D-Bus name appears on the bus */
+        SERVICE_NOTIFY,   /* we fork and wait until a daemon sends us a ready message with sd_notify() */
         _SERVICE_TYPE_MAX,
         _SERVICE_TYPE_INVALID = -1
 } ServiceType;
@@ -74,6 +75,14 @@ typedef enum ServiceExecCommand {
         _SERVICE_EXEC_COMMAND_MAX,
         _SERVICE_EXEC_COMMAND_INVALID = -1
 } ServiceExecCommand;
+
+typedef enum NotifyAccess {
+        NOTIFY_NONE,
+        NOTIFY_ALL,
+        NOTIFY_MAIN,
+        _NOTIFY_ACCESS_MAX,
+        _NOTIFY_ACCESS_INVALID = -1
+} NotifyAccess;
 
 struct Service {
         Meta meta;
@@ -90,47 +99,49 @@ struct Service {
         ExecCommand* exec_command[_SERVICE_EXEC_COMMAND_MAX];
         ExecContext exec_context;
 
-        bool permissions_start_only;
-        bool root_directory_start_only;
-        bool valid_no_process;
-
         ServiceState state, deserialized_state;
-
-        KillMode kill_mode;
 
         ExecStatus main_exec_status;
 
         ExecCommand *control_command;
         ServiceExecCommand control_command_id;
         pid_t main_pid, control_pid;
-        bool main_pid_known:1;
+
+        bool permissions_start_only;
+        bool root_directory_start_only;
+        bool remain_after_exit;
 
         /* If we shut down, remember why */
         bool failure:1;
-
+        bool main_pid_known:1;
         bool bus_name_good:1;
-
-        bool allow_restart:1;
-
+        bool forbid_restart:1;
         bool got_socket_fd:1;
-
         bool sysv_has_lsb:1;
-        char *sysv_path;
+        bool sysv_enabled:1;
+
+        int socket_fd;
         int sysv_start_priority;
+
+        char *sysv_path;
         char *sysv_runlevels;
 
         char *bus_name;
 
+        char *status_text;
+
         RateLimit ratelimit;
 
-        int socket_fd;
+        struct Socket *socket;
 
         Watch timer_watch;
+
+        NotifyAccess notify_access;
 };
 
 extern const UnitVTable service_vtable;
 
-int service_set_socket_fd(Service *s, int fd);
+int service_set_socket_fd(Service *s, int fd, struct Socket *socket);
 
 const char* service_state_to_string(ServiceState i);
 ServiceState service_state_from_string(const char *s);
@@ -143,5 +154,8 @@ ServiceType service_type_from_string(const char *s);
 
 const char* service_exec_command_to_string(ServiceExecCommand i);
 ServiceExecCommand service_exec_command_from_string(const char *s);
+
+const char* notify_access_to_string(NotifyAccess i);
+NotifyAccess notify_access_from_string(const char *s);
 
 #endif

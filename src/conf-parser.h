@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef fooconfparserhfoo
 #define fooconfparserhfoo
@@ -23,6 +23,7 @@
 ***/
 
 #include <stdio.h>
+#include <stdbool.h>
 
 /* An abstract parser for simple, line based, shallow configuration
  * files consisting of variable assignments only. */
@@ -40,7 +41,7 @@ typedef struct ConfigItem {
 /* The configuration file parsing routine. Expects a table of
  * config_items in *t that is terminated by an item where lvalue is
  * NULL */
-int config_parse(const char *filename, FILE *f, const char* const * sections, const ConfigItem *t, void *userdata);
+int config_parse(const char *filename, FILE *f, const char* const *sections, const ConfigItem *t, bool relaxed, void *userdata);
 
 /* Generic parsers */
 int config_parse_int(const char *filename, unsigned line, const char *section, const char *lvalue, const char *rvalue, void *data, void *userdata);
@@ -51,5 +52,32 @@ int config_parse_string(const char *filename, unsigned line, const char *section
 int config_parse_path(const char *filename, unsigned line, const char *section, const char *lvalue, const char *rvalue, void *data, void *userdata);
 int config_parse_strv(const char *filename, unsigned line, const char *section, const char *lvalue, const char *rvalue, void *data, void *userdata);
 int config_parse_path_strv(const char *filename, unsigned line, const char *section, const char *lvalue, const char *rvalue, void *data, void *userdata);
+
+#define DEFINE_CONFIG_PARSE_ENUM(function,name,type,msg)                \
+        int function(                                                   \
+                        const char *filename,                           \
+                        unsigned line,                                  \
+                        const char *section,                            \
+                        const char *lvalue,                             \
+                        const char *rvalue,                             \
+                        void *data,                                     \
+                        void *userdata) {                               \
+                                                                        \
+                type *i = data, x;                                      \
+                                                                        \
+                assert(filename);                                       \
+                assert(lvalue);                                         \
+                assert(rvalue);                                         \
+                assert(data);                                           \
+                                                                        \
+                if ((x = name##_from_string(rvalue)) < 0) {             \
+                        log_error("[%s:%u] " msg ", ignoring: %s", filename, line, rvalue); \
+                        return 0;                                       \
+                }                                                       \
+                                                                        \
+                *i = x;                                                 \
+                                                                        \
+                return 0;                                               \
+        }
 
 #endif

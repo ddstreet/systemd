@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -31,7 +31,8 @@
 
 static const char * const kmod_table[] = {
         "autofs4", "/sys/class/misc/autofs",
-        "ipv6",    "/sys/module/ipv6"
+        "ipv6",    "/sys/module/ipv6",
+        "unix",    "/proc/net/unix"
 };
 
 int kmod_setup(void) {
@@ -47,9 +48,9 @@ int kmod_setup(void) {
                 if (access(kmod_table[i+1], F_OK) >= 0)
                         continue;
 
-                log_info("Your kernel apparently lacks built-in %s support. Please fix that. "
-                         "We'll now try to work around this by calling '/sbin/modprobe %s'...",
-                         kmod_table[i], kmod_table[i]);
+                log_debug("Your kernel apparently lacks built-in %s support. Might be a good idea to compile it in. "
+                          "We'll now try to work around this by calling '/sbin/modprobe %s'...",
+                          kmod_table[i], kmod_table[i]);
 
                 cmdline[3 + n++] = kmod_table[i];
         }
@@ -69,7 +70,7 @@ int kmod_setup(void) {
         command.argv = (char**) cmdline;
 
         exec_context_init(&context);
-        r = exec_spawn(&command, NULL, &context, NULL, 0, NULL, false, false, false, NULL, &pid);
+        r = exec_spawn(&command, NULL, &context, NULL, 0, NULL, false, false, false, false, NULL, &pid);
         exec_context_done(&context);
 
         if (r < 0)
@@ -98,7 +99,7 @@ int kmod_setup(void) {
         }
 
         if (WIFSIGNALED(status)) {
-                log_warning("/sbin/modprobe terminated by signal %s.", strsignal(WTERMSIG(status)));
+                log_warning("/sbin/modprobe terminated by signal %s.", signal_to_string(WTERMSIG(status)));
                 return -EPROTO;
         }
 

@@ -7,10 +7,12 @@
 
 [Unit]
 Description=Kill All Processes
+DefaultDependencies=no
 After=shutdown.target
-OnlyByDependency=yes
+RefuseManualStart=yes
 
 [Service]
-Type=finish
-ValidNoProcess=yes
-ExecStart=/etc/init.d/killall start
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=-/etc/init.d/killall start
+StandardOutput=tty
