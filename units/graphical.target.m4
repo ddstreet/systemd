@@ -14,9 +14,12 @@ After=multi-user.target
 Conflicts=rescue.target
 m4_dnl
 m4_ifdef(`TARGET_FEDORA',
-m4_dnl On Fedora Runlevel 5 is graphical login
+# On Fedora Runlevel 5 is graphical login
 Names=runlevel5.target
 )m4_dnl
 m4_ifdef(`TARGET_SUSE',
 Names=runlevel5.target
 )m4_dnl
+
+[Install]
+Alias=default.target m4_ifdef(`TARGET_FEDORA', runlevel5.target)

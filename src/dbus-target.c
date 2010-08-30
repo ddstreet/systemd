@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -19,6 +19,8 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+#include <errno.h>
+
 #include "dbus-unit.h"
 #include "dbus-target.h"
 
@@ -32,16 +34,17 @@
         BUS_UNIT_INTERFACE                                              \
         BUS_TARGET_INTERFACE                                            \
         BUS_PROPERTIES_INTERFACE                                        \
+        BUS_PEER_INTERFACE                                              \
         BUS_INTROSPECTABLE_INTERFACE                                    \
         "</node>\n"
 
 const char bus_target_interface[] = BUS_TARGET_INTERFACE;
 
-DBusHandlerResult bus_target_message_handler(Unit *u, DBusMessage *message) {
+DBusHandlerResult bus_target_message_handler(Unit *u, DBusConnection *c, DBusMessage *message) {
         const BusProperty properties[] = {
                 BUS_UNIT_PROPERTIES,
                 { NULL, NULL, NULL, NULL, NULL }
         };
 
-        return bus_default_message_handler(u->meta.manager, message, INTROSPECTION, properties);
+        return bus_default_message_handler(u->meta.manager, c, message, INTROSPECTION, properties);
 }

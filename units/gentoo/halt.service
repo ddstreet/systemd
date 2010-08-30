@@ -7,13 +7,13 @@
 
 [Unit]
 Description=Halt
-Requires=shutdown.target killall.service
-After=shutdown.target killall.service
-Conflicts=dev-hugepages.automount dev-mqueue.automount proc-sys-fs-binfmt_misc.automount sys-kernel-debug.automount sys-kernel-security.automount
+DefaultDependencies=no
+Requires=shutdown.target umount.target killall.service
+After=shutdown.target umount.target killall.service
 
 [Service]
-Type=finish
-ValidNoProcess=yes
-Environment=INIT_HALT=HALT
-Environment=RC_DOWN_HARDDISK=yes
+Type=oneshot
+RemainAfterExit=yes
+Environment=INIT_HALT=HALT RC_DOWN_HARDDISK=yes
 ExecStart=/etc/init.d/shutdown.sh
+StandardOutput=tty

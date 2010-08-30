@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -42,13 +42,23 @@ typedef struct MountPoint {
 } MountPoint;
 
 static const MountPoint mount_table[] = {
-        { "proc",     "/proc",           "proc",     NULL,                MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
-        { "sysfs",    "/sys",            "sysfs",    NULL,                MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
-        { "devtmpfs", "/dev",            "devtmpfs", "mode=755",          MS_NOSUID,                    true },
-        { "tmpfs",    "/dev/shm",        "tmpfs",    "mode=1777",         MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
-        { "devpts",   "/dev/pts",        "devpts",   NULL,                MS_NOSUID|MS_NOEXEC|MS_NODEV, false },
-        { "tmpfs",    "/cgroup",         "tmpfs",    "mode=755",          MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
-        { "cgroup",   "/cgroup/systemd", "cgroup",   "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+        { "proc",     "/proc",                  "proc",     NULL,                MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+        { "sysfs",    "/sys",                   "sysfs",    NULL,                MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+        { "devtmpfs", "/dev",                   "devtmpfs", "mode=755",          MS_NOSUID,                    true },
+        { "tmpfs",    "/dev/shm",               "tmpfs",    "mode=1777",         MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+        { "devpts",   "/dev/pts",               "devpts",   NULL,                MS_NOSUID|MS_NOEXEC,          false },
+        { "tmpfs",    "/sys/fs/cgroup",         "tmpfs",    "mode=755",          MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+        { "cgroup",   "/sys/fs/cgroup/systemd", "cgroup",   "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+};
+
+/* These are API file systems that might be mounted by other software,
+ * we just list them here so that we know that we should igore them */
+
+static const char * const ignore_paths[] = {
+        "/selinux",
+        "/proc/bus/usb",
+        "/var/lib/nfs/rpc_pipefs",
+        "/proc/fs/nfsd"
 };
 
 bool mount_point_is_api(const char *path) {
@@ -58,10 +68,14 @@ bool mount_point_is_api(const char *path) {
          * should be ignored */
 
         for (i = 0; i < ELEMENTSOF(mount_table); i ++)
-                if (path_startswith(path, mount_table[i].where))
+                if (path_equal(path, mount_table[i].where))
                         return true;
 
-        return path_startswith(path, "/cgroup/");
+        for (i = 0; i < ELEMENTSOF(ignore_paths); i++)
+                if (path_equal(path, ignore_paths[i]))
+                        return true;
+
+        return path_startswith(path, "/sys/fs/cgroup/");
 }
 
 static int mount_one(const MountPoint *p) {
@@ -124,7 +138,7 @@ static int mount_cgroup_controllers(void) {
                         goto finish;
                 }
 
-                if (asprintf(&where, "/cgroup/%s", controller) < 0) {
+                if (asprintf(&where, "/sys/fs/cgroup/%s", controller) < 0) {
                         free(controller);
                         r = -ENOMEM;
                         goto finish;

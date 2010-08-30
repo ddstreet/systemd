@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foodevicehfoo
 #define foodevicehfoo
@@ -30,7 +30,7 @@ typedef struct Device Device;
  * simplifies the state engine greatly */
 typedef enum DeviceState {
         DEVICE_DEAD,
-        DEVICE_AVAILABLE,
+        DEVICE_PLUGGED,
         _DEVICE_STATE_MAX,
         _DEVICE_STATE_INVALID = -1
 } DeviceState;
@@ -38,9 +38,15 @@ typedef enum DeviceState {
 struct Device {
         Meta meta;
 
-        DeviceState state;
-
         char *sysfs;
+
+        /* In order to be able to distuingish dependencies on
+        different device nodes we might end up creating multiple
+        devices for the same sysfs path. We chain them up here. */
+
+        LIST_FIELDS(struct Device, same_sysfs);
+
+        DeviceState state;
 };
 
 extern const UnitVTable device_vtable;

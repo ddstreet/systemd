@@ -1,13 +1,40 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* AUDIT available */
+#undef HAVE_AUDIT
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
 /* Define if GTK is available */
 #undef HAVE_GTK
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the <libaudit.h> header file. */
+#undef HAVE_LIBAUDIT_H
+
+/* Have tcpwrap? */
+#undef HAVE_LIBWRAP
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* PAM available */
+#undef HAVE_PAM
+
+/* Define to 1 if you have the <security/pam_ext.h> header file. */
+#undef HAVE_SECURITY_PAM_EXT_H
+
+/* Define to 1 if you have the <security/pam_modules.h> header file. */
+#undef HAVE_SECURITY_PAM_MODULES_H
+
+/* Define to 1 if you have the <security/pam_modutil.h> header file. */
+#undef HAVE_SECURITY_PAM_MODUTIL_H
+
+/* Define if SELINUX is available */
+#undef HAVE_SELINUX
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -33,6 +60,10 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
 /* Define to 1 if your C compiler doesn't accept -c and -o together. */
 #undef NO_MINUS_C_MINUS_O
 
@@ -57,9 +88,6 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* D-Bus service name */
-#undef SPECIAL_DBUS_SERVICE
-
 /* Syslog service name */
 #undef SPECIAL_SYSLOG_SERVICE
 
@@ -81,7 +109,7 @@
 /* Target is Slackware */
 #undef TARGET_SLACKWARE
 
-/* Target is OpenSUSE/SLE */
+/* Target is openSUSE/SLE */
 #undef TARGET_SUSE
 
 /* Enable extensions on AIX 3, Interix.  */

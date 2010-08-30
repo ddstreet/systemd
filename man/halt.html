@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>halt</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="halt"><a id="halt"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>halt, poweroff, reboot — Halt, power-off or reboot the machine</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">halt [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">poweroff [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">reboot [OPTIONS...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id2710682"/><h2>Description</h2><p><span class="command"><strong>halt</strong></span>,
+                <span class="command"><strong>poweroff</strong></span>, <span class="command"><strong>reboot</strong></span>
+                may be used to halt, power-off or reboot the
+                machine.</p></div><div class="refsect1" title="Options"><a id="id2710710"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--halt</code></span></dt><dd><p>Halt the machine,
+                                regardless which one of the three
+                                commands is invoked.</p></dd><dt><span class="term"><code class="option">-p</code>, </span><span class="term"><code class="option">--poweroff</code></span></dt><dd><p>Power-off the machine,
+                                regardless which one of the three
+                                commands is invoked.</p></dd><dt><span class="term"><code class="option">--reboot</code></span></dt><dd><p>Reboot the machine,
+                                regardless which one of the three
+                                commands is invoked.</p></dd><dt><span class="term"><code class="option">-f</code>, </span><span class="term"><code class="option">--force</code></span></dt><dd><p>Force immediate halt,
+                                power-off, reboot. Don't contact the
+                                init system.</p></dd><dt><span class="term"><code class="option">-w</code>, </span><span class="term"><code class="option">--wtmp-only</code></span></dt><dd><p>Only write wtmp
+                                shutdown entry, don't actually halt,
+                                power-off, reboot.</p></dd><dt><span class="term"><code class="option">-d</code>, </span><span class="term"><code class="option">--no-wtmp</code></span></dt><dd><p>Don't write wtmp
+                                shutdown entry.</p></dd><dt><span class="term"><code class="option">-n</code>, </span><span class="term"><code class="option">--no-sync</code></span></dt><dd><p>Don't sync hard disks/storage media before
+                                halt, power-off,
+                                reboot.</p></dd><dt><span class="term"><code class="option">--no-wall</code></span></dt><dd><p>Don't send wall
+                                message before
+                                halt, power-off, reboot.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id2710219"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="Notes"><a id="id2710230"/><h2>Notes</h2><p>These are legacy commands available for
+                compatibility only.</p></div><div class="refsect1" title="See Also"><a id="id2710241"/><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">shutdown</span>(8)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span>
+                </p></div></div></body></html>

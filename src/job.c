@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -21,6 +21,8 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <sys/timerfd.h>
+#include <sys/epoll.h>
 
 #include "set.h"
 #include "unit.h"
@@ -45,6 +47,8 @@ Job* job_new(Manager *m, JobType type, Unit *unit) {
         j->id = m->current_job_id++;
         j->type = type;
         j->unit = unit;
+
+        j->timer_watch.type = WATCH_INVALID;
 
         /* We don't link it here, that's what job_dependency() is for */
 
@@ -76,10 +80,20 @@ void job_free(Job *j) {
         if (j->in_dbus_queue)
                 LIST_REMOVE(Job, dbus_queue, j->manager->dbus_job_queue, j);
 
+        if (j->timer_watch.type != WATCH_INVALID) {
+                assert(j->timer_watch.type == WATCH_JOB_TIMER);
+                assert(j->timer_watch.data.job == j);
+                assert(j->timer_watch.fd >= 0);
+
+                assert_se(epoll_ctl(j->manager->epoll_fd, EPOLL_CTL_DEL, j->timer_watch.fd, NULL) >= 0);
+                close_nointr_nofail(j->timer_watch.fd);
+        }
+
+        free(j->bus_client);
         free(j);
 }
 
-JobDependency* job_dependency_new(Job *subject, Job *object, bool matters) {
+JobDependency* job_dependency_new(Job *subject, Job *object, bool matters, bool conflicts) {
         JobDependency *l;
 
         assert(object);
@@ -95,6 +109,7 @@ JobDependency* job_dependency_new(Job *subject, Job *object, bool matters) {
         l->subject = subject;
         l->object = object;
         l->matters = matters;
+        l->conflicts = conflicts;
 
         if (subject)
                 LIST_PREPEND(JobDependency, subject, subject->subject_list, l);
@@ -117,30 +132,6 @@ void job_dependency_free(JobDependency *l) {
         LIST_REMOVE(JobDependency, object, l->object->object_list, l);
 
         free(l);
-}
-
-void job_dependency_delete(Job *subject, Job *object, bool *matters) {
-        JobDependency *l;
-
-        assert(object);
-
-        LIST_FOREACH(object, l, object->object_list) {
-                assert(l->object == object);
-
-                if (l->subject == subject)
-                        break;
-        }
-
-        if (!l) {
-                if (matters)
-                        *matters = false;
-                return;
-        }
-
-        if (matters)
-                *matters = l->matters;
-
-        job_dependency_free(l);
 }
 
 void job_dump(Job *j, FILE*f, const char *prefix) {
@@ -275,25 +266,26 @@ bool job_type_is_redundant(JobType a, UnitActiveState b) {
         case JOB_START:
                 return
                         b == UNIT_ACTIVE ||
-                        b == UNIT_ACTIVE_RELOADING;
+                        b == UNIT_RELOADING;
 
         case JOB_STOP:
                 return
-                        b == UNIT_INACTIVE;
+                        b == UNIT_INACTIVE ||
+                        b == UNIT_MAINTENANCE;
 
         case JOB_VERIFY_ACTIVE:
                 return
                         b == UNIT_ACTIVE ||
-                        b == UNIT_ACTIVE_RELOADING;
+                        b == UNIT_RELOADING;
 
         case JOB_RELOAD:
                 return
-                        b == UNIT_ACTIVE_RELOADING;
+                        b == UNIT_RELOADING;
 
         case JOB_RELOAD_OR_START:
                 return
                         b == UNIT_ACTIVATING ||
-                        b == UNIT_ACTIVE_RELOADING;
+                        b == UNIT_RELOADING;
 
         case JOB_RESTART:
                 return
@@ -361,6 +353,8 @@ bool job_is_runnable(Job *j) {
 
 int job_run_and_invalidate(Job *j) {
         int r;
+        uint32_t id;
+        Manager *m;
 
         assert(j);
         assert(j->installed);
@@ -378,6 +372,14 @@ int job_run_and_invalidate(Job *j) {
 
         j->state = JOB_RUNNING;
         job_add_to_dbus_queue(j);
+
+        /* While we execute this operation the job might go away (for
+         * example: because it is replaced by a new, conflicting
+         * job.) To make sure we don't access a freed job later on we
+         * store the id here, so that we can verify the job is still
+         * valid. */
+        id = j->id;
+        m = j->manager;
 
         switch (j->type) {
 
@@ -415,7 +417,7 @@ int job_run_and_invalidate(Job *j) {
 
                 case JOB_RESTART: {
                         UnitActiveState t = unit_active_state(j->unit);
-                        if (t == UNIT_INACTIVE || t == UNIT_ACTIVATING) {
+                        if (t == UNIT_INACTIVE || t == UNIT_MAINTENANCE || t == UNIT_ACTIVATING) {
                                 j->type = JOB_START;
                                 r = unit_start(j->unit);
                         } else
@@ -425,7 +427,7 @@ int job_run_and_invalidate(Job *j) {
 
                 case JOB_TRY_RESTART: {
                         UnitActiveState t = unit_active_state(j->unit);
-                        if (t == UNIT_INACTIVE || t == UNIT_DEACTIVATING)
+                        if (t == UNIT_INACTIVE || t == UNIT_MAINTENANCE || t == UNIT_DEACTIVATING)
                                 r = -ENOEXEC;
                         else if (t == UNIT_ACTIVATING) {
                                 j->type = JOB_START;
@@ -439,13 +441,14 @@ int job_run_and_invalidate(Job *j) {
                         assert_not_reached("Unknown job type");
         }
 
-        if (r == -EALREADY)
-                r = job_finish_and_invalidate(j, true);
-        else if (r == -EAGAIN) {
-                j->state = JOB_WAITING;
-                return -EAGAIN;
-        } else if (r < 0)
-                r = job_finish_and_invalidate(j, false);
+        if ((j = manager_get_job(m, id))) {
+                if (r == -EALREADY)
+                        r = job_finish_and_invalidate(j, true);
+                else if (r == -EAGAIN)
+                        j->state = JOB_WAITING;
+                else if (r < 0)
+                        r = job_finish_and_invalidate(j, false);
+        }
 
         return r;
 }
@@ -459,7 +462,6 @@ int job_finish_and_invalidate(Job *j, bool success) {
         assert(j);
         assert(j->installed);
 
-        log_debug("Job %s/%s finished, success=%s", j->unit->meta.id, job_type_to_string(j->type), yes_no(success));
         job_add_to_dbus_queue(j);
 
         /* Patch restart jobs so that they become normal start jobs */
@@ -469,17 +471,22 @@ int job_finish_and_invalidate(Job *j, bool success) {
                           j->unit->meta.id, job_type_to_string(j->type),
                           j->unit->meta.id, job_type_to_string(JOB_START));
 
-                j->state = JOB_RUNNING;
+                j->state = JOB_WAITING;
                 j->type = JOB_START;
 
                 job_add_to_run_queue(j);
                 return 0;
         }
 
+        log_debug("Job %s/%s finished, success=%s", j->unit->meta.id, job_type_to_string(j->type), yes_no(success));
+
         j->failed = !success;
         u = j->unit;
         t = j->type;
         job_free(j);
+
+        if (!success)
+                unit_status_printf(u, "Starting %s " ANSI_HIGHLIGHT_ON "failed" ANSI_HIGHLIGHT_OFF ".\n", unit_description(u));
 
         /* Fail depending jobs on failure */
         if (!success) {
@@ -489,14 +496,16 @@ int job_finish_and_invalidate(Job *j, bool success) {
                     t == JOB_RELOAD_OR_START) {
 
                         SET_FOREACH(other, u->meta.dependencies[UNIT_REQUIRED_BY], i)
-                                if (other->meta.job &&
+                                if (!other->meta.ignore_dependency_failure &&
+                                    other->meta.job &&
                                     (other->meta.job->type == JOB_START ||
                                      other->meta.job->type == JOB_VERIFY_ACTIVE ||
                                      other->meta.job->type == JOB_RELOAD_OR_START))
                                         job_finish_and_invalidate(other->meta.job, false);
 
                         SET_FOREACH(other, u->meta.dependencies[UNIT_REQUIRED_BY_OVERRIDABLE], i)
-                                if (other->meta.job &&
+                                if (!other->meta.ignore_dependency_failure &&
+                                    other->meta.job &&
                                     !other->meta.job->override &&
                                     (other->meta.job->type == JOB_START ||
                                      other->meta.job->type == JOB_VERIFY_ACTIVE ||
@@ -506,7 +515,16 @@ int job_finish_and_invalidate(Job *j, bool success) {
                 } else if (t == JOB_STOP) {
 
                         SET_FOREACH(other, u->meta.dependencies[UNIT_CONFLICTS], i)
-                                if (other->meta.job &&
+                                if (!other->meta.ignore_dependency_failure &&
+                                    other->meta.job &&
+                                    (other->meta.job->type == JOB_START ||
+                                     other->meta.job->type == JOB_VERIFY_ACTIVE ||
+                                     other->meta.job->type == JOB_RELOAD_OR_START))
+                                        job_finish_and_invalidate(other->meta.job, false);
+
+                        SET_FOREACH(other, u->meta.dependencies[UNIT_CONFLICTED_BY], i)
+                                if (!other->meta.ignore_dependency_failure &&
+                                    other->meta.job &&
                                     (other->meta.job->type == JOB_START ||
                                      other->meta.job->type == JOB_VERIFY_ACTIVE ||
                                      other->meta.job->type == JOB_RELOAD_OR_START))
@@ -523,6 +541,53 @@ int job_finish_and_invalidate(Job *j, bool success) {
                         job_add_to_run_queue(other->meta.job);
 
         return 0;
+}
+
+int job_start_timer(Job *j) {
+        struct itimerspec its;
+        struct epoll_event ev;
+        int fd, r;
+        assert(j);
+
+        if (j->unit->meta.job_timeout <= 0 ||
+            j->timer_watch.type == WATCH_JOB_TIMER)
+                return 0;
+
+        assert(j->timer_watch.type == WATCH_INVALID);
+
+        if ((fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK|TFD_CLOEXEC)) < 0) {
+                r = -errno;
+                goto fail;
+        }
+
+        zero(its);
+        timespec_store(&its.it_value, j->unit->meta.job_timeout);
+
+        if (timerfd_settime(fd, 0, &its, NULL) < 0) {
+                r = -errno;
+                goto fail;
+        }
+
+        zero(ev);
+        ev.data.ptr = &j->timer_watch;
+        ev.events = EPOLLIN;
+
+        if (epoll_ctl(j->manager->epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0) {
+                r = -errno;
+                goto fail;
+        }
+
+        j->timer_watch.type = WATCH_JOB_TIMER;
+        j->timer_watch.fd = fd;
+        j->timer_watch.data.job = j;
+
+        return 0;
+
+fail:
+        if (fd >= 0)
+                close_nointr_nofail(fd);
+
+        return r;
 }
 
 void job_add_to_run_queue(Job *j) {
@@ -543,10 +608,9 @@ void job_add_to_dbus_queue(Job *j) {
         if (j->in_dbus_queue)
                 return;
 
-        if (set_isempty(j->manager->subscribed)) {
-                j->sent_dbus_new_signal = true;
-                return;
-        }
+        /* We don't check if anybody is subscribed here, since this
+         * job might just have been created and not yet assigned to a
+         * connection/client. */
 
         LIST_PREPEND(Job, dbus_queue, j->manager->dbus_job_queue, j);
         j->in_dbus_queue = true;
@@ -561,6 +625,14 @@ char *job_dbus_path(Job *j) {
                 return NULL;
 
         return p;
+}
+
+void job_timer_event(Job *j, uint64_t n_elapsed, Watch *w) {
+        assert(j);
+        assert(w == &j->timer_watch);
+
+        log_warning("Job %s/%s timed out.", j->unit->meta.id, job_type_to_string(j->type));
+        job_finish_and_invalidate(j, false);
 }
 
 static const char* const job_state_table[_JOB_STATE_MAX] = {

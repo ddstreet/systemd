@@ -1,0 +1,270 @@
+'\" t
+.\"     Title: pam_systemd
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 08/25/2010
+.\"    Manual: pam_systemd
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "PAM_SYSTEMD" "8" "08/25/2010" "systemd" "pam_systemd"
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+pam_systemd \- Register user sessions in the systemd control group hierarchy
+.SH "SYNOPSIS"
+.HP \w'\fBpam_systemd\&.so\fR\ 'u
+\fBpam_systemd\&.so\fR
+.SH "DESCRIPTION"
+.PP
+\fBpam_systemd\fR
+registers user sessions in the systemd control group hierarchy\&.
+.PP
+On login, this module ensures the following:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+If it does not exist yet, the user runtime directory
+/var/run/user/$USER
+is created and its ownership changed to the user that is logging in\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+If
+\fBcreate\-session=1\fR
+is set, the
+\fI$XDG_SESSION_ID\fR
+environment variable is initialized\&. If auditing is available and
+\fBpam_loginuid\&.so\fR
+run before this module (which is highly recommended), the variable is initialized from the auditing session id (/proc/self/sessionid)\&. Otherwise an independent session counter is used\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  3." 4.2
+.\}
+If
+\fBcreate\-session=1\fR
+is set, a new control group
+/user/$USER/$XDG_SESSION_ID
+is created and the login process moved into it\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 4.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  4." 4.2
+.\}
+If
+\fBcreate\-session=0\fR
+is set, a new control group
+/user/$USER/no\-session
+is created and the login process moved into it\&.
+.RE
+.PP
+On logout, this module ensures the following:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+If
+\fI$XDG_SESSION_ID\fR
+is set and
+\fBkill\-session=1\fR
+specified, all remaining processes in the
+/user/$USER/$XDG_SESSION_ID
+control group are killed and the control group is removed\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+If
+\fI$XDG_SESSION_ID\fR
+is set and
+\fBkill\-session=0\fR
+specified, all remaining processes in the
+/user/$USER/$XDG_SESSION_ID
+control group are migrated to
+/user/$USER/no\-session
+and the original control group is removed\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  3." 4.2
+.\}
+If
+\fBkill\-user=1\fR
+is specified, and no other user session control group remains, except
+/user/$USER/no\-session, all remaining processes in the
+/user/$USER
+hierarchy are killed and the control group is removed\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 4.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  4." 4.2
+.\}
+If
+\fBkill\-user=0\fR
+is specified, and no process remains in the
+/user/$USER
+hierarchy the control group is removed\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 5.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  5." 4.2
+.\}
+If the
+/user/$USER
+control group was removed the
+\fI$XDG_RUNTIME_DIR\fR
+directory and all its contents are removed, too\&.
+.RE
+.PP
+If the system was not booted up with systemd as init system, this module does nothing and immediately returns PAM_SUCCESS\&.
+.SH "OPTIONS"
+.PP
+The following options are understood:
+.PP
+\fBcreate\-session=\fR
+.RS 4
+Takes a boolean argument\&. If true, a new session is created: the
+\fI$XDG_SESSION_ID\fR
+environment variable is set and the login process moved to the
+/user/$USER/$XDG_SESSION_ID
+control group\&. It is recommended that all services which are directly created on the user\'s behalf set this option\&. Only for services that shall automatically be terminated when the user logs out completely, otherwise
+\fIcreate\-session=0\fR
+should be set\&.
+.RE
+.PP
+\fBkill\-session=\fR
+.RS 4
+Takes a boolean argument\&. If true, all processes created by the user during his session and from his session will be terminated when he logs out from his session\&.
+.RE
+.PP
+\fBkill\-user=\fR
+.RS 4
+Takes a boolean argument\&. If true, all processes created by the user during his session and from his session will be terminated after he logged out completely\&. This is a weaker version of
+\fBkill\-session=1\fR
+and is more friendly for users logged in more than once, as their processes are terminated only on their complete logout\&.
+.RE
+.PP
+Note that setting
+\fIkill\-user=1\fR
+or even
+\fIkill\-session=1\fR
+will break tools like
+\fBscreen\fR(1)\&.
+.PP
+If the options are omitted they default to
+\fBcreate\-session=1\fR,
+\fBkill\-session=0\fR,
+\fBkill\-user=0\fR\&.
+.SH "MODULE TYPES PROVIDED"
+.PP
+Only
+\fBsession\fR
+is provided\&.
+.SH "ENVIRONMENT"
+.PP
+The following environment variables are set for the processes of the user\'s session:
+.PP
+\fI$XDG_SESSION_ID\fR
+.RS 4
+A session identifier, suitable to be used in file names\&. The string itself should be considered opaque, although often it is just the audit session ID as reported by
+/proc/self/sessionid\&. Each ID will be assigned only once during machine uptime\&. It may hence be used to uniquely label files or other resources of this session\&.
+.RE
+.PP
+\fI$XDG_RUNTIME_DIR\fR
+.RS 4
+Path to a user\-private user\-writable directory that is bound to the user login time on the machine\&. It is automatically created the first time a user logs in and removed on his final logout\&. If a user logs in twice at the same time, both sessions will see the same
+\fI$XDG_RUNTIME_DIR\fR
+and the same contents\&. If a user logs in once, then logs out again, and logs in again, the directory contents will have been lost in between, but applications should not rely on this behaviour and must be able to deal with stale files\&. To store session\-private data in this directory the user should include the value of
+\fI$XDG_SESSION_ID\fR
+in the filename\&. This directory shall be used for runtime file system objects such as AF_UNIX sockets, FIFOs, PID files and similar\&. It is guaranteed that this directory is local and offers the greatest possible file system feature set the operating system provides\&.
+.RE
+.SH "EXAMPLE"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+#%PAM\-1\&.0
+auth       required     pam_unix\&.so
+auth       required     pam_nologin\&.so
+account    required     pam_unix\&.so
+password   required     pam_unix\&.so
+session    required     pam_unix\&.so
+session    required     pam_loginuid\&.so
+session    required     pam_systemd\&.so kill\-user=1
+.fi
+.if n \{\
+.RE
+.\}
+.SH "SEE ALSO"
+.PP
+
+\fBpam.conf\fR(5),
+\fBpam.d\fR(5),
+\fBpam\fR(8),
+\fBpam_loginuid\fR(8),
+\fBsystemd\fR(1)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

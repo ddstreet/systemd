@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foocgrouphfoo
 #define foocgrouphfoo
@@ -22,8 +22,6 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include <libcgroup.h>
-
 typedef struct CGroupBonding CGroupBonding;
 
 #include "unit.h"
@@ -34,8 +32,6 @@ struct CGroupBonding {
         char *path;
 
         Unit *unit;
-
-        struct cgroup *cgroup;
 
         /* For the Unit::cgroup_bondings list */
         LIST_FIELDS(CGroupBonding, by_unit);
@@ -49,8 +45,8 @@ struct CGroupBonding {
         /* When our tasks are the only ones in this group */
         bool only_us:1;
 
-        /* Inherit parameters from parent group */
-        bool inherit:1;
+        /* This cgroup is realized */
+        bool realized:1;
 };
 
 int cgroup_bonding_realize(CGroupBonding *b);
@@ -65,6 +61,9 @@ int cgroup_bonding_install_list(CGroupBonding *first, pid_t pid);
 int cgroup_bonding_kill(CGroupBonding *b, int sig);
 int cgroup_bonding_kill_list(CGroupBonding *first, int sig);
 
+void cgroup_bonding_trim(CGroupBonding *first, bool delete_root);
+void cgroup_bonding_trim_list(CGroupBonding *first, bool delete_root);
+
 int cgroup_bonding_is_empty(CGroupBonding *b);
 int cgroup_bonding_is_empty_list(CGroupBonding *first);
 
@@ -75,8 +74,10 @@ char *cgroup_bonding_to_string(CGroupBonding *b);
 #include "manager.h"
 
 int manager_setup_cgroup(Manager *m);
-int manager_shutdown_cgroup(Manager *m, bool delete);
+void manager_shutdown_cgroup(Manager *m, bool delete);
 
 int cgroup_notify_empty(Manager *m, const char *group);
+
+Unit* cgroup_unit_by_pid(Manager *m, pid_t pid);
 
 #endif

@@ -1,0 +1,59 @@
+'\" t
+.\"     Title: systemd.conf
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 08/25/2010
+.\"    Manual: systemd.conf
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\&.CONF" "5" "08/25/2010" "systemd" "systemd.conf"
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd.conf \- systemd manager configuration file
+.SH "SYNOPSIS"
+.PP
+system\&.conf
+.PP
+session\&.conf
+.SH "DESCRIPTION"
+.PP
+When run as system instance systemd reads the configuration file
+system\&.conf, otherwise
+session\&.conf\&. These configuration files contain a few settings controlling basic manager operations\&.
+.SH "OPTIONS"
+.PP
+All options are configured in the
+[Manager]
+section:
+.PP
+\fILogLevel=\fR, \fILogTarget=\fR, \fILogColor=\fR, \fILogLocation=\fR, \fIDumpCore=yes\fR, \fICrashShell=no\fR, \fIShowStatus=yes\fR, \fICrashChVT=1\fR
+.RS 4
+Configures various parameters of basic manager operation\&. These options may be overriden by the respective command line arguments\&. See
+\fBsystemd\fR(1)
+for details about these command line arguments\&.
+.RE
+.PP
+\fICPUAffinity=\fR
+.RS 4
+Configures the initial CPU affinity for the init process\&. Takes a space\-seperated list of CPU indexes\&.
+.RE
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

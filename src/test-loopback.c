@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -22,8 +22,10 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #include "loopback-setup.h"
+#include "util.h"
 
 int main(int argc, char* argv[]) {
         int r;

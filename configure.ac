@@ -17,12 +17,12 @@
 
 AC_PREREQ(2.63)
 
-AC_INIT([systemd],[0],[systemd-devel@lists.freedesktop.org])
+AC_INIT([systemd],[8],[systemd-devel@lists.freedesktop.org])
 AC_CONFIG_SRCDIR([src/main.c])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
-AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules tar-pax subdir-objects])
+AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules tar-pax subdir-objects dist-bzip2])
 
 AC_SUBST(PACKAGE_URL, [http://www.freedesktop.org/wiki/Software/systemd])
 
@@ -48,14 +48,12 @@ AC_PROG_GCC_TRADITIONAL
 AC_USE_SYSTEM_EXTENSIONS
 
 CC_CHECK_CFLAGS_APPEND([ \
+        -pipe \
         -Wall \
         -W \
         -Wextra \
-        -pipe \
-        -Wno-long-long \
-        -Winline \
+        -Wno-inline \
         -Wvla \
-        -Wno-overlength-strings \
         -Wundef \
         -Wformat=2 \
         -Wlogical-op \
@@ -78,25 +76,33 @@ CC_CHECK_CFLAGS_APPEND([ \
         -Wcast-align \
         -Wstrict-aliasing=2 \
         -Wwrite-strings \
+        -Wno-long-long \
+        -Wno-overlength-strings \
         -Wno-unused-parameter \
-        -ffast-math \
+        -Wno-missing-field-initializers \
+        -Wno-unused-result \
         -Wp,-D_FORTIFY_SOURCE=2 \
+        -ffast-math \
         -fno-common \
         -fdiagnostics-show-option \
-        -Wno-missing-field-initializers])
+        -fno-strict-aliasing])
+
+LT_PREREQ(2.2)
+LT_INIT
 
 AC_SEARCH_LIBS([clock_gettime], [rt], [], [AC_MSG_ERROR([*** POSIX RT library not found])])
+AC_SEARCH_LIBS([dlsym], [dl], [], [AC_MSG_ERROR([*** Dynamic linking loader library not found])])
 AC_SEARCH_LIBS([cap_init], [cap], [], [AC_MSG_ERROR([*** POSIX caps library not found])])
 AC_CHECK_HEADERS([sys/capability.h], [], [AC_MSG_ERROR([*** POSIX caps headers not found])])
 
 # This makes sure pkg.m4 is available.
 m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
 
-PKG_CHECK_MODULES(UDEV, [ libudev >= 154 ])
+PKG_CHECK_MODULES(UDEV, [ libudev >= 160 ])
 AC_SUBST(UDEV_CFLAGS)
 AC_SUBST(UDEV_LIBS)
 
-PKG_CHECK_MODULES(DBUS, [ dbus-1 ])
+PKG_CHECK_MODULES(DBUS, [ dbus-1 >= 1.3.2 ])
 AC_SUBST(DBUS_CFLAGS)
 AC_SUBST(DBUS_LIBS)
 
@@ -104,9 +110,118 @@ PKG_CHECK_MODULES(DBUSGLIB, [ dbus-glib-1 ])
 AC_SUBST(DBUSGLIB_CFLAGS)
 AC_SUBST(DBUSGLIB_LIBS)
 
-PKG_CHECK_MODULES(CGROUP, [ libcgroup >= 0.36 ])
-AC_SUBST(CGROUP_CFLAGS)
-AC_SUBST(CGROUP_LIBS)
+have_selinux=no
+AC_ARG_ENABLE(selinux, AS_HELP_STRING([--disable-selinux], [Disable optional SELINUX support]))
+if test "x$enable_selinux" != "xno"; then
+	# not using PKG_CHECK_MODULES as for some reason libselinux didn't
+	# install any pkg-config modules here
+	AC_SEARCH_LIBS([getcon], [selinux],
+                [AC_DEFINE(HAVE_SELINUX, 1, [Define if SELINUX is available]) have_selinux=yes],
+		have_selinux=no)
+        AC_SUBST(SELINUX_CFLAGS)
+        AC_SUBST(SELINUX_LIBS)
+        if test "x$have_selinux" = xno -a "x$enable_selinux" = xyes; then
+                AC_MSG_ERROR([*** selinux support requested but libraries not found])
+        fi
+fi
+AM_CONDITIONAL(HAVE_SELINUX, [test "$have_selinux" = "yes"])
+
+AC_ARG_ENABLE([tcpwrap],
+        AS_HELP_STRING([--disable-tcpwrap],[Disable optional TCP wrappers support]),
+                [case "${enableval}" in
+                        yes) have_tcpwrap=yes ;;
+                        no) have_tcpwrap=no ;;
+                        *) AC_MSG_ERROR(bad value ${enableval} for --disable-tcpwrap) ;;
+                esac],
+                [have_tcpwrap=auto])
+
+if test "x${have_tcpwrap}" != xno ; then
+        ACX_LIBWRAP
+        if test "x${LIBWRAP_LIBS}" = x ; then
+                if test "x$have_tcpwrap" = xyes ; then
+                        AC_MSG_ERROR([*** TCP wrappers support not found.])
+                fi
+                have_tcpwrap=no
+        else
+                have_tcpwrap=yes
+        fi
+else
+        LIBWRAP_LIBS=
+fi
+AC_SUBST(LIBWRAP_LIBS)
+
+AC_ARG_ENABLE([pam],
+        AS_HELP_STRING([--disable-pam],[Disable optional PAM support]),
+                [case "${enableval}" in
+                        yes) have_pam=yes ;;
+                        no) have_pam=no ;;
+                        *) AC_MSG_ERROR(bad value ${enableval} for --disable-pam) ;;
+                esac],
+                [have_pam=auto])
+
+if test "x${have_pam}" != xno ; then
+        AC_CHECK_HEADERS(
+                [security/pam_modules.h security/pam_modutil.h security/pam_ext.h],
+                [have_pam=yes],
+                [if test "x$have_pam" = xyes ; then
+                        AC_MSG_ERROR([*** PAM headers not found.])
+                fi])
+
+        AC_CHECK_LIB(
+                [pam],
+                [pam_syslog],
+                [have_pam=yes],
+                [if test "x$have_pam" = xyes ; then
+                        AC_MSG_ERROR([*** libpam not found.])
+                fi])
+
+        if test "x$have_pam" = xyes ; then
+                PAM_LIBS="-lpam -lpam_misc"
+                AC_DEFINE(HAVE_PAM, 1, [PAM available])
+        else
+                have_pam=no
+        fi
+else
+        PAM_LIBS=
+fi
+AC_SUBST(PAM_LIBS)
+AM_CONDITIONAL([HAVE_PAM], [test "x$have_pam" != xno])
+
+AC_ARG_ENABLE([audit],
+        AS_HELP_STRING([--disable-audit],[Disable optional AUDIT support]),
+                [case "${enableval}" in
+                        yes) have_audit=yes ;;
+                        no) have_audit=no ;;
+                        *) AC_MSG_ERROR(bad value ${enableval} for --disable-audit) ;;
+                esac],
+                [have_audit=auto])
+
+if test "x${have_audit}" != xno ; then
+        AC_CHECK_HEADERS(
+                [libaudit.h],
+                [have_audit=yes],
+                [if test "x$have_audit" = xyes ; then
+                        AC_MSG_ERROR([*** AUDIT headers not found.])
+                fi])
+
+        AC_CHECK_LIB(
+                [audit],
+                [audit_open],
+                [have_audit=yes],
+                [if test "x$have_audit" = xyes ; then
+                        AC_MSG_ERROR([*** libaudit not found.])
+                fi])
+
+        if test "x$have_audit" = xyes ; then
+                AUDIT_LIBS="-laudit"
+                AC_DEFINE(HAVE_AUDIT, 1, [AUDIT available])
+        else
+                have_audit=no
+        fi
+else
+        AUDIT_LIBS=
+fi
+AC_SUBST(AUDIT_LIBS)
 
 have_gtk=no
 AC_ARG_ENABLE(gtk, AS_HELP_STRING([--disable-gtk], [disable GTK tools]))
@@ -121,7 +236,7 @@ if test "x$enable_gtk" != "xno"; then
 fi
 AM_CONDITIONAL(HAVE_GTK, [test "$have_gtk" = "yes"])
 
-AM_PROG_VALAC([0.8])
+AM_PROG_VALAC([0.9])
 AC_SUBST(VAPIDIR)
 AM_CONDITIONAL(HAVE_VALAC, test x"$VALAC" != x)
 
@@ -149,7 +264,6 @@ fi
 with_distro=`echo ${with_distro} | tr '[[:upper:]]' '[[:lower:]]' `
 
 # Default generic names
-SPECIAL_DBUS_SERVICE=dbus.service
 SPECIAL_SYSLOG_SERVICE=syslog.service
 
 # Location of the init scripts as mandated by LSB
@@ -162,24 +276,23 @@ case $with_distro in
                 SYSTEM_SYSVINIT_PATH=/etc/rc.d/init.d
                 SYSTEM_SYSVRCND_PATH=/etc/rc.d
 
-                # A little background why we define these special unit
+                # A little background why we define this special unit
                 # names here in configure.ac: SysV services currently
                 # cannot have aliases. As long as syslog is started
-                # via a SysV init script we hence define these names
-                # to the actual SysV name here. Later on when SysV
-                # init scripts are not used anymore it is advisable to
-                # use the generic names instead and use symlinks in
-                # the unit directories to point to the right native
-                # unit file.
+                # via a SysV init script we hence define this name to
+                # the actual SysV name here. Later on when SysV init
+                # scripts are not used anymore it is advisable to use
+                # the generic name instead and use symlinks in the
+                # unit directories to point to the right native unit
+                # file.
 
-                SPECIAL_DBUS_SERVICE=messagebus.service
                 SPECIAL_SYSLOG_SERVICE=rsyslog.service
                 AC_DEFINE(TARGET_FEDORA, [], [Target is Fedora/RHEL])
                 M4_DISTRO_FLAG=-DTARGET_FEDORA=1
                 ;;
         suse)
                 SYSTEM_SYSVRCND_PATH=/etc/init.d
-                AC_DEFINE(TARGET_SUSE, [], [Target is OpenSUSE/SLE])
+                AC_DEFINE(TARGET_SUSE, [], [Target is openSUSE/SLE])
                 M4_DISTRO_FLAG=-DTARGET_SUSE=1
                 ;;
         debian)
@@ -204,7 +317,6 @@ case $with_distro in
         slackware)
                 SYSTEM_SYSVINIT_PATH=/etc/rc.d/init.d
                 SYSTEM_SYSVRCND_PATH=/etc/rc.d
-                SPECIAL_DBUS_SERVICE=messagebus.service
                 AC_DEFINE(TARGET_SLACKWARE, [], [Target is Slackware])
                 M4_DISTRO_FLAG=-DTARGET_SLACKWARE=1
                 ;;
@@ -213,8 +325,6 @@ case $with_distro in
                         [AC_MSG_ERROR([With --distro=other, you must pass --with-sysvinit-path= to configure])])
                 AS_IF([test "x$with_sysvrcd_path" = "x"],
                         [AC_MSG_ERROR([With --distro=other, you must pass --with-sysvrcd-path= to configure])])
-                AS_IF([test "x$with_dbus_service" = "x"],
-                        [AC_MSG_ERROR([With --distro=other, you must pass --with-dbus-service= to configure])])
                 AS_IF([test "x$with_syslog_service" = "x"],
                         [AC_MSG_ERROR([With --distro=other, you must pass --with-syslog-service= to configure])])
                 ;;
@@ -235,21 +345,14 @@ AC_ARG_WITH([sysvrcd-path],
         [SYSTEM_SYSVRCND_PATH="$withval"],
         [])
 
-AC_ARG_WITH([dbus-service],
-        [AS_HELP_STRING([--with-dbus-service=PATH],
-                [Specify the name of the special DBus service @<:@default=based on distro@:>@])],
-        [SPECIAL_DBUS_SERVICE="$withval"],
-        [])
-
 AC_ARG_WITH([syslog-service],
-        [AS_HELP_STRING([--with-syslog-service=PATH],
+        [AS_HELP_STRING([--with-syslog-service=UNIT],
                 [Specify the name of the special syslog service @<:@default=based on distro@:>@])],
         [SPECIAL_SYSLOG_SERVICE="$withval"],
         [])
 
 AC_SUBST(SYSTEM_SYSVINIT_PATH)
 AC_SUBST(SYSTEM_SYSVRCND_PATH)
-AC_SUBST(SPECIAL_DBUS_SERVICE)
 AC_SUBST(SPECIAL_SYSLOG_SERVICE)
 AC_SUBST(M4_DISTRO_FLAG)
 
@@ -260,19 +363,49 @@ AM_CONDITIONAL(TARGET_ARCH, test x"$with_distro" = xarch)
 AM_CONDITIONAL(TARGET_GENTOO, test x"$with_distro" = xgentoo)
 AM_CONDITIONAL(TARGET_SLACKWARE, test x"$with_distro" = xslackware)
 
-AC_DEFINE_UNQUOTED(SPECIAL_DBUS_SERVICE, ["$SPECIAL_DBUS_SERVICE"], [D-Bus service name])
 AC_DEFINE_UNQUOTED(SPECIAL_SYSLOG_SERVICE, ["$SPECIAL_SYSLOG_SERVICE"], [Syslog service name])
+
+AC_ARG_WITH([dbuspolicydir],
+        AS_HELP_STRING([--with-dbuspolicydir=DIR], [D-Bus policy directory]),
+        [],
+        [with_dbuspolicydir=`pkg-config --variable=sysconfdir dbus-1`/dbus-1/system.d])
+
+AC_ARG_WITH([dbussessionservicedir],
+        AS_HELP_STRING([--with-dbussessionservicedir=DIR], [D-Bus session service directory]),
+        [],
+        [with_dbussessionservicedir=`pkg-config --variable=session_bus_services_dir dbus-1`])
+
+AC_ARG_WITH([dbussystemservicedir],
+        AS_HELP_STRING([--with-dbussystemservicedir=DIR], [D-Bus system service directory]),
+        [],
+        [with_dbussystemservicedir=`pkg-config --variable=session_bus_services_dir dbus-1`/../system-services])
+
+AC_ARG_WITH([dbusinterfacedir],
+        AS_HELP_STRING([--with-dbusinterfacedir=DIR], [D-Bus interface directory]),
+        [],
+        [with_dbusinterfacedir=`pkg-config --variable=session_bus_services_dir dbus-1`/../interfaces])
 
 AC_ARG_WITH([udevrulesdir],
         AS_HELP_STRING([--with-udevrulesdir=DIR], [Diectory for udev rules]),
         [],
-        [with_udevrulesdir=/lib/udev/rules.d])
-AC_SUBST([udevrulesdir], [$with_udevrulesdir])
+        [with_udevrulesdir=`pkg-config --variable=udevdir udev`/rules.d])
+
+AC_ARG_WITH([pamlibdir],
+        AS_HELP_STRING([--with-pamlibdir=DIR], [Diectory for PAM modules]),
+        [],
+        [with_pamlibdir=/lib/`$CC -print-multi-os-directory`/security])
 
 AC_ARG_WITH([rootdir],
         AS_HELP_STRING([--with-rootdir=DIR], [Root directory for files necessary for boot]),
         [],
         [with_rootdir=${ac_default_prefix}])
+
+AC_SUBST([dbuspolicydir], [$with_dbuspolicydir])
+AC_SUBST([dbussessionservicedir], [$with_dbussessionservicedir])
+AC_SUBST([dbussystemservicedir], [$with_dbussystemservicedir])
+AC_SUBST([dbusinterfacedir], [$with_dbusinterfacedir])
+AC_SUBST([udevrulesdir], [$with_udevrulesdir])
+AC_SUBST([pamlibdir], [$with_pamlibdir])
 AC_SUBST([rootdir], [$with_rootdir])
 
 AC_CONFIG_FILES([Makefile])
@@ -285,9 +418,15 @@ echo "
         SysV init scripts:       ${SYSTEM_SYSVINIT_PATH}
         SysV rc?.d directories:  ${SYSTEM_SYSVRCND_PATH}
         Syslog service:          ${SPECIAL_SYSLOG_SERVICE}
-        D-Bus service:           ${SPECIAL_DBUS_SERVICE}
         Gtk:                     ${have_gtk}
+        tcpwrap:                 ${have_tcpwrap}
+        PAM:                     ${have_pam}
         prefix:                  ${prefix}
         root dir:                ${with_rootdir}
         udev rules dir:          ${with_udevrulesdir}
+        pam modules dir:         ${with_pamlibdir}
+        dbus policy dir:         ${with_dbuspolicydir}
+        dbus session dir:        ${with_dbussessionservicedir}
+        dbus system dir:         ${with_dbussystemservicedir}
+        dbus interfaces dir:     ${with_dbusinterfacedir}
 "

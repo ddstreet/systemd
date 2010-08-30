@@ -7,11 +7,13 @@
 
 [Unit]
 Description=System Initialization
-Before=local-fs.target remote-fs.target swap.target sockets.target
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target emergency.service emergency.target
 
 [Service]
 ExecStart=/etc/rc.d/rc.sysinit
 Type=forking
 TimeoutSec=0
 StandardInput=tty
-ValidNoProcess=yes
+RemainAfterExit=yes

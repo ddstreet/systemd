@@ -7,11 +7,13 @@
 
 [Unit]
 Description=Power-Off
-Requires=shutdown.target
-After=shutdown.target
-Conflicts=dev-hugepages.automount dev-mqueue.automount proc-sys-fs-binfmt_misc.automount sys-kernel-debug.automount sys-kernel-security.automount
+DefaultDependencies=no
+Requires=shutdown.target umount.target
+After=shutdown.target umount.target
 
 [Service]
-Type=finish
-ValidNoProcess=yes
-ExecStart=/etc/init.d/halt start
+Type=oneshot
+RemainAfterExit=yes
+Environment=COLD_BOOT=1
+ExecStart=/etc/init.d/halt
+StandardOutput=tty

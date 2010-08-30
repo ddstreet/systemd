@@ -13,8 +13,8 @@
 
 m4_ifndef([AC_AUTOCONF_VERSION],
   [m4_copy([m4_PACKAGE_VERSION], [AC_AUTOCONF_VERSION])])dnl
-m4_if(m4_defn([AC_AUTOCONF_VERSION]), [2.65],,
-[m4_warning([this file was generated for autoconf 2.65.
+m4_if(m4_defn([AC_AUTOCONF_VERSION]), [2.66],,
+[m4_warning([this file was generated for autoconf 2.66.
 You have another version of autoconf.  It may work, but is not guaranteed to.
 If you have problems, you may need to regenerate the build system entirely.
 To do so, use the procedure documented by the package, typically `autoreconf'.])])
@@ -156,7 +156,7 @@ $$1_PKG_ERRORS
 Consider adjusting the PKG_CONFIG_PATH environment variable if you
 installed software in a non-standard prefix.
 
-_PKG_TEXT])dnl
+_PKG_TEXT])
         ])
 elif test $pkg_failed = untried; then
      	AC_MSG_RESULT([no])
@@ -167,7 +167,7 @@ path to pkg-config.
 
 _PKG_TEXT
 
-To get pkg-config, see <http://pkg-config.freedesktop.org/>.])dnl
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.])
         ])
 else
 	$1[]_CFLAGS=$pkg_cv_[]$1[]_CFLAGS
@@ -1216,4 +1216,10 @@ AC_DEFUN([AM_PROG_VALAC],
           AC_MSG_ERROR([Vala $1 not found.])])])])
 ])
 
+m4_include([m4/acx_libwrap.m4])
 m4_include([m4/attributes.m4])
+m4_include([m4/libtool.m4])
+m4_include([m4/ltoptions.m4])
+m4_include([m4/ltsugar.m4])
+m4_include([m4/ltversion.m4])
+m4_include([m4/lt~obsolete.m4])
