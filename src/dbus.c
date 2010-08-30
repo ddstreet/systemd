@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -42,6 +42,9 @@
 #include "dbus-swap.h"
 #include "dbus-timer.h"
 #include "dbus-path.h"
+#include "bus-errors.h"
+
+#define CONNECTIONS_MAX 52
 
 static const char bus_properties_interface[] = BUS_PROPERTIES_INTERFACE;
 static const char bus_introspectable_interface[] = BUS_INTROSPECTABLE_INTERFACE;
@@ -66,33 +69,25 @@ const char *const bus_interface_table[] = {
 };
 
 static const char *error_to_dbus(int error);
+static void bus_done_api(Manager *m);
+static void bus_done_system(Manager *m);
+static void bus_done_private(Manager *m);
+static void shutdown_connection(Manager *m, DBusConnection *c);
 
-static void api_bus_dispatch_status(DBusConnection *bus, DBusDispatchStatus status, void *data)  {
+static void bus_dispatch_status(DBusConnection *bus, DBusDispatchStatus status, void *data)  {
         Manager *m = data;
 
         assert(bus);
         assert(m);
 
-        if (!m->api_bus)
-                return;
+        /* We maintain two sets, one for those connections where we
+         * requested a dispatch, and another where we didn't. And then,
+         * we move the connections between the two sets. */
 
-        assert(m->api_bus == bus);
-
-        m->request_api_bus_dispatch = status != DBUS_DISPATCH_COMPLETE;
-}
-
-static void system_bus_dispatch_status(DBusConnection *bus, DBusDispatchStatus status, void *data)  {
-        Manager *m = data;
-
-        assert(bus);
-        assert(m);
-
-        if (!m->system_bus)
-                return;
-
-        assert(m->system_bus == bus);
-
-        m->request_system_bus_dispatch = status != DBUS_DISPATCH_COMPLETE;
+        if (status == DBUS_DISPATCH_COMPLETE)
+                set_move_one(m->bus_connections, m->bus_connections_for_dispatch, bus);
+        else
+                set_move_one(m->bus_connections_for_dispatch, m->bus_connections, bus);
 }
 
 static uint32_t bus_flags_to_events(DBusWatch *bus_watch) {
@@ -332,7 +327,7 @@ static void bus_toggle_timeout(DBusTimeout *timeout, void *data) {
                 log_error("Failed to rearm timer: %s", strerror(-r));
 }
 
-static DBusHandlerResult api_bus_message_filter(DBusConnection  *connection, DBusMessage  *message, void *data) {
+static DBusHandlerResult api_bus_message_filter(DBusConnection *connection, DBusMessage *message, void *data) {
         Manager *m = data;
         DBusError error;
         DBusMessage *reply = NULL;
@@ -343,13 +338,15 @@ static DBusHandlerResult api_bus_message_filter(DBusConnection  *connection, DBu
 
         dbus_error_init(&error);
 
-        /* log_debug("Got D-Bus request: %s.%s() on %s", */
-        /*           dbus_message_get_interface(message), */
-        /*           dbus_message_get_member(message), */
-        /*           dbus_message_get_path(message)); */
+        if (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL ||
+            dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_SIGNAL)
+                log_debug("Got D-Bus request: %s.%s() on %s",
+                          dbus_message_get_interface(message),
+                          dbus_message_get_member(message),
+                          dbus_message_get_path(message));
 
         if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
-                log_error("Warning! API D-Bus connection terminated.");
+                log_debug("API D-Bus connection terminated.");
                 bus_done_api(m);
 
         } else if (dbus_message_is_signal(message, DBUS_INTERFACE_DBUS, "NameOwnerChanged")) {
@@ -362,8 +359,8 @@ static DBusHandlerResult api_bus_message_filter(DBusConnection  *connection, DBu
                                            DBUS_TYPE_INVALID))
                         log_error("Failed to parse NameOwnerChanged message: %s", error.message);
                 else  {
-                        if (set_remove(m->subscribed, (char*) name))
-                                log_debug("Subscription client vanished: %s (left: %u)", name, set_size(m->subscribed));
+                        if (set_remove(BUS_CONNECTION_SUBSCRIBED(m, connection), (char*) name))
+                                log_debug("Subscription client vanished: %s (left: %u)", name, set_size(BUS_CONNECTION_SUBSCRIBED(m, connection)));
 
                         if (old_owner[0] == 0)
                                 old_owner = NULL;
@@ -386,22 +383,24 @@ static DBusHandlerResult api_bus_message_filter(DBusConnection  *connection, DBu
 
                         log_debug("Got D-Bus activation request for %s", name);
 
-                        r = manager_load_unit(m, name, NULL, &u);
+                        r = manager_load_unit(m, name, NULL, &error, &u);
 
-                        if (r >= 0 && u->meta.only_by_dependency)
+                        if (r >= 0 && u->meta.refuse_manual_start)
                                 r = -EPERM;
 
                         if (r >= 0)
-                                r = manager_add_job(m, JOB_START, u, JOB_REPLACE, true, NULL);
+                                r = manager_add_job(m, JOB_START, u, JOB_REPLACE, true, &error, NULL);
 
                         if (r < 0) {
                                 const char *id, *text;
 
+                                log_warning("D-Bus activation failed for %s: %s", name, strerror(-r));
+
                                 if (!(reply = dbus_message_new_signal("/org/freedesktop/systemd1", "org.freedesktop.systemd1.Activator", "ActivationFailure")))
                                         goto oom;
 
-                                id = error_to_dbus(r);
-                                text = strerror(-r);
+                                id = error.name ? error.name : error_to_dbus(r);
+                                text = bus_error(&error, r);
 
                                 if (!dbus_message_set_destination(reply, DBUS_SERVICE_DBUS) ||
                                     !dbus_message_append_args(reply,
@@ -436,7 +435,7 @@ oom:
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
 }
 
-static DBusHandlerResult system_bus_message_filter(DBusConnection  *connection, DBusMessage  *message, void *data) {
+static DBusHandlerResult system_bus_message_filter(DBusConnection *connection, DBusMessage *message, void *data) {
         Manager *m = data;
         DBusError error;
 
@@ -446,16 +445,19 @@ static DBusHandlerResult system_bus_message_filter(DBusConnection  *connection, 
 
         dbus_error_init(&error);
 
-        /* log_debug("Got D-Bus request: %s.%s() on %s", */
-        /*           dbus_message_get_interface(message), */
-        /*           dbus_message_get_member(message), */
-        /*           dbus_message_get_path(message)); */
+        if (m->api_bus != m->system_bus &&
+            (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL ||
+             dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_SIGNAL))
+                log_debug("Got D-Bus request on system bus: %s.%s() on %s",
+                          dbus_message_get_interface(message),
+                          dbus_message_get_member(message),
+                          dbus_message_get_path(message));
 
         if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
-                log_error("Warning! System D-Bus connection terminated.");
+                log_debug("System D-Bus connection terminated.");
                 bus_done_system(m);
 
-        } if (dbus_message_is_signal(message, "org.freedesktop.systemd1.Agent", "Released")) {
+        } else if (dbus_message_is_signal(message, "org.freedesktop.systemd1.Agent", "Released")) {
                 const char *cgroup;
 
                 if (!dbus_message_get_args(message, &error,
@@ -470,7 +472,44 @@ static DBusHandlerResult system_bus_message_filter(DBusConnection  *connection, 
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
+static DBusHandlerResult private_bus_message_filter(DBusConnection *connection, DBusMessage *message, void *data) {
+        Manager *m = data;
+        DBusError error;
+
+        assert(connection);
+        assert(message);
+        assert(m);
+
+        dbus_error_init(&error);
+
+        if (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL ||
+            dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_SIGNAL)
+                log_debug("Got D-Bus request: %s.%s() on %s",
+                          dbus_message_get_interface(message),
+                          dbus_message_get_member(message),
+                          dbus_message_get_path(message));
+
+        if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected"))
+                shutdown_connection(m, connection);
+        else if (dbus_message_is_signal(message, "org.freedesktop.systemd1.Agent", "Released")) {
+                const char *cgroup;
+
+                if (!dbus_message_get_args(message, &error,
+                                           DBUS_TYPE_STRING, &cgroup,
+                                           DBUS_TYPE_INVALID))
+                        log_error("Failed to parse Released message: %s", error.message);
+                else
+                        cgroup_notify_empty(m, cgroup);
+        }
+
+        dbus_error_free(&error);
+
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
 unsigned bus_dispatch(Manager *m) {
+        DBusConnection *c;
+
         assert(m);
 
         if (m->queued_message) {
@@ -478,23 +517,18 @@ unsigned bus_dispatch(Manager *m) {
                  * dispatch any D-Bus messages, so that we won't end
                  * up wanting to queue another message. */
 
-                if (!dbus_connection_send(m->api_bus, m->queued_message, NULL))
-                        return 0;
+                if (m->queued_message_connection)
+                        if (!dbus_connection_send(m->queued_message_connection, m->queued_message, NULL))
+                                return 0;
 
                 dbus_message_unref(m->queued_message);
                 m->queued_message = NULL;
+                m->queued_message_connection = NULL;
         }
 
-        if (m->request_api_bus_dispatch) {
-                if (dbus_connection_dispatch(m->api_bus) == DBUS_DISPATCH_COMPLETE)
-                        m->request_api_bus_dispatch = false;
-
-                return 1;
-        }
-
-        if (m->request_system_bus_dispatch) {
-                if (dbus_connection_dispatch(m->system_bus) == DBUS_DISPATCH_COMPLETE)
-                        m->request_system_bus_dispatch = false;
+        if ((c = set_first(m->bus_connections_for_dispatch))) {
+                if (dbus_connection_dispatch(c) == DBUS_DISPATCH_COMPLETE)
+                        set_move_one(m->bus_connections, m->bus_connections_for_dispatch, c);
 
                 return 1;
         }
@@ -687,15 +721,58 @@ static int bus_setup_loop(Manager *m, DBusConnection *bus) {
         dbus_connection_set_exit_on_disconnect(bus, FALSE);
 
         if (!dbus_connection_set_watch_functions(bus, bus_add_watch, bus_remove_watch, bus_toggle_watch, m, NULL) ||
-            !dbus_connection_set_timeout_functions(bus, bus_add_timeout, bus_remove_timeout, bus_toggle_timeout, m, NULL))
+            !dbus_connection_set_timeout_functions(bus, bus_add_timeout, bus_remove_timeout, bus_toggle_timeout, m, NULL)) {
+                log_error("Not enough memory");
                 return -ENOMEM;
+        }
 
+        if (set_put(m->bus_connections_for_dispatch, bus) < 0) {
+                log_error("Not enough memory");
+                return -ENOMEM;
+        }
+
+        dbus_connection_set_dispatch_status_function(bus, bus_dispatch_status, m, NULL);
         return 0;
 }
 
-int bus_init_system(Manager *m) {
+static dbus_bool_t allow_only_root(DBusConnection *connection, unsigned long uid, void *data) {
+        return uid == 0;
+}
+
+static void bus_new_connection(
+                DBusServer *server,
+                DBusConnection *new_connection,
+                void *data) {
+
+        Manager *m = data;
+
+        assert(m);
+
+        if (set_size(m->bus_connections) >= CONNECTIONS_MAX) {
+                log_error("Too many concurrent connections.");
+                return;
+        }
+
+        dbus_connection_set_unix_user_function(new_connection, allow_only_root, NULL, NULL);
+
+        if (bus_setup_loop(m, new_connection) < 0)
+                return;
+
+        if (!dbus_connection_register_object_path(new_connection, "/org/freedesktop/systemd1", &bus_manager_vtable, m) ||
+            !dbus_connection_register_fallback(new_connection, "/org/freedesktop/systemd1/unit", &bus_unit_vtable, m) ||
+            !dbus_connection_register_fallback(new_connection, "/org/freedesktop/systemd1/job", &bus_job_vtable, m) ||
+            !dbus_connection_add_filter(new_connection, private_bus_message_filter, m, NULL)) {
+                log_error("Not enough memory.");
+                return;
+        }
+
+        log_debug("Accepted connection on private bus.");
+
+        dbus_connection_ref(new_connection);
+}
+
+static int bus_init_system(Manager *m) {
         DBusError error;
-        char *id;
         int r;
 
         assert(m);
@@ -705,53 +782,57 @@ int bus_init_system(Manager *m) {
         if (m->system_bus)
                 return 0;
 
-        if (m->running_as != MANAGER_SESSION && m->api_bus)
+        if (m->running_as == MANAGER_SYSTEM && m->api_bus)
                 m->system_bus = m->api_bus;
         else {
                 if (!(m->system_bus = dbus_bus_get_private(DBUS_BUS_SYSTEM, &error))) {
                         log_debug("Failed to get system D-Bus connection, retrying later: %s", error.message);
-                        dbus_error_free(&error);
-                        return 0;
+                        r = 0;
+                        goto fail;
                 }
 
-                dbus_connection_set_dispatch_status_function(m->system_bus, system_bus_dispatch_status, m, NULL);
-                m->request_system_bus_dispatch = true;
-
-                if ((r = bus_setup_loop(m, m->system_bus)) < 0) {
-                        bus_done_system(m);
-                        return r;
-                }
+                if ((r = bus_setup_loop(m, m->system_bus)) < 0)
+                        goto fail;
         }
 
         if (!dbus_connection_add_filter(m->system_bus, system_bus_message_filter, m, NULL)) {
-                bus_done_system(m);
-                return -ENOMEM;
+                log_error("Not enough memory");
+                r = -EIO;
+                goto fail;
         }
 
         dbus_bus_add_match(m->system_bus,
                            "type='signal',"
                            "interface='org.freedesktop.systemd1.Agent',"
+                           "member='Released',"
                            "path='/org/freedesktop/systemd1/agent'",
                            &error);
 
         if (dbus_error_is_set(&error)) {
                 log_error("Failed to register match: %s", error.message);
-                dbus_error_free(&error);
-                bus_done_system(m);
-                return -ENOMEM;
+                r = -EIO;
+                goto fail;
         }
 
-        log_debug("Successfully connected to system D-Bus bus %s as %s",
-                  strnull((id = dbus_connection_get_server_id(m->system_bus))),
-                  strnull(dbus_bus_get_unique_name(m->system_bus)));
-        dbus_free(id);
+        if (m->api_bus != m->system_bus) {
+                char *id;
+                log_debug("Successfully connected to system D-Bus bus %s as %s",
+                         strnull((id = dbus_connection_get_server_id(m->system_bus))),
+                         strnull(dbus_bus_get_unique_name(m->system_bus)));
+                dbus_free(id);
+        }
 
         return 0;
+
+fail:
+        bus_done_system(m);
+        dbus_error_free(&error);
+
+        return r;
 }
 
-int bus_init_api(Manager *m) {
+static int bus_init_api(Manager *m) {
         DBusError error;
-        char *id;
         int r;
 
         assert(m);
@@ -761,34 +842,26 @@ int bus_init_api(Manager *m) {
         if (m->api_bus)
                 return 0;
 
-        if (m->name_data_slot < 0)
-                if (!dbus_pending_call_allocate_data_slot(&m->name_data_slot))
-                        return -ENOMEM;
-
-        if (m->running_as != MANAGER_SESSION && m->system_bus)
+        if (m->running_as == MANAGER_SYSTEM && m->system_bus)
                 m->api_bus = m->system_bus;
         else {
                 if (!(m->api_bus = dbus_bus_get_private(m->running_as == MANAGER_SESSION ? DBUS_BUS_SESSION : DBUS_BUS_SYSTEM, &error))) {
                         log_debug("Failed to get API D-Bus connection, retrying later: %s", error.message);
-                        dbus_error_free(&error);
-                        return 0;
+                        r = 0;
+                        goto fail;
                 }
 
-                dbus_connection_set_dispatch_status_function(m->api_bus, api_bus_dispatch_status, m, NULL);
-                m->request_api_bus_dispatch = true;
-
-                if ((r = bus_setup_loop(m, m->api_bus)) < 0) {
-                        bus_done_api(m);
-                        return r;
-                }
+                if ((r = bus_setup_loop(m, m->api_bus)) < 0)
+                        goto fail;
         }
 
         if (!dbus_connection_register_object_path(m->api_bus, "/org/freedesktop/systemd1", &bus_manager_vtable, m) ||
             !dbus_connection_register_fallback(m->api_bus, "/org/freedesktop/systemd1/unit", &bus_unit_vtable, m) ||
             !dbus_connection_register_fallback(m->api_bus, "/org/freedesktop/systemd1/job", &bus_job_vtable, m) ||
             !dbus_connection_add_filter(m->api_bus, api_bus_message_filter, m, NULL)) {
-                bus_done_api(m);
-                return -ENOMEM;
+                log_error("Not enough memory");
+                r = -ENOMEM;
+                goto fail;
         }
 
         /* Get NameOwnerChange messages */
@@ -796,14 +869,14 @@ int bus_init_api(Manager *m) {
                            "type='signal',"
                            "sender='"DBUS_SERVICE_DBUS"',"
                            "interface='"DBUS_INTERFACE_DBUS"',"
+                           "member='NameOwnerChanged',"
                            "path='"DBUS_PATH_DBUS"'",
                            &error);
 
         if (dbus_error_is_set(&error)) {
                 log_error("Failed to register match: %s", error.message);
-                dbus_error_free(&error);
-                bus_done_api(m);
-                return -ENOMEM;
+                r = -EIO;
+                goto fail;
         }
 
         /* Get activation requests */
@@ -811,64 +884,165 @@ int bus_init_api(Manager *m) {
                            "type='signal',"
                            "sender='"DBUS_SERVICE_DBUS"',"
                            "interface='org.freedesktop.systemd1.Activator',"
+                           "member='ActivationRequest',"
                            "path='"DBUS_PATH_DBUS"'",
                            &error);
 
         if (dbus_error_is_set(&error)) {
                 log_error("Failed to register match: %s", error.message);
-                dbus_error_free(&error);
-                bus_done_api(m);
+                r = -EIO;
+                goto fail;
+        }
+
+        if ((r = request_name(m)) < 0)
+                goto fail;
+
+        if ((r = query_name_list(m)) < 0)
+                goto fail;
+
+        if (m->api_bus != m->system_bus) {
+                char *id;
+                log_debug("Successfully connected to API D-Bus bus %s as %s",
+                         strnull((id = dbus_connection_get_server_id(m->api_bus))),
+                         strnull(dbus_bus_get_unique_name(m->api_bus)));
+                dbus_free(id);
+        }
+
+        return 0;
+
+fail:
+        bus_done_api(m);
+        dbus_error_free(&error);
+
+        return r;
+}
+
+static int bus_init_private(Manager *m) {
+        DBusError error;
+        int r;
+        const char *const external_only[] = {
+                "EXTERNAL",
+                NULL
+        };
+
+        assert(m);
+
+        dbus_error_init(&error);
+
+        if (m->private_bus)
+                return 0;
+
+        /* We want the private bus only when running as init */
+        if (getpid() != 1)
+                return 0;
+
+        if (!(m->private_bus = dbus_server_listen("unix:abstract=/org/freedesktop/systemd1/private", &error))) {
+                log_error("Failed to create private D-Bus server: %s", error.message);
+                r = -EIO;
+                goto fail;
+        }
+
+        if (!dbus_server_set_auth_mechanisms(m->private_bus, (const char**) external_only) ||
+            !dbus_server_set_watch_functions(m->private_bus, bus_add_watch, bus_remove_watch, bus_toggle_watch, m, NULL) ||
+            !dbus_server_set_timeout_functions(m->private_bus, bus_add_timeout, bus_remove_timeout, bus_toggle_timeout, m, NULL)) {
+                log_error("Not enough memory");
+                r = -ENOMEM;
+                goto fail;
+        }
+
+        dbus_server_set_new_connection_function(m->private_bus, bus_new_connection, m, NULL);
+
+        log_debug("Successfully created private D-Bus server.");
+
+        return 0;
+
+fail:
+        bus_done_private(m);
+        dbus_error_free(&error);
+
+        return r;
+}
+
+int bus_init(Manager *m) {
+        int r;
+
+        if (set_ensure_allocated(&m->bus_connections, trivial_hash_func, trivial_compare_func) < 0 ||
+            set_ensure_allocated(&m->bus_connections_for_dispatch, trivial_hash_func, trivial_compare_func) < 0) {
+                log_error("Not enough memory");
                 return -ENOMEM;
         }
 
-        if ((r = request_name(m)) < 0) {
-                bus_done_api(m);
-                return r;
-        }
-
-        if ((r = query_name_list(m)) < 0) {
-                bus_done_api(m);
-                return r;
-        }
-
-        log_debug("Successfully connected to API D-Bus bus %s as %s",
-                  strnull((id = dbus_connection_get_server_id(m->api_bus))),
-                  strnull(dbus_bus_get_unique_name(m->api_bus)));
-        dbus_free(id);
-
-        if (!m->subscribed)
-                if (!(m->subscribed = set_new(string_hash_func, string_compare_func)))
+        if (m->name_data_slot < 0)
+                if (!dbus_pending_call_allocate_data_slot(&m->name_data_slot)) {
+                        log_error("Not enough memory");
                         return -ENOMEM;
+                }
+
+        if (m->subscribed_data_slot < 0)
+                if (!dbus_pending_call_allocate_data_slot(&m->subscribed_data_slot)) {
+                        log_error("Not enough memory");
+                        return -ENOMEM;
+                }
+
+        if ((r = bus_init_system(m)) < 0 ||
+            (r = bus_init_api(m)) < 0 ||
+            (r = bus_init_private(m)) < 0)
+                return r;
 
         return 0;
 }
 
-void bus_done_api(Manager *m) {
+static void shutdown_connection(Manager *m, DBusConnection *c) {
+        Set *s;
+        Job *j;
+        Iterator i;
+
+        HASHMAP_FOREACH(j, m->jobs, i)
+                if (j->bus == c) {
+                        free(j->bus_client);
+                        j->bus_client = NULL;
+
+                        j->bus = NULL;
+                }
+
+        set_remove(m->bus_connections, c);
+        set_remove(m->bus_connections_for_dispatch, c);
+
+        if ((s = BUS_CONNECTION_SUBSCRIBED(m, c))) {
+                char *t;
+
+                while ((t = set_steal_first(s)))
+                        free(t);
+
+                set_free(s);
+        }
+
+        if (m->queued_message_connection == c) {
+                m->queued_message_connection = NULL;
+
+                if (m->queued_message) {
+                        dbus_message_unref(m->queued_message);
+                        m->queued_message = NULL;
+                }
+        }
+
+        dbus_connection_set_dispatch_status_function(c, NULL, NULL, NULL);
+        dbus_connection_flush(c);
+        dbus_connection_close(c);
+        dbus_connection_unref(c);
+}
+
+static void bus_done_api(Manager *m) {
         assert(m);
 
         if (m->api_bus) {
                 if (m->system_bus == m->api_bus)
                         m->system_bus = NULL;
 
-                dbus_connection_set_dispatch_status_function(m->api_bus, NULL, NULL, NULL);
-                dbus_connection_flush(m->api_bus);
-                dbus_connection_close(m->api_bus);
-                dbus_connection_unref(m->api_bus);
+                shutdown_connection(m, m->api_bus);
                 m->api_bus = NULL;
         }
 
-        if (m->subscribed) {
-                char *c;
-
-                while ((c = set_steal_first(m->subscribed)))
-                        free(c);
-
-                set_free(m->subscribed);
-                m->subscribed = NULL;
-        }
-
-       if (m->name_data_slot >= 0)
-               dbus_pending_call_free_data_slot(&m->name_data_slot);
 
        if (m->queued_message) {
                dbus_message_unref(m->queued_message);
@@ -876,19 +1050,48 @@ void bus_done_api(Manager *m) {
        }
 }
 
-void bus_done_system(Manager *m) {
+static void bus_done_system(Manager *m) {
         assert(m);
 
         if (m->system_bus == m->api_bus)
                 bus_done_api(m);
 
         if (m->system_bus) {
-                dbus_connection_set_dispatch_status_function(m->system_bus, NULL, NULL, NULL);
-                dbus_connection_flush(m->system_bus);
-                dbus_connection_close(m->system_bus);
-                dbus_connection_unref(m->system_bus);
+                shutdown_connection(m, m->system_bus);
                 m->system_bus = NULL;
         }
+}
+
+static void bus_done_private(Manager *m) {
+
+        if (m->private_bus) {
+                dbus_server_disconnect(m->private_bus);
+                dbus_server_unref(m->private_bus);
+                m->private_bus = NULL;
+        }
+}
+
+void bus_done(Manager *m) {
+        DBusConnection *c;
+
+        bus_done_api(m);
+        bus_done_system(m);
+        bus_done_private(m);
+
+        while ((c = set_steal_first(m->bus_connections)))
+                shutdown_connection(m, c);
+
+        while ((c = set_steal_first(m->bus_connections_for_dispatch)))
+                shutdown_connection(m, c);
+
+        set_free(m->bus_connections);
+        set_free(m->bus_connections_for_dispatch);
+
+        if (m->name_data_slot >= 0)
+               dbus_pending_call_free_data_slot(&m->name_data_slot);
+
+        if (m->subscribed_data_slot >= 0)
+                dbus_pending_call_free_data_slot(&m->subscribed_data_slot);
 }
 
 static void query_pid_pending_cb(DBusPendingCall *pending, void *userdata) {
@@ -899,7 +1102,7 @@ static void query_pid_pending_cb(DBusPendingCall *pending, void *userdata) {
 
         dbus_error_init(&error);
 
-        assert_se(name = dbus_pending_call_get_data(pending, m->name_data_slot));
+        assert_se(name = BUS_PENDING_CALL_NAME(m, pending));
         assert_se(reply = dbus_pending_call_steal_reply(pending));
 
         switch (dbus_message_get_type(reply)) {
@@ -987,7 +1190,7 @@ oom:
         return -ENOMEM;
 }
 
-DBusHandlerResult bus_default_message_handler(Manager *m, DBusMessage *message, const char*introspection, const BusProperty *properties) {
+DBusHandlerResult bus_default_message_handler(Manager *m, DBusConnection *c, DBusMessage *message, const char*introspection, const BusProperty *properties) {
         DBusError error;
         DBusMessage *reply = NULL;
         int r;
@@ -1015,7 +1218,7 @@ DBusHandlerResult bus_default_message_handler(Manager *m, DBusMessage *message, 
                             DBUS_TYPE_STRING, &interface,
                             DBUS_TYPE_STRING, &property,
                             DBUS_TYPE_INVALID))
-                        return bus_send_error_reply(m, message, &error, -EINVAL);
+                        return bus_send_error_reply(m, c, message, &error, -EINVAL);
 
                 for (p = properties; p->property; p++)
                         if (streq(p->interface, interface) && streq(p->property, property))
@@ -1038,24 +1241,24 @@ DBusHandlerResult bus_default_message_handler(Manager *m, DBusMessage *message, 
                                         goto oom;
 
                                 dbus_message_unref(reply);
-                                return bus_send_error_reply(m, message, NULL, r);
+                                return bus_send_error_reply(m, c, message, NULL, r);
                         }
 
                         if (!dbus_message_iter_close_container(&iter, &sub))
                                 goto oom;
                 }
+
         } else if (dbus_message_is_method_call(message, "org.freedesktop.DBus.Properties", "GetAll") && properties) {
                 const char *interface;
                 const BusProperty *p;
                 DBusMessageIter iter, sub, sub2, sub3;
-                bool any = false;
 
                 if (!dbus_message_get_args(
                             message,
                             &error,
                             DBUS_TYPE_STRING, &interface,
                             DBUS_TYPE_INVALID))
-                        return bus_send_error_reply(m, message, &error, -EINVAL);
+                        return bus_send_error_reply(m, c, message, &error, -EINVAL);
 
                 if (!(reply = dbus_message_new_method_return(message)))
                         goto oom;
@@ -1066,7 +1269,7 @@ DBusHandlerResult bus_default_message_handler(Manager *m, DBusMessage *message, 
                         goto oom;
 
                 for (p = properties; p->property; p++) {
-                        if (!streq(p->interface, interface))
+                        if (interface[0] && !streq(p->interface, interface))
                                 continue;
 
                         if (!dbus_message_iter_open_container(&sub, DBUS_TYPE_DICT_ENTRY, NULL, &sub2) ||
@@ -1080,14 +1283,12 @@ DBusHandlerResult bus_default_message_handler(Manager *m, DBusMessage *message, 
                                         goto oom;
 
                                 dbus_message_unref(reply);
-                                return bus_send_error_reply(m, message, NULL, r);
+                                return bus_send_error_reply(m, c, message, NULL, r);
                         }
 
                         if (!dbus_message_iter_close_container(&sub2, &sub3) ||
                             !dbus_message_iter_close_container(&sub, &sub2))
                                 goto oom;
-
-                        any = true;
                 }
 
                 if (!dbus_message_iter_close_container(&iter, &sub))
@@ -1095,7 +1296,7 @@ DBusHandlerResult bus_default_message_handler(Manager *m, DBusMessage *message, 
         }
 
         if (reply) {
-                if (!dbus_connection_send(m->api_bus, reply, NULL))
+                if (!dbus_connection_send(c, reply, NULL))
                         goto oom;
 
                 dbus_message_unref(reply);
@@ -1151,13 +1352,13 @@ static const char *error_to_dbus(int error) {
         return DBUS_ERROR_FAILED;
 }
 
-DBusHandlerResult bus_send_error_reply(Manager *m, DBusMessage *message, DBusError *bus_error, int error) {
+DBusHandlerResult bus_send_error_reply(Manager *m, DBusConnection *c, DBusMessage *message, DBusError *berror, int error) {
         DBusMessage *reply = NULL;
         const char *name, *text;
 
-        if (bus_error && dbus_error_is_set(bus_error)) {
-                name = bus_error->name;
-                text = bus_error->message;
+        if (berror && dbus_error_is_set(berror)) {
+                name = berror->name;
+                text = berror->message;
         } else {
                 name = error_to_dbus(error);
                 text = strerror(-error);
@@ -1166,13 +1367,13 @@ DBusHandlerResult bus_send_error_reply(Manager *m, DBusMessage *message, DBusErr
         if (!(reply = dbus_message_new_error(message, name, text)))
                 goto oom;
 
-        if (!dbus_connection_send(m->api_bus, reply, NULL))
+        if (!dbus_connection_send(c, reply, NULL))
                 goto oom;
 
         dbus_message_unref(reply);
 
-        if (bus_error)
-                dbus_error_free(bus_error);
+        if (berror)
+                dbus_error_free(berror);
 
         return DBUS_HANDLER_RESULT_HANDLED;
 
@@ -1180,10 +1381,29 @@ oom:
         if (reply)
                 dbus_message_unref(reply);
 
-        if (bus_error)
-                dbus_error_free(bus_error);
+        if (berror)
+                dbus_error_free(berror);
 
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
+}
+
+int bus_broadcast(Manager *m, DBusMessage *message) {
+        bool oom = false;
+        Iterator i;
+        DBusConnection *c;
+
+        assert(m);
+        assert(message);
+
+        SET_FOREACH(c, m->bus_connections_for_dispatch, i)
+                if (c != m->system_bus || m->running_as == MANAGER_SYSTEM)
+                        oom = !dbus_connection_send(c, message, NULL);
+
+        SET_FOREACH(c, m->bus_connections, i)
+                if (c != m->system_bus || m->running_as == MANAGER_SYSTEM)
+                        oom = !dbus_connection_send(c, message, NULL);
+
+        return oom ? -ENOMEM : 0;
 }
 
 int bus_property_append_string(Manager *m, DBusMessageIter *i, const char *property, void *data) {
@@ -1288,6 +1508,38 @@ int bus_property_append_int32(Manager *m, DBusMessageIter *i, const char *proper
         return 0;
 }
 
+int bus_property_append_size(Manager *m, DBusMessageIter *i, const char *property, void *data) {
+        uint64_t u;
+
+        assert(m);
+        assert(i);
+        assert(property);
+        assert(data);
+
+        u = (uint64_t) *(size_t*) data;
+
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_UINT64, &u))
+                return -ENOMEM;
+
+        return 0;
+}
+
+int bus_property_append_ul(Manager *m, DBusMessageIter *i, const char *property, void *data) {
+        uint64_t u;
+
+        assert(m);
+        assert(i);
+        assert(property);
+        assert(data);
+
+        u = (uint64_t) *(unsigned long*) data;
+
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_UINT64, &u))
+                return -ENOMEM;
+
+        return 0;
+}
+
 int bus_parse_strv(DBusMessage *m, char ***_l) {
         DBusMessageIter iter, sub;
         unsigned n = 0, i = 0;
@@ -1335,4 +1587,66 @@ int bus_parse_strv(DBusMessage *m, char ***_l) {
                 *_l = l;
 
         return 0;
+}
+
+bool bus_has_subscriber(Manager *m) {
+        Iterator i;
+        DBusConnection *c;
+
+        assert(m);
+
+        SET_FOREACH(c, m->bus_connections_for_dispatch, i)
+                if (bus_connection_has_subscriber(m, c))
+                        return true;
+
+        SET_FOREACH(c, m->bus_connections, i)
+                if (bus_connection_has_subscriber(m, c))
+                        return true;
+
+        return false;
+}
+
+bool bus_connection_has_subscriber(Manager *m, DBusConnection *c) {
+        assert(m);
+        assert(c);
+
+        return !set_isempty(BUS_CONNECTION_SUBSCRIBED(m, c));
+}
+
+DBusMessage* bus_properties_changed_new(const char *path, const char *interface, const char *properties) {
+        DBusMessage *m;
+        DBusMessageIter iter, sub;
+        const char *i;
+
+        assert(interface);
+        assert(properties);
+
+        if (!(m = dbus_message_new_signal(path, "org.freedesktop.DBus.Properties", "PropertiesChanged")))
+                goto oom;
+
+        dbus_message_iter_init_append(m, &iter);
+
+        /* We won't send any property values, since they might be
+         * large and sometimes not cheap to generated */
+
+        if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &interface) ||
+            !dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "{sv}", &sub) ||
+            !dbus_message_iter_close_container(&iter, &sub) ||
+            !dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "s", &sub))
+                goto oom;
+
+        NULSTR_FOREACH(i, properties)
+                if (!dbus_message_iter_append_basic(&sub, DBUS_TYPE_STRING, &i))
+                        goto oom;
+
+        if (!dbus_message_iter_close_container(&iter, &sub))
+                goto oom;
+
+        return m;
+
+oom:
+        if (m)
+                dbus_message_unref(m);
+
+        return NULL;
 }

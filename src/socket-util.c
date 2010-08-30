@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -33,6 +33,8 @@
 #include "macro.h"
 #include "util.h"
 #include "socket-util.h"
+#include "missing.h"
+#include "label.h"
 
 int socket_address_parse(SocketAddress *a, const char *s) {
         int r;
@@ -100,7 +102,7 @@ int socket_address_parse(SocketAddress *a, const char *s) {
 
                 a->sockaddr.un.sun_family = AF_UNIX;
                 memcpy(a->sockaddr.un.sun_path+1, s+1, l);
-                a->size = sizeof(struct sockaddr_un);
+                a->size = sizeof(sa_family_t) + 1 + l;
 
         } else {
 
@@ -197,11 +199,7 @@ int socket_address_verify(const SocketAddress *a) {
 
                         if (a->size > sizeof(sa_family_t)) {
 
-                                if (a->sockaddr.un.sun_path[0] == 0) {
-                                        /* abstract */
-                                        if (a->size != sizeof(struct sockaddr_un))
-                                                return -EINVAL;
-                                } else {
+                                if (a->sockaddr.un.sun_path[0] != 0) {
                                         char *e;
 
                                         /* path */
@@ -305,8 +303,10 @@ int socket_address_listen(
                 int backlog,
                 SocketAddressBindIPv6Only only,
                 const char *bind_to_device,
+                bool free_bind,
                 mode_t directory_mode,
                 mode_t socket_mode,
+                const char *label,
                 int *ret) {
 
         int r, fd, one;
@@ -316,8 +316,17 @@ int socket_address_listen(
         if ((r = socket_address_verify(a)) < 0)
                 return r;
 
-        if ((fd = socket(socket_address_family(a), a->type | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) < 0)
-                return -errno;
+        r = label_socket_set(label);
+        if (r < 0)
+                return r;
+
+        fd = socket(socket_address_family(a), a->type | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+        r = fd < 0 ? -errno : 0;
+
+        label_socket_clear();
+
+        if (r < 0)
+                return r;
 
         if (socket_address_family(a) == AF_INET6 && only != SOCKET_ADDRESS_DEFAULT) {
                 int flag = only == SOCKET_ADDRESS_IPV6_ONLY;
@@ -329,6 +338,12 @@ int socket_address_listen(
         if (bind_to_device)
                 if (setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, bind_to_device, strlen(bind_to_device)+1) < 0)
                         goto fail;
+
+        if (free_bind) {
+                one = 1;
+                if (setsockopt(fd, IPPROTO_IP, IP_FREEBIND, &one, sizeof(one)) < 0)
+                        log_warning("IP_FREEBIND failed: %m");
+        }
 
         one = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) < 0)
@@ -429,7 +444,7 @@ bool socket_address_equal(const SocketAddress *a, const SocketAddress *b) {
                         if (strncmp(a->sockaddr.un.sun_path, b->sockaddr.un.sun_path, sizeof(a->sockaddr.un.sun_path)) != 0)
                                 return false;
                 } else {
-                        if (memcmp(a->sockaddr.un.sun_path, b->sockaddr.un.sun_path, sizeof(a->sockaddr.un.sun_path)) != 0)
+                        if (memcmp(a->sockaddr.un.sun_path, b->sockaddr.un.sun_path, a->size) != 0)
                                 return false;
                 }
 

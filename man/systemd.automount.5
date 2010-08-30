@@ -1,0 +1,98 @@
+'\" t
+.\"     Title: systemd.automount
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 08/25/2010
+.\"    Manual: systemd.automount
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\&.AUTOMOUNT" "5" "08/25/2010" "systemd" "systemd.automount"
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd.automount \- systemd automount configuration files
+.SH "SYNOPSIS"
+.PP
+systemd\&.automount
+.SH "DESCRIPTION"
+.PP
+A unit configuration file whose name ends in
+\&.automount
+encodes information about a file system automount point controlled and supervised by systemd\&.
+.PP
+This man page lists the configuration options specific to this unit type\&. See
+\fBsystemd.unit\fR(5)
+for the common options of all unit configuration files\&. The common configuration items are configured in the generic [Unit] and [Install] sections\&. The automount specific configuration options are configured in the [Automount] section\&.
+.PP
+Automount units must be named after the automount directories they control\&. Example: the automount point
+/home/lennart
+must be configured in a unit file
+home\-lennart\&.automount\&. For details about the escaping logic used to convert a file system path to a unit name see
+\fBsystemd.unit\fR(5)\&.
+.PP
+For each automount unit file a matching mount unit file (see
+\fBsystemd.mount\fR(5)
+for details) must exist which is activated when the automount path is accessed\&. Example: if an automount unit
+home\-lennart\&.automount
+is active and the user accesses
+/home/lennart
+the mount unit
+home\-lennart\&.mount
+will be activated\&.
+.PP
+Automount units may be used to implement on\-demand mounting as well as parallelized mounting of file systems\&.
+.PP
+If an automount point is beneath another mount point in the file system hierarchy a dependency between both units is created automatically\&.
+.SH "FSTAB"
+.PP
+Automount units may either be configured via unit files, or via
+/etc/fstab
+(see
+\fBfstab\fR(5)
+for details)\&.
+.PP
+For details how systemd parses
+/etc/fstab
+see
+\fBsystemd.mount\fR(5)\&.
+.PP
+If an automount point is configured in both
+/etc/fstab
+and a unit file the configuration in the latter takes precedence\&.
+.SH "OPTIONS"
+.PP
+Automount files must include an [Automount] section, which carries information about the file system automount points it supervises\&. The options specific to the [Automount] section of automount units are the following:
+.PP
+\fIWhere=\fR
+.RS 4
+Takes an absolute path of a directory of the automount point\&. If the automount point is not existing at time of the automount point is installed it is created\&. This string must be reflected in the unit file name\&. (See above\&.) This option is mandatory\&.
+.RE
+.PP
+\fIDirectoryMode=\fR
+.RS 4
+Directories of automount points (and any parent directories) are automatically created if needed\&. This option specifies the file system access mode used when creating these directories\&. Takes an access mode in octal notation\&. Defaults to 0755\&.
+.RE
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBsystemctl\fR(8),
+\fBsystemd.unit\fR(5),
+\fBsystemd.mount\fR(5),
+\fBmount\fR(8),
+\fBautomount\fR(8)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foologhfoo
 #define foologhfoo
@@ -23,6 +23,7 @@
 ***/
 
 #include <syslog.h>
+#include <stdbool.h>
 
 #include "macro.h"
 
@@ -33,6 +34,7 @@ typedef enum LogTarget{
         LOG_TARGET_KMSG,
         LOG_TARGET_SYSLOG,
         LOG_TARGET_SYSLOG_OR_KMSG,
+        LOG_TARGET_NULL,
         _LOG_TARGET_MAX,
         _LOG_TARGET_INVALID = -1
 }  LogTarget;
@@ -42,6 +44,12 @@ void log_set_max_level(int level);
 
 int log_set_target_from_string(const char *e);
 int log_set_max_level_from_string(const char *e);
+
+void log_show_color(bool b);
+void log_show_location(bool b);
+
+int log_show_color_from_string(const char *e);
+int log_show_location_from_string(const char *e);
 
 LogTarget log_get_target(void);
 int log_get_max_level(void);
@@ -74,6 +82,8 @@ int log_dump_internal(
         int line,
         const char *func,
         char *buffer);
+
+#define log_full(level, ...) log_meta(level, __FILE__, __LINE__, __func__, __VA_ARGS__)
 
 #define log_debug(...)   log_meta(LOG_DEBUG,   __FILE__, __LINE__, __func__, __VA_ARGS__)
 #define log_info(...)    log_meta(LOG_INFO,    __FILE__, __LINE__, __func__, __VA_ARGS__)

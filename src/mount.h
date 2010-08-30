@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foomounthfoo
 #define foomounthfoo
@@ -39,7 +39,7 @@ typedef enum MountState {
         MOUNT_REMOUNTING_SIGKILL,
         MOUNT_UNMOUNTING_SIGTERM,
         MOUNT_UNMOUNTING_SIGKILL,
-        MOUNT_MAINTAINANCE,
+        MOUNT_MAINTENANCE,
         _MOUNT_STATE_MAX,
         _MOUNT_STATE_INVALID = -1
 } MountState;
@@ -79,14 +79,14 @@ struct Mount {
 
         bool failure:1;
 
+        mode_t directory_mode;
+
         usec_t timeout_usec;
 
         ExecCommand exec_command[_MOUNT_EXEC_COMMAND_MAX];
         ExecContext exec_context;
 
         MountState state, deserialized_state;
-
-        KillMode kill_mode;
 
         ExecCommand* control_command;
         MountExecCommand control_command_id;
@@ -98,8 +98,6 @@ struct Mount {
 extern const UnitVTable mount_vtable;
 
 void mount_fd_event(Manager *m, int events);
-
-int mount_path_is_mounted(Manager *m, const char* path);
 
 const char* mount_state_to_string(MountState i);
 MountState mount_state_from_string(const char *s);

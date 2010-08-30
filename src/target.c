@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -27,6 +27,7 @@
 #include "load-fragment.h"
 #include "log.h"
 #include "dbus-target.h"
+#include "special.h"
 
 static const UnitActiveState state_translation_table[_TARGET_STATE_MAX] = {
         [TARGET_DEAD] = UNIT_INACTIVE,
@@ -42,11 +43,56 @@ static void target_set_state(Target *t, TargetState state) {
 
         if (state != old_state)
                 log_debug("%s changed %s -> %s",
-                          UNIT(t)->meta.id,
+                          t->meta.id,
                           target_state_to_string(old_state),
                           target_state_to_string(state));
 
         unit_notify(UNIT(t), state_translation_table[old_state], state_translation_table[state]);
+}
+
+static int target_add_default_dependencies(Target *t) {
+        Iterator i;
+        Unit *other;
+        int r;
+
+        /* Imply ordering for requirement dependencies on target
+         * units. Note that when the user created a contradicting
+         * ordering manually we won't add anything in here to make
+         * sure we don't create a loop. */
+
+        SET_FOREACH(other, t->meta.dependencies[UNIT_REQUIRES], i)
+                if (!set_get(t->meta.dependencies[UNIT_BEFORE], other))
+                        if ((r = unit_add_dependency(UNIT(t), UNIT_AFTER, other, true)) < 0)
+                                return r;
+        SET_FOREACH(other, t->meta.dependencies[UNIT_REQUIRES_OVERRIDABLE], i)
+                if (!set_get(t->meta.dependencies[UNIT_BEFORE], other))
+                        if ((r = unit_add_dependency(UNIT(t), UNIT_AFTER, other, true)) < 0)
+                                return r;
+        SET_FOREACH(other, t->meta.dependencies[UNIT_WANTS], i)
+                if (!set_get(t->meta.dependencies[UNIT_BEFORE], other))
+                        if ((r = unit_add_dependency(UNIT(t), UNIT_AFTER, other, true)) < 0)
+                                return r;
+
+        return 0;
+}
+
+static int target_load(Unit *u) {
+        Target *t = TARGET(u);
+        int r;
+
+        assert(t);
+
+        if ((r = unit_load_fragment_and_dropin(u)) < 0)
+                return r;
+
+        /* This is a new unit? Then let's add in some extras */
+        if (u->meta.load_state == UNIT_LOADED) {
+                if (u->meta.default_dependencies)
+                        if ((r = target_add_default_dependencies(t)) < 0)
+                                return r;
+        }
+
+        return 0;
 }
 
 static int target_coldplug(Unit *u) {
@@ -137,35 +183,6 @@ static const char *target_sub_state_to_string(Unit *u) {
         return target_state_to_string(TARGET(u)->state);
 }
 
-int target_get_runlevel(Target *t) {
-
-        static const struct {
-                const char *special;
-                const int runlevel;
-        } table[] = {
-                { SPECIAL_RUNLEVEL5_TARGET, '5' },
-                { SPECIAL_RUNLEVEL4_TARGET, '4' },
-                { SPECIAL_RUNLEVEL3_TARGET, '3' },
-                { SPECIAL_RUNLEVEL2_TARGET, '2' },
-                { SPECIAL_RUNLEVEL1_TARGET, '1' },
-                { SPECIAL_RUNLEVEL0_TARGET, '0' },
-                { SPECIAL_RUNLEVEL6_TARGET, '6' },
-        };
-
-        unsigned i;
-
-        assert(t);
-
-        /* Tries to determine if this is a SysV runlevel and returns
-         * it if that is so. */
-
-        for (i = 0; i < ELEMENTSOF(table); i++)
-                if (unit_has_name(UNIT(t), table[i].special))
-                        return table[i].runlevel;
-
-        return 0;
-}
-
 static const char* const target_state_table[_TARGET_STATE_MAX] = {
         [TARGET_DEAD] = "dead",
         [TARGET_ACTIVE] = "active"
@@ -176,7 +193,7 @@ DEFINE_STRING_TABLE_LOOKUP(target_state, TargetState);
 const UnitVTable target_vtable = {
         .suffix = ".target",
 
-        .load = unit_load_fragment_and_dropin,
+        .load = target_load,
         .coldplug = target_coldplug,
 
         .dump = target_dump,
@@ -190,5 +207,6 @@ const UnitVTable target_vtable = {
         .active_state = target_active_state,
         .sub_state_to_string = target_sub_state_to_string,
 
+        .bus_interface = "org.freedesktop.systemd1.Target",
         .bus_message_handler = bus_target_message_handler
 };

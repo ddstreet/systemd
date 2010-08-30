@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foostrvhfoo
 #define foostrvhfoo
@@ -28,6 +28,8 @@
 #include "macro.h"
 
 char *strv_find(char **l, const char *name);
+char *strv_find_prefix(char **l, const char *name);
+
 void strv_free(char **l);
 char **strv_copy(char **l) _malloc_;
 unsigned strv_length(char **l);
@@ -53,8 +55,13 @@ char **strv_split_quoted(const char *s) _malloc_;
 
 char *strv_join(char **l, const char *separator) _malloc_;
 
-char **strv_env_merge(char **x, ...) _sentinel_;
-char **strv_env_delete(char **x, ...) _sentinel_;
+char **strv_env_merge(unsigned n_lists, ...);
+char **strv_env_delete(char **x, unsigned n_lists, ...);
+
+char **strv_env_set(char **x, const char *p);
+
+char *strv_env_get_with_length(char **l, const char *name, size_t k);
+char *strv_env_get(char **x, const char *n);
 
 #define STRV_FOREACH(s, l)                      \
         for ((s) = (l); (s) && *(s); (s)++)

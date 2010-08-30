@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foodbustimerhfoo
 #define foodbustimerhfoo
@@ -26,8 +26,9 @@
 
 #include "unit.h"
 
-DBusHandlerResult bus_timer_message_handler(Unit *u, DBusMessage *message);
+DBusHandlerResult bus_timer_message_handler(Unit *u, DBusConnection *c, DBusMessage *message);
 
 extern const char bus_timer_interface[];
+extern const char bus_timer_invalidating_properties[];
 
 #endif

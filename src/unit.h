@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foounithfoo
 #define foounithfoo
@@ -39,18 +39,9 @@ typedef enum UnitDependency UnitDependency;
 #include "socket-util.h"
 #include "execute.h"
 
-#define UNIT_NAME_MAX 128
+#define UNIT_NAME_MAX 256
 #define DEFAULT_TIMEOUT_USEC (60*USEC_PER_SEC)
 #define DEFAULT_RESTART_USEC (100*USEC_PER_MSEC)
-
-typedef enum KillMode {
-        KILL_CONTROL_GROUP = 0,
-        KILL_PROCESS_GROUP,
-        KILL_PROCESS,
-        KILL_NONE,
-        _KILL_MODE_MAX,
-        _KILL_MODE_INVALID = -1
-} KillMode;
 
 enum UnitType {
         UNIT_SERVICE = 0,
@@ -78,8 +69,9 @@ enum UnitLoadState {
 
 enum UnitActiveState {
         UNIT_ACTIVE,
-        UNIT_ACTIVE_RELOADING,
+        UNIT_RELOADING,
         UNIT_INACTIVE,
+        UNIT_MAINTENANCE,
         UNIT_ACTIVATING,
         UNIT_DEACTIVATING,
         _UNIT_ACTIVE_STATE_MAX,
@@ -87,15 +79,19 @@ enum UnitActiveState {
 };
 
 static inline bool UNIT_IS_ACTIVE_OR_RELOADING(UnitActiveState t) {
-        return t == UNIT_ACTIVE || t == UNIT_ACTIVE_RELOADING;
+        return t == UNIT_ACTIVE || t == UNIT_RELOADING;
 }
 
 static inline bool UNIT_IS_ACTIVE_OR_ACTIVATING(UnitActiveState t) {
-        return t == UNIT_ACTIVE || t == UNIT_ACTIVATING || t == UNIT_ACTIVE_RELOADING;
+        return t == UNIT_ACTIVE || t == UNIT_ACTIVATING || t == UNIT_RELOADING;
 }
 
 static inline bool UNIT_IS_INACTIVE_OR_DEACTIVATING(UnitActiveState t) {
-        return t == UNIT_INACTIVE || t == UNIT_DEACTIVATING;
+        return t == UNIT_INACTIVE || t == UNIT_MAINTENANCE || t == UNIT_DEACTIVATING;
+}
+
+static inline bool UNIT_IS_INACTIVE_OR_MAINTENANCE(UnitActiveState t) {
+        return t == UNIT_INACTIVE || t == UNIT_MAINTENANCE;
 }
 
 enum UnitDependency {
@@ -112,11 +108,15 @@ enum UnitDependency {
         UNIT_WANTED_BY,               /* inverse of 'wants' */
 
         /* Negative dependencies */
-        UNIT_CONFLICTS,               /* inverse of 'conflicts' is 'conflicts' */
+        UNIT_CONFLICTS,               /* inverse of 'conflicts' is 'conflicted_by' */
+        UNIT_CONFLICTED_BY,
 
         /* Order */
         UNIT_BEFORE,                  /* inverse of 'before' is 'after' and vice versa */
         UNIT_AFTER,
+
+        /* On Failure */
+        UNIT_ON_FAILURE,
 
         /* Reference information for GC logic */
         UNIT_REFERENCES,              /* Inverse of 'references' is 'referenced_by' */
@@ -137,9 +137,6 @@ struct Meta {
         UnitLoadState load_state;
         Unit *merged_into;
 
-        /* Refuse manual starting, allow starting only indirectly via dependency. */
-        bool only_by_dependency;
-
         char *id; /* One name is special because we use it for identification. Points to an entry in the names set */
         char *instance;
 
@@ -147,16 +144,20 @@ struct Meta {
         Set *dependencies[_UNIT_DEPENDENCY_MAX];
 
         char *description;
+
         char *fragment_path; /* if loaded from a config file this is the primary path to it */
+        usec_t fragment_mtime;
 
         /* If there is something to do with this unit, then this is
          * the job for it */
         Job *job;
 
-        timestamp inactive_exit_timestamp;
-        timestamp active_enter_timestamp;
-        timestamp active_exit_timestamp;
-        timestamp inactive_enter_timestamp;
+        usec_t job_timeout;
+
+        dual_timestamp inactive_exit_timestamp;
+        dual_timestamp active_enter_timestamp;
+        dual_timestamp active_exit_timestamp;
+        dual_timestamp inactive_enter_timestamp;
 
         /* Counterparts in the cgroup filesystem */
         CGroupBonding *cgroup_bondings;
@@ -179,15 +180,30 @@ struct Meta {
         /* Used during GC sweeps */
         unsigned gc_marker;
 
+        /* When deserializing, temporarily store the job type for this
+         * unit here, if there was a job scheduled */
+        int deserialized_job; /* This is actually of type JobType */
+
+        /* Error code when we didn't manage to load the unit (negative) */
+        int load_error;
+
         /* If we go down, pull down everything that depends on us, too */
         bool recursive_stop;
 
         /* Garbage collect us we nobody wants or requires us anymore */
         bool stop_when_unneeded;
 
-        /* When deserializing, temporarily store the job type for this
-         * unit here, if there was a job scheduled */
-        int deserialized_job; /* This is actually of type JobType */
+        /* Create default depedencies */
+        bool default_dependencies;
+
+        /* Bring up this unit even if a dependency fails to start */
+        bool ignore_dependency_failure;
+
+        /* Refuse manual starting, allow starting only indirectly via dependency. */
+        bool refuse_manual_start;
+
+        /* Don't allow the user to stop this unit manually, allow stopping only indirectly via dependency. */
+        bool refuse_manual_stop;
 
         bool in_load_queue:1;
         bool in_dbus_queue:1;
@@ -195,6 +211,10 @@ struct Meta {
         bool in_gc_queue:1;
 
         bool sent_dbus_new_signal:1;
+
+        bool no_gc:1;
+
+        bool in_audit:1;
 };
 
 #include "service.h"
@@ -281,9 +301,15 @@ struct UnitVTable {
         void (*sigchld_event)(Unit *u, pid_t pid, int code, int status);
         void (*timer_event)(Unit *u, uint64_t n_elapsed, Watch *w);
 
+        /* Reset maintenance state if we are in maintainance state */
+        void (*reset_maintenance)(Unit *u);
+
         /* Called whenever any of the cgroups this unit watches for
          * ran empty */
         void (*cgroup_notify_empty)(Unit *u);
+
+        /* Called whenever a process of this unit sends us a message */
+        void (*notify_message)(Unit *u, pid_t pid, char **tags);
 
         /* Called whenever a name thus Unit registered for comes or
          * goes away. */
@@ -293,7 +319,10 @@ struct UnitVTable {
         void (*bus_query_pid_done)(Unit *u, const char *name, pid_t pid);
 
         /* Called for each message received on the bus */
-        DBusHandlerResult (*bus_message_handler)(Unit *u, DBusMessage *message);
+        DBusHandlerResult (*bus_message_handler)(Unit *u, DBusConnection *c, DBusMessage *message);
+
+        /* Return the unit this unit is following */
+        Unit *(*following)(Unit *u);
 
         /* This is called for each unit type and should be used to
          * enumerate existing devices and load them. However,
@@ -304,6 +333,14 @@ struct UnitVTable {
 
         /* Type specific cleanups. */
         void (*shutdown)(Manager *m);
+
+        /* When sending out PropertiesChanged signal, which properties
+         * shall be invalidated? This is a NUL seperated list of
+         * strings, to minimize relocations a little. */
+        const char *bus_invalidating_properties;
+
+        /* The interface name */
+        const char *bus_interface;
 
         /* Can units of this type have multiple names? */
         bool no_alias:1;
@@ -324,6 +361,9 @@ struct UnitVTable {
 
         /* Exclude from isolation requests */
         bool no_isolate:1;
+
+        /* Show status updates on the console */
+        bool show_status:1;
 };
 
 extern const UnitVTable * const unit_vtable[_UNIT_TYPE_MAX];
@@ -333,14 +373,14 @@ extern const UnitVTable * const unit_vtable[_UNIT_TYPE_MAX];
 /* For casting a unit into the various unit types */
 #define DEFINE_CAST(UPPERCASE, MixedCase)                               \
         static inline MixedCase* UPPERCASE(Unit *u) {                   \
-                if (!u || u->meta.type != UNIT_##UPPERCASE)             \
+                if (_unlikely_(!u || u->meta.type != UNIT_##UPPERCASE)) \
                         return NULL;                                    \
                                                                         \
                 return (MixedCase*) u;                                  \
         }
 
 /* For casting the various unit types into a unit */
-#define UNIT(u) ((Unit*) (u))
+#define UNIT(u) ((Unit*) (&(u)->meta))
 
 DEFINE_CAST(SOCKET, Socket);
 DEFINE_CAST(TIMER, Timer);
@@ -359,8 +399,13 @@ void unit_free(Unit *u);
 int unit_add_name(Unit *u, const char *name);
 
 int unit_add_dependency(Unit *u, UnitDependency d, Unit *other, bool add_reference);
+int unit_add_two_dependencies(Unit *u, UnitDependency d, UnitDependency e, Unit *other, bool add_reference);
+
 int unit_add_dependency_by_name(Unit *u, UnitDependency d, const char *name, const char *filename, bool add_reference);
+int unit_add_two_dependencies_by_name(Unit *u, UnitDependency d, UnitDependency e, const char *name, const char *path, bool add_reference);
+
 int unit_add_dependency_by_name_inverse(Unit *u, UnitDependency d, const char *name, const char *filename, bool add_reference);
+int unit_add_two_dependencies_by_name_inverse(Unit *u, UnitDependency d, UnitDependency e, const char *name, const char *path, bool add_reference);
 
 int unit_add_exec_dependencies(Unit *u, ExecContext *c);
 
@@ -386,7 +431,6 @@ Unit *unit_follow_merge(Unit *u);
 
 int unit_load_fragment_and_dropin(Unit *u);
 int unit_load_fragment_and_dropin_optional(Unit *u);
-int unit_load_nop(Unit *u);
 int unit_load(Unit *unit);
 
 const char *unit_description(Unit *u);
@@ -443,8 +487,13 @@ int unit_add_node_link(Unit *u, const char *what, bool wants);
 
 int unit_coldplug(Unit *u);
 
-const char *unit_type_to_string(UnitType i);
-UnitType unit_type_from_string(const char *s);
+void unit_status_printf(Unit *u, const char *format, ...);
+
+bool unit_need_daemon_reload(Unit *u);
+
+void unit_reset_maintenance(Unit *u);
+
+Unit *unit_following(Unit *u);
 
 const char *unit_load_state_to_string(UnitLoadState i);
 UnitLoadState unit_load_state_from_string(const char *s);

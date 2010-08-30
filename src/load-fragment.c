@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -29,6 +29,7 @@
 #include <sys/prctl.h>
 #include <sys/mount.h>
 #include <linux/fs.h>
+#include <sys/stat.h>
 
 #include "unit.h"
 #include "strv.h"
@@ -39,33 +40,9 @@
 #include "securebits.h"
 #include "missing.h"
 #include "unit-name.h"
+#include "bus-errors.h"
 
-#define DEFINE_CONFIG_PARSE_ENUM(function,name,type,msg)                \
-        static int function(                                            \
-                        const char *filename,                           \
-                        unsigned line,                                  \
-                        const char *section,                            \
-                        const char *lvalue,                             \
-                        const char *rvalue,                             \
-                        void *data,                                     \
-                        void *userdata) {                               \
-                                                                        \
-                type *i = data, x;                                      \
-                                                                        \
-                assert(filename);                                       \
-                assert(lvalue);                                         \
-                assert(rvalue);                                         \
-                assert(data);                                           \
-                                                                        \
-                if ((x = name##_from_string(rvalue)) < 0) {             \
-                        log_error("[%s:%u] " msg ": %s", filename, line, rvalue); \
-                        return -EBADMSG;                                \
-                }                                                       \
-                                                                        \
-                *i = x;                                                 \
-                                                                        \
-                return 0;                                               \
-        }
+#define COMMENTS "#;\n"
 
 static int config_parse_deps(
                 const char *filename,
@@ -86,7 +63,7 @@ static int config_parse_deps(
         assert(lvalue);
         assert(rvalue);
 
-        FOREACH_WORD(w, l, rvalue, state) {
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 char *t, *k;
                 int r;
 
@@ -100,10 +77,14 @@ static int config_parse_deps(
                         return -ENOMEM;
 
                 r = unit_add_dependency_by_name(u, d, k, NULL, true);
-                free(k);
 
-                if (r < 0)
-                        return r;
+                if (r < 0) {
+                        log_error("Failed to add dependency on %s, ignoring: %s", k, strerror(-r));
+                        free(k);
+                        return 0;
+                }
+
+                free(k);
         }
 
         return 0;
@@ -128,7 +109,7 @@ static int config_parse_names(
         assert(rvalue);
         assert(data);
 
-        FOREACH_WORD(w, l, rvalue, state) {
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 char *t, *k;
                 int r;
 
@@ -142,16 +123,20 @@ static int config_parse_names(
                         return -ENOMEM;
 
                 r = unit_merge_by_name(u, k);
-                free(k);
 
-                if (r < 0)
-                        return r;
+                if (r < 0) {
+                        log_error("Failed to add name %s, ignoring: %s", k, strerror(-r));
+                        free(k);
+                        return 0;
+                }
+
+                free(k);
         }
 
         return 0;
 }
 
-static int config_parse_description(
+static int config_parse_string_printf(
                 const char *filename,
                 unsigned line,
                 const char *section,
@@ -161,23 +146,24 @@ static int config_parse_description(
                 void *userdata) {
 
         Unit *u = userdata;
+        char **s = data;
         char *k;
 
         assert(filename);
         assert(lvalue);
         assert(rvalue);
-        assert(data);
+        assert(s);
+        assert(u);
 
         if (!(k = unit_full_printf(u, rvalue)))
                 return -ENOMEM;
 
-        free(u->meta.description);
-
+        free(*s);
         if (*k)
-                u->meta.description = k;
+                *s = k;
         else {
                 free(k);
-                u->meta.description = NULL;
+                *s = NULL;
         }
 
         return 0;
@@ -219,9 +205,9 @@ static int config_parse_listen(
                 p->type = SOCKET_SOCKET;
 
                 if ((r = socket_address_parse(&p->address, rvalue)) < 0) {
-                        log_error("[%s:%u] Failed to parse address value: %s", filename, line, rvalue);
+                        log_error("[%s:%u] Failed to parse address value, ignoring: %s", filename, line, rvalue);
                         free(p);
-                        return r;
+                        return 0;
                 }
 
                 if (streq(lvalue, "ListenStream"))
@@ -234,8 +220,9 @@ static int config_parse_listen(
                 }
 
                 if (socket_address_family(&p->address) != AF_LOCAL && p->address.type == SOCK_SEQPACKET) {
+                        log_error("[%s:%u] Address family not supported, ignoring: %s", filename, line, rvalue);
                         free(p);
-                        return -EPROTONOSUPPORT;
+                        return 0;
                 }
         }
 
@@ -268,8 +255,8 @@ static int config_parse_socket_bind(
                 int r;
 
                 if ((r = parse_boolean(rvalue)) < 0) {
-                        log_error("[%s:%u] Failed to parse bind IPv6 only value: %s", filename, line, rvalue);
-                        return -EBADMSG;
+                        log_error("[%s:%u] Failed to parse bind IPv6 only value, ignoring: %s", filename, line, rvalue);
+                        return 0;
                 }
 
                 s->bind_ipv6_only = r ? SOCKET_ADDRESS_IPV6_ONLY : SOCKET_ADDRESS_BOTH;
@@ -297,13 +284,13 @@ static int config_parse_nice(
         assert(data);
 
         if ((r = safe_atoi(rvalue, &priority)) < 0) {
-                log_error("[%s:%u] Failed to parse nice priority: %s", filename, line, rvalue);
-                return r;
+                log_error("[%s:%u] Failed to parse nice priority, ignoring: %s. ", filename, line, rvalue);
+                return 0;
         }
 
         if (priority < PRIO_MIN || priority >= PRIO_MAX) {
-                log_error("[%s:%u] Nice priority out of range: %s", filename, line, rvalue);
-                return -ERANGE;
+                log_error("[%s:%u] Nice priority out of range, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         c->nice = priority;
@@ -330,13 +317,13 @@ static int config_parse_oom_adjust(
         assert(data);
 
         if ((r = safe_atoi(rvalue, &oa)) < 0) {
-                log_error("[%s:%u] Failed to parse OOM adjust value: %s", filename, line, rvalue);
-                return r;
+                log_error("[%s:%u] Failed to parse OOM adjust value, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         if (oa < OOM_DISABLE || oa > OOM_ADJUST_MAX) {
-                log_error("[%s:%u] OOM adjust value out of range: %s", filename, line, rvalue);
-                return -ERANGE;
+                log_error("[%s:%u] OOM adjust value out of range, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         c->oom_adjust = oa;
@@ -366,13 +353,13 @@ static int config_parse_mode(
         errno = 0;
         l = strtol(rvalue, &x, 8);
         if (!x || *x || errno) {
-                log_error("[%s:%u] Failed to parse mode value: %s", filename, line, rvalue);
-                return errno ? -errno : -EINVAL;
+                log_error("[%s:%u] Failed to parse mode value, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         if (l < 0000 || l > 07777) {
-                log_error("[%s:%u] mode value out of range: %s", filename, line, rvalue);
-                return -ERANGE;
+                log_error("[%s:%u] mode value out of range, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         *m = (mode_t) l;
@@ -388,73 +375,102 @@ static int config_parse_exec(
                 void *data,
                 void *userdata) {
 
-        ExecCommand **e = data, *nce = NULL;
-        char **n;
-        char *w;
+        ExecCommand **e = data, *nce;
+        char *path, **n;
         unsigned k;
-        size_t l;
-        char *state, *path = NULL;
-        bool honour_argv0, write_to_path;
 
         assert(filename);
         assert(lvalue);
         assert(rvalue);
-        assert(data);
+        assert(e);
 
         /* We accept an absolute path as first argument, or
          * alternatively an absolute prefixed with @ to allow
          * overriding of argv[0]. */
 
-        honour_argv0 = rvalue[0] == '@';
+        for (;;) {
+                char *w;
+                size_t l;
+                char *state;
+                bool honour_argv0 = false, ignore = false;
 
-        if (rvalue[honour_argv0 ? 1 : 0] != '/') {
-                log_error("[%s:%u] Invalid executable path in command line: %s", filename, line, rvalue);
-                return -EINVAL;
-        }
+                path = NULL;
+                nce = NULL;
+                n = NULL;
 
-        k = 0;
-        FOREACH_WORD_QUOTED(w, l, rvalue, state)
-                k++;
+                rvalue += strspn(rvalue, WHITESPACE);
 
-        if (!(n = new(char*, k + (honour_argv0 ? 0 : 1))))
-                return -ENOMEM;
+                if (rvalue[0] == 0)
+                        break;
 
-        k = 0;
-        write_to_path = honour_argv0;
-        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
-                if (write_to_path) {
-                        if (!(path = strndup(w+1, l-1)))
-                                goto fail;
-                        write_to_path = false;
-                } else {
-                        if (!(n[k++] = strndup(w, l)))
-                                goto fail;
+                if (rvalue[0] == '-') {
+                        ignore = true;
+                        rvalue ++;
                 }
-        }
 
-        n[k] = NULL;
+                if (rvalue[0] == '@') {
+                        honour_argv0 = true;
+                        rvalue ++;
+                }
 
-        if (!n[0]) {
-                log_error("[%s:%u] Invalid command line: %s", filename, line, rvalue);
-                strv_free(n);
-                return -EINVAL;
-        }
+                if (*rvalue != '/') {
+                        log_error("[%s:%u] Invalid executable path in command line, ignoring: %s", filename, line, rvalue);
+                        return 0;
+                }
 
-        if (!path)
-                if (!(path = strdup(n[0])))
+                k = 0;
+                FOREACH_WORD_QUOTED(w, l, rvalue, state) {
+                        if (strncmp(w, ";", l) == 0)
+                                break;
+
+                        k++;
+                }
+
+                if (!(n = new(char*, k + !honour_argv0)))
+                        return -ENOMEM;
+
+                k = 0;
+                FOREACH_WORD_QUOTED(w, l, rvalue, state) {
+                        if (strncmp(w, ";", l) == 0)
+                                break;
+
+                        if (honour_argv0 && w == rvalue) {
+                                assert(!path);
+                                if (!(path = cunescape_length(w, l)))
+                                        goto fail;
+                        } else {
+                                if (!(n[k++] = cunescape_length(w, l)))
+                                        goto fail;
+                        }
+                }
+
+                n[k] = NULL;
+
+                if (!n[0]) {
+                        log_error("[%s:%u] Invalid command line, ignoring: %s", filename, line, rvalue);
+                        strv_free(n);
+                        return 0;
+                }
+
+                if (!path)
+                        if (!(path = strdup(n[0])))
+                                goto fail;
+
+                assert(path_is_absolute(path));
+
+                if (!(nce = new0(ExecCommand, 1)))
                         goto fail;
 
-        assert(path_is_absolute(path));
+                nce->argv = n;
+                nce->path = path;
+                nce->ignore = ignore;
 
-        if (!(nce = new0(ExecCommand, 1)))
-                goto fail;
+                path_kill_slashes(nce->path);
 
-        nce->argv = n;
-        nce->path = path;
+                exec_command_append_list(e, nce);
 
-        path_kill_slashes(nce->path);
-
-        exec_command_append_list(e, nce);
+                rvalue = state;
+        }
 
         return 0;
 
@@ -485,15 +501,15 @@ static int config_parse_usec(
         assert(data);
 
         if ((r = parse_usec(rvalue, usec)) < 0) {
-                log_error("[%s:%u] Failed to parse time value: %s", filename, line, rvalue);
-                return r;
+                log_error("[%s:%u] Failed to parse time value, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         return 0;
 }
 
-DEFINE_CONFIG_PARSE_ENUM(config_parse_service_type, service_type, ServiceType, "Failed to parse service type");
-DEFINE_CONFIG_PARSE_ENUM(config_parse_service_restart, service_restart, ServiceRestart, "Failed to parse service restart specifier");
+static DEFINE_CONFIG_PARSE_ENUM(config_parse_service_type, service_type, ServiceType, "Failed to parse service type");
+static DEFINE_CONFIG_PARSE_ENUM(config_parse_service_restart, service_restart, ServiceRestart, "Failed to parse service restart specifier");
 
 static int config_parse_bindtodevice(
                 const char *filename,
@@ -524,8 +540,8 @@ static int config_parse_bindtodevice(
         return 0;
 }
 
-DEFINE_CONFIG_PARSE_ENUM(config_parse_output, exec_output, ExecOutput, "Failed to parse output specifier");
-DEFINE_CONFIG_PARSE_ENUM(config_parse_input, exec_input, ExecInput, "Failed to parse input specifier");
+static DEFINE_CONFIG_PARSE_ENUM(config_parse_output, exec_output, ExecOutput, "Failed to parse output specifier");
+static DEFINE_CONFIG_PARSE_ENUM(config_parse_input, exec_input, ExecInput, "Failed to parse input specifier");
 
 static int config_parse_facility(
                 const char *filename,
@@ -545,8 +561,8 @@ static int config_parse_facility(
         assert(data);
 
         if ((x = log_facility_from_string(rvalue)) < 0) {
-                log_error("[%s:%u] Failed to parse log facility: %s", filename, line, rvalue);
-                return -EBADMSG;
+                log_error("[%s:%u] Failed to parse log facility, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         *o = LOG_MAKEPRI(x, LOG_PRI(*o));
@@ -572,8 +588,8 @@ static int config_parse_level(
         assert(data);
 
         if ((x = log_level_from_string(rvalue)) < 0) {
-                log_error("[%s:%u] Failed to parse log level: %s", filename, line, rvalue);
-                return -EBADMSG;
+                log_error("[%s:%u] Failed to parse log level, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         *o = LOG_MAKEPRI(LOG_FAC(*o), x);
@@ -598,8 +614,8 @@ static int config_parse_io_class(
         assert(data);
 
         if ((x = ioprio_class_from_string(rvalue)) < 0) {
-                log_error("[%s:%u] Failed to parse IO scheduling class: %s", filename, line, rvalue);
-                return -EBADMSG;
+                log_error("[%s:%u] Failed to parse IO scheduling class, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         c->ioprio = IOPRIO_PRIO_VALUE(x, IOPRIO_PRIO_DATA(c->ioprio));
@@ -626,8 +642,8 @@ static int config_parse_io_priority(
         assert(data);
 
         if (safe_atoi(rvalue, &i) < 0 || i < 0 || i >= IOPRIO_BE_NR) {
-                log_error("[%s:%u] Failed to parse io priority: %s", filename, line, rvalue);
-                return -EBADMSG;
+                log_error("[%s:%u] Failed to parse io priority, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         c->ioprio = IOPRIO_PRIO_VALUE(IOPRIO_PRIO_CLASS(c->ioprio), i);
@@ -655,8 +671,8 @@ static int config_parse_cpu_sched_policy(
         assert(data);
 
         if ((x = sched_policy_from_string(rvalue)) < 0) {
-                log_error("[%s:%u] Failed to parse CPU scheduling policy: %s", filename, line, rvalue);
-                return -EBADMSG;
+                log_error("[%s:%u] Failed to parse CPU scheduling policy, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         c->cpu_sched_policy = x;
@@ -684,8 +700,8 @@ static int config_parse_cpu_sched_prio(
 
         /* On Linux RR/FIFO have the same range */
         if (safe_atoi(rvalue, &i) < 0 || i < sched_get_priority_min(SCHED_RR) || i > sched_get_priority_max(SCHED_RR)) {
-                log_error("[%s:%u] Failed to parse CPU scheduling priority: %s", filename, line, rvalue);
-                return -EBADMSG;
+                log_error("[%s:%u] Failed to parse CPU scheduling priority, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         c->cpu_sched_priority = i;
@@ -713,7 +729,7 @@ static int config_parse_cpu_affinity(
         assert(rvalue);
         assert(data);
 
-        FOREACH_WORD(w, l, rvalue, state) {
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 char *t;
                 int r;
                 unsigned cpu;
@@ -724,15 +740,17 @@ static int config_parse_cpu_affinity(
                 r = safe_atou(t, &cpu);
                 free(t);
 
-                if (r < 0 || cpu >= CPU_SETSIZE) {
-                        log_error("[%s:%u] Failed to parse CPU affinity: %s", filename, line, rvalue);
-                        return -EBADMSG;
+                if (!(c->cpuset))
+                        if (!(c->cpuset = cpu_set_malloc(&c->cpuset_ncpus)))
+                                return -ENOMEM;
+
+                if (r < 0 || cpu >= c->cpuset_ncpus) {
+                        log_error("[%s:%u] Failed to parse CPU affinity, ignoring: %s", filename, line, rvalue);
+                        return 0;
                 }
 
-                CPU_SET(cpu, &c->cpu_affinity);
+                CPU_SET_S(cpu, CPU_ALLOC_SIZE(c->cpuset_ncpus), c->cpuset);
         }
-
-        c->cpu_affinity_set = true;
 
         return 0;
 }
@@ -758,8 +776,8 @@ static int config_parse_capabilities(
                 if (errno == ENOMEM)
                         return -ENOMEM;
 
-                log_error("[%s:%u] Failed to parse capabilities: %s", filename, line, rvalue);
-                return -EBADMSG;
+                log_error("[%s:%u] Failed to parse capabilities, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         if (c->capabilities)
@@ -788,7 +806,7 @@ static int config_parse_secure_bits(
         assert(rvalue);
         assert(data);
 
-        FOREACH_WORD(w, l, rvalue, state) {
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 if (first_word(w, "keep-caps"))
                         c->secure_bits |= SECURE_KEEP_CAPS;
                 else if (first_word(w, "keep-caps-locked"))
@@ -802,8 +820,8 @@ static int config_parse_secure_bits(
                 else if (first_word(w, "noroot-locked"))
                         c->secure_bits |= SECURE_NOROOT_LOCKED;
                 else {
-                        log_error("[%s:%u] Failed to parse secure bits: %s", filename, line, rvalue);
-                        return -EBADMSG;
+                        log_error("[%s:%u] Failed to parse secure bits, ignoring: %s", filename, line, rvalue);
+                        return 0;
                 }
         }
 
@@ -829,7 +847,7 @@ static int config_parse_bounding_set(
         assert(rvalue);
         assert(data);
 
-        FOREACH_WORD(w, l, rvalue, state) {
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 char *t;
                 int r;
                 cap_value_t cap;
@@ -841,8 +859,8 @@ static int config_parse_bounding_set(
                 free(t);
 
                 if (r < 0) {
-                        log_error("[%s:%u] Failed to parse capability bounding set: %s", filename, line, rvalue);
-                        return -EBADMSG;
+                        log_error("[%s:%u] Failed to parse capability bounding set, ignoring: %s", filename, line, rvalue);
+                        return 0;
                 }
 
                 c->capability_bounding_set_drop |= 1 << cap;
@@ -851,7 +869,7 @@ static int config_parse_bounding_set(
         return 0;
 }
 
-static int config_parse_timer_slack_ns(
+static int config_parse_timer_slack_nsec(
                 const char *filename,
                 unsigned line,
                 const char *section,
@@ -870,11 +888,11 @@ static int config_parse_timer_slack_ns(
         assert(data);
 
         if ((r = safe_atolu(rvalue, &u)) < 0) {
-                log_error("[%s:%u] Failed to parse time slack value: %s", filename, line, rvalue);
-                return r;
+                log_error("[%s:%u] Failed to parse time slack value, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
-        c->timer_slack_ns = u;
+        c->timer_slack_nsec = u;
 
         return 0;
 }
@@ -898,8 +916,8 @@ static int config_parse_limit(
         assert(data);
 
         if ((r = safe_atollu(rvalue, &u)) < 0) {
-                log_error("[%s:%u] Failed to parse resource value: %s", filename, line, rvalue);
-                return r;
+                log_error("[%s:%u] Failed to parse resource value, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         if (!*rl)
@@ -924,18 +942,20 @@ static int config_parse_cgroup(
         size_t l;
         char *state;
 
-        FOREACH_WORD(w, l, rvalue, state) {
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 char *t;
                 int r;
 
-                if (!(t = strndup(w, l)))
+                if (!(t = cunescape_length(w, l)))
                         return -ENOMEM;
 
                 r = unit_add_cgroup_from_text(u, t);
                 free(t);
 
-                if (r < 0)
-                        return r;
+                if (r < 0) {
+                        log_error("[%s:%u] Failed to parse cgroup value, ignoring: %s", filename, line, rvalue);
+                        return 0;
+                }
         }
 
         return 0;
@@ -959,15 +979,45 @@ static int config_parse_sysv_priority(
         assert(data);
 
         if ((r = safe_atoi(rvalue, &i)) < 0 || i < 0) {
-                log_error("[%s:%u] Failed to parse SysV start priority: %s", filename, line, rvalue);
-                return r;
+                log_error("[%s:%u] Failed to parse SysV start priority, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         *priority = (int) i;
         return 0;
 }
 
-DEFINE_CONFIG_PARSE_ENUM(config_parse_kill_mode, kill_mode, KillMode, "Failed to parse kill mode");
+static DEFINE_CONFIG_PARSE_ENUM(config_parse_kill_mode, kill_mode, KillMode, "Failed to parse kill mode");
+
+static int config_parse_kill_signal(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        int *sig = data;
+        int r;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(sig);
+
+        if ((r = signal_from_string(rvalue)) <= 0)
+                if (startswith(rvalue, "SIG"))
+                        r = signal_from_string(rvalue+3);
+
+        if (r <= 0) {
+                log_error("[%s:%u] Failed to parse kill signal, ignoring: %s", filename, line, rvalue);
+                return 0;
+        }
+
+        *sig = r;
+        return 0;
+}
 
 static int config_parse_mount_flags(
                 const char *filename,
@@ -989,7 +1039,7 @@ static int config_parse_mount_flags(
         assert(rvalue);
         assert(data);
 
-        FOREACH_WORD(w, l, rvalue, state) {
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 if (strncmp(w, "shared", l) == 0)
                         flags |= MS_SHARED;
                 else if (strncmp(w, "slave", l) == 0)
@@ -997,8 +1047,8 @@ static int config_parse_mount_flags(
                 else if (strncmp(w, "private", l) == 0)
                         flags |= MS_PRIVATE;
                 else {
-                        log_error("[%s:%u] Failed to parse mount flags: %s", filename, line, rvalue);
-                        return -EINVAL;
+                        log_error("[%s:%u] Failed to parse mount flags, ignoring: %s", filename, line, rvalue);
+                        return 0;
                 }
         }
 
@@ -1027,13 +1077,13 @@ static int config_parse_timer(
         assert(data);
 
         if ((b = timer_base_from_string(lvalue)) < 0) {
-                log_error("[%s:%u] Failed to parse timer base: %s", filename, line, lvalue);
-                return -EINVAL;
+                log_error("[%s:%u] Failed to parse timer base, ignoring: %s", filename, line, lvalue);
+                return 0;
         }
 
         if ((r = parse_usec(rvalue, &u)) < 0) {
-                log_error("[%s:%u] Failed to parse timer value: %s", filename, line, rvalue);
-                return r;
+                log_error("[%s:%u] Failed to parse timer value, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         if (!(v = new0(TimerValue, 1)))
@@ -1058,15 +1108,24 @@ static int config_parse_timer_unit(
 
         Timer *t = data;
         int r;
+        DBusError error;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(data);
+
+        dbus_error_init(&error);
 
         if (endswith(rvalue, ".timer")) {
-                log_error("[%s:%u] Unit cannot be of type timer: %s", filename, line, rvalue);
-                return -EINVAL;
+                log_error("[%s:%u] Unit cannot be of type timer, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
-        if ((r = manager_load_unit(t->meta.manager, rvalue, NULL, &t->unit)) < 0) {
-                log_error("[%s:%u] Failed to load unit: %s", filename, line, rvalue);
-                return r;
+        if ((r = manager_load_unit(t->meta.manager, rvalue, NULL, NULL, &t->unit)) < 0) {
+                log_error("[%s:%u] Failed to load unit %s, ignoring: %s", filename, line, rvalue, bus_error(&error, r));
+                dbus_error_free(&error);
+                return 0;
         }
 
         return 0;
@@ -1091,13 +1150,13 @@ static int config_parse_path_spec(
         assert(data);
 
         if ((b = path_type_from_string(lvalue)) < 0) {
-                log_error("[%s:%u] Failed to parse path type: %s", filename, line, lvalue);
-                return -EINVAL;
+                log_error("[%s:%u] Failed to parse path type, ignoring: %s", filename, line, lvalue);
+                return 0;
         }
 
         if (!path_is_absolute(rvalue)) {
-                log_error("[%s:%u] Path is not absolute: %s", filename, line, rvalue);
-                return -EINVAL;
+                log_error("[%s:%u] Path is not absolute, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
         if (!(s = new0(PathSpec, 1)))
@@ -1129,19 +1188,116 @@ static int config_parse_path_unit(
 
         Path *t = data;
         int r;
+        DBusError error;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(data);
+
+        dbus_error_init(&error);
 
         if (endswith(rvalue, ".path")) {
-                log_error("[%s:%u] Unit cannot be of type path: %s", filename, line, rvalue);
-                return -EINVAL;
+                log_error("[%s:%u] Unit cannot be of type path, ignoring: %s", filename, line, rvalue);
+                return 0;
         }
 
-        if ((r = manager_load_unit(t->meta.manager, rvalue, NULL, &t->unit)) < 0) {
-                log_error("[%s:%u] Failed to load unit: %s", filename, line, rvalue);
-                return r;
+        if ((r = manager_load_unit(t->meta.manager, rvalue, NULL, &error, &t->unit)) < 0) {
+                log_error("[%s:%u] Failed to load unit %s, ignoring: %s", filename, line, rvalue, bus_error(&error, r));
+                dbus_error_free(&error);
+                return 0;
         }
 
         return 0;
 }
+
+static int config_parse_env_file(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        FILE *f;
+        int r;
+        char ***env = data;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(data);
+
+        if (!(f = fopen(rvalue, "re"))) {
+                log_error("[%s:%u] Failed to open environment file '%s', ignoring: %m", filename, line, rvalue);
+                return 0;
+        }
+
+        while (!feof(f)) {
+                char l[LINE_MAX], *p;
+                char **t;
+
+                if (!fgets(l, sizeof(l), f)) {
+                        if (feof(f))
+                                break;
+
+                        r = -errno;
+                        log_error("[%s:%u] Failed to read environment file '%s', ignoring: %m", filename, line, rvalue);
+                        r = 0;
+                        goto finish;
+                }
+
+                p = strstrip(l);
+
+                if (!*p)
+                        continue;
+
+                if (strchr(COMMENTS, *p))
+                        continue;
+
+                t = strv_env_set(*env, p);
+                strv_free(*env);
+                *env = t;
+        }
+
+        r = 0;
+
+finish:
+        if (f)
+                fclose(f);
+
+        return r;
+}
+
+static int config_parse_ip_tos(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        int *ip_tos = data, x;
+        int r;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(data);
+
+        if ((x = ip_tos_from_string(rvalue)) < 0)
+                if ((r = safe_atoi(rvalue, &x)) < 0) {
+                        log_error("[%s:%u] Failed to parse IP TOS value, ignoring: %s", filename, line, rvalue);
+                        return 0;
+                }
+
+        *ip_tos = x;
+        return 0;
+}
+
+static DEFINE_CONFIG_PARSE_ENUM(config_parse_notify_access, notify_access, NotifyAccess, "Failed to parse notify access specifier");
 
 #define FOLLOW_MAX 8
 
@@ -1160,7 +1316,7 @@ static int open_follow(char **filename, FILE **_f, Set *names, char **_final) {
          * reached by a symlink. The old string will be freed. */
 
         for (;;) {
-                char *target, *k, *name;
+                char *target, *name;
 
                 if (c++ >= FOLLOW_MAX)
                         return -ELOOP;
@@ -1168,16 +1324,20 @@ static int open_follow(char **filename, FILE **_f, Set *names, char **_final) {
                 path_kill_slashes(*filename);
 
                 /* Add the file name we are currently looking at to
-                 * the names of this unit */
+                 * the names of this unit, but only if it is a valid
+                 * unit name. */
                 name = file_name_from_path(*filename);
-                if (!(id = set_get(names, name))) {
 
-                        if (!(id = strdup(name)))
-                                return -ENOMEM;
+                if (unit_name_is_valid(name)) {
+                        if (!(id = set_get(names, name))) {
 
-                        if ((r = set_put(names, id)) < 0) {
-                                free(id);
-                                return r;
+                                if (!(id = strdup(name)))
+                                        return -ENOMEM;
+
+                                if ((r = set_put(names, id)) < 0) {
+                                        free(id);
+                                        return r;
+                                }
                         }
                 }
 
@@ -1189,20 +1349,14 @@ static int open_follow(char **filename, FILE **_f, Set *names, char **_final) {
                         return -errno;
 
                 /* Hmm, so this is a symlink. Let's read the name, and follow it manually */
-                if ((r = readlink_malloc(*filename, &target)) < 0)
+                if ((r = readlink_and_make_absolute(*filename, &target)) < 0)
                         return r;
 
-                k = file_in_same_dir(*filename, target);
-                free(target);
-
-                if (!k)
-                        return -ENOMEM;
-
                 free(*filename);
-                *filename = k;
+                *filename = target;
         }
 
-        if (!(f = fdopen(fd, "r"))) {
+        if (!(f = fdopen(fd, "re"))) {
                 r = -errno;
                 close_nointr_nofail(fd);
                 return r;
@@ -1278,6 +1432,7 @@ static void dump_items(FILE *f, const ConfigItem *items) {
                 { config_parse_cpu_sched_prio,   "CPUSCHEDPRIO" },
                 { config_parse_cpu_affinity,     "CPUAFFINITY" },
                 { config_parse_mode,             "MODE" },
+                { config_parse_env_file,         "FILE" },
                 { config_parse_output,           "OUTPUT" },
                 { config_parse_input,            "INPUT" },
                 { config_parse_facility,         "FACILITY" },
@@ -1285,7 +1440,7 @@ static void dump_items(FILE *f, const ConfigItem *items) {
                 { config_parse_capabilities,     "CAPABILITIES" },
                 { config_parse_secure_bits,      "SECUREBITS" },
                 { config_parse_bounding_set,     "BOUNDINGSET" },
-                { config_parse_timer_slack_ns,   "TIMERSLACK" },
+                { config_parse_timer_slack_nsec, "TIMERSLACK" },
                 { config_parse_limit,            "LIMIT" },
                 { config_parse_cgroup,           "CGROUP [...]" },
                 { config_parse_deps,             "UNIT [...]" },
@@ -1295,15 +1450,20 @@ static void dump_items(FILE *f, const ConfigItem *items) {
                 { config_parse_service_restart,  "SERVICERESTART" },
                 { config_parse_sysv_priority,    "SYSVPRIORITY" },
                 { config_parse_kill_mode,        "KILLMODE" },
+                { config_parse_kill_signal,      "SIGNAL" },
                 { config_parse_listen,           "SOCKET [...]" },
                 { config_parse_socket_bind,      "SOCKETBIND" },
                 { config_parse_bindtodevice,     "NETWORKINTERFACE" },
                 { config_parse_usec,             "SECONDS" },
                 { config_parse_path_strv,        "PATH [...]" },
                 { config_parse_mount_flags,      "MOUNTFLAG [...]" },
-                { config_parse_description,      "DESCRIPTION" },
+                { config_parse_string_printf,    "STRING" },
                 { config_parse_timer,            "TIMER" },
                 { config_parse_timer_unit,       "NAME" },
+                { config_parse_path_spec,        "PATH" },
+                { config_parse_path_unit,        "UNIT" },
+                { config_parse_notify_access,    "ACCESS" },
+                { config_parse_ip_tos,           "TOS" },
         };
 
         assert(f);
@@ -1351,8 +1511,8 @@ static int load_from_path(Unit *u, const char *path) {
 #define EXEC_CONTEXT_CONFIG_ITEMS(context, section) \
                 { "WorkingDirectory",       config_parse_path,            &(context).working_directory,                    section   }, \
                 { "RootDirectory",          config_parse_path,            &(context).root_directory,                       section   }, \
-                { "User",                   config_parse_string,          &(context).user,                                 section   }, \
-                { "Group",                  config_parse_string,          &(context).group,                                section   }, \
+                { "User",                   config_parse_string_printf,   &(context).user,                                 section   }, \
+                { "Group",                  config_parse_string_printf,   &(context).group,                                section   }, \
                 { "SupplementaryGroups",    config_parse_strv,            &(context).supplementary_groups,                 section   }, \
                 { "Nice",                   config_parse_nice,            &(context),                                      section   }, \
                 { "OOMAdjust",              config_parse_oom_adjust,      &(context),                                      section   }, \
@@ -1364,18 +1524,19 @@ static int load_from_path(Unit *u, const char *path) {
                 { "CPUAffinity",            config_parse_cpu_affinity,    &(context),                                      section   }, \
                 { "UMask",                  config_parse_mode,            &(context).umask,                                section   }, \
                 { "Environment",            config_parse_strv,            &(context).environment,                          section   }, \
+                { "EnvironmentFile",        config_parse_env_file,        &(context).environment,                          section   }, \
                 { "StandardInput",          config_parse_input,           &(context).std_input,                            section   }, \
                 { "StandardOutput",         config_parse_output,          &(context).std_output,                           section   }, \
                 { "StandardError",          config_parse_output,          &(context).std_error,                            section   }, \
                 { "TTYPath",                config_parse_path,            &(context).tty_path,                             section   }, \
-                { "SyslogIdentifier",       config_parse_string,          &(context).syslog_identifier,                    section   }, \
+                { "SyslogIdentifier",       config_parse_string_printf,   &(context).syslog_identifier,                    section   }, \
                 { "SyslogFacility",         config_parse_facility,        &(context).syslog_priority,                      section   }, \
                 { "SyslogLevel",            config_parse_level,           &(context).syslog_priority,                      section   }, \
-                { "SyslogNoPrefix",         config_parse_bool,            &(context).syslog_no_prefix,                     section   }, \
+                { "SyslogLevelPrefix",      config_parse_bool,            &(context).syslog_level_prefix,                  section   }, \
                 { "Capabilities",           config_parse_capabilities,    &(context),                                      section   }, \
                 { "SecureBits",             config_parse_secure_bits,     &(context),                                      section   }, \
                 { "CapabilityBoundingSetDrop", config_parse_bounding_set, &(context),                                      section   }, \
-                { "TimerSlackNS",           config_parse_timer_slack_ns,  &(context),                                      section   }, \
+                { "TimerSlackNSec",         config_parse_timer_slack_nsec,&(context),                                      section   }, \
                 { "LimitCPU",               config_parse_limit,           &(context).rlimit[RLIMIT_CPU],                   section   }, \
                 { "LimitFSIZE",             config_parse_limit,           &(context).rlimit[RLIMIT_FSIZE],                 section   }, \
                 { "LimitDATA",              config_parse_limit,           &(context).rlimit[RLIMIT_DATA],                  section   }, \
@@ -1397,11 +1558,15 @@ static int load_from_path(Unit *u, const char *path) {
                 { "ReadOnlyDirectories",    config_parse_path_strv,       &(context).read_only_dirs,                       section   }, \
                 { "InaccessibleDirectories",config_parse_path_strv,       &(context).inaccessible_dirs,                    section   }, \
                 { "PrivateTmp",             config_parse_bool,            &(context).private_tmp,                          section   }, \
-                { "MountFlags",             config_parse_mount_flags,     &(context),                                      section   }
+                { "MountFlags",             config_parse_mount_flags,     &(context),                                      section   }, \
+                { "TCPWrapName",            config_parse_string_printf,   &(context).tcpwrap_name,                         section   }, \
+                { "PAMName",                config_parse_string_printf,   &(context).pam_name,                             section   }, \
+                { "KillMode",               config_parse_kill_mode,       &(context).kill_mode,                            section   }, \
+                { "KillSignal",             config_parse_kill_signal,     &(context).kill_signal,                          section   }
 
         const ConfigItem items[] = {
                 { "Names",                  config_parse_names,           u,                                               "Unit"    },
-                { "Description",            config_parse_description,     u,                                               "Unit"    },
+                { "Description",            config_parse_string_printf,   &u->meta.description,                            "Unit"    },
                 { "Requires",               config_parse_deps,            UINT_TO_PTR(UNIT_REQUIRES),                      "Unit"    },
                 { "RequiresOverridable",    config_parse_deps,            UINT_TO_PTR(UNIT_REQUIRES_OVERRIDABLE),          "Unit"    },
                 { "Requisite",              config_parse_deps,            UINT_TO_PTR(UNIT_REQUISITE),                     "Unit"    },
@@ -1410,9 +1575,14 @@ static int load_from_path(Unit *u, const char *path) {
                 { "Conflicts",              config_parse_deps,            UINT_TO_PTR(UNIT_CONFLICTS),                     "Unit"    },
                 { "Before",                 config_parse_deps,            UINT_TO_PTR(UNIT_BEFORE),                        "Unit"    },
                 { "After",                  config_parse_deps,            UINT_TO_PTR(UNIT_AFTER),                         "Unit"    },
+                { "OnFailure",              config_parse_deps,            UINT_TO_PTR(UNIT_ON_FAILURE),                    "Unit"    },
                 { "RecursiveStop",          config_parse_bool,            &u->meta.recursive_stop,                         "Unit"    },
                 { "StopWhenUnneeded",       config_parse_bool,            &u->meta.stop_when_unneeded,                     "Unit"    },
-                { "OnlyByDependency",       config_parse_bool,            &u->meta.only_by_dependency,                     "Unit"    },
+                { "RefuseManualStart",      config_parse_bool,            &u->meta.refuse_manual_start,                    "Unit"    },
+                { "RefuseManualStop",       config_parse_bool,            &u->meta.refuse_manual_stop,                     "Unit"    },
+                { "DefaultDependencies",    config_parse_bool,            &u->meta.default_dependencies,                   "Unit"    },
+                { "IgnoreDependencyFailure",config_parse_bool,            &u->meta.ignore_dependency_failure,              "Unit"    },
+                { "JobTimeoutSec",          config_parse_usec,            &u->meta.job_timeout,                            "Unit"    },
 
                 { "PIDFile",                config_parse_path,            &u->service.pid_file,                            "Service" },
                 { "ExecStartPre",           config_parse_exec,            u->service.exec_command+SERVICE_EXEC_START_PRE,  "Service" },
@@ -1427,11 +1597,11 @@ static int load_from_path(Unit *u, const char *path) {
                 { "Restart",                config_parse_service_restart, &u->service.restart,                             "Service" },
                 { "PermissionsStartOnly",   config_parse_bool,            &u->service.permissions_start_only,              "Service" },
                 { "RootDirectoryStartOnly", config_parse_bool,            &u->service.root_directory_start_only,           "Service" },
-                { "ValidNoProcess",         config_parse_bool,            &u->service.valid_no_process,                    "Service" },
+                { "RemainAfterExit",        config_parse_bool,            &u->service.remain_after_exit,                   "Service" },
                 { "SysVStartPriority",      config_parse_sysv_priority,   &u->service.sysv_start_priority,                 "Service" },
-                { "KillMode",               config_parse_kill_mode,       &u->service.kill_mode,                           "Service" },
                 { "NonBlocking",            config_parse_bool,            &u->service.exec_context.non_blocking,           "Service" },
-                { "BusName",                config_parse_string,          &u->service.bus_name,                            "Service" },
+                { "BusName",                config_parse_string_printf,   &u->service.bus_name,                            "Service" },
+                { "NotifyAccess",           config_parse_notify_access,   &u->service.notify_access,                       "Service" },
                 EXEC_CONTEXT_CONFIG_ITEMS(u->service.exec_context, "Service"),
 
                 { "ListenStream",           config_parse_listen,          &u->socket,                                      "Socket"  },
@@ -1448,8 +1618,18 @@ static int load_from_path(Unit *u, const char *path) {
                 { "TimeoutSec",             config_parse_usec,            &u->socket.timeout_usec,                         "Socket"  },
                 { "DirectoryMode",          config_parse_mode,            &u->socket.directory_mode,                       "Socket"  },
                 { "SocketMode",             config_parse_mode,            &u->socket.socket_mode,                          "Socket"  },
-                { "KillMode",               config_parse_kill_mode,       &u->socket.kill_mode,                            "Socket"  },
                 { "Accept",                 config_parse_bool,            &u->socket.accept,                               "Socket"  },
+                { "MaxConnections",         config_parse_unsigned,        &u->socket.max_connections,                      "Socket"  },
+                { "KeepAlive",              config_parse_bool,            &u->socket.keep_alive,                           "Socket"  },
+                { "Priority",               config_parse_int,             &u->socket.priority,                             "Socket"  },
+                { "ReceiveBuffer",          config_parse_size,            &u->socket.receive_buffer,                       "Socket"  },
+                { "SendBuffer",             config_parse_size,            &u->socket.send_buffer,                          "Socket"  },
+                { "IPTOS",                  config_parse_ip_tos,          &u->socket.ip_tos,                               "Socket"  },
+                { "IPTTL",                  config_parse_int,             &u->socket.ip_ttl,                               "Socket"  },
+                { "Mark",                   config_parse_int,             &u->socket.mark,                                 "Socket"  },
+                { "PipeSize",               config_parse_size,            &u->socket.pipe_size,                            "Socket"  },
+                { "FreeBind",               config_parse_bool,            &u->socket.free_bind,                            "Socket"  },
+                { "TCPCongestion",          config_parse_string,          &u->socket.tcp_congestion,                       "Socket"  },
                 EXEC_CONTEXT_CONFIG_ITEMS(u->socket.exec_context, "Socket"),
 
                 { "What",                   config_parse_string,          &u->mount.parameters_fragment.what,              "Mount"   },
@@ -1457,19 +1637,20 @@ static int load_from_path(Unit *u, const char *path) {
                 { "Options",                config_parse_string,          &u->mount.parameters_fragment.options,           "Mount"   },
                 { "Type",                   config_parse_string,          &u->mount.parameters_fragment.fstype,            "Mount"   },
                 { "TimeoutSec",             config_parse_usec,            &u->mount.timeout_usec,                          "Mount"   },
-                { "KillMode",               config_parse_kill_mode,       &u->mount.kill_mode,                             "Mount"   },
+                { "DirectoryMode",          config_parse_mode,            &u->mount.directory_mode,                        "Mount"   },
                 EXEC_CONTEXT_CONFIG_ITEMS(u->mount.exec_context, "Mount"),
 
                 { "Where",                  config_parse_path,            &u->automount.where,                             "Automount" },
+                { "DirectoryMode",          config_parse_mode,            &u->automount.directory_mode,                    "Automount" },
 
                 { "What",                   config_parse_path,            &u->swap.parameters_fragment.what,               "Swap"    },
                 { "Priority",               config_parse_int,             &u->swap.parameters_fragment.priority,           "Swap"    },
 
-                { "OnActive",               config_parse_timer,           &u->timer,                                       "Timer"   },
-                { "OnBoot",                 config_parse_timer,           &u->timer,                                       "Timer"   },
-                { "OnStartup",              config_parse_timer,           &u->timer,                                       "Timer"   },
-                { "OnUnitActive",           config_parse_timer,           &u->timer,                                       "Timer"   },
-                { "OnUnitInactive",         config_parse_timer,           &u->timer,                                       "Timer"   },
+                { "OnActiveSec",            config_parse_timer,           &u->timer,                                       "Timer"   },
+                { "OnBootSec",              config_parse_timer,           &u->timer,                                       "Timer"   },
+                { "OnStartupSec",           config_parse_timer,           &u->timer,                                       "Timer"   },
+                { "OnUnitActiveSec",        config_parse_timer,           &u->timer,                                       "Timer"   },
+                { "OnUnitInactiveSec",      config_parse_timer,           &u->timer,                                       "Timer"   },
                 { "Unit",                   config_parse_timer_unit,      &u->timer,                                       "Timer"   },
 
                 { "PathExists",             config_parse_path_spec,       &u->path,                                        "Path"    },
@@ -1477,18 +1658,23 @@ static int load_from_path(Unit *u, const char *path) {
                 { "DirectoryNotEmpty",      config_parse_path_spec,       &u->path,                                        "Path"    },
                 { "Unit",                   config_parse_path_unit,       &u->path,                                        "Path"    },
 
+                /* The [Install] section is ignored here. */
+                { "Alias",                  NULL,                         NULL,                                            "Install" },
+                { "WantedBy",               NULL,                         NULL,                                            "Install" },
+                { "Also",                   NULL,                         NULL,                                            "Install" },
+
                 { NULL, NULL, NULL, NULL }
         };
 
 #undef EXEC_CONTEXT_CONFIG_ITEMS
 
-        const char *sections[3];
-        char *k;
+        const char *sections[4];
         int r;
         Set *symlink_names;
         FILE *f = NULL;
         char *filename = NULL, *id = NULL;
         Unit *merged;
+        struct stat st;
 
         if (!u) {
                 /* Dirty dirty hack. */
@@ -1501,7 +1687,8 @@ static int load_from_path(Unit *u, const char *path) {
 
         sections[0] = "Unit";
         sections[1] = section_table[u->meta.type];
-        sections[2] = NULL;
+        sections[2] = "Install";
+        sections[3] = NULL;
 
         if (!(symlink_names = set_new(string_hash_func, string_compare_func)))
                 return -ENOMEM;
@@ -1524,7 +1711,7 @@ static int load_from_path(Unit *u, const char *path) {
         } else  {
                 char **p;
 
-                STRV_FOREACH(p, u->meta.manager->unit_path) {
+                STRV_FOREACH(p, u->meta.manager->lookup_paths.unit_path) {
 
                         /* Instead of opening the path right away, we manually
                          * follow all symlinks and add their name to our unit
@@ -1534,7 +1721,13 @@ static int load_from_path(Unit *u, const char *path) {
                                 goto finish;
                         }
 
-                        if ((r = open_follow(&filename, &f, symlink_names, &id)) < 0) {
+                        if (u->meta.manager->unit_path_cache &&
+                            !set_get(u->meta.manager->unit_path_cache, filename))
+                                r = -ENOENT;
+                        else
+                                r = open_follow(&filename, &f, symlink_names, &id);
+
+                        if (r < 0) {
                                 char *sn;
 
                                 free(filename);
@@ -1555,6 +1748,7 @@ static int load_from_path(Unit *u, const char *path) {
         }
 
         if (!filename) {
+                /* Hmm, no suitable file found? */
                 r = 0;
                 goto finish;
         }
@@ -1569,22 +1763,27 @@ static int load_from_path(Unit *u, const char *path) {
                 goto finish;
         }
 
+        zero(st);
+        if (fstat(fileno(f), &st) < 0) {
+                r = -errno;
+                goto finish;
+        }
+
         /* Now, parse the file contents */
-        if ((r = config_parse(filename, f, sections, items, u)) < 0)
+        if ((r = config_parse(filename, f, sections, items, false, u)) < 0)
                 goto finish;
 
         free(u->meta.fragment_path);
         u->meta.fragment_path = filename;
         filename = NULL;
 
+        u->meta.fragment_mtime = timespec_load(&st.st_mtim);
+
         u->meta.load_state = UNIT_LOADED;
         r = 0;
 
 finish:
-        while ((k = set_steal_first(symlink_names)))
-                free(k);
-
-        set_free(symlink_names);
+        set_free_free(symlink_names);
         free(filename);
 
         if (f)
@@ -1595,68 +1794,69 @@ finish:
 
 int unit_load_fragment(Unit *u) {
         int r;
+        Iterator i;
+        const char *t;
 
         assert(u);
+        assert(u->meta.load_state == UNIT_STUB);
+        assert(u->meta.id);
 
-        if (u->meta.fragment_path) {
+        /* First, try to find the unit under its id. We always look
+         * for unit files in the default directories, to make it easy
+         * to override things by placing things in /etc/systemd/system */
+        if ((r = load_from_path(u, u->meta.id)) < 0)
+                return r;
 
+        /* Try to find an alias we can load this with */
+        if (u->meta.load_state == UNIT_STUB)
+                SET_FOREACH(t, u->meta.names, i) {
+
+                        if (t == u->meta.id)
+                                continue;
+
+                        if ((r = load_from_path(u, t)) < 0)
+                                return r;
+
+                        if (u->meta.load_state != UNIT_STUB)
+                                break;
+                }
+
+        /* And now, try looking for it under the suggested (originally linked) path */
+        if (u->meta.load_state == UNIT_STUB && u->meta.fragment_path)
                 if ((r = load_from_path(u, u->meta.fragment_path)) < 0)
                         return r;
 
-        } else {
-                Iterator i;
-                const char *t;
+        /* Look for a template */
+        if (u->meta.load_state == UNIT_STUB && u->meta.instance) {
+                char *k;
 
-                /* Try to find the unit under its id */
-                if ((r = load_from_path(u, u->meta.id)) < 0)
+                if (!(k = unit_name_template(u->meta.id)))
+                        return -ENOMEM;
+
+                r = load_from_path(u, k);
+                free(k);
+
+                if (r < 0)
                         return r;
 
-                /* Try to find an alias we can load this with */
                 if (u->meta.load_state == UNIT_STUB)
                         SET_FOREACH(t, u->meta.names, i) {
 
                                 if (t == u->meta.id)
                                         continue;
 
-                                if ((r = load_from_path(u, t)) < 0)
+                                if (!(k = unit_name_template(t)))
+                                        return -ENOMEM;
+
+                                r = load_from_path(u, k);
+                                free(k);
+
+                                if (r < 0)
                                         return r;
 
                                 if (u->meta.load_state != UNIT_STUB)
                                         break;
                         }
-
-                /* Now, follow the same logic, but look for a template */
-                if (u->meta.load_state == UNIT_STUB && u->meta.instance) {
-                        char *k;
-
-                        if (!(k = unit_name_template(u->meta.id)))
-                                return -ENOMEM;
-
-                        r = load_from_path(u, k);
-                        free(k);
-
-                        if (r < 0)
-                                return r;
-
-                        if (u->meta.load_state == UNIT_STUB)
-                                SET_FOREACH(t, u->meta.names, i) {
-
-                                        if (t == u->meta.id)
-                                                continue;
-
-                                        if (!(k = unit_name_template(t)))
-                                                return -ENOMEM;
-
-                                        r = load_from_path(u, k);
-                                        free(k);
-
-                                        if (r < 0)
-                                                return r;
-
-                                        if (u->meta.load_state != UNIT_STUB)
-                                                break;
-                                }
-                }
         }
 
         return 0;

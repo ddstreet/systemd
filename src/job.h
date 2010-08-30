@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 #ifndef foojobhfoo
 #define foojobhfoo
@@ -80,6 +80,7 @@ struct JobDependency {
         LIST_FIELDS(JobDependency, object);
 
         bool matters;
+        bool conflicts;
 };
 
 struct Job {
@@ -102,6 +103,12 @@ struct Job {
         JobType type;
         JobState state;
 
+        Watch timer_watch;
+
+        /* Note that this bus object is not ref counted here. */
+        DBusConnection *bus;
+        char *bus_client;
+
         bool installed:1;
         bool in_run_queue:1;
         bool matters_to_anchor:1;
@@ -115,9 +122,8 @@ Job* job_new(Manager *m, JobType type, Unit *unit);
 void job_free(Job *job);
 void job_dump(Job *j, FILE*f, const char *prefix);
 
-JobDependency* job_dependency_new(Job *subject, Job *object, bool matters);
+JobDependency* job_dependency_new(Job *subject, Job *object, bool matters, bool conflicts);
 void job_dependency_free(JobDependency *l);
-void job_dependency_delete(Job *subject, Job *object, bool *matters);
 
 bool job_is_anchor(Job *j);
 
@@ -134,8 +140,13 @@ bool job_is_runnable(Job *j);
 void job_add_to_run_queue(Job *j);
 void job_add_to_dbus_queue(Job *j);
 
+int job_start_timer(Job *j);
+void job_timer_event(Job *j, uint64_t n_elapsed, Watch *w);
+
 int job_run_and_invalidate(Job *j);
 int job_finish_and_invalidate(Job *j, bool success);
+
+char *job_dbus_path(Job *j);
 
 const char* job_type_to_string(JobType t);
 JobType job_type_from_string(const char *s);
@@ -145,7 +156,5 @@ JobState job_state_from_string(const char *s);
 
 const char* job_mode_to_string(JobMode t);
 JobMode job_mode_from_string(const char *s);
-
-char *job_dbus_path(Job *j);
 
 #endif

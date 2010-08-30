@@ -1,4 +1,4 @@
-/*-*- Mode: C; c-basic-offset: 8 -*-*/
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
 /***
   This file is part of systemd.
@@ -40,6 +40,12 @@
 #include "kmod-setup.h"
 #include "load-fragment.h"
 #include "fdset.h"
+#include "special.h"
+#include "conf-parser.h"
+#include "bus-errors.h"
+#include "missing.h"
+#include "label.h"
+#include "build.h"
 
 static enum {
         ACTION_RUN,
@@ -47,15 +53,20 @@ static enum {
         ACTION_TEST,
         ACTION_DUMP_CONFIGURATION_ITEMS,
         ACTION_DONE
-} action = ACTION_RUN;
+} arg_action = ACTION_RUN;
 
-static char *default_unit = NULL;
-static ManagerRunningAs running_as = _MANAGER_RUNNING_AS_INVALID;
+static char *arg_default_unit = NULL;
+static ManagerRunningAs arg_running_as = _MANAGER_RUNNING_AS_INVALID;
 
-static bool dump_core = true;
-static bool crash_shell = false;
-static int crash_chvt = -1;
-static bool confirm_spawn = false;
+static bool arg_dump_core = true;
+static bool arg_crash_shell = false;
+static int arg_crash_chvt = -1;
+static bool arg_confirm_spawn = false;
+static bool arg_show_status = true;
+static bool arg_sysv_console = true;
+static bool arg_mount_auto = true;
+static bool arg_swap_auto = true;
+
 static FILE* serialization = NULL;
 
 _noreturn_ static void freeze(void) {
@@ -68,8 +79,8 @@ static void nop_handler(int sig) {
 
 _noreturn_ static void crash(int sig) {
 
-        if (!dump_core)
-                log_error("Caught <%s>, not dumping core.", strsignal(sig));
+        if (!arg_dump_core)
+                log_error("Caught <%s>, not dumping core.", signal_to_string(sig));
         else {
                 struct sigaction sa;
                 pid_t pid;
@@ -81,7 +92,7 @@ _noreturn_ static void crash(int sig) {
                 assert_se(sigaction(SIGCHLD, &sa, NULL) == 0);
 
                 if ((pid = fork()) < 0)
-                        log_error("Caught <%s>, cannot fork for core dump: %s", strsignal(sig), strerror(errno));
+                        log_error("Caught <%s>, cannot fork for core dump: %s", signal_to_string(sig), strerror(errno));
 
                 else if (pid == 0) {
                         struct rlimit rl;
@@ -107,22 +118,22 @@ _noreturn_ static void crash(int sig) {
                         _exit(1);
 
                 } else {
-                        int status, r;
+                        int status;
 
                         /* Order things nicely. */
-                        if ((r = waitpid(pid, &status, 0)) < 0)
-                                log_error("Caught <%s>, waitpid() failed: %s", strsignal(sig), strerror(errno));
+                        if (waitpid(pid, &status, 0) < 0)
+                                log_error("Caught <%s>, waitpid() failed: %s", signal_to_string(sig), strerror(errno));
                         else if (!WCOREDUMP(status))
-                                log_error("Caught <%s>, core dump failed.", strsignal(sig));
+                                log_error("Caught <%s>, core dump failed.", signal_to_string(sig));
                         else
-                                log_error("Caught <%s>, dumped core as pid %llu.", strsignal(sig), (unsigned long long) pid);
+                                log_error("Caught <%s>, dumped core as pid %lu.", signal_to_string(sig), (unsigned long) pid);
                 }
         }
 
-        if (crash_chvt)
-                chvt(crash_chvt);
+        if (arg_crash_chvt)
+                chvt(arg_crash_chvt);
 
-        if (crash_shell) {
+        if (arg_crash_shell) {
                 struct sigaction sa;
                 pid_t pid;
 
@@ -151,7 +162,7 @@ _noreturn_ static void crash(int sig) {
                         _exit(1);
                 }
 
-                log_info("Successfully spawned crash shall as pid %llu.", (unsigned long long) pid);
+                log_info("Successfully spawned crash shall as pid %lu.", (unsigned long) pid);
         }
 
         log_info("Freezing execution.");
@@ -214,27 +225,29 @@ static int set_default_unit(const char *u) {
         if (!(c = strdup(u)))
                 return -ENOMEM;
 
-        free(default_unit);
-        default_unit = c;
+        free(arg_default_unit);
+        arg_default_unit = c;
         return 0;
 }
 
 static int parse_proc_cmdline_word(const char *word) {
 
         static const char * const rlmap[] = {
-                "single", SPECIAL_RUNLEVEL1_TARGET,
-                "-s",     SPECIAL_RUNLEVEL1_TARGET,
-                "s",      SPECIAL_RUNLEVEL1_TARGET,
-                "S",      SPECIAL_RUNLEVEL1_TARGET,
-                "1",      SPECIAL_RUNLEVEL1_TARGET,
+                "single", SPECIAL_RESCUE_TARGET,
+                "-s",     SPECIAL_RESCUE_TARGET,
+                "s",      SPECIAL_RESCUE_TARGET,
+                "S",      SPECIAL_RESCUE_TARGET,
+                "1",      SPECIAL_RESCUE_TARGET,
                 "2",      SPECIAL_RUNLEVEL2_TARGET,
                 "3",      SPECIAL_RUNLEVEL3_TARGET,
                 "4",      SPECIAL_RUNLEVEL4_TARGET,
                 "5",      SPECIAL_RUNLEVEL5_TARGET
         };
 
-        if (startswith(word, "systemd.default="))
-                return set_default_unit(word + 16);
+        assert(word);
+
+        if (startswith(word, "systemd.unit="))
+                return set_default_unit(word + 13);
 
         else if (startswith(word, "systemd.log_target=")) {
 
@@ -246,13 +259,23 @@ static int parse_proc_cmdline_word(const char *word) {
                 if (log_set_max_level_from_string(word + 18) < 0)
                         log_warning("Failed to parse log level %s. Ignoring.", word + 18);
 
+        } else if (startswith(word, "systemd.log_color=")) {
+
+                if (log_show_color_from_string(word + 18) < 0)
+                        log_warning("Failed to parse log color setting %s. Ignoring.", word + 18);
+
+        } else if (startswith(word, "systemd.log_location=")) {
+
+                if (log_show_location_from_string(word + 21) < 0)
+                        log_warning("Failed to parse log location setting %s. Ignoring.", word + 21);
+
         } else if (startswith(word, "systemd.dump_core=")) {
                 int r;
 
                 if ((r = parse_boolean(word + 18)) < 0)
                         log_warning("Failed to parse dump core switch %s, Ignoring.", word + 18);
                 else
-                        dump_core = r;
+                        arg_dump_core = r;
 
         } else if (startswith(word, "systemd.crash_shell=")) {
                 int r;
@@ -260,8 +283,7 @@ static int parse_proc_cmdline_word(const char *word) {
                 if ((r = parse_boolean(word + 20)) < 0)
                         log_warning("Failed to parse crash shell switch %s, Ignoring.", word + 20);
                 else
-                        crash_shell = r;
-
+                        arg_crash_shell = r;
 
         } else if (startswith(word, "systemd.confirm_spawn=")) {
                 int r;
@@ -269,7 +291,7 @@ static int parse_proc_cmdline_word(const char *word) {
                 if ((r = parse_boolean(word + 22)) < 0)
                         log_warning("Failed to parse confirm spawn switch %s, Ignoring.", word + 22);
                 else
-                        confirm_spawn = r;
+                        arg_confirm_spawn = r;
 
         } else if (startswith(word, "systemd.crash_chvt=")) {
                 int k;
@@ -277,21 +299,45 @@ static int parse_proc_cmdline_word(const char *word) {
                 if (safe_atoi(word + 19, &k) < 0)
                         log_warning("Failed to parse crash chvt switch %s, Ignoring.", word + 19);
                 else
-                        crash_chvt = k;
+                        arg_crash_chvt = k;
+
+        } else if (startswith(word, "systemd.show_status=")) {
+                int r;
+
+                if ((r = parse_boolean(word + 20)) < 0)
+                        log_warning("Failed to parse show status switch %s, Ignoring.", word + 20);
+                else
+                        arg_show_status = r;
+
+        } else if (startswith(word, "systemd.sysv_console=")) {
+                int r;
+
+                if ((r = parse_boolean(word + 21)) < 0)
+                        log_warning("Failed to parse SysV console switch %s, Ignoring.", word + 20);
+                else
+                        arg_sysv_console = r;
 
         } else if (startswith(word, "systemd.")) {
 
                 log_warning("Unknown kernel switch %s. Ignoring.", word);
 
-                log_info("Supported kernel switches:");
-                log_info("systemd.default=UNIT                     Default unit to start");
-                log_info("systemd.log_target=console|kmsg|syslog   Log target");
-                log_info("systemd.log_level=LEVEL                  Log level");
-                log_info("systemd.dump_core=0|1                    Dump core on crash");
-                log_info("systemd.crash_shell=0|1                  On crash run shell");
-                log_info("systemd.crash_chvt=N                     Change to VT #N on crash");
-                log_info("systemd.confirm_spawn=0|1                Confirm every process spawn");
+                log_info("Supported kernel switches:\n"
+                         "systemd.unit=UNIT                        Default unit to start\n"
+                         "systemd.dump_core=0|1                    Dump core on crash\n"
+                         "systemd.crash_shell=0|1                  Run shell on crash\n"
+                         "systemd.crash_chvt=N                     Change to VT #N on crash\n"
+                         "systemd.confirm_spawn=0|1                Confirm every process spawn\n"
+                         "systemd.show_status=0|1                  Show status updates on the console during bootup\n"
+                         "systemd.sysv_console=0|1                 Connect output of SysV scripts to console\n"
+                         "systemd.log_target=console|kmsg|syslog|syslog-org-kmsg|null\n"
+                         "                                         Log target\n"
+                         "systemd.log_level=LEVEL                  Log level\n"
+                         "systemd.log_color=0|1                    Highlight important log messages\n"
+                         "systemd.log_location=0|1                 Include code location in log messages\n");
 
+        } else if (streq(word, "quiet")) {
+                arg_show_status = false;
+                arg_sysv_console = false;
         } else {
                 unsigned i;
 
@@ -304,6 +350,172 @@ static int parse_proc_cmdline_word(const char *word) {
         return 0;
 }
 
+static int config_parse_level(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        log_set_max_level_from_string(rvalue);
+        return 0;
+}
+
+static int config_parse_target(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        log_set_target_from_string(rvalue);
+        return 0;
+}
+
+static int config_parse_color(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        log_show_color_from_string(rvalue);
+        return 0;
+}
+
+static int config_parse_location(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        log_show_location_from_string(rvalue);
+        return 0;
+}
+
+static int config_parse_cpu_affinity(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        char *w;
+        size_t l;
+        char *state;
+        cpu_set_t *c = NULL;
+        unsigned ncpus = 0;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        FOREACH_WORD_QUOTED(w, l, rvalue, state) {
+                char *t;
+                int r;
+                unsigned cpu;
+
+                if (!(t = strndup(w, l)))
+                        return -ENOMEM;
+
+                r = safe_atou(t, &cpu);
+                free(t);
+
+                if (!c)
+                        if (!(c = cpu_set_malloc(&ncpus)))
+                                return -ENOMEM;
+
+                if (r < 0 || cpu >= ncpus) {
+                        log_error("[%s:%u] Failed to parse CPU affinity: %s", filename, line, rvalue);
+                        CPU_FREE(c);
+                        return -EBADMSG;
+                }
+
+                CPU_SET_S(cpu, CPU_ALLOC_SIZE(ncpus), c);
+        }
+
+        if (c) {
+                if (sched_setaffinity(0, CPU_ALLOC_SIZE(ncpus), c) < 0)
+                        log_warning("Failed to set CPU affinity: %m");
+
+                CPU_FREE(c);
+        }
+
+        return 0;
+}
+
+static int parse_config_file(void) {
+
+        const ConfigItem items[] = {
+                { "LogLevel",    config_parse_level,        NULL,               "Manager" },
+                { "LogTarget",   config_parse_target,       NULL,               "Manager" },
+                { "LogColor",    config_parse_color,        NULL,               "Manager" },
+                { "LogLocation", config_parse_location,     NULL,               "Manager" },
+                { "DumpCore",    config_parse_bool,         &arg_dump_core,     "Manager" },
+                { "CrashShell",  config_parse_bool,         &arg_crash_shell,   "Manager" },
+                { "ShowStatus",  config_parse_bool,         &arg_show_status,   "Manager" },
+                { "SysVConsole", config_parse_bool,         &arg_sysv_console,  "Manager" },
+                { "CrashChVT",   config_parse_int,          &arg_crash_chvt,    "Manager" },
+                { "CPUAffinity", config_parse_cpu_affinity, NULL,               "Manager" },
+                { "MountAuto",   config_parse_bool,         &arg_mount_auto,    "Manager" },
+                { "SwapAuto",    config_parse_bool,         &arg_swap_auto,     "Manager" },
+                { NULL, NULL, NULL, NULL }
+        };
+
+        static const char * const sections[] = {
+                "Manager",
+                NULL
+        };
+
+        FILE *f;
+        const char *fn;
+        int r;
+
+        fn = arg_running_as == MANAGER_SYSTEM ? SYSTEM_CONFIG_FILE : SESSION_CONFIG_FILE;
+
+        if (!(f = fopen(fn, "re"))) {
+                if (errno == ENOENT)
+                        return 0;
+
+                log_warning("Failed to open configuration file '%s': %m", fn);
+                return 0;
+        }
+
+        if ((r = config_parse(fn, f, sections, items, false, NULL)) < 0)
+                log_warning("Failed to parse configuration file: %s", strerror(-r));
+
+        fclose(f);
+
+        return 0;
+}
+
 static int parse_proc_cmdline(void) {
         char *line;
         int r;
@@ -312,7 +524,7 @@ static int parse_proc_cmdline(void) {
         char *state;
 
         if ((r = read_one_line_file("/proc/cmdline", &line)) < 0) {
-                log_warning("Failed to read /proc/cmdline, ignoring: %s", strerror(errno));
+                log_warning("Failed to read /proc/cmdline, ignoring: %s", strerror(-r));
                 return 0;
         }
 
@@ -343,11 +555,18 @@ static int parse_argv(int argc, char *argv[]) {
         enum {
                 ARG_LOG_LEVEL = 0x100,
                 ARG_LOG_TARGET,
-                ARG_DEFAULT,
-                ARG_RUNNING_AS,
+                ARG_LOG_COLOR,
+                ARG_LOG_LOCATION,
+                ARG_UNIT,
+                ARG_SYSTEM,
+                ARG_SESSION,
                 ARG_TEST,
                 ARG_DUMP_CONFIGURATION_ITEMS,
+                ARG_DUMP_CORE,
+                ARG_CRASH_SHELL,
                 ARG_CONFIRM_SPAWN,
+                ARG_SHOW_STATUS,
+                ARG_SYSV_CONSOLE,
                 ARG_DESERIALIZE,
                 ARG_INTROSPECT
         };
@@ -355,12 +574,19 @@ static int parse_argv(int argc, char *argv[]) {
         static const struct option options[] = {
                 { "log-level",                required_argument, NULL, ARG_LOG_LEVEL                },
                 { "log-target",               required_argument, NULL, ARG_LOG_TARGET               },
-                { "default",                  required_argument, NULL, ARG_DEFAULT                  },
-                { "running-as",               required_argument, NULL, ARG_RUNNING_AS               },
+                { "log-color",                optional_argument, NULL, ARG_LOG_COLOR                },
+                { "log-location",             optional_argument, NULL, ARG_LOG_LOCATION             },
+                { "unit",                     required_argument, NULL, ARG_UNIT                     },
+                { "system",                   no_argument,       NULL, ARG_SYSTEM                   },
+                { "session",                  no_argument,       NULL, ARG_SESSION                  },
                 { "test",                     no_argument,       NULL, ARG_TEST                     },
                 { "help",                     no_argument,       NULL, 'h'                          },
                 { "dump-configuration-items", no_argument,       NULL, ARG_DUMP_CONFIGURATION_ITEMS },
+                { "dump-core",                no_argument,       NULL, ARG_DUMP_CORE                },
+                { "crash-shell",              no_argument,       NULL, ARG_CRASH_SHELL              },
                 { "confirm-spawn",            no_argument,       NULL, ARG_CONFIRM_SPAWN            },
+                { "show-status",              optional_argument, NULL, ARG_SHOW_STATUS              },
+                { "sysv-console",             optional_argument, NULL, ARG_SYSV_CONSOLE             },
                 { "deserialize",              required_argument, NULL, ARG_DESERIALIZE              },
                 { "introspect",               optional_argument, NULL, ARG_INTROSPECT               },
                 { NULL,                       0,                 NULL, 0                            }
@@ -371,7 +597,7 @@ static int parse_argv(int argc, char *argv[]) {
         assert(argc >= 1);
         assert(argv);
 
-        while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0)
+        while ((c = getopt_long(argc, argv, "hD", options, NULL)) >= 0)
 
                 switch (c) {
 
@@ -392,7 +618,31 @@ static int parse_argv(int argc, char *argv[]) {
 
                         break;
 
-                case ARG_DEFAULT:
+                case ARG_LOG_COLOR:
+
+                        if (optarg) {
+                                if ((r = log_show_color_from_string(optarg)) < 0) {
+                                        log_error("Failed to parse log color setting %s.", optarg);
+                                        return r;
+                                }
+                        } else
+                                log_show_color(true);
+
+                        break;
+
+                case ARG_LOG_LOCATION:
+
+                        if (optarg) {
+                                if ((r = log_show_location_from_string(optarg)) < 0) {
+                                        log_error("Failed to parse log location setting %s.", optarg);
+                                        return r;
+                                }
+                        } else
+                                log_show_location(true);
+
+                        break;
+
+                case ARG_UNIT:
 
                         if ((r = set_default_unit(optarg)) < 0) {
                                 log_error("Failed to set default unit %s: %s", optarg, strerror(-r));
@@ -401,28 +651,56 @@ static int parse_argv(int argc, char *argv[]) {
 
                         break;
 
-                case ARG_RUNNING_AS: {
-                        ManagerRunningAs as;
-
-                        if ((as = manager_running_as_from_string(optarg)) < 0) {
-                                log_error("Failed to parse running as value %s", optarg);
-                                return -EINVAL;
-                        }
-
-                        running_as = as;
+                case ARG_SYSTEM:
+                        arg_running_as = MANAGER_SYSTEM;
                         break;
-                }
+
+                case ARG_SESSION:
+                        arg_running_as = MANAGER_SESSION;
+                        break;
 
                 case ARG_TEST:
-                        action = ACTION_TEST;
+                        arg_action = ACTION_TEST;
                         break;
 
                 case ARG_DUMP_CONFIGURATION_ITEMS:
-                        action = ACTION_DUMP_CONFIGURATION_ITEMS;
+                        arg_action = ACTION_DUMP_CONFIGURATION_ITEMS;
+                        break;
+
+                case ARG_DUMP_CORE:
+                        arg_dump_core = true;
+                        break;
+
+                case ARG_CRASH_SHELL:
+                        arg_crash_shell = true;
                         break;
 
                 case ARG_CONFIRM_SPAWN:
-                        confirm_spawn = true;
+                        arg_confirm_spawn = true;
+                        break;
+
+                case ARG_SHOW_STATUS:
+
+                        if (optarg) {
+                                if ((r = parse_boolean(optarg)) < 0) {
+                                        log_error("Failed to show status boolean %s.", optarg);
+                                        return r;
+                                }
+                                arg_show_status = r;
+                        } else
+                                arg_show_status = true;
+                        break;
+
+                case ARG_SYSV_CONSOLE:
+
+                        if (optarg) {
+                                if ((r = parse_boolean(optarg)) < 0) {
+                                        log_error("Failed to SysV console boolean %s.", optarg);
+                                        return r;
+                                }
+                                arg_sysv_console = r;
+                        } else
+                                arg_sysv_console = true;
                         break;
 
                 case ARG_DESERIALIZE: {
@@ -464,12 +742,16 @@ static int parse_argv(int argc, char *argv[]) {
                         if (!i[0] && optarg)
                                 log_error("Unknown interface %s.", optarg);
 
-                        action = ACTION_DONE;
+                        arg_action = ACTION_DONE;
                         break;
                 }
 
                 case 'h':
-                        action = ACTION_HELP;
+                        arg_action = ACTION_HELP;
+                        break;
+
+                case 'D':
+                        log_set_max_level(LOG_DEBUG);
                         break;
 
                 case '?':
@@ -484,7 +766,7 @@ static int parse_argv(int argc, char *argv[]) {
          * ignore and unconditionally read from
          * /proc/cmdline. However, we need to ignore those arguments
          * here. */
-        if (running_as != MANAGER_INIT && optind < argc) {
+        if (arg_running_as != MANAGER_SYSTEM && optind < argc) {
                 log_error("Excess arguments.");
                 return -EINVAL;
         }
@@ -494,17 +776,25 @@ static int parse_argv(int argc, char *argv[]) {
 
 static int help(void) {
 
-        printf("%s [options]\n\n"
+        printf("%s [OPTIONS...]\n\n"
+               "Starts up and maintains the system or a session.\n\n"
                "  -h --help                      Show this help\n"
-               "     --default=UNIT              Set default unit\n"
-               "     --log-level=LEVEL           Set log level\n"
-               "     --log-target=TARGET         Set log target (console, syslog, kmsg, syslog-or-kmsg)\n"
-               "     --running-as=AS             Set running as (init, system, session)\n"
                "     --test                      Determine startup sequence, dump it and exit\n"
                "     --dump-configuration-items  Dump understood unit configuration items\n"
+               "     --introspect[=INTERFACE]    Extract D-Bus interface data\n"
+               "     --unit=UNIT                 Set default unit\n"
+               "     --system                    Run a system instance, even if PID != 1\n"
+               "     --session                   Run a session instance\n"
+               "     --dump-core                 Dump core on crash\n"
+               "     --crash-shell               Run shell on crash\n"
                "     --confirm-spawn             Ask for confirmation when spawning processes\n"
-               "     --introspect[=INTERFACE]    Extract D-Bus interface data\n",
-               __progname);
+               "     --show-status[=0|1]         Show status updates on the console during bootup\n"
+               "     --sysv-console[=0|1]        Connect output of SysV scripts to console\n"
+               "     --log-target=TARGET         Set log target (console, syslog, kmsg, syslog-or-kmsg, null)\n"
+               "     --log-level=LEVEL           Set log level (debug, info, notice, warning, err, crit, alert, emerg)\n"
+               "     --log-color[=0|1]           Highlight important log messages\n"
+               "     --log-location[=0|1]        Include code location in log messages\n",
+               program_invocation_short_name);
 
         return 0;
 }
@@ -518,7 +808,7 @@ static int prepare_reexecute(Manager *m, FILE **_f, FDSet **_fds) {
         assert(_f);
         assert(_fds);
 
-        if ((r = manager_open_serialization(&f)) < 0) {
+        if ((r = manager_open_serialization(m, &f)) < 0) {
                 log_error("Failed to create serialization faile: %s", strerror(-r));
                 goto fail;
         }
@@ -565,24 +855,41 @@ fail:
 
 int main(int argc, char *argv[]) {
         Manager *m = NULL;
-        Unit *target = NULL;
-        Job *job = NULL;
         int r, retval = 1;
         FDSet *fds = NULL;
         bool reexecute = false;
 
+        if (getpid() != 1 && strstr(program_invocation_short_name, "init")) {
+                /* This is compatbility support for SysV, where
+                 * calling init as a user is identical to telinit. */
+
+                errno = -ENOENT;
+                execv(SYSTEMCTL_BINARY_PATH, argv);
+                log_error("Failed to exec " SYSTEMCTL_BINARY_PATH ": %m");
+                return 1;
+        }
+
+        log_show_color(isatty(STDERR_FILENO) > 0);
+        log_show_location(false);
+        log_set_max_level(LOG_INFO);
+
         if (getpid() == 1) {
-                running_as = MANAGER_INIT;
+                arg_running_as = MANAGER_SYSTEM;
                 log_set_target(LOG_TARGET_SYSLOG_OR_KMSG);
-        } else
-                running_as = MANAGER_SESSION;
+
+                if (label_init() < 0)
+                        goto finish;
+        } else {
+                arg_running_as = MANAGER_SESSION;
+                log_set_target(LOG_TARGET_CONSOLE);
+        }
 
         if (set_default_unit(SPECIAL_DEFAULT_TARGET) < 0)
                 goto finish;
 
         /* Mount /proc, /sys and friends, so that /proc/cmdline and
          * /proc/$PID/fd is available. */
-        if (geteuid() == 0)
+        if (geteuid() == 0 && !getenv("SYSTEMD_SKIP_API_MOUNTS"))
                 if (mount_setup() < 0)
                         goto finish;
 
@@ -592,7 +899,10 @@ int main(int argc, char *argv[]) {
         /* If we are init, we can block sigkill. Yay. */
         ignore_signals(SIGNALS_IGNORE, -1);
 
-        if (running_as != MANAGER_SESSION)
+        if (parse_config_file() < 0)
+                goto finish;
+
+        if (arg_running_as == MANAGER_SYSTEM)
                 if (parse_proc_cmdline() < 0)
                         goto finish;
 
@@ -601,19 +911,19 @@ int main(int argc, char *argv[]) {
         if (parse_argv(argc, argv) < 0)
                 goto finish;
 
-        if (action == ACTION_HELP) {
+        if (arg_action == ACTION_HELP) {
                 retval = help();
                 goto finish;
-        } else if (action == ACTION_DUMP_CONFIGURATION_ITEMS) {
+        } else if (arg_action == ACTION_DUMP_CONFIGURATION_ITEMS) {
                 unit_dump_config_items(stdout);
                 retval = 0;
                 goto finish;
-        } else if (action == ACTION_DONE) {
+        } else if (arg_action == ACTION_DONE) {
                 retval = 0;
                 goto finish;
         }
 
-        assert_se(action == ACTION_RUN || action == ACTION_TEST);
+        assert_se(arg_action == ACTION_RUN || arg_action == ACTION_TEST);
 
         /* Remember open file descriptors for later deserialization */
         if (serialization) {
@@ -629,12 +939,12 @@ int main(int argc, char *argv[]) {
         /* Set up PATH unless it is already set */
         setenv("PATH",
                "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-               running_as == MANAGER_INIT);
+               arg_running_as == MANAGER_SYSTEM);
 
         /* Move out of the way, so that we won't block unmounts */
         assert_se(chdir("/")  == 0);
 
-        if (running_as != MANAGER_SESSION) {
+        if (arg_running_as == MANAGER_SYSTEM) {
                 /* Become a session leader if we aren't one yet. */
                 setsid();
 
@@ -647,7 +957,7 @@ int main(int argc, char *argv[]) {
 
         /* Reset the console, but only if this is really init and we
          * are freshly booted */
-        if (running_as != MANAGER_SESSION && action == ACTION_RUN) {
+        if (arg_running_as == MANAGER_SYSTEM && arg_action == ACTION_RUN) {
                 console_setup(getpid() == 1 && !serialization);
                 make_null_stdio();
         }
@@ -660,18 +970,28 @@ int main(int argc, char *argv[]) {
         if (getpid() == 1)
                 install_crash_handler();
 
-        log_debug("systemd running in %s mode.", manager_running_as_to_string(running_as));
+        log_full(arg_running_as == MANAGER_SYSTEM ? LOG_INFO : LOG_DEBUG,
+                 PACKAGE_STRING " running in %s mode. (" SYSTEMD_FEATURES ")", manager_running_as_to_string(arg_running_as));
 
-        if (running_as == MANAGER_INIT) {
+        if (arg_running_as == MANAGER_SYSTEM && !serialization) {
+                if (arg_show_status)
+                        status_welcome();
+
                 kmod_setup();
                 hostname_setup();
                 loopback_setup();
         }
 
-        if ((r = manager_new(running_as, confirm_spawn, &m)) < 0) {
+        if ((r = manager_new(arg_running_as, &m)) < 0) {
                 log_error("Failed to allocate manager object: %s", strerror(-r));
                 goto finish;
         }
+
+        m->confirm_spawn = arg_confirm_spawn;
+        m->show_status = arg_show_status;
+        m->sysv_console = arg_sysv_console;
+        m->mount_auto = arg_mount_auto;
+        m->swap_auto = arg_swap_auto;
 
         if ((r = manager_startup(m, serialization, fds)) < 0)
                 log_error("Failed to fully start up daemon: %s", strerror(-r));
@@ -688,29 +1008,44 @@ int main(int argc, char *argv[]) {
                 fclose(serialization);
                 serialization = NULL;
         } else {
-                log_debug("Activating default unit: %s", default_unit);
+                DBusError error;
+                Unit *target = NULL;
 
-                if ((r = manager_load_unit(m, default_unit, NULL, &target)) < 0) {
-                        log_error("Failed to load default target: %s", strerror(-r));
+                dbus_error_init(&error);
 
+                log_debug("Activating default unit: %s", arg_default_unit);
+
+                if ((r = manager_load_unit(m, arg_default_unit, NULL, &error, &target)) < 0) {
+                        log_error("Failed to load default target: %s", bus_error(&error, r));
+                        dbus_error_free(&error);
+                } else if (target->meta.load_state != UNIT_LOADED)
+                        log_error("Failed to load default target: %s", strerror(-target->meta.load_error));
+
+                if (!target || target->meta.load_state != UNIT_LOADED) {
                         log_info("Trying to load rescue target...");
-                        if ((r = manager_load_unit(m, SPECIAL_RESCUE_TARGET, NULL, &target)) < 0) {
-                                log_error("Failed to load rescue target: %s", strerror(-r));
+
+                        if ((r = manager_load_unit(m, SPECIAL_RESCUE_TARGET, NULL, &error, &target)) < 0) {
+                                log_error("Failed to load rescue target: %s", bus_error(&error, r));
+                                dbus_error_free(&error);
+                                goto finish;
+                        } else if (target->meta.load_state != UNIT_LOADED) {
+                                log_error("Failed to load rescue target: %s", strerror(-target->meta.load_error));
                                 goto finish;
                         }
                 }
 
-                if (action == ACTION_TEST) {
+                if (arg_action == ACTION_TEST) {
                         printf("-> By units:\n");
                         manager_dump_units(m, stdout, "\t");
                 }
 
-                if ((r = manager_add_job(m, JOB_START, target, JOB_REPLACE, false, &job)) < 0) {
-                        log_error("Failed to start default target: %s", strerror(-r));
+                if ((r = manager_add_job(m, JOB_START, target, JOB_REPLACE, false, &error, NULL)) < 0) {
+                        log_error("Failed to start default target: %s", bus_error(&error, r));
+                        dbus_error_free(&error);
                         goto finish;
                 }
 
-                if (action == ACTION_TEST) {
+                if (arg_action == ACTION_TEST) {
                         printf("-> By jobs:\n");
                         manager_dump_jobs(m, stdout, "\t");
                         retval = 0;
@@ -732,6 +1067,7 @@ int main(int argc, char *argv[]) {
                         goto finish;
 
                 case MANAGER_RELOAD:
+                        log_info("Reloading.");
                         if ((r = manager_reload(m)) < 0)
                                 log_error("Failed to reload: %s", strerror(-r));
                         break;
@@ -741,7 +1077,7 @@ int main(int argc, char *argv[]) {
                                 goto finish;
 
                         reexecute = true;
-                        log_debug("Reexecuting.");
+                        log_notice("Reexecuting.");
                         goto finish;
 
                 default:
@@ -753,12 +1089,12 @@ finish:
         if (m)
                 manager_free(m);
 
-        free(default_unit);
+        free(arg_default_unit);
 
         dbus_shutdown();
 
         if (reexecute) {
-                const char *args[11];
+                const char *args[15];
                 unsigned i = 0;
                 char sfd[16];
 
@@ -773,17 +1109,35 @@ finish:
                 args[i++] = "--log-target";
                 args[i++] = log_target_to_string(log_get_target());
 
-                args[i++] = "--running-as";
-                args[i++] = manager_running_as_to_string(running_as);
+                if (arg_running_as == MANAGER_SYSTEM)
+                        args[i++] = "--system";
+                else
+                        args[i++] = "--session";
+
+                if (arg_dump_core)
+                        args[i++] = "--dump-core";
+
+                if (arg_crash_shell)
+                        args[i++] = "--crash-shell";
+
+                if (arg_confirm_spawn)
+                        args[i++] = "--confirm-spawn";
+
+                if (arg_show_status)
+                        args[i++] = "--show-status=1";
+                else
+                        args[i++] = "--show-status=0";
+
+                if (arg_sysv_console)
+                        args[i++] = "--sysv-console=1";
+                else
+                        args[i++] = "--sysv-console=0";
 
                 snprintf(sfd, sizeof(sfd), "%i", fileno(serialization));
                 char_array_0(sfd);
 
                 args[i++] = "--deserialize";
                 args[i++] = sfd;
-
-                if (confirm_spawn)
-                        args[i++] = "--confirm-spawn";
 
                 args[i++] = NULL;
 
@@ -802,6 +1156,8 @@ finish:
 
         if (getpid() == 1)
                 freeze();
+
+        label_finish();
 
         return retval;
 }
