@@ -83,30 +83,36 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @TARGET_FEDORA_TRUE@	units/fedora/plymouth-poweroff.service \
 @TARGET_FEDORA_TRUE@	units/fedora/plymouth-halt.service
 
-@TARGET_SUSE_TRUE@am__append_3 = \
+@TARGET_DEBIAN_TRUE@am__append_3 = \
+@TARGET_DEBIAN_TRUE@	units/debian/halt.service \
+@TARGET_DEBIAN_TRUE@	units/debian/killall.service \
+@TARGET_DEBIAN_TRUE@	units/debian/poweroff.service \
+@TARGET_DEBIAN_TRUE@	units/debian/reboot.service
+
+@TARGET_SUSE_TRUE@am__append_4 = \
 @TARGET_SUSE_TRUE@	units/suse/halt.service \
 @TARGET_SUSE_TRUE@	units/suse/poweroff.service \
 @TARGET_SUSE_TRUE@	units/suse/reboot.service \
 @TARGET_SUSE_TRUE@	units/suse/fsck.target
 
-@TARGET_GENTOO_TRUE@am__append_4 = \
+@TARGET_GENTOO_TRUE@am__append_5 = \
 @TARGET_GENTOO_TRUE@	units/gentoo/halt.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/killall.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/poweroff.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/reboot.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/xdm.service
 
-@TARGET_ARCH_TRUE@am__append_5 = \
+@TARGET_ARCH_TRUE@am__append_6 = \
 @TARGET_ARCH_TRUE@	units/arch/sysinit.service \
 @TARGET_ARCH_TRUE@	units/arch/rc-local.service \
 @TARGET_ARCH_TRUE@	units/arch/halt.service \
 @TARGET_ARCH_TRUE@	units/arch/poweroff.service \
 @TARGET_ARCH_TRUE@	units/arch/reboot.service
 
-@HAVE_VALAC_TRUE@am__append_6 = \
+@HAVE_VALAC_TRUE@am__append_7 = \
 @HAVE_VALAC_TRUE@	${systemadm_SOURCES:.vala=.c}
 
-@HAVE_XSLTPROC_TRUE@am__append_7 = \
+@HAVE_XSLTPROC_TRUE@am__append_8 = \
 @HAVE_XSLTPROC_TRUE@	$(dist_man_MANS) \
 @HAVE_XSLTPROC_TRUE@	${nodist_man_MANS:=.in} \
 @HAVE_XSLTPROC_TRUE@	${XML_FILES:.xml=.html} \
@@ -541,7 +547,9 @@ am__dist_systemunit_DATA_DIST = units/emergency.service \
 	units/fedora/single.service units/fedora/plymouth-quit.service \
 	units/fedora/plymouth-reboot.service \
 	units/fedora/plymouth-poweroff.service \
-	units/fedora/plymouth-halt.service units/suse/halt.service \
+	units/fedora/plymouth-halt.service units/debian/halt.service \
+	units/debian/killall.service units/debian/poweroff.service \
+	units/debian/reboot.service units/suse/halt.service \
 	units/suse/poweroff.service units/suse/reboot.service \
 	units/suse/fsck.target units/gentoo/halt.service \
 	units/gentoo/killall.service units/gentoo/poweroff.service \
@@ -796,7 +804,7 @@ dist_systemunit_DATA = units/emergency.service units/emergency.target \
 	units/sysctl.service units/remount-rootfs.service \
 	units/printer.target units/bluetooth.target \
 	units/smartcard.target $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5)
+	$(am__append_4) $(am__append_5) $(am__append_6)
 nodist_systemunit_DATA = \
 	units/sysinit.target \
 	units/getty@.service \
@@ -1283,7 +1291,7 @@ M4_PROCESS_SESSION = \
 
 CLEANFILES = $(nodist_systemunit_DATA) $(nodist_sessionunit_DATA) \
 	$(nodist_man_MANS) ${XML_IN_FILES:.xml.in=.html} \
-	$(pkgconfigdata_DATA) $(am__append_6) $(am__append_7) \
+	$(pkgconfigdata_DATA) $(am__append_7) $(am__append_8) \
 	$(dbusinterface_DATA)
 @HAVE_XSLTPROC_TRUE@XSLTPROC_FLAGS = \
 @HAVE_XSLTPROC_TRUE@	--nonet \
@@ -4229,6 +4237,8 @@ install-data-hook:
 		$(DESTDIR)$(pkgsysconfdir)/system/graphical.target.wants \
 		$(DESTDIR)$(pkgsysconfdir)/session \
 		$(DESTDIR)$(sysconfdir)/xdg/systemd
+	$(MKDIR_P) -m 0755 $(DESTDIR)/cgroup || \
+		echo "Don't forget to create /cgroup! Couldn't create it for you, continuing anyway."
 	( cd $(DESTDIR)$(sysconfdir)/xdg/systemd/ && \
 		rm -f session && \
 		$(LN_S) $(pkgsysconfdir)/session session )
