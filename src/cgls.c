@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
                         goto finish;
                 }
 
-                if (path_startswith(p, "/sys/fs/cgroup")) {
+                if (path_startswith(p, "/cgroup")) {
                         printf("Working Directory %s:\n", p);
                         r = show_cgroup_by_path(p, NULL, 0);
                 } else
