@@ -232,6 +232,13 @@ dist_systemunit_DATA += \
 	units/fedora/plymouth-poweroff.service \
 	units/fedora/plymouth-halt.service
 endif
+if TARGET_DEBIAN
+dist_systemunit_DATA += \
+	units/debian/halt.service \
+	units/debian/killall.service \
+	units/debian/poweroff.service \
+	units/debian/reboot.service
+endif
 
 if TARGET_SUSE
 dist_systemunit_DATA += \
