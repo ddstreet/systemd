@@ -9,7 +9,7 @@
                 <code class="filename">systemd.target</code>,
                 <code class="filename">systemd.path</code>,
                 <code class="filename">systemd.timer</code>,
-                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id2889403"/><h2>Description</h2><p>A unit configuration file encodes information
+                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id515689"/><h2>Description</h2><p>A unit configuration file encodes information
                 about a service, a socket, a device, a mount point, an
                 automount point, a swap file or partition, a start-up
                 target, a file system path or a timer controlled and
@@ -111,7 +111,9 @@
                 prefix name and the unescaped instance name,
                 respectively. The prefix name here refers to the
                 string before the @, i.e. "getty" in the example
-                above, where "tty3" is the instance name.</p></div><div class="refsect1" title="Options"><a id="id2888243"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
+                above, where "tty3" is the instance name.</p><p>The unit file format is covered by the
+                <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise">Interface
+                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id483385"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
                 carries generic information about the unit that is not
                 dependent on the type of unit:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">Names=</code></span></dt><dd><p>Additional names for
                                 this unit. The names listed here must
@@ -276,8 +278,9 @@
                                 no ordering takes
                                 place. </p></dd><dt><span class="term"><code class="varname">OnFailure=</code></span></dt><dd><p>Lists one or more
                                 units that are activated when this
-                                unit fails (i.e. enters maintenance
-                                state).</p></dd><dt><span class="term"><code class="varname">RecursiveStop=</code></span></dt><dd><p>Takes a boolean
+                                unit enters the
+                                '<code class="literal">failed</code>'
+                                state.</p></dd><dt><span class="term"><code class="varname">RecursiveStop=</code></span></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code> and
                                 the unit stops without being requested
                                 by the user, all units
@@ -320,6 +323,17 @@
                                 accidentally deactivate units that are
                                 not intended to be deactivated.
                                 These options default to
+                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">AllowIsolate=</code></span></dt><dd><p>Takes a boolean
+                                argument. If <code class="option">true</code>
+                                this unit may be used with the
+                                <span class="command"><strong>systemctl isolate</strong></span>
+                                command. Otherwise this will be
+                                refused. It probably is a good idea to
+                                leave this disabled except for target
+                                units that shall be used similar to
+                                runlevels in SysV init systems, just
+                                as a precaution to avoid unusable
+                                system states. This option defaults to
                                 <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">DefaultDependencies=</code></span></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 (the default), a few default
@@ -356,22 +370,23 @@
                                 time. If this time limit is reached
                                 the job will be cancelled, the unit
                                 however will not change state or even
-                                enter maintenance mode. This value
-                                defaults to 0 (job timeouts disabled),
-                                except for device units. NB: this
-                                timeout is independent from any
-                                unit-specific timeout (for example,
-                                the timeout set with
+                                enter the '<code class="literal">failed</code>'
+                                mode. This value defaults to 0 (job
+                                timeouts disabled), except for device
+                                units. NB: this timeout is independent
+                                from any unit-specific timeout (for
+                                example, the timeout set with
                                 <code class="varname">Timeout=</code> in service
-                                units) as the job timeout has no effect
-                                on the unit itself, only on the job
-                                that might be pending for it. Or in
-                                other words: unit-specific timeouts
+                                units) as the job timeout has no
+                                effect on the unit itself, only on the
+                                job that might be pending for it. Or
+                                in other words: unit-specific timeouts
                                 are useful to abort unit state
                                 changes, and revert them. The job
                                 timeout set with this option however
-                                is useful to abort only the job waiting
-                                for the unit state to change.</p></dd></dl></div><p>Unit file may include a [Install] section, which
+                                is useful to abort only the job
+                                waiting for the unit state to
+                                change.</p></dd></dl></div><p>Unit file may include a [Install] section, which
                 carries installation information for the unit. This
                 section is not interpreted by
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
@@ -431,7 +446,7 @@
                                 <span class="command"><strong>systemctl enable</strong></span>
                                 will automatically install units
                                 listed in this option as
-                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id2938981"/><h2>See Also</h2><p>
+                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id525146"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>,

@@ -2,12 +2,12 @@
 .\"     Title: systemd.service
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 08/25/2010
+.\"      Date: 10/07/2010
 .\"    Manual: systemd.service
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SERVICE" "5" "08/25/2010" "systemd" "systemd.service"
+.TH "SYSTEMD\&.SERVICE" "5" "10/07/2010" "systemd" "systemd.service"
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -169,13 +169,13 @@ is set, the process started via this command line will be considered the main pr
 ${FOO}
 is replaced by the string value of the environment variable of the same name\&. Also
 $FOO
-may appear as seperate word on the command line in which case the variable is replaced by its value split at whitespaces\&.
+may appear as separate word on the command line in which case the variable is replaced by its value split at whitespaces\&. Note that the first argument (i\&.e\&. the binary to execute) may not be a variable, and must be a literal and absolute path name\&.
 .RE
 .PP
 \fIExecStartPre=\fR, \fIExecStartPost=\fR
 .RS 4
 Additional commands that are executed before (resp\&. after) the command in
-\fIExecStart=\fR\&. Multiple command lines may be concatenated in a single directive, by seperating them by semicolons (these semicolons must be passed as seperate words)\&. In that case, the commands are executed one after the other, serially\&. Alternatively, these directives may be specified more than once whith the same effect\&. However, the latter syntax is not recommended for compatibility with parsers suitable for XDG
+\fIExecStart=\fR\&. Multiple command lines may be concatenated in a single directive, by separating them by semicolons (these semicolons must be passed as separate words)\&. In that case, the commands are executed one after the other, serially\&. Alternatively, these directives may be specified more than once whith the same effect\&. However, the latter syntax is not recommended for compatibility with parsers suitable for XDG
 \&.desktop
 files\&. Use of these settings is optional\&. Specifier and environment variable substitution is supported\&.
 .RE
@@ -225,15 +225,15 @@ below\&.) Takes a unit\-less value in seconds, or a time span value such as "5mi
 \fIRestart=\fR
 .RS 4
 Configures whether the main service process shall be restarted when it exists\&. Takes one of
-\fBonce\fR,
-\fBrestart\-on\-success\fR
+\fBno\fR,
+\fBon\-success\fR
 or
-\fBrestart\-always\fR\&. If set to
-\fBonce\fR
+\fBalways\fR\&. If set to
+\fBno\fR
 (the default) the service will not be restarted when it exits\&. If set to
-\fBrestart\-on\-success\fR
+\fBon\-success\fR
 it will be restarted only when it exited cleanly, i\&.e\&. terminated with an exit code of 0\&. If set to
-\fBrestart\-always\fR
+\fBalways\fR
 the service will be restarted regardless whether it exited cleanly or not, or got terminated abnormally by a signal\&.
 .RE
 .PP
@@ -329,6 +329,21 @@ only service updates sent from the main process of the service are accepted\&. I
 all services updates from all members of the service\'s control group are accepted\&. This option must be set to open access to the notification socket when using
 \fIType=notify\fR
 (see above)\&.
+.RE
+.PP
+\fISockets=\fR
+.RS 4
+Specifies the name of the socket units this service shall inherit the sockets from when the service (ignoring the different suffix of course) is started\&. Normally it should not be necessary to use this setting as all sockets whose unit shares the same name as the service are passed to the spawned process\&.
+.sp
+Note that the same socket may be passed to multiple processes at the same time\&. Also note that a different service may be activated on incoming traffic than inherits the sockets\&. Or in other words: The
+\fIService=\fR
+setting of
+\&.socket
+units doesn\'t have to match the inverse of the
+\fISockets=\fR
+setting of the
+\&.service
+it refers to\&.
 .RE
 .SH "SEE ALSO"
 .PP

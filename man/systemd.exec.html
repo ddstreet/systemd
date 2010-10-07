@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.exec"><a id="systemd.exec"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.exec — systemd execution environment configuration</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
                 <code class="filename">systemd.socket</code>,
-                <code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a id="id2883645"/><h2>Description</h2><p>Unit configuration files for services, sockets
+                <code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a id="id499739"/><h2>Description</h2><p>Unit configuration files for services, sockets
                 and mount points share a subset of configuration
                 options which define the execution environment of
                 spawned processes.</p><p>This man page lists the configuration options
@@ -17,7 +17,7 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket] resp. [Mount] section, depending on the unit
-                type.</p></div><div class="refsect1" title="Options"><a id="id2883280"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                type.</p></div><div class="refsect1" title="Options"><a id="id499786"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed
                                 processes.</p></dd><dt><span class="term"><code class="varname">RootDirectory=</code></span></dt><dd><p>Takes an absolute
@@ -36,7 +36,7 @@
                                 set the default group of the user is
                                 chosen.</p></dd><dt><span class="term"><code class="varname">SupplementaryGroups=</code></span></dt><dd><p>Sets the supplementary
                                 Unix groups the processes are executed
-                                as. This takes a space seperated list
+                                as. This takes a space separated list
                                 of group names or IDs. This option may
                                 be specified more than once in which
                                 case all listed groups are set as
@@ -50,11 +50,11 @@
                                 between -20 (highest priority) and 19
                                 (lowest priority). See
                                 <span class="citerefentry"><span class="refentrytitle">setpriority</span>(2)</span>
-                                for details.</p></dd><dt><span class="term"><code class="varname">OOMAdjust=</code></span></dt><dd><p>Sets the adjustment
+                                for details.</p></dd><dt><span class="term"><code class="varname">OOMScoreAdjust=</code></span></dt><dd><p>Sets the adjustment
                                 level for the Out-Of-Memory killer for
                                 executed processes. Takes an integer
-                                between -17 (to disable OOM killing
-                                for this process) and 15 (to make
+                                between -1000 (to disable OOM killing
+                                for this process) and 1000 (to make
                                 killing of this process under memory
                                 pressure very likely). See <a class="ulink" href="http://www.kernel.org/doc/Documentation/filesystems/proc.txt">proc.txt</a>
                                 for details.</p></dd><dt><span class="term"><code class="varname">IOSchedulingClass=</code></span></dt><dd><p>Sets the IO scheduling
@@ -99,7 +99,7 @@
                                 <span class="citerefentry"><span class="refentrytitle">sched_setscheduler</span>(2)</span>
                                 for details. Defaults to false.</p></dd><dt><span class="term"><code class="varname">CPUAffinity=</code></span></dt><dd><p>Controls the CPU
                                 affinity of the executed
-                                processes. Takes a space-seperated
+                                processes. Takes a space-separated
                                 list of CPU indexes. See
                                 <span class="citerefentry"><span class="refentrytitle">sched_setaffinity</span>(2)</span>
                                 for details.</p></dd><dt><span class="term"><code class="varname">UMask=</code></span></dt><dd><p>Controls the file mode
@@ -109,7 +109,7 @@
                                 for details. Defaults to
                                 0002.</p></dd><dt><span class="term"><code class="varname">Environment=</code></span></dt><dd><p>Sets environment
                                 variables for executed
-                                processes. Takes a space-seperated
+                                processes. Takes a space-separated
                                 list of variable assignments. This
                                 option may be specified more than once
                                 in which case all listed variables
@@ -121,7 +121,7 @@
                                 <code class="varname">Environment=</code> but
                                 reads the environment variables from a
                                 text file. The text file should
-                                contain new-line seperated variable
+                                contain new-line separated variable
                                 assignments. Empty lines and lines
                                 starting with ; or # will be ignored,
                                 which may be used for
@@ -376,7 +376,7 @@
                                 </p></dd><dt><span class="term"><code class="varname">ControlGroup=</code></span></dt><dd><p>Controls the control
                                 groups the executed processes shall be
                                 made members of. Takes a
-                                space-seperated list of cgroup
+                                space-separated list of cgroup
                                 identifiers. A cgroup identifier has a
                                 format like
                                 <code class="filename">cpu:/foo/bar</code>,
@@ -395,7 +395,7 @@
                                 arbitrary hierachies -- which can be
                                 configured externally with additional execution limits. By default
                                 systemd will place all executed
-                                processes in seperate per-unit control
+                                processes in separate per-unit control
                                 groups (named after the unit) in the
                                 systemd named hierarchy. Since every
                                 process can be in one group per
@@ -409,7 +409,7 @@
                                 to limit access a process might have
                                 to the main file-system
                                 hierarchy. Each setting takes a
-                                space-seperated list of absolute
+                                space-separated list of absolute
                                 directory paths. Directories listed in
                                 <code class="varname">ReadWriteDirectories=</code>
                                 are accessible from within the
@@ -426,7 +426,7 @@
                                 restricting access with these options
                                 does not extend to submounts of a
                                 directory. You must list submounts
-                                seperately in these setttings to
+                                separately in these setttings to
                                 ensure the same limited access. These
                                 options may be specified more than
                                 once in which case all directories
@@ -462,7 +462,7 @@
                                 namespace will both receive new mount
                                 points from the main namespace as well
                                 as propagate new mounts to
-                                it.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id2933200"/><h2>See Also</h2><p>
+                                it.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id509601"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
