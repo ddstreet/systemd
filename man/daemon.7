@@ -2,12 +2,12 @@
 .\"     Title: daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 08/25/2010
+.\"      Date: 10/07/2010
 .\"    Manual: daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "DAEMON" "7" "08/25/2010" "systemd" "daemon"
+.TH "DAEMON" "7" "10/07/2010" "systemd" "daemon"
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -608,8 +608,10 @@ PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([\-\-with\-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [], [with_systemdsystemunitdir=$($PKG_CONFIG \-\-variable=systemdsystemunitdir systemd)])
-AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
-AM_CONDITIONAL(HAVE_SYSTEMD, [test \-n "$with_systemdsystemunitdir"])
+if test "x$with_systemdsystemunitdir" != xno; then
+        AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
+fi
+AM_CONDITIONAL(HAVE_SYSTEMD, [test \-n "$with_systemdsystemunitdir" \-a "x$with_systemdsystemunitdir" != xno ])
 .fi
 .if n \{\
 .RE
@@ -662,7 +664,7 @@ file use a snippet like the following to enable/disable the service during insta
 .nf
 %post
 if [ $1 \-eq 1 ]; then
-        # Enable (but don\'t start) the units by default
+        # On install, enable (but don\'t start) the units by default
         /bin/systemctl enable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 
         # Alternatively, just call /bin/systemctl daemon\-reload here,
@@ -672,16 +674,16 @@ fi
 
 %preun
 if [ $1 \-eq 0 ]; then
-        # Disable and stop the units
+        # On uninstall, disable and stop the units
         /bin/systemctl disable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
         /bin/systemctl stop foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 fi
 
 %postun
+# On upgrade and uninstall, reload init system configuration, to make systemd honour changed unit files
+/bin/systemctl daemon\-reload >/dev/null 2>&1 || :
 if [ $1 \-ge 1 ] ; then
-        # On upgrade, reload init system configuration if we changed unit files
-        /bin/systemctl daemon\-reload >/dev/null 2>&1 || :
-        # On upgrade, restart the daemon
+        # Optionally, on upgrade, restart the daemon
         /bin/systemctl try\-restart foobar\&.service >/dev/null 2>&1 || :
 fi
 .fi
@@ -699,7 +701,7 @@ To facilitate upgrades from a package version that shipped only SysV init script
 .RS 4
 .\}
 .nf
-%triggerin \-\- foobar < 0\&.47\&.11\-1
+%triggerun \-\- foobar < 0\&.47\&.11\-1
 if /sbin/chkconfig foobar ; then
         /bin/systemctl enable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 fi

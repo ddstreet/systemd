@@ -53,23 +53,37 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@TARGET_GENTOO_TRUE@am__append_1 = \
+@TARGET_GENTOO_TRUE@	-DKBD_LOADKEYS=\"/usr/bin/loadkeys\" \
+@TARGET_GENTOO_TRUE@	-DKBD_SETFONT=\"/usr/bin/setfont\" \
+@TARGET_GENTOO_TRUE@	-DDEFAULT_FONT=\"LatArCyrHeb-16\"
+
+@TARGET_GENTOO_FALSE@am__append_2 = \
+@TARGET_GENTOO_FALSE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
+@TARGET_GENTOO_FALSE@	-DKBD_SETFONT=\"/bin/setfont\" \
+@TARGET_GENTOO_FALSE@	-DDEFAULT_FONT=\"latarcyrheb-sun16\"
+
 rootbin_PROGRAMS = systemd$(EXEEXT) systemctl$(EXEEXT) \
-	systemd-notify$(EXEEXT)
+	systemd-notify$(EXEEXT) systemd-ask-password$(EXEEXT)
 bin_PROGRAMS = systemd-cgls$(EXEEXT) $(am__EXEEXT_1)
-@HAVE_GTK_TRUE@am__append_1 = \
-@HAVE_GTK_TRUE@	systemadm
+@HAVE_GTK_TRUE@am__append_3 = \
+@HAVE_GTK_TRUE@	systemadm \
+@HAVE_GTK_TRUE@	systemd-ask-password-agent
 
 rootlibexec_PROGRAMS = systemd-logger$(EXEEXT) \
 	systemd-cgroups-agent$(EXEEXT) systemd-initctl$(EXEEXT) \
 	systemd-update-utmp$(EXEEXT) systemd-random-seed$(EXEEXT) \
-	systemd-shutdownd$(EXEEXT) systemd-auto-serial-getty$(EXEEXT) \
-	systemd-modules-load$(EXEEXT) systemd-remount-api-vfs$(EXEEXT) \
-	systemd-kmsg-syslogd$(EXEEXT)
+	systemd-shutdownd$(EXEEXT) systemd-modules-load$(EXEEXT) \
+	systemd-remount-api-vfs$(EXEEXT) systemd-kmsg-syslogd$(EXEEXT) \
+	systemd-vconsole-setup$(EXEEXT) \
+	systemd-reply-password$(EXEEXT) \
+	systemd-readahead-collect$(EXEEXT) \
+	systemd-readahead-replay$(EXEEXT) systemd-tmpfiles$(EXEEXT)
 noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 	test-ns$(EXEEXT) test-loopback$(EXEEXT) test-hostname$(EXEEXT) \
 	test-daemon$(EXEEXT) test-cgroup$(EXEEXT) \
 	test-env-replace$(EXEEXT)
-@TARGET_FEDORA_TRUE@am__append_2 = \
+@TARGET_FEDORA_TRUE@am__append_4 = \
 @TARGET_FEDORA_TRUE@	units/fedora/halt.service \
 @TARGET_FEDORA_TRUE@	units/fedora/killall.service \
 @TARGET_FEDORA_TRUE@	units/fedora/poweroff.service \
@@ -83,36 +97,40 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @TARGET_FEDORA_TRUE@	units/fedora/plymouth-poweroff.service \
 @TARGET_FEDORA_TRUE@	units/fedora/plymouth-halt.service
 
-@TARGET_DEBIAN_TRUE@am__append_3 = \
+@TARGET_DEBIAN_TRUE@am__append_5 = \
 @TARGET_DEBIAN_TRUE@	units/debian/halt.service \
 @TARGET_DEBIAN_TRUE@	units/debian/killall.service \
 @TARGET_DEBIAN_TRUE@	units/debian/poweroff.service \
-@TARGET_DEBIAN_TRUE@	units/debian/reboot.service
+@TARGET_DEBIAN_TRUE@	units/debian/reboot.service \
+@TARGET_DEBIAN_TRUE@	units/debian/fsck.target \
+@TARGET_DEBIAN_TRUE@	units/debian/umountfs.service \
+@TARGET_DEBIAN_TRUE@	units/debian/umountnfs.service \
+@TARGET_DEBIAN_TRUE@	units/debian/umountroot.service
 
-@TARGET_SUSE_TRUE@am__append_4 = \
+@TARGET_SUSE_TRUE@am__append_6 = \
 @TARGET_SUSE_TRUE@	units/suse/halt.service \
 @TARGET_SUSE_TRUE@	units/suse/poweroff.service \
 @TARGET_SUSE_TRUE@	units/suse/reboot.service \
 @TARGET_SUSE_TRUE@	units/suse/fsck.target
 
-@TARGET_GENTOO_TRUE@am__append_5 = \
+@TARGET_GENTOO_TRUE@am__append_7 = \
 @TARGET_GENTOO_TRUE@	units/gentoo/halt.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/killall.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/poweroff.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/reboot.service \
 @TARGET_GENTOO_TRUE@	units/gentoo/xdm.service
 
-@TARGET_ARCH_TRUE@am__append_6 = \
+@TARGET_ARCH_TRUE@am__append_8 = \
 @TARGET_ARCH_TRUE@	units/arch/sysinit.service \
 @TARGET_ARCH_TRUE@	units/arch/rc-local.service \
 @TARGET_ARCH_TRUE@	units/arch/halt.service \
 @TARGET_ARCH_TRUE@	units/arch/poweroff.service \
 @TARGET_ARCH_TRUE@	units/arch/reboot.service
 
-@HAVE_VALAC_TRUE@am__append_7 = \
+@HAVE_VALAC_TRUE@am__append_9 = \
 @HAVE_VALAC_TRUE@	${systemadm_SOURCES:.vala=.c}
 
-@HAVE_XSLTPROC_TRUE@am__append_8 = \
+@HAVE_XSLTPROC_TRUE@am__append_10 = \
 @HAVE_XSLTPROC_TRUE@	$(dist_man_MANS) \
 @HAVE_XSLTPROC_TRUE@	${nodist_man_MANS:=.in} \
 @HAVE_XSLTPROC_TRUE@	${XML_FILES:.xml=.html} \
@@ -123,25 +141,31 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(am__dist_systemunit_DATA_DIST) $(dist_dbuspolicy_DATA) \
 	$(dist_dbussystemservice_DATA) $(dist_doc_DATA) \
 	$(dist_man_MANS) $(dist_noinst_DATA) $(dist_pkgsysconf_DATA) \
-	$(dist_sessionunit_DATA) $(dist_udevrules_DATA) \
+	$(dist_polkitpolicy_DATA) $(dist_sessionunit_DATA) \
+	$(dist_tmpfiles_DATA) $(dist_udevrules_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/config.h.in $(top_srcdir)/configure compile \
 	config.guess config.sub depcomp install-sh \
 	libsystemd_basic_la_vala.stamp libsystemd_core_la_vala.stamp \
-	ltmain.sh missing pam_systemd_la_vala.stamp src/systemadm.c \
+	ltmain.sh missing pam_systemd_la_vala.stamp \
+	src/ask-password-agent.c src/systemadm.c \
 	src/systemd-interfaces.c systemadm_vala.stamp \
-	systemctl_vala.stamp systemd_auto_serial_getty_vala.stamp \
-	systemd_cgls_vala.stamp systemd_cgroups_agent_vala.stamp \
-	systemd_initctl_vala.stamp systemd_kmsg_syslogd_vala.stamp \
-	systemd_logger_vala.stamp systemd_modules_load_vala.stamp \
-	systemd_notify_vala.stamp systemd_random_seed_vala.stamp \
+	systemctl_vala.stamp systemd_ask_password_agent_vala.stamp \
+	systemd_ask_password_vala.stamp systemd_cgls_vala.stamp \
+	systemd_cgroups_agent_vala.stamp systemd_initctl_vala.stamp \
+	systemd_kmsg_syslogd_vala.stamp systemd_logger_vala.stamp \
+	systemd_modules_load_vala.stamp systemd_notify_vala.stamp \
+	systemd_random_seed_vala.stamp \
+	systemd_readahead_collect_vala.stamp \
+	systemd_readahead_replay_vala.stamp \
 	systemd_remount_api_vfs_vala.stamp \
-	systemd_shutdownd_vala.stamp systemd_update_utmp_vala.stamp \
-	systemd_vala.stamp test_cgroup_vala.stamp \
-	test_daemon_vala.stamp test_engine_vala.stamp \
-	test_env_replace_vala.stamp test_hostname_vala.stamp \
-	test_job_type_vala.stamp test_loopback_vala.stamp \
-	test_ns_vala.stamp
+	systemd_reply_password_vala.stamp systemd_shutdownd_vala.stamp \
+	systemd_tmpfiles_vala.stamp systemd_update_utmp_vala.stamp \
+	systemd_vala.stamp systemd_vconsole_setup_vala.stamp \
+	test_cgroup_vala.stamp test_daemon_vala.stamp \
+	test_engine_vala.stamp test_env_replace_vala.stamp \
+	test_hostname_vala.stamp test_job_type_vala.stamp \
+	test_loopback_vala.stamp test_ns_vala.stamp
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_libwrap.m4 \
 	$(top_srcdir)/m4/attributes.m4 $(top_srcdir)/m4/libtool.m4 \
@@ -184,8 +208,9 @@ am__installdirs = "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" \
 	"$(DESTDIR)$(dbuspolicydir)" \
 	"$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" \
-	"$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(sessionunitdir)" \
-	"$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(udevrulesdir)" \
+	"$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(polkitpolicydir)" \
+	"$(DESTDIR)$(sessionunitdir)" "$(DESTDIR)$(systemunitdir)" \
+	"$(DESTDIR)$(tmpfilesdir)" "$(DESTDIR)$(udevrulesdir)" \
 	"$(DESTDIR)$(sessionunitdir)" "$(DESTDIR)$(systemunitdir)" \
 	"$(DESTDIR)$(pkgconfigdatadir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(pamlib_LTLIBRARIES)
@@ -248,6 +273,7 @@ am_libsystemd_core_la_OBJECTS = src/libsystemd_core_la-unit.lo \
 	src/libsystemd_core_la-hostname-setup.lo \
 	src/libsystemd_core_la-loopback-setup.lo \
 	src/libsystemd_core_la-kmod-setup.lo \
+	src/libsystemd_core_la-locale-setup.lo \
 	src/libsystemd_core_la-specifier.lo \
 	src/libsystemd_core_la-unit-name.lo \
 	src/libsystemd_core_la-fdset.lo \
@@ -270,7 +296,8 @@ pam_systemd_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(pam_systemd_la_CFLAGS) $(CFLAGS) $(pam_systemd_la_LDFLAGS) \
 	$(LDFLAGS) -o $@
 @HAVE_PAM_TRUE@am_pam_systemd_la_rpath = -rpath $(pamlibdir)
-@HAVE_GTK_TRUE@am__EXEEXT_1 = systemadm$(EXEEXT)
+@HAVE_GTK_TRUE@am__EXEEXT_1 = systemadm$(EXEEXT) \
+@HAVE_GTK_TRUE@	systemd-ask-password-agent$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(rootbin_PROGRAMS) \
 	$(rootlibexec_PROGRAMS)
 am_systemadm_OBJECTS = src/systemadm-systemadm.$(OBJEXT) \
@@ -287,7 +314,8 @@ am_systemctl_OBJECTS = src/systemctl-systemctl.$(OBJEXT) \
 	src/systemctl-sd-daemon.$(OBJEXT) \
 	src/systemctl-cgroup-show.$(OBJEXT) \
 	src/systemctl-cgroup-util.$(OBJEXT) \
-	src/systemctl-exit-status.$(OBJEXT)
+	src/systemctl-exit-status.$(OBJEXT) \
+	src/systemctl-unit-name.$(OBJEXT)
 systemctl_OBJECTS = $(am_systemctl_OBJECTS)
 systemctl_DEPENDENCIES = libsystemd-basic.la $(am__DEPENDENCIES_1)
 systemctl_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -299,16 +327,18 @@ systemd_DEPENDENCIES = libsystemd-core.la
 systemd_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(systemd_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-am_systemd_auto_serial_getty_OBJECTS =  \
-	src/systemd_auto_serial_getty-auto-serial-getty.$(OBJEXT) \
-	src/systemd_auto_serial_getty-dbus-common.$(OBJEXT)
-systemd_auto_serial_getty_OBJECTS =  \
-	$(am_systemd_auto_serial_getty_OBJECTS)
-systemd_auto_serial_getty_DEPENDENCIES = libsystemd-basic.la \
+am_systemd_ask_password_OBJECTS = src/ask-password.$(OBJEXT)
+systemd_ask_password_OBJECTS = $(am_systemd_ask_password_OBJECTS)
+systemd_ask_password_DEPENDENCIES = libsystemd-basic.la
+am_systemd_ask_password_agent_OBJECTS =  \
+	src/systemd_ask_password_agent-ask-password-agent.$(OBJEXT)
+systemd_ask_password_agent_OBJECTS =  \
+	$(am_systemd_ask_password_agent_OBJECTS)
+systemd_ask_password_agent_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-systemd_auto_serial_getty_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+systemd_ask_password_agent_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(systemd_ask_password_agent_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am_systemd_cgls_OBJECTS = src/systemd_cgls-cgls.$(OBJEXT) \
 	src/systemd_cgls-cgroup-show.$(OBJEXT) \
@@ -362,7 +392,7 @@ systemd_modules_load_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(systemd_modules_load_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am_systemd_notify_OBJECTS = src/notify.$(OBJEXT) \
-	src/sd-daemon.$(OBJEXT)
+	src/sd-daemon.$(OBJEXT) src/sd-readahead.$(OBJEXT)
 systemd_notify_OBJECTS = $(am_systemd_notify_OBJECTS)
 systemd_notify_DEPENDENCIES = libsystemd-basic.la
 am_systemd_random_seed_OBJECTS =  \
@@ -372,6 +402,30 @@ systemd_random_seed_DEPENDENCIES = libsystemd-basic.la
 systemd_random_seed_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(systemd_random_seed_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_systemd_readahead_collect_OBJECTS =  \
+	src/systemd_readahead_collect-readahead-collect.$(OBJEXT) \
+	src/systemd_readahead_collect-sd-daemon.$(OBJEXT) \
+	src/systemd_readahead_collect-readahead-common.$(OBJEXT)
+systemd_readahead_collect_OBJECTS =  \
+	$(am_systemd_readahead_collect_OBJECTS)
+systemd_readahead_collect_DEPENDENCIES = libsystemd-basic.la \
+	$(am__DEPENDENCIES_1)
+systemd_readahead_collect_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_readahead_collect_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_systemd_readahead_replay_OBJECTS =  \
+	src/systemd_readahead_replay-readahead-replay.$(OBJEXT) \
+	src/systemd_readahead_replay-sd-daemon.$(OBJEXT) \
+	src/systemd_readahead_replay-readahead-common.$(OBJEXT)
+systemd_readahead_replay_OBJECTS =  \
+	$(am_systemd_readahead_replay_OBJECTS)
+systemd_readahead_replay_DEPENDENCIES = libsystemd-basic.la \
+	$(am__DEPENDENCIES_1)
+systemd_readahead_replay_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_readahead_replay_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am_systemd_remount_api_vfs_OBJECTS =  \
 	src/systemd_remount_api_vfs-remount-api-vfs.$(OBJEXT) \
@@ -383,6 +437,9 @@ systemd_remount_api_vfs_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(systemd_remount_api_vfs_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_systemd_reply_password_OBJECTS = src/reply-password.$(OBJEXT)
+systemd_reply_password_OBJECTS = $(am_systemd_reply_password_OBJECTS)
+systemd_reply_password_DEPENDENCIES = libsystemd-basic.la
 am_systemd_shutdownd_OBJECTS =  \
 	src/systemd_shutdownd-utmp-wtmp.$(OBJEXT) \
 	src/systemd_shutdownd-sd-daemon.$(OBJEXT) \
@@ -392,6 +449,13 @@ systemd_shutdownd_DEPENDENCIES = libsystemd-basic.la
 systemd_shutdownd_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(systemd_shutdownd_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
+am_systemd_tmpfiles_OBJECTS = src/systemd_tmpfiles-tmpfiles.$(OBJEXT)
+systemd_tmpfiles_OBJECTS = $(am_systemd_tmpfiles_OBJECTS)
+systemd_tmpfiles_DEPENDENCIES = libsystemd-basic.la
+systemd_tmpfiles_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_tmpfiles_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
 am_systemd_update_utmp_OBJECTS =  \
 	src/systemd_update_utmp-update-utmp.$(OBJEXT) \
@@ -403,6 +467,14 @@ systemd_update_utmp_DEPENDENCIES = libsystemd-basic.la \
 systemd_update_utmp_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(systemd_update_utmp_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_systemd_vconsole_setup_OBJECTS =  \
+	src/systemd_vconsole_setup-vconsole-setup.$(OBJEXT)
+systemd_vconsole_setup_OBJECTS = $(am_systemd_vconsole_setup_OBJECTS)
+systemd_vconsole_setup_DEPENDENCIES = libsystemd-basic.la
+systemd_vconsole_setup_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_vconsole_setup_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am_test_cgroup_OBJECTS = src/test_cgroup-test-cgroup.$(OBJEXT) \
 	src/test_cgroup-cgroup-util.$(OBJEXT)
@@ -485,31 +557,41 @@ am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(libsystemd_basic_la_SOURCES) $(libsystemd_core_la_SOURCES) \
 	$(pam_systemd_la_SOURCES) $(systemadm_SOURCES) \
 	$(systemctl_SOURCES) $(systemd_SOURCES) \
-	$(systemd_auto_serial_getty_SOURCES) $(systemd_cgls_SOURCES) \
+	$(systemd_ask_password_SOURCES) \
+	$(systemd_ask_password_agent_SOURCES) $(systemd_cgls_SOURCES) \
 	$(systemd_cgroups_agent_SOURCES) $(systemd_initctl_SOURCES) \
 	$(systemd_kmsg_syslogd_SOURCES) $(systemd_logger_SOURCES) \
 	$(systemd_modules_load_SOURCES) $(systemd_notify_SOURCES) \
 	$(systemd_random_seed_SOURCES) \
+	$(systemd_readahead_collect_SOURCES) \
+	$(systemd_readahead_replay_SOURCES) \
 	$(systemd_remount_api_vfs_SOURCES) \
-	$(systemd_shutdownd_SOURCES) $(systemd_update_utmp_SOURCES) \
-	$(test_cgroup_SOURCES) $(test_daemon_SOURCES) \
-	$(test_engine_SOURCES) $(test_env_replace_SOURCES) \
-	$(test_hostname_SOURCES) $(test_job_type_SOURCES) \
-	$(test_loopback_SOURCES) $(test_ns_SOURCES)
+	$(systemd_reply_password_SOURCES) $(systemd_shutdownd_SOURCES) \
+	$(systemd_tmpfiles_SOURCES) $(systemd_update_utmp_SOURCES) \
+	$(systemd_vconsole_setup_SOURCES) $(test_cgroup_SOURCES) \
+	$(test_daemon_SOURCES) $(test_engine_SOURCES) \
+	$(test_env_replace_SOURCES) $(test_hostname_SOURCES) \
+	$(test_job_type_SOURCES) $(test_loopback_SOURCES) \
+	$(test_ns_SOURCES)
 DIST_SOURCES = $(libsystemd_basic_la_SOURCES) \
 	$(libsystemd_core_la_SOURCES) $(pam_systemd_la_SOURCES) \
 	$(systemadm_SOURCES) $(systemctl_SOURCES) $(systemd_SOURCES) \
-	$(systemd_auto_serial_getty_SOURCES) $(systemd_cgls_SOURCES) \
+	$(systemd_ask_password_SOURCES) \
+	$(systemd_ask_password_agent_SOURCES) $(systemd_cgls_SOURCES) \
 	$(systemd_cgroups_agent_SOURCES) $(systemd_initctl_SOURCES) \
 	$(systemd_kmsg_syslogd_SOURCES) $(systemd_logger_SOURCES) \
 	$(systemd_modules_load_SOURCES) $(systemd_notify_SOURCES) \
 	$(systemd_random_seed_SOURCES) \
+	$(systemd_readahead_collect_SOURCES) \
+	$(systemd_readahead_replay_SOURCES) \
 	$(systemd_remount_api_vfs_SOURCES) \
-	$(systemd_shutdownd_SOURCES) $(systemd_update_utmp_SOURCES) \
-	$(test_cgroup_SOURCES) $(test_daemon_SOURCES) \
-	$(test_engine_SOURCES) $(test_env_replace_SOURCES) \
-	$(test_hostname_SOURCES) $(test_job_type_SOURCES) \
-	$(test_loopback_SOURCES) $(test_ns_SOURCES)
+	$(systemd_reply_password_SOURCES) $(systemd_shutdownd_SOURCES) \
+	$(systemd_tmpfiles_SOURCES) $(systemd_update_utmp_SOURCES) \
+	$(systemd_vconsole_setup_SOURCES) $(test_cgroup_SOURCES) \
+	$(test_daemon_SOURCES) $(test_engine_SOURCES) \
+	$(test_env_replace_SOURCES) $(test_hostname_SOURCES) \
+	$(test_job_type_SOURCES) $(test_loopback_SOURCES) \
+	$(test_ns_SOURCES)
 man1dir = $(mandir)/man1
 man3dir = $(mandir)/man3
 man5dir = $(mandir)/man5
@@ -521,12 +603,12 @@ am__dist_systemunit_DATA_DIST = units/emergency.service \
 	units/emergency.target units/basic.target units/getty.target \
 	units/halt.target units/local-fs.target units/network.target \
 	units/nss-lookup.target units/mail-transfer-agent.target \
-	units/poweroff.target units/reboot.target units/rescue.target \
-	units/rpcbind.target units/rtc-set.target \
-	units/shutdown.target units/umount.target units/sigpwr.target \
-	units/sockets.target units/swap.target units/dbus.target \
-	units/systemd-initctl.socket units/systemd-logger.socket \
-	units/systemd-shutdownd.socket \
+	units/http-daemon.target units/poweroff.target \
+	units/reboot.target units/rescue.target units/rpcbind.target \
+	units/rtc-set.target units/shutdown.target units/umount.target \
+	units/sigpwr.target units/sockets.target units/swap.target \
+	units/dbus.target units/systemd-initctl.socket \
+	units/systemd-logger.socket units/systemd-shutdownd.socket \
 	units/systemd-kmsg-syslogd.socket \
 	units/dev-hugepages.automount units/dev-hugepages.mount \
 	units/dev-mqueue.automount units/dev-mqueue.mount \
@@ -535,21 +617,24 @@ am__dist_systemunit_DATA_DIST = units/emergency.service \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
 	units/sys-kernel-security.mount units/tmp.mount \
-	units/var-lock.mount units/var-lock.service \
-	units/var-run.mount units/var-run.service \
+	units/var-lock.mount units/var-run.mount \
 	units/hwclock-load.service units/hwclock-save.service \
 	units/sysctl.service units/remount-rootfs.service \
 	units/printer.target units/bluetooth.target \
-	units/smartcard.target units/fedora/halt.service \
-	units/fedora/killall.service units/fedora/poweroff.service \
-	units/fedora/prefdm.service units/fedora/rc-local.service \
-	units/fedora/reboot.service units/fedora/sysinit.service \
-	units/fedora/single.service units/fedora/plymouth-quit.service \
+	units/smartcard.target units/tmpwatch.service \
+	units/tmpwatch.timer units/systemd-readahead-done.timer \
+	units/fedora/halt.service units/fedora/killall.service \
+	units/fedora/poweroff.service units/fedora/prefdm.service \
+	units/fedora/rc-local.service units/fedora/reboot.service \
+	units/fedora/sysinit.service units/fedora/single.service \
+	units/fedora/plymouth-quit.service \
 	units/fedora/plymouth-reboot.service \
 	units/fedora/plymouth-poweroff.service \
 	units/fedora/plymouth-halt.service units/debian/halt.service \
 	units/debian/killall.service units/debian/poweroff.service \
-	units/debian/reboot.service units/suse/halt.service \
+	units/debian/reboot.service units/debian/fsck.target \
+	units/debian/umountfs.service units/debian/umountnfs.service \
+	units/debian/umountroot.service units/suse/halt.service \
 	units/suse/poweroff.service units/suse/reboot.service \
 	units/suse/fsck.target units/gentoo/halt.service \
 	units/gentoo/killall.service units/gentoo/poweroff.service \
@@ -560,7 +645,8 @@ am__dist_systemunit_DATA_DIST = units/emergency.service \
 DATA = $(dbusinterface_DATA) $(dist_dbuspolicy_DATA) \
 	$(dist_dbussystemservice_DATA) $(dist_doc_DATA) \
 	$(dist_noinst_DATA) $(dist_pkgsysconf_DATA) \
-	$(dist_sessionunit_DATA) $(dist_systemunit_DATA) \
+	$(dist_polkitpolicy_DATA) $(dist_sessionunit_DATA) \
+	$(dist_systemunit_DATA) $(dist_tmpfiles_DATA) \
 	$(dist_udevrules_DATA) $(nodist_noinst_DATA) \
 	$(nodist_sessionunit_DATA) $(nodist_systemunit_DATA) \
 	$(pkgconfigdata_DATA)
@@ -726,15 +812,16 @@ top_srcdir = @top_srcdir@
 udevrulesdir = @udevrulesdir@
 ACLOCAL_AMFLAGS = -I m4
 pkgconfigdatadir = $(datadir)/pkgconfig
+polkitpolicydir = $(datadir)/polkit-1/actions
 
 # Our own, non-special dirs
 pkgsysconfdir = $(sysconfdir)/systemd
 sessionunitdir = $(pkgdatadir)/session
+tmpfilesdir = $(sysconfdir)/tmpfiles.d
 rootbindir = $(rootdir)/bin
 rootlibexecdir = $(rootdir)/lib/systemd
 systemunitdir = $(rootdir)/lib/systemd/system
-AM_CPPFLAGS = \
-        -include $(top_builddir)/config.h \
+AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-DSYSTEM_CONFIG_FILE=\"$(pkgsysconfdir)/system.conf\" \
 	-DSYSTEM_CONFIG_UNIT_PATH=\"$(pkgsysconfdir)/system\" \
 	-DSYSTEM_DATA_UNIT_PATH=\"$(systemunitdir)\" \
@@ -747,9 +834,8 @@ AM_CPPFLAGS = \
 	-DSYSTEMD_BINARY_PATH=\"$(rootbindir)/systemd\" \
 	-DSYSTEMCTL_BINARY_PATH=\"$(rootbindir)/systemctl\" \
 	-DRUNTIME_DIR=\"$(localstatedir)/run\" \
-	-DRANDOM_SEED=\"$(localstatedir)/lib/random-seed\" \
-	-I $(top_srcdir)/src
-
+	-DRANDOM_SEED=\"$(localstatedir)/lib/random-seed\" -I \
+	$(top_srcdir)/src $(am__append_1) $(am__append_2)
 @HAVE_PAM_TRUE@pamlib_LTLIBRARIES = \
 @HAVE_PAM_TRUE@	pam_systemd.la
 
@@ -780,16 +866,20 @@ dbusinterface_DATA = \
 	org.freedesktop.systemd1.Swap.xml \
 	org.freedesktop.systemd1.Path.xml
 
+dist_tmpfiles_DATA = \
+	tmpfiles.d/systemd.conf \
+	tmpfiles.d/x11.conf
+
 dist_systemunit_DATA = units/emergency.service units/emergency.target \
 	units/basic.target units/getty.target units/halt.target \
 	units/local-fs.target units/network.target \
 	units/nss-lookup.target units/mail-transfer-agent.target \
-	units/poweroff.target units/reboot.target units/rescue.target \
-	units/rpcbind.target units/rtc-set.target \
-	units/shutdown.target units/umount.target units/sigpwr.target \
-	units/sockets.target units/swap.target units/dbus.target \
-	units/systemd-initctl.socket units/systemd-logger.socket \
-	units/systemd-shutdownd.socket \
+	units/http-daemon.target units/poweroff.target \
+	units/reboot.target units/rescue.target units/rpcbind.target \
+	units/rtc-set.target units/shutdown.target units/umount.target \
+	units/sigpwr.target units/sockets.target units/swap.target \
+	units/dbus.target units/systemd-initctl.socket \
+	units/systemd-logger.socket units/systemd-shutdownd.socket \
 	units/systemd-kmsg-syslogd.socket \
 	units/dev-hugepages.automount units/dev-hugepages.mount \
 	units/dev-mqueue.automount units/dev-mqueue.mount \
@@ -798,13 +888,14 @@ dist_systemunit_DATA = units/emergency.service units/emergency.target \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
 	units/sys-kernel-security.mount units/tmp.mount \
-	units/var-lock.mount units/var-lock.service \
-	units/var-run.mount units/var-run.service \
+	units/var-lock.mount units/var-run.mount \
 	units/hwclock-load.service units/hwclock-save.service \
 	units/sysctl.service units/remount-rootfs.service \
 	units/printer.target units/bluetooth.target \
-	units/smartcard.target $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5) $(am__append_6)
+	units/smartcard.target units/tmpwatch.service \
+	units/tmpwatch.timer units/systemd-readahead-done.timer \
+	$(am__append_4) $(am__append_5) $(am__append_6) \
+	$(am__append_7) $(am__append_8)
 nodist_systemunit_DATA = \
 	units/sysinit.target \
 	units/getty@.service \
@@ -816,13 +907,17 @@ nodist_systemunit_DATA = \
 	units/systemd-logger.service \
 	units/systemd-shutdownd.service \
 	units/systemd-kmsg-syslogd.service \
-	units/systemd-auto-serial-getty.service \
 	units/systemd-modules-load.service \
+	units/systemd-vconsole-setup.service \
 	units/systemd-remount-api-vfs.service \
 	units/systemd-update-utmp-runlevel.service \
 	units/systemd-update-utmp-shutdown.service \
 	units/systemd-random-seed-save.service \
 	units/systemd-random-seed-load.service \
+	units/systemd-readahead-collect.service \
+	units/systemd-readahead-replay.service \
+	units/systemd-readahead-done.service \
+	units/systemd-tmpfiles.service \
 	units/syslog.target
 
 dist_sessionunit_DATA = \
@@ -843,46 +938,56 @@ EXTRA_DIST = units/sysinit.target.m4 units/getty@.service.m4 \
 	units/systemd-logger.service.in \
 	units/systemd-shutdownd.service.in \
 	units/systemd-kmsg-syslogd.service.in \
-	units/systemd-auto-serial-getty.service.in \
 	units/systemd-modules-load.service.in \
+	units/systemd-vconsole-setup.service.in \
 	units/systemd-remount-api-vfs.service.in \
 	units/systemd-update-utmp-runlevel.service.in \
 	units/systemd-update-utmp-shutdown.service.in \
 	units/systemd-random-seed-save.service.in \
 	units/systemd-random-seed-load.service.in \
-	units/syslog.target.in units/session/exit.service.in \
-	systemd.pc.in ${libsystemd_basic_la_SOURCES:.c=.h} \
+	units/systemd-readahead-collect.service.in \
+	units/systemd-readahead-replay.service.in \
+	units/systemd-readahead-done.service.in \
+	units/systemd-tmpfiles.service.in units/syslog.target.in \
+	units/session/exit.service.in systemd.pc.in \
+	${libsystemd_basic_la_SOURCES:.c=.h} \
 	${libsystemd_core_la_SOURCES:.c=.h} src/macro.h src/ioprio.h \
 	src/missing.h src/list.h src/securebits.h \
-	src/linux/auto_dev-ioctl.h src/initreq.h src/sd-daemon.h \
-	src/special.h src/dbus-common.h src/bus-errors.h \
-	src/cgroup-show.h src/utmp-wtmp.h src/build.h src/shutdownd.h \
-	$(XML_FILES) $(XML_IN_FILES) ${nodist_man_MANS:=.in} \
-	${XML_IN_FILES:.xml.in=.html.in}
+	src/linux/auto_dev-ioctl.h src/linux/fanotify.h src/initreq.h \
+	src/sd-daemon.h src/sd-readahead.h src/special.h \
+	src/dbus-common.h src/bus-errors.h src/cgroup-show.h \
+	src/utmp-wtmp.h src/build.h src/shutdownd.h \
+	src/readahead-common.h $(XML_FILES) $(XML_IN_FILES) \
+	${nodist_man_MANS:=.in} ${XML_IN_FILES:.xml.in=.html.in}
 dist_doc_DATA = \
 	README \
 	LICENSE \
 	DISTRO_PORTING \
 	src/sd-daemon.h \
-	src/sd-daemon.c
+	src/sd-daemon.c \
+	src/sd-readahead.h \
+	src/sd-readahead.c
 
 pkgconfigdata_DATA = \
 	systemd.pc
+
+dist_polkitpolicy_DATA = \
+	src/org.freedesktop.systemd1.policy
 
 noinst_LTLIBRARIES = \
 	libsystemd-basic.la \
 	libsystemd-core.la
 
 libsystemd_basic_la_SOURCES = \
-        src/util.c \
+	src/util.c \
 	src/label.c \
-        src/hashmap.c \
-        src/set.c \
-        src/strv.c \
-        src/conf-parser.c \
-        src/socket-util.c \
-        src/log.c \
-        src/ratelimit.c
+	src/hashmap.c \
+	src/set.c \
+	src/strv.c \
+	src/conf-parser.c \
+	src/socket-util.c \
+	src/log.c \
+	src/ratelimit.c
 
 libsystemd_basic_la_CFLAGS = \
 	$(AM_CFLAGS) \
@@ -893,27 +998,27 @@ libsystemd_basic_la_LIBADD = \
 
 libsystemd_core_la_SOURCES = \
 	src/unit.c \
-        src/job.c \
-        src/manager.c \
+	src/job.c \
+	src/manager.c \
 	src/path-lookup.c \
-        src/load-fragment.c \
-        src/service.c \
-        src/automount.c \
-        src/mount.c \
-        src/swap.c \
-        src/device.c \
-        src/target.c \
-        src/snapshot.c \
-        src/socket.c \
-        src/timer.c \
+	src/load-fragment.c \
+	src/service.c \
+	src/automount.c \
+	src/mount.c \
+	src/swap.c \
+	src/device.c \
+	src/target.c \
+	src/snapshot.c \
+	src/socket.c \
+	src/timer.c \
 	src/path.c \
-        src/load-dropin.c \
-        src/execute.c \
+	src/load-dropin.c \
+	src/execute.c \
 	src/exit-status.c \
-        src/dbus.c \
-        src/dbus-manager.c \
-        src/dbus-unit.c \
-        src/dbus-job.c \
+	src/dbus.c \
+	src/dbus-manager.c \
+	src/dbus-unit.c \
+	src/dbus-job.c \
 	src/dbus-service.c \
 	src/dbus-socket.c \
 	src/dbus-timer.c \
@@ -930,6 +1035,7 @@ libsystemd_core_la_SOURCES = \
 	src/hostname-setup.c \
 	src/loopback-setup.c \
 	src/kmod-setup.c \
+	src/locale-setup.c \
 	src/specifier.c \
 	src/unit-name.c \
 	src/fdset.c \
@@ -960,6 +1066,7 @@ MANPAGES = \
 	man/systemd-cgls.1 \
 	man/systemd-notify.1 \
 	man/sd_notify.3 \
+	man/sd_readahead.3 \
 	man/sd_booted.3 \
 	man/sd_listen_fds.3 \
 	man/sd_is_fifo.3 \
@@ -977,6 +1084,7 @@ MANPAGES = \
 	man/systemd.exec.5 \
 	man/daemon.7 \
 	man/sd-daemon.7 \
+	man/sd-readahead.7 \
 	man/runlevel.8 \
 	man/telinit.8 \
 	man/halt.8 \
@@ -1135,25 +1243,31 @@ systemd_shutdownd_CFLAGS = \
 systemd_shutdownd_LDADD = \
 	libsystemd-basic.la
 
-systemd_auto_serial_getty_SOURCES = \
-	src/auto-serial-getty.c \
-	src/dbus-common.c
-
-systemd_auto_serial_getty_CFLAGS = \
-	$(AM_CFLAGS) \
-	$(DBUS_CFLAGS)
-
-systemd_auto_serial_getty_LDADD = \
-	libsystemd-basic.la \
-	$(DBUS_LIBS)
-
 systemd_modules_load_SOURCES = \
 	src/modules-load.c
 
 systemd_modules_load_CFLAGS = \
 	$(AM_CFLAGS)
 
+systemd_tmpfiles_LDADD = \
+	libsystemd-basic.la
+
+systemd_tmpfiles_SOURCES = \
+	src/tmpfiles.c
+
+systemd_tmpfiles_CFLAGS = \
+	$(AM_CFLAGS)
+
 systemd_modules_load_LDADD = \
+	libsystemd-basic.la
+
+systemd_vconsole_setup_SOURCES = \
+	src/vconsole-setup.c
+
+systemd_vconsole_setup_CFLAGS = \
+	$(AM_CFLAGS)
+
+systemd_vconsole_setup_LDADD = \
 	libsystemd-basic.la
 
 systemd_remount_api_vfs_SOURCES = \
@@ -1197,7 +1311,8 @@ systemctl_SOURCES = \
 	src/sd-daemon.c \
 	src/cgroup-show.c \
 	src/cgroup-util.c \
-	src/exit-status.c
+	src/exit-status.c \
+	src/unit-name.c
 
 systemctl_CFLAGS = \
 	$(AM_CFLAGS) \
@@ -1209,10 +1324,47 @@ systemctl_LDADD = \
 
 systemd_notify_SOURCES = \
 	src/notify.c \
-	src/sd-daemon.c
+	src/sd-daemon.c \
+	src/sd-readahead.c
 
 systemd_notify_LDADD = \
 	libsystemd-basic.la
+
+systemd_ask_password_SOURCES = \
+	src/ask-password.c
+
+systemd_ask_password_LDADD = \
+	libsystemd-basic.la
+
+systemd_reply_password_SOURCES = \
+	src/reply-password.c
+
+systemd_reply_password_LDADD = \
+	libsystemd-basic.la
+
+systemd_readahead_collect_SOURCES = \
+	src/readahead-collect.c \
+	src/sd-daemon.c \
+	src/readahead-common.c
+
+systemd_readahead_collect_CFLAGS = \
+	$(UDEV_CFLAGS)
+
+systemd_readahead_collect_LDADD = \
+	libsystemd-basic.la \
+	$(UDEV_LIBS)
+
+systemd_readahead_replay_SOURCES = \
+	src/readahead-replay.c \
+	src/sd-daemon.c \
+	src/readahead-common.c
+
+systemd_readahead_replay_CFLAGS = \
+	$(UDEV_CFLAGS)
+
+systemd_readahead_replay_LDADD = \
+	libsystemd-basic.la \
+	$(UDEV_LIBS)
 
 systemd_cgls_SOURCES = \
 	src/cgls.c \
@@ -1248,6 +1400,31 @@ systemadm_LDADD = \
 	$(DBUSGLIB_LIBS) \
 	$(GTK_LIBS)
 
+systemd_ask_password_agent_SOURCES = \
+	src/ask-password-agent.vala
+
+systemd_ask_password_agent_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(DBUSGLIB_CFLAGS) \
+	$(GTK_CFLAGS) \
+	-Wno-unused-variable \
+	-Wno-unused-function \
+	-Wno-shadow \
+	-Wno-format-nonliteral
+
+systemd_ask_password_agent_VALAFLAGS = \
+	--pkg=dbus-glib-1 \
+	--pkg=posix \
+	--pkg=gtk+-2.0 \
+	--pkg=linux \
+	--pkg=gio-unix-2.0 \
+	--pkg=libnotify \
+	-g
+
+systemd_ask_password_agent_LDADD = \
+	$(DBUSGLIB_LIBS) \
+	$(GTK_LIBS)
+
 pam_systemd_la_SOURCES = \
 	src/pam-module.c \
 	src/cgroup-util.c \
@@ -1272,6 +1449,7 @@ SED_PROCESS = \
 	$(SED)  -e 's,@rootlibexecdir\@,$(rootlibexecdir),g' \
 		-e 's,@SPECIAL_SYSLOG_SERVICE\@,$(SPECIAL_SYSLOG_SERVICE),g' \
 		-e 's,@SYSTEMCTL\@,$(rootbindir)/systemctl,g' \
+		-e 's,@SYSTEMD_NOTIFY\@,$(rootbindir)/systemd-notify,g' \
 		-e 's,@pkgsysconfdir\@,$(pkgsysconfdir),g' \
 		-e 's,@pkgdatadir\@,$(pkgdatadir),g' \
 		-e 's,@systemunitdir\@,$(systemunitdir),g' \
@@ -1291,7 +1469,7 @@ M4_PROCESS_SESSION = \
 
 CLEANFILES = $(nodist_systemunit_DATA) $(nodist_sessionunit_DATA) \
 	$(nodist_man_MANS) ${XML_IN_FILES:.xml.in=.html} \
-	$(pkgconfigdata_DATA) $(am__append_7) $(am__append_8) \
+	$(pkgconfigdata_DATA) $(am__append_9) $(am__append_10) \
 	$(dbusinterface_DATA)
 @HAVE_XSLTPROC_TRUE@XSLTPROC_FLAGS = \
 @HAVE_XSLTPROC_TRUE@	--nonet \
@@ -1522,6 +1700,8 @@ src/libsystemd_core_la-loopback-setup.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libsystemd_core_la-kmod-setup.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/libsystemd_core_la-locale-setup.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/libsystemd_core_la-specifier.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libsystemd_core_la-unit-name.lo: src/$(am__dirstamp) \
@@ -1705,6 +1885,8 @@ src/systemctl-cgroup-util.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/systemctl-exit-status.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/systemctl-unit-name.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 systemctl$(EXEEXT): $(systemctl_OBJECTS) $(systemctl_DEPENDENCIES) 
 	@rm -f systemctl$(EXEEXT)
 	$(AM_V_CCLD)$(systemctl_LINK) $(systemctl_OBJECTS) $(systemctl_LDADD) $(LIBS)
@@ -1713,13 +1895,16 @@ src/systemd-main.$(OBJEXT): src/$(am__dirstamp) \
 systemd$(EXEEXT): $(systemd_OBJECTS) $(systemd_DEPENDENCIES) 
 	@rm -f systemd$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_LINK) $(systemd_OBJECTS) $(systemd_LDADD) $(LIBS)
-src/systemd_auto_serial_getty-auto-serial-getty.$(OBJEXT):  \
+src/ask-password.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-ask-password$(EXEEXT): $(systemd_ask_password_OBJECTS) $(systemd_ask_password_DEPENDENCIES) 
+	@rm -f systemd-ask-password$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(systemd_ask_password_OBJECTS) $(systemd_ask_password_LDADD) $(LIBS)
+src/systemd_ask_password_agent-ask-password-agent.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/systemd_auto_serial_getty-dbus-common.$(OBJEXT):  \
-	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-systemd-auto-serial-getty$(EXEEXT): $(systemd_auto_serial_getty_OBJECTS) $(systemd_auto_serial_getty_DEPENDENCIES) 
-	@rm -f systemd-auto-serial-getty$(EXEEXT)
-	$(AM_V_CCLD)$(systemd_auto_serial_getty_LINK) $(systemd_auto_serial_getty_OBJECTS) $(systemd_auto_serial_getty_LDADD) $(LIBS)
+systemd-ask-password-agent$(EXEEXT): $(systemd_ask_password_agent_OBJECTS) $(systemd_ask_password_agent_DEPENDENCIES) 
+	@rm -f systemd-ask-password-agent$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_ask_password_agent_LINK) $(systemd_ask_password_agent_OBJECTS) $(systemd_ask_password_agent_LDADD) $(LIBS)
 src/systemd_cgls-cgls.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/systemd_cgls-cgroup-show.$(OBJEXT): src/$(am__dirstamp) \
@@ -1770,6 +1955,8 @@ systemd-modules-load$(EXEEXT): $(systemd_modules_load_OBJECTS) $(systemd_modules
 	$(AM_V_CCLD)$(systemd_modules_load_LINK) $(systemd_modules_load_OBJECTS) $(systemd_modules_load_LDADD) $(LIBS)
 src/notify.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/sd-readahead.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 systemd-notify$(EXEEXT): $(systemd_notify_OBJECTS) $(systemd_notify_DEPENDENCIES) 
 	@rm -f systemd-notify$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(systemd_notify_OBJECTS) $(systemd_notify_LDADD) $(LIBS)
@@ -1778,6 +1965,24 @@ src/systemd_random_seed-random-seed.$(OBJEXT): src/$(am__dirstamp) \
 systemd-random-seed$(EXEEXT): $(systemd_random_seed_OBJECTS) $(systemd_random_seed_DEPENDENCIES) 
 	@rm -f systemd-random-seed$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_random_seed_LINK) $(systemd_random_seed_OBJECTS) $(systemd_random_seed_LDADD) $(LIBS)
+src/systemd_readahead_collect-readahead-collect.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_readahead_collect-sd-daemon.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_readahead_collect-readahead-common.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+systemd-readahead-collect$(EXEEXT): $(systemd_readahead_collect_OBJECTS) $(systemd_readahead_collect_DEPENDENCIES) 
+	@rm -f systemd-readahead-collect$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_readahead_collect_LINK) $(systemd_readahead_collect_OBJECTS) $(systemd_readahead_collect_LDADD) $(LIBS)
+src/systemd_readahead_replay-readahead-replay.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_readahead_replay-sd-daemon.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_readahead_replay-readahead-common.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+systemd-readahead-replay$(EXEEXT): $(systemd_readahead_replay_OBJECTS) $(systemd_readahead_replay_DEPENDENCIES) 
+	@rm -f systemd-readahead-replay$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_readahead_replay_LINK) $(systemd_readahead_replay_OBJECTS) $(systemd_readahead_replay_LDADD) $(LIBS)
 src/systemd_remount_api_vfs-remount-api-vfs.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/systemd_remount_api_vfs-mount-setup.$(OBJEXT):  \
@@ -1785,6 +1990,11 @@ src/systemd_remount_api_vfs-mount-setup.$(OBJEXT):  \
 systemd-remount-api-vfs$(EXEEXT): $(systemd_remount_api_vfs_OBJECTS) $(systemd_remount_api_vfs_DEPENDENCIES) 
 	@rm -f systemd-remount-api-vfs$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_remount_api_vfs_LINK) $(systemd_remount_api_vfs_OBJECTS) $(systemd_remount_api_vfs_LDADD) $(LIBS)
+src/reply-password.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-reply-password$(EXEEXT): $(systemd_reply_password_OBJECTS) $(systemd_reply_password_DEPENDENCIES) 
+	@rm -f systemd-reply-password$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(systemd_reply_password_OBJECTS) $(systemd_reply_password_LDADD) $(LIBS)
 src/systemd_shutdownd-utmp-wtmp.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/systemd_shutdownd-sd-daemon.$(OBJEXT): src/$(am__dirstamp) \
@@ -1794,6 +2004,11 @@ src/systemd_shutdownd-shutdownd.$(OBJEXT): src/$(am__dirstamp) \
 systemd-shutdownd$(EXEEXT): $(systemd_shutdownd_OBJECTS) $(systemd_shutdownd_DEPENDENCIES) 
 	@rm -f systemd-shutdownd$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_shutdownd_LINK) $(systemd_shutdownd_OBJECTS) $(systemd_shutdownd_LDADD) $(LIBS)
+src/systemd_tmpfiles-tmpfiles.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-tmpfiles$(EXEEXT): $(systemd_tmpfiles_OBJECTS) $(systemd_tmpfiles_DEPENDENCIES) 
+	@rm -f systemd-tmpfiles$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_tmpfiles_LINK) $(systemd_tmpfiles_OBJECTS) $(systemd_tmpfiles_LDADD) $(LIBS)
 src/systemd_update_utmp-update-utmp.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/systemd_update_utmp-dbus-common.$(OBJEXT): src/$(am__dirstamp) \
@@ -1803,6 +2018,11 @@ src/systemd_update_utmp-utmp-wtmp.$(OBJEXT): src/$(am__dirstamp) \
 systemd-update-utmp$(EXEEXT): $(systemd_update_utmp_OBJECTS) $(systemd_update_utmp_DEPENDENCIES) 
 	@rm -f systemd-update-utmp$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_update_utmp_LINK) $(systemd_update_utmp_OBJECTS) $(systemd_update_utmp_LDADD) $(LIBS)
+src/systemd_vconsole_setup-vconsole-setup.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+systemd-vconsole-setup$(EXEEXT): $(systemd_vconsole_setup_OBJECTS) $(systemd_vconsole_setup_DEPENDENCIES) 
+	@rm -f systemd-vconsole-setup$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_vconsole_setup_LINK) $(systemd_vconsole_setup_OBJECTS) $(systemd_vconsole_setup_LDADD) $(LIBS)
 src/test_cgroup-test-cgroup.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/test_cgroup-cgroup-util.$(OBJEXT): src/$(am__dirstamp) \
@@ -1852,6 +2072,7 @@ test-ns$(EXEEXT): $(test_ns_OBJECTS) $(test_ns_DEPENDENCIES)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f src/ask-password.$(OBJEXT)
 	-rm -f src/hostname-setup.$(OBJEXT)
 	-rm -f src/libsystemd_basic_la-conf-parser.$(OBJEXT)
 	-rm -f src/libsystemd_basic_la-conf-parser.lo
@@ -1925,6 +2146,8 @@ mostlyclean-compile:
 	-rm -f src/libsystemd_core_la-load-dropin.lo
 	-rm -f src/libsystemd_core_la-load-fragment.$(OBJEXT)
 	-rm -f src/libsystemd_core_la-load-fragment.lo
+	-rm -f src/libsystemd_core_la-locale-setup.$(OBJEXT)
+	-rm -f src/libsystemd_core_la-locale-setup.lo
 	-rm -f src/libsystemd_core_la-loopback-setup.$(OBJEXT)
 	-rm -f src/libsystemd_core_la-loopback-setup.lo
 	-rm -f src/libsystemd_core_la-manager.$(OBJEXT)
@@ -1968,7 +2191,9 @@ mostlyclean-compile:
 	-rm -f src/pam_systemd_la-pam-module.lo
 	-rm -f src/pam_systemd_la-sd-daemon.$(OBJEXT)
 	-rm -f src/pam_systemd_la-sd-daemon.lo
+	-rm -f src/reply-password.$(OBJEXT)
 	-rm -f src/sd-daemon.$(OBJEXT)
+	-rm -f src/sd-readahead.$(OBJEXT)
 	-rm -f src/systemadm-systemadm.$(OBJEXT)
 	-rm -f src/systemadm-systemd-interfaces.$(OBJEXT)
 	-rm -f src/systemctl-cgroup-show.$(OBJEXT)
@@ -1978,10 +2203,10 @@ mostlyclean-compile:
 	-rm -f src/systemctl-path-lookup.$(OBJEXT)
 	-rm -f src/systemctl-sd-daemon.$(OBJEXT)
 	-rm -f src/systemctl-systemctl.$(OBJEXT)
+	-rm -f src/systemctl-unit-name.$(OBJEXT)
 	-rm -f src/systemctl-utmp-wtmp.$(OBJEXT)
 	-rm -f src/systemd-main.$(OBJEXT)
-	-rm -f src/systemd_auto_serial_getty-auto-serial-getty.$(OBJEXT)
-	-rm -f src/systemd_auto_serial_getty-dbus-common.$(OBJEXT)
+	-rm -f src/systemd_ask_password_agent-ask-password-agent.$(OBJEXT)
 	-rm -f src/systemd_cgls-cgls.$(OBJEXT)
 	-rm -f src/systemd_cgls-cgroup-show.$(OBJEXT)
 	-rm -f src/systemd_cgls-cgroup-util.$(OBJEXT)
@@ -1995,14 +2220,22 @@ mostlyclean-compile:
 	-rm -f src/systemd_kmsg_syslogd-sd-daemon.$(OBJEXT)
 	-rm -f src/systemd_modules_load-modules-load.$(OBJEXT)
 	-rm -f src/systemd_random_seed-random-seed.$(OBJEXT)
+	-rm -f src/systemd_readahead_collect-readahead-collect.$(OBJEXT)
+	-rm -f src/systemd_readahead_collect-readahead-common.$(OBJEXT)
+	-rm -f src/systemd_readahead_collect-sd-daemon.$(OBJEXT)
+	-rm -f src/systemd_readahead_replay-readahead-common.$(OBJEXT)
+	-rm -f src/systemd_readahead_replay-readahead-replay.$(OBJEXT)
+	-rm -f src/systemd_readahead_replay-sd-daemon.$(OBJEXT)
 	-rm -f src/systemd_remount_api_vfs-mount-setup.$(OBJEXT)
 	-rm -f src/systemd_remount_api_vfs-remount-api-vfs.$(OBJEXT)
 	-rm -f src/systemd_shutdownd-sd-daemon.$(OBJEXT)
 	-rm -f src/systemd_shutdownd-shutdownd.$(OBJEXT)
 	-rm -f src/systemd_shutdownd-utmp-wtmp.$(OBJEXT)
+	-rm -f src/systemd_tmpfiles-tmpfiles.$(OBJEXT)
 	-rm -f src/systemd_update_utmp-dbus-common.$(OBJEXT)
 	-rm -f src/systemd_update_utmp-update-utmp.$(OBJEXT)
 	-rm -f src/systemd_update_utmp-utmp-wtmp.$(OBJEXT)
+	-rm -f src/systemd_vconsole_setup-vconsole-setup.$(OBJEXT)
 	-rm -f src/tcpwrap.$(OBJEXT)
 	-rm -f src/test-daemon.$(OBJEXT)
 	-rm -f src/test-hostname.$(OBJEXT)
@@ -2017,6 +2250,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/ask-password.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/hostname-setup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-conf-parser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-hashmap.Plo@am__quote@
@@ -2054,6 +2288,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-kmod-setup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-load-dropin.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-load-fragment.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-locale-setup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-loopback-setup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-mount-setup.Plo@am__quote@
@@ -2077,7 +2312,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/pam_systemd_la-cgroup-util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/pam_systemd_la-pam-module.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/pam_systemd_la-sd-daemon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/reply-password.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/sd-daemon.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/sd-readahead.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemadm-systemadm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemadm-systemd-interfaces.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemctl-cgroup-show.Po@am__quote@
@@ -2087,10 +2324,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemctl-path-lookup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemctl-sd-daemon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemctl-systemctl.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemctl-unit-name.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemctl-utmp-wtmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd-main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_auto_serial_getty-auto-serial-getty.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_auto_serial_getty-dbus-common.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_ask_password_agent-ask-password-agent.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_cgls-cgls.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_cgls-cgroup-show.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_cgls-cgroup-util.Po@am__quote@
@@ -2104,14 +2341,22 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_kmsg_syslogd-sd-daemon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_modules_load-modules-load.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_random_seed-random-seed.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_readahead_collect-readahead-common.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_readahead_collect-sd-daemon.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_readahead_replay-readahead-common.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_readahead_replay-readahead-replay.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_readahead_replay-sd-daemon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_remount_api_vfs-mount-setup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_remount_api_vfs-remount-api-vfs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_shutdownd-sd-daemon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_shutdownd-shutdownd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_shutdownd-utmp-wtmp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_tmpfiles-tmpfiles.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_update_utmp-dbus-common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_update_utmp-update-utmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_update_utmp-utmp-wtmp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_vconsole_setup-vconsole-setup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/tcpwrap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/test-daemon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/test-hostname.Po@am__quote@
@@ -2526,6 +2771,14 @@ src/libsystemd_core_la-kmod-setup.lo: src/kmod-setup.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_core_la-kmod-setup.lo `test -f 'src/kmod-setup.c' || echo '$(srcdir)/'`src/kmod-setup.c
 
+src/libsystemd_core_la-locale-setup.lo: src/locale-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -MT src/libsystemd_core_la-locale-setup.lo -MD -MP -MF src/$(DEPDIR)/libsystemd_core_la-locale-setup.Tpo -c -o src/libsystemd_core_la-locale-setup.lo `test -f 'src/locale-setup.c' || echo '$(srcdir)/'`src/locale-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libsystemd_core_la-locale-setup.Tpo src/$(DEPDIR)/libsystemd_core_la-locale-setup.Plo
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/locale-setup.c' object='src/libsystemd_core_la-locale-setup.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_core_la-locale-setup.lo `test -f 'src/locale-setup.c' || echo '$(srcdir)/'`src/locale-setup.c
+
 src/libsystemd_core_la-specifier.lo: src/specifier.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -MT src/libsystemd_core_la-specifier.lo -MD -MP -MF src/$(DEPDIR)/libsystemd_core_la-specifier.Tpo -c -o src/libsystemd_core_la-specifier.lo `test -f 'src/specifier.c' || echo '$(srcdir)/'`src/specifier.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libsystemd_core_la-specifier.Tpo src/$(DEPDIR)/libsystemd_core_la-specifier.Plo
@@ -2758,6 +3011,22 @@ src/systemctl-exit-status.obj: src/exit-status.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemctl_CFLAGS) $(CFLAGS) -c -o src/systemctl-exit-status.obj `if test -f 'src/exit-status.c'; then $(CYGPATH_W) 'src/exit-status.c'; else $(CYGPATH_W) '$(srcdir)/src/exit-status.c'; fi`
 
+src/systemctl-unit-name.o: src/unit-name.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemctl_CFLAGS) $(CFLAGS) -MT src/systemctl-unit-name.o -MD -MP -MF src/$(DEPDIR)/systemctl-unit-name.Tpo -c -o src/systemctl-unit-name.o `test -f 'src/unit-name.c' || echo '$(srcdir)/'`src/unit-name.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemctl-unit-name.Tpo src/$(DEPDIR)/systemctl-unit-name.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/unit-name.c' object='src/systemctl-unit-name.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemctl_CFLAGS) $(CFLAGS) -c -o src/systemctl-unit-name.o `test -f 'src/unit-name.c' || echo '$(srcdir)/'`src/unit-name.c
+
+src/systemctl-unit-name.obj: src/unit-name.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemctl_CFLAGS) $(CFLAGS) -MT src/systemctl-unit-name.obj -MD -MP -MF src/$(DEPDIR)/systemctl-unit-name.Tpo -c -o src/systemctl-unit-name.obj `if test -f 'src/unit-name.c'; then $(CYGPATH_W) 'src/unit-name.c'; else $(CYGPATH_W) '$(srcdir)/src/unit-name.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemctl-unit-name.Tpo src/$(DEPDIR)/systemctl-unit-name.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/unit-name.c' object='src/systemctl-unit-name.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemctl_CFLAGS) $(CFLAGS) -c -o src/systemctl-unit-name.obj `if test -f 'src/unit-name.c'; then $(CYGPATH_W) 'src/unit-name.c'; else $(CYGPATH_W) '$(srcdir)/src/unit-name.c'; fi`
+
 src/systemd-main.o: src/main.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_CFLAGS) $(CFLAGS) -MT src/systemd-main.o -MD -MP -MF src/$(DEPDIR)/systemd-main.Tpo -c -o src/systemd-main.o `test -f 'src/main.c' || echo '$(srcdir)/'`src/main.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd-main.Tpo src/$(DEPDIR)/systemd-main.Po
@@ -2774,37 +3043,21 @@ src/systemd-main.obj: src/main.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_CFLAGS) $(CFLAGS) -c -o src/systemd-main.obj `if test -f 'src/main.c'; then $(CYGPATH_W) 'src/main.c'; else $(CYGPATH_W) '$(srcdir)/src/main.c'; fi`
 
-src/systemd_auto_serial_getty-auto-serial-getty.o: src/auto-serial-getty.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -MT src/systemd_auto_serial_getty-auto-serial-getty.o -MD -MP -MF src/$(DEPDIR)/systemd_auto_serial_getty-auto-serial-getty.Tpo -c -o src/systemd_auto_serial_getty-auto-serial-getty.o `test -f 'src/auto-serial-getty.c' || echo '$(srcdir)/'`src/auto-serial-getty.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_auto_serial_getty-auto-serial-getty.Tpo src/$(DEPDIR)/systemd_auto_serial_getty-auto-serial-getty.Po
+src/systemd_ask_password_agent-ask-password-agent.o: src/ask-password-agent.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_ask_password_agent_CFLAGS) $(CFLAGS) -MT src/systemd_ask_password_agent-ask-password-agent.o -MD -MP -MF src/$(DEPDIR)/systemd_ask_password_agent-ask-password-agent.Tpo -c -o src/systemd_ask_password_agent-ask-password-agent.o `test -f 'src/ask-password-agent.c' || echo '$(srcdir)/'`src/ask-password-agent.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_ask_password_agent-ask-password-agent.Tpo src/$(DEPDIR)/systemd_ask_password_agent-ask-password-agent.Po
 @am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/auto-serial-getty.c' object='src/systemd_auto_serial_getty-auto-serial-getty.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/ask-password-agent.c' object='src/systemd_ask_password_agent-ask-password-agent.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -c -o src/systemd_auto_serial_getty-auto-serial-getty.o `test -f 'src/auto-serial-getty.c' || echo '$(srcdir)/'`src/auto-serial-getty.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_ask_password_agent_CFLAGS) $(CFLAGS) -c -o src/systemd_ask_password_agent-ask-password-agent.o `test -f 'src/ask-password-agent.c' || echo '$(srcdir)/'`src/ask-password-agent.c
 
-src/systemd_auto_serial_getty-auto-serial-getty.obj: src/auto-serial-getty.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -MT src/systemd_auto_serial_getty-auto-serial-getty.obj -MD -MP -MF src/$(DEPDIR)/systemd_auto_serial_getty-auto-serial-getty.Tpo -c -o src/systemd_auto_serial_getty-auto-serial-getty.obj `if test -f 'src/auto-serial-getty.c'; then $(CYGPATH_W) 'src/auto-serial-getty.c'; else $(CYGPATH_W) '$(srcdir)/src/auto-serial-getty.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_auto_serial_getty-auto-serial-getty.Tpo src/$(DEPDIR)/systemd_auto_serial_getty-auto-serial-getty.Po
+src/systemd_ask_password_agent-ask-password-agent.obj: src/ask-password-agent.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_ask_password_agent_CFLAGS) $(CFLAGS) -MT src/systemd_ask_password_agent-ask-password-agent.obj -MD -MP -MF src/$(DEPDIR)/systemd_ask_password_agent-ask-password-agent.Tpo -c -o src/systemd_ask_password_agent-ask-password-agent.obj `if test -f 'src/ask-password-agent.c'; then $(CYGPATH_W) 'src/ask-password-agent.c'; else $(CYGPATH_W) '$(srcdir)/src/ask-password-agent.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_ask_password_agent-ask-password-agent.Tpo src/$(DEPDIR)/systemd_ask_password_agent-ask-password-agent.Po
 @am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/auto-serial-getty.c' object='src/systemd_auto_serial_getty-auto-serial-getty.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/ask-password-agent.c' object='src/systemd_ask_password_agent-ask-password-agent.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -c -o src/systemd_auto_serial_getty-auto-serial-getty.obj `if test -f 'src/auto-serial-getty.c'; then $(CYGPATH_W) 'src/auto-serial-getty.c'; else $(CYGPATH_W) '$(srcdir)/src/auto-serial-getty.c'; fi`
-
-src/systemd_auto_serial_getty-dbus-common.o: src/dbus-common.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -MT src/systemd_auto_serial_getty-dbus-common.o -MD -MP -MF src/$(DEPDIR)/systemd_auto_serial_getty-dbus-common.Tpo -c -o src/systemd_auto_serial_getty-dbus-common.o `test -f 'src/dbus-common.c' || echo '$(srcdir)/'`src/dbus-common.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_auto_serial_getty-dbus-common.Tpo src/$(DEPDIR)/systemd_auto_serial_getty-dbus-common.Po
-@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/dbus-common.c' object='src/systemd_auto_serial_getty-dbus-common.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -c -o src/systemd_auto_serial_getty-dbus-common.o `test -f 'src/dbus-common.c' || echo '$(srcdir)/'`src/dbus-common.c
-
-src/systemd_auto_serial_getty-dbus-common.obj: src/dbus-common.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -MT src/systemd_auto_serial_getty-dbus-common.obj -MD -MP -MF src/$(DEPDIR)/systemd_auto_serial_getty-dbus-common.Tpo -c -o src/systemd_auto_serial_getty-dbus-common.obj `if test -f 'src/dbus-common.c'; then $(CYGPATH_W) 'src/dbus-common.c'; else $(CYGPATH_W) '$(srcdir)/src/dbus-common.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_auto_serial_getty-dbus-common.Tpo src/$(DEPDIR)/systemd_auto_serial_getty-dbus-common.Po
-@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/dbus-common.c' object='src/systemd_auto_serial_getty-dbus-common.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_auto_serial_getty_CFLAGS) $(CFLAGS) -c -o src/systemd_auto_serial_getty-dbus-common.obj `if test -f 'src/dbus-common.c'; then $(CYGPATH_W) 'src/dbus-common.c'; else $(CYGPATH_W) '$(srcdir)/src/dbus-common.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_ask_password_agent_CFLAGS) $(CFLAGS) -c -o src/systemd_ask_password_agent-ask-password-agent.obj `if test -f 'src/ask-password-agent.c'; then $(CYGPATH_W) 'src/ask-password-agent.c'; else $(CYGPATH_W) '$(srcdir)/src/ask-password-agent.c'; fi`
 
 src/systemd_cgls-cgls.o: src/cgls.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_cgls_CFLAGS) $(CFLAGS) -MT src/systemd_cgls-cgls.o -MD -MP -MF src/$(DEPDIR)/systemd_cgls-cgls.Tpo -c -o src/systemd_cgls-cgls.o `test -f 'src/cgls.c' || echo '$(srcdir)/'`src/cgls.c
@@ -3014,6 +3267,102 @@ src/systemd_random_seed-random-seed.obj: src/random-seed.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_random_seed_CFLAGS) $(CFLAGS) -c -o src/systemd_random_seed-random-seed.obj `if test -f 'src/random-seed.c'; then $(CYGPATH_W) 'src/random-seed.c'; else $(CYGPATH_W) '$(srcdir)/src/random-seed.c'; fi`
 
+src/systemd_readahead_collect-readahead-collect.o: src/readahead-collect.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_collect-readahead-collect.o -MD -MP -MF src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Tpo -c -o src/systemd_readahead_collect-readahead-collect.o `test -f 'src/readahead-collect.c' || echo '$(srcdir)/'`src/readahead-collect.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Tpo src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-collect.c' object='src/systemd_readahead_collect-readahead-collect.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_collect-readahead-collect.o `test -f 'src/readahead-collect.c' || echo '$(srcdir)/'`src/readahead-collect.c
+
+src/systemd_readahead_collect-readahead-collect.obj: src/readahead-collect.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_collect-readahead-collect.obj -MD -MP -MF src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Tpo -c -o src/systemd_readahead_collect-readahead-collect.obj `if test -f 'src/readahead-collect.c'; then $(CYGPATH_W) 'src/readahead-collect.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-collect.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Tpo src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-collect.c' object='src/systemd_readahead_collect-readahead-collect.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_collect-readahead-collect.obj `if test -f 'src/readahead-collect.c'; then $(CYGPATH_W) 'src/readahead-collect.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-collect.c'; fi`
+
+src/systemd_readahead_collect-sd-daemon.o: src/sd-daemon.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_collect-sd-daemon.o -MD -MP -MF src/$(DEPDIR)/systemd_readahead_collect-sd-daemon.Tpo -c -o src/systemd_readahead_collect-sd-daemon.o `test -f 'src/sd-daemon.c' || echo '$(srcdir)/'`src/sd-daemon.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_collect-sd-daemon.Tpo src/$(DEPDIR)/systemd_readahead_collect-sd-daemon.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/sd-daemon.c' object='src/systemd_readahead_collect-sd-daemon.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_collect-sd-daemon.o `test -f 'src/sd-daemon.c' || echo '$(srcdir)/'`src/sd-daemon.c
+
+src/systemd_readahead_collect-sd-daemon.obj: src/sd-daemon.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_collect-sd-daemon.obj -MD -MP -MF src/$(DEPDIR)/systemd_readahead_collect-sd-daemon.Tpo -c -o src/systemd_readahead_collect-sd-daemon.obj `if test -f 'src/sd-daemon.c'; then $(CYGPATH_W) 'src/sd-daemon.c'; else $(CYGPATH_W) '$(srcdir)/src/sd-daemon.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_collect-sd-daemon.Tpo src/$(DEPDIR)/systemd_readahead_collect-sd-daemon.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/sd-daemon.c' object='src/systemd_readahead_collect-sd-daemon.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_collect-sd-daemon.obj `if test -f 'src/sd-daemon.c'; then $(CYGPATH_W) 'src/sd-daemon.c'; else $(CYGPATH_W) '$(srcdir)/src/sd-daemon.c'; fi`
+
+src/systemd_readahead_collect-readahead-common.o: src/readahead-common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_collect-readahead-common.o -MD -MP -MF src/$(DEPDIR)/systemd_readahead_collect-readahead-common.Tpo -c -o src/systemd_readahead_collect-readahead-common.o `test -f 'src/readahead-common.c' || echo '$(srcdir)/'`src/readahead-common.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_collect-readahead-common.Tpo src/$(DEPDIR)/systemd_readahead_collect-readahead-common.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-common.c' object='src/systemd_readahead_collect-readahead-common.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_collect-readahead-common.o `test -f 'src/readahead-common.c' || echo '$(srcdir)/'`src/readahead-common.c
+
+src/systemd_readahead_collect-readahead-common.obj: src/readahead-common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_collect-readahead-common.obj -MD -MP -MF src/$(DEPDIR)/systemd_readahead_collect-readahead-common.Tpo -c -o src/systemd_readahead_collect-readahead-common.obj `if test -f 'src/readahead-common.c'; then $(CYGPATH_W) 'src/readahead-common.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-common.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_collect-readahead-common.Tpo src/$(DEPDIR)/systemd_readahead_collect-readahead-common.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-common.c' object='src/systemd_readahead_collect-readahead-common.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_collect_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_collect-readahead-common.obj `if test -f 'src/readahead-common.c'; then $(CYGPATH_W) 'src/readahead-common.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-common.c'; fi`
+
+src/systemd_readahead_replay-readahead-replay.o: src/readahead-replay.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_replay-readahead-replay.o -MD -MP -MF src/$(DEPDIR)/systemd_readahead_replay-readahead-replay.Tpo -c -o src/systemd_readahead_replay-readahead-replay.o `test -f 'src/readahead-replay.c' || echo '$(srcdir)/'`src/readahead-replay.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_replay-readahead-replay.Tpo src/$(DEPDIR)/systemd_readahead_replay-readahead-replay.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-replay.c' object='src/systemd_readahead_replay-readahead-replay.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_replay-readahead-replay.o `test -f 'src/readahead-replay.c' || echo '$(srcdir)/'`src/readahead-replay.c
+
+src/systemd_readahead_replay-readahead-replay.obj: src/readahead-replay.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_replay-readahead-replay.obj -MD -MP -MF src/$(DEPDIR)/systemd_readahead_replay-readahead-replay.Tpo -c -o src/systemd_readahead_replay-readahead-replay.obj `if test -f 'src/readahead-replay.c'; then $(CYGPATH_W) 'src/readahead-replay.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-replay.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_replay-readahead-replay.Tpo src/$(DEPDIR)/systemd_readahead_replay-readahead-replay.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-replay.c' object='src/systemd_readahead_replay-readahead-replay.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_replay-readahead-replay.obj `if test -f 'src/readahead-replay.c'; then $(CYGPATH_W) 'src/readahead-replay.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-replay.c'; fi`
+
+src/systemd_readahead_replay-sd-daemon.o: src/sd-daemon.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_replay-sd-daemon.o -MD -MP -MF src/$(DEPDIR)/systemd_readahead_replay-sd-daemon.Tpo -c -o src/systemd_readahead_replay-sd-daemon.o `test -f 'src/sd-daemon.c' || echo '$(srcdir)/'`src/sd-daemon.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_replay-sd-daemon.Tpo src/$(DEPDIR)/systemd_readahead_replay-sd-daemon.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/sd-daemon.c' object='src/systemd_readahead_replay-sd-daemon.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_replay-sd-daemon.o `test -f 'src/sd-daemon.c' || echo '$(srcdir)/'`src/sd-daemon.c
+
+src/systemd_readahead_replay-sd-daemon.obj: src/sd-daemon.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_replay-sd-daemon.obj -MD -MP -MF src/$(DEPDIR)/systemd_readahead_replay-sd-daemon.Tpo -c -o src/systemd_readahead_replay-sd-daemon.obj `if test -f 'src/sd-daemon.c'; then $(CYGPATH_W) 'src/sd-daemon.c'; else $(CYGPATH_W) '$(srcdir)/src/sd-daemon.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_replay-sd-daemon.Tpo src/$(DEPDIR)/systemd_readahead_replay-sd-daemon.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/sd-daemon.c' object='src/systemd_readahead_replay-sd-daemon.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_replay-sd-daemon.obj `if test -f 'src/sd-daemon.c'; then $(CYGPATH_W) 'src/sd-daemon.c'; else $(CYGPATH_W) '$(srcdir)/src/sd-daemon.c'; fi`
+
+src/systemd_readahead_replay-readahead-common.o: src/readahead-common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_replay-readahead-common.o -MD -MP -MF src/$(DEPDIR)/systemd_readahead_replay-readahead-common.Tpo -c -o src/systemd_readahead_replay-readahead-common.o `test -f 'src/readahead-common.c' || echo '$(srcdir)/'`src/readahead-common.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_replay-readahead-common.Tpo src/$(DEPDIR)/systemd_readahead_replay-readahead-common.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-common.c' object='src/systemd_readahead_replay-readahead-common.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_replay-readahead-common.o `test -f 'src/readahead-common.c' || echo '$(srcdir)/'`src/readahead-common.c
+
+src/systemd_readahead_replay-readahead-common.obj: src/readahead-common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -MT src/systemd_readahead_replay-readahead-common.obj -MD -MP -MF src/$(DEPDIR)/systemd_readahead_replay-readahead-common.Tpo -c -o src/systemd_readahead_replay-readahead-common.obj `if test -f 'src/readahead-common.c'; then $(CYGPATH_W) 'src/readahead-common.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-common.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_readahead_replay-readahead-common.Tpo src/$(DEPDIR)/systemd_readahead_replay-readahead-common.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/readahead-common.c' object='src/systemd_readahead_replay-readahead-common.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_readahead_replay_CFLAGS) $(CFLAGS) -c -o src/systemd_readahead_replay-readahead-common.obj `if test -f 'src/readahead-common.c'; then $(CYGPATH_W) 'src/readahead-common.c'; else $(CYGPATH_W) '$(srcdir)/src/readahead-common.c'; fi`
+
 src/systemd_remount_api_vfs-remount-api-vfs.o: src/remount-api-vfs.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_remount_api_vfs_CFLAGS) $(CFLAGS) -MT src/systemd_remount_api_vfs-remount-api-vfs.o -MD -MP -MF src/$(DEPDIR)/systemd_remount_api_vfs-remount-api-vfs.Tpo -c -o src/systemd_remount_api_vfs-remount-api-vfs.o `test -f 'src/remount-api-vfs.c' || echo '$(srcdir)/'`src/remount-api-vfs.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_remount_api_vfs-remount-api-vfs.Tpo src/$(DEPDIR)/systemd_remount_api_vfs-remount-api-vfs.Po
@@ -3094,6 +3443,22 @@ src/systemd_shutdownd-shutdownd.obj: src/shutdownd.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_shutdownd_CFLAGS) $(CFLAGS) -c -o src/systemd_shutdownd-shutdownd.obj `if test -f 'src/shutdownd.c'; then $(CYGPATH_W) 'src/shutdownd.c'; else $(CYGPATH_W) '$(srcdir)/src/shutdownd.c'; fi`
 
+src/systemd_tmpfiles-tmpfiles.o: src/tmpfiles.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_tmpfiles_CFLAGS) $(CFLAGS) -MT src/systemd_tmpfiles-tmpfiles.o -MD -MP -MF src/$(DEPDIR)/systemd_tmpfiles-tmpfiles.Tpo -c -o src/systemd_tmpfiles-tmpfiles.o `test -f 'src/tmpfiles.c' || echo '$(srcdir)/'`src/tmpfiles.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_tmpfiles-tmpfiles.Tpo src/$(DEPDIR)/systemd_tmpfiles-tmpfiles.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/tmpfiles.c' object='src/systemd_tmpfiles-tmpfiles.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_tmpfiles_CFLAGS) $(CFLAGS) -c -o src/systemd_tmpfiles-tmpfiles.o `test -f 'src/tmpfiles.c' || echo '$(srcdir)/'`src/tmpfiles.c
+
+src/systemd_tmpfiles-tmpfiles.obj: src/tmpfiles.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_tmpfiles_CFLAGS) $(CFLAGS) -MT src/systemd_tmpfiles-tmpfiles.obj -MD -MP -MF src/$(DEPDIR)/systemd_tmpfiles-tmpfiles.Tpo -c -o src/systemd_tmpfiles-tmpfiles.obj `if test -f 'src/tmpfiles.c'; then $(CYGPATH_W) 'src/tmpfiles.c'; else $(CYGPATH_W) '$(srcdir)/src/tmpfiles.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_tmpfiles-tmpfiles.Tpo src/$(DEPDIR)/systemd_tmpfiles-tmpfiles.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/tmpfiles.c' object='src/systemd_tmpfiles-tmpfiles.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_tmpfiles_CFLAGS) $(CFLAGS) -c -o src/systemd_tmpfiles-tmpfiles.obj `if test -f 'src/tmpfiles.c'; then $(CYGPATH_W) 'src/tmpfiles.c'; else $(CYGPATH_W) '$(srcdir)/src/tmpfiles.c'; fi`
+
 src/systemd_update_utmp-update-utmp.o: src/update-utmp.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_update_utmp_CFLAGS) $(CFLAGS) -MT src/systemd_update_utmp-update-utmp.o -MD -MP -MF src/$(DEPDIR)/systemd_update_utmp-update-utmp.Tpo -c -o src/systemd_update_utmp-update-utmp.o `test -f 'src/update-utmp.c' || echo '$(srcdir)/'`src/update-utmp.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_update_utmp-update-utmp.Tpo src/$(DEPDIR)/systemd_update_utmp-update-utmp.Po
@@ -3141,6 +3506,22 @@ src/systemd_update_utmp-utmp-wtmp.obj: src/utmp-wtmp.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/utmp-wtmp.c' object='src/systemd_update_utmp-utmp-wtmp.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_update_utmp_CFLAGS) $(CFLAGS) -c -o src/systemd_update_utmp-utmp-wtmp.obj `if test -f 'src/utmp-wtmp.c'; then $(CYGPATH_W) 'src/utmp-wtmp.c'; else $(CYGPATH_W) '$(srcdir)/src/utmp-wtmp.c'; fi`
+
+src/systemd_vconsole_setup-vconsole-setup.o: src/vconsole-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_vconsole_setup_CFLAGS) $(CFLAGS) -MT src/systemd_vconsole_setup-vconsole-setup.o -MD -MP -MF src/$(DEPDIR)/systemd_vconsole_setup-vconsole-setup.Tpo -c -o src/systemd_vconsole_setup-vconsole-setup.o `test -f 'src/vconsole-setup.c' || echo '$(srcdir)/'`src/vconsole-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_vconsole_setup-vconsole-setup.Tpo src/$(DEPDIR)/systemd_vconsole_setup-vconsole-setup.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/vconsole-setup.c' object='src/systemd_vconsole_setup-vconsole-setup.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_vconsole_setup_CFLAGS) $(CFLAGS) -c -o src/systemd_vconsole_setup-vconsole-setup.o `test -f 'src/vconsole-setup.c' || echo '$(srcdir)/'`src/vconsole-setup.c
+
+src/systemd_vconsole_setup-vconsole-setup.obj: src/vconsole-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_vconsole_setup_CFLAGS) $(CFLAGS) -MT src/systemd_vconsole_setup-vconsole-setup.obj -MD -MP -MF src/$(DEPDIR)/systemd_vconsole_setup-vconsole-setup.Tpo -c -o src/systemd_vconsole_setup-vconsole-setup.obj `if test -f 'src/vconsole-setup.c'; then $(CYGPATH_W) 'src/vconsole-setup.c'; else $(CYGPATH_W) '$(srcdir)/src/vconsole-setup.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_vconsole_setup-vconsole-setup.Tpo src/$(DEPDIR)/systemd_vconsole_setup-vconsole-setup.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/vconsole-setup.c' object='src/systemd_vconsole_setup-vconsole-setup.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_vconsole_setup_CFLAGS) $(CFLAGS) -c -o src/systemd_vconsole_setup-vconsole-setup.obj `if test -f 'src/vconsole-setup.c'; then $(CYGPATH_W) 'src/vconsole-setup.c'; else $(CYGPATH_W) '$(srcdir)/src/vconsole-setup.c'; fi`
 
 src/test_cgroup-test-cgroup.o: src/test-cgroup.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_cgroup_CFLAGS) $(CFLAGS) -MT src/test_cgroup-test-cgroup.o -MD -MP -MF src/$(DEPDIR)/test_cgroup-test-cgroup.Tpo -c -o src/test_cgroup-test-cgroup.o `test -f 'src/test-cgroup.c' || echo '$(srcdir)/'`src/test-cgroup.c
@@ -3246,8 +3627,14 @@ test_loopback_vala.stamp: $(test_loopback_SOURCES)
 systemd_shutdownd_vala.stamp: $(systemd_shutdownd_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_shutdownd_SOURCES)
 	$(AM_V_at)touch $@
-systemd_auto_serial_getty_vala.stamp: $(systemd_auto_serial_getty_SOURCES)
-	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_auto_serial_getty_SOURCES)
+systemd_readahead_replay_vala.stamp: $(systemd_readahead_replay_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_readahead_replay_SOURCES)
+	$(AM_V_at)touch $@
+systemd_ask_password_vala.stamp: $(systemd_ask_password_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_ask_password_SOURCES)
+	$(AM_V_at)touch $@
+systemd_tmpfiles_vala.stamp: $(systemd_tmpfiles_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_tmpfiles_SOURCES)
 	$(AM_V_at)touch $@
 systemd_remount_api_vfs_vala.stamp: $(systemd_remount_api_vfs_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_remount_api_vfs_SOURCES)
@@ -3263,6 +3650,17 @@ systemd_logger_vala.stamp: $(systemd_logger_SOURCES)
 	$(AM_V_at)touch $@
 test_ns_vala.stamp: $(test_ns_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(test_ns_SOURCES)
+	$(AM_V_at)touch $@
+systemd_readahead_collect_vala.stamp: $(systemd_readahead_collect_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_readahead_collect_SOURCES)
+	$(AM_V_at)touch $@
+$(srcdir)/src/ask-password-agent.c: $(srcdir)/systemd_ask_password_agent_vala.stamp
+	@if test -f $@; then :; else \
+	  rm -f $(srcdir)/systemd_ask_password_agent_vala.stamp; \
+	  $(am__cd) $(srcdir) && $(MAKE) $(AM_MAKEFLAGS) systemd_ask_password_agent_vala.stamp; \
+	fi
+systemd_ask_password_agent_vala.stamp: $(systemd_ask_password_agent_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(systemd_ask_password_agent_VALAFLAGS) $(VALAFLAGS) -C $(systemd_ask_password_agent_SOURCES)
 	$(AM_V_at)touch $@
 systemd_initctl_vala.stamp: $(systemd_initctl_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_initctl_SOURCES)
@@ -3295,14 +3693,17 @@ systemadm_vala.stamp: $(systemadm_SOURCES)
 test_daemon_vala.stamp: $(test_daemon_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(test_daemon_SOURCES)
 	$(AM_V_at)touch $@
-systemd_random_seed_vala.stamp: $(systemd_random_seed_SOURCES)
-	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_random_seed_SOURCES)
-	$(AM_V_at)touch $@
 test_cgroup_vala.stamp: $(test_cgroup_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(test_cgroup_SOURCES)
 	$(AM_V_at)touch $@
+systemd_random_seed_vala.stamp: $(systemd_random_seed_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_random_seed_SOURCES)
+	$(AM_V_at)touch $@
 systemd_kmsg_syslogd_vala.stamp: $(systemd_kmsg_syslogd_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_kmsg_syslogd_SOURCES)
+	$(AM_V_at)touch $@
+systemd_vconsole_setup_vala.stamp: $(systemd_vconsole_setup_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_vconsole_setup_SOURCES)
 	$(AM_V_at)touch $@
 test_job_type_vala.stamp: $(test_job_type_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(test_job_type_SOURCES)
@@ -3315,6 +3716,9 @@ systemd_update_utmp_vala.stamp: $(systemd_update_utmp_SOURCES)
 	$(AM_V_at)touch $@
 systemd_cgls_vala.stamp: $(systemd_cgls_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_cgls_SOURCES)
+	$(AM_V_at)touch $@
+systemd_reply_password_vala.stamp: $(systemd_reply_password_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_reply_password_SOURCES)
 	$(AM_V_at)touch $@
 libsystemd_core_la_vala.stamp: $(libsystemd_core_la_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(libsystemd_core_la_SOURCES)
@@ -3625,6 +4029,26 @@ uninstall-dist_pkgsysconfDATA:
 	test -n "$$files" || exit 0; \
 	echo " ( cd '$(DESTDIR)$(pkgsysconfdir)' && rm -f" $$files ")"; \
 	cd "$(DESTDIR)$(pkgsysconfdir)" && rm -f $$files
+install-dist_polkitpolicyDATA: $(dist_polkitpolicy_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(polkitpolicydir)" || $(MKDIR_P) "$(DESTDIR)$(polkitpolicydir)"
+	@list='$(dist_polkitpolicy_DATA)'; test -n "$(polkitpolicydir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(polkitpolicydir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(polkitpolicydir)" || exit $$?; \
+	done
+
+uninstall-dist_polkitpolicyDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_polkitpolicy_DATA)'; test -n "$(polkitpolicydir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	test -n "$$files" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(polkitpolicydir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(polkitpolicydir)" && rm -f $$files
 install-dist_sessionunitDATA: $(dist_sessionunit_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(sessionunitdir)" || $(MKDIR_P) "$(DESTDIR)$(sessionunitdir)"
@@ -3665,6 +4089,26 @@ uninstall-dist_systemunitDATA:
 	test -n "$$files" || exit 0; \
 	echo " ( cd '$(DESTDIR)$(systemunitdir)' && rm -f" $$files ")"; \
 	cd "$(DESTDIR)$(systemunitdir)" && rm -f $$files
+install-dist_tmpfilesDATA: $(dist_tmpfiles_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(tmpfilesdir)" || $(MKDIR_P) "$(DESTDIR)$(tmpfilesdir)"
+	@list='$(dist_tmpfiles_DATA)'; test -n "$(tmpfilesdir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(tmpfilesdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(tmpfilesdir)" || exit $$?; \
+	done
+
+uninstall-dist_tmpfilesDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_tmpfiles_DATA)'; test -n "$(tmpfilesdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	test -n "$$files" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(tmpfilesdir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(tmpfilesdir)" && rm -f $$files
 install-dist_udevrulesDATA: $(dist_udevrules_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(udevrulesdir)" || $(MKDIR_P) "$(DESTDIR)$(udevrulesdir)"
@@ -3962,7 +4406,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(MANS) $(DATA) config.h
 installdirs:
-	for dir in "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(rootbindir)" "$(DESTDIR)$(rootlibexecdir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" "$(DESTDIR)$(dbuspolicydir)" "$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" "$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(sessionunitdir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(sessionunitdir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(pkgconfigdatadir)"; do \
+	for dir in "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(rootbindir)" "$(DESTDIR)$(rootlibexecdir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" "$(DESTDIR)$(dbuspolicydir)" "$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" "$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(sessionunitdir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(tmpfilesdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(sessionunitdir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(pkgconfigdatadir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -3996,11 +4440,13 @@ maintainer-clean-generic:
 	-rm -f libsystemd_basic_la_vala.stamp
 	-rm -f libsystemd_core_la_vala.stamp
 	-rm -f pam_systemd_la_vala.stamp
+	-rm -f src/ask-password-agent.c
 	-rm -f src/systemadm.c
 	-rm -f src/systemd-interfaces.c
 	-rm -f systemadm_vala.stamp
 	-rm -f systemctl_vala.stamp
-	-rm -f systemd_auto_serial_getty_vala.stamp
+	-rm -f systemd_ask_password_agent_vala.stamp
+	-rm -f systemd_ask_password_vala.stamp
 	-rm -f systemd_cgls_vala.stamp
 	-rm -f systemd_cgroups_agent_vala.stamp
 	-rm -f systemd_initctl_vala.stamp
@@ -4009,10 +4455,15 @@ maintainer-clean-generic:
 	-rm -f systemd_modules_load_vala.stamp
 	-rm -f systemd_notify_vala.stamp
 	-rm -f systemd_random_seed_vala.stamp
+	-rm -f systemd_readahead_collect_vala.stamp
+	-rm -f systemd_readahead_replay_vala.stamp
 	-rm -f systemd_remount_api_vfs_vala.stamp
+	-rm -f systemd_reply_password_vala.stamp
 	-rm -f systemd_shutdownd_vala.stamp
+	-rm -f systemd_tmpfiles_vala.stamp
 	-rm -f systemd_update_utmp_vala.stamp
 	-rm -f systemd_vala.stamp
+	-rm -f systemd_vconsole_setup_vala.stamp
 	-rm -f test_cgroup_vala.stamp
 	-rm -f test_daemon_vala.stamp
 	-rm -f test_engine_vala.stamp
@@ -4049,8 +4500,9 @@ info-am:
 
 install-data-am: install-dbusinterfaceDATA install-dist_dbuspolicyDATA \
 	install-dist_dbussystemserviceDATA install-dist_docDATA \
-	install-dist_pkgsysconfDATA install-dist_sessionunitDATA \
-	install-dist_systemunitDATA install-dist_udevrulesDATA \
+	install-dist_pkgsysconfDATA install-dist_polkitpolicyDATA \
+	install-dist_sessionunitDATA install-dist_systemunitDATA \
+	install-dist_tmpfilesDATA install-dist_udevrulesDATA \
 	install-man install-nodist_sessionunitDATA \
 	install-nodist_systemunitDATA install-pamlibLTLIBRARIES \
 	install-pkgconfigdataDATA install-rootbinPROGRAMS
@@ -4106,8 +4558,9 @@ ps-am:
 uninstall-am: uninstall-binPROGRAMS uninstall-dbusinterfaceDATA \
 	uninstall-dist_dbuspolicyDATA \
 	uninstall-dist_dbussystemserviceDATA uninstall-dist_docDATA \
-	uninstall-dist_pkgsysconfDATA uninstall-dist_sessionunitDATA \
-	uninstall-dist_systemunitDATA uninstall-dist_udevrulesDATA \
+	uninstall-dist_pkgsysconfDATA uninstall-dist_polkitpolicyDATA \
+	uninstall-dist_sessionunitDATA uninstall-dist_systemunitDATA \
+	uninstall-dist_tmpfilesDATA uninstall-dist_udevrulesDATA \
 	uninstall-man uninstall-nodist_sessionunitDATA \
 	uninstall-nodist_systemunitDATA uninstall-pamlibLTLIBRARIES \
 	uninstall-pkgconfigdataDATA uninstall-rootbinPROGRAMS \
@@ -4131,7 +4584,8 @@ uninstall-man: uninstall-man1 uninstall-man3 uninstall-man5 \
 	install-data-am install-data-hook install-dbusinterfaceDATA \
 	install-dist_dbuspolicyDATA install-dist_dbussystemserviceDATA \
 	install-dist_docDATA install-dist_pkgsysconfDATA \
-	install-dist_sessionunitDATA install-dist_systemunitDATA \
+	install-dist_polkitpolicyDATA install-dist_sessionunitDATA \
+	install-dist_systemunitDATA install-dist_tmpfilesDATA \
 	install-dist_udevrulesDATA install-dvi install-dvi-am \
 	install-exec install-exec-am install-html install-html-am \
 	install-info install-info-am install-man install-man1 \
@@ -4147,8 +4601,9 @@ uninstall-man: uninstall-man1 uninstall-man3 uninstall-man5 \
 	uninstall-binPROGRAMS uninstall-dbusinterfaceDATA \
 	uninstall-dist_dbuspolicyDATA \
 	uninstall-dist_dbussystemserviceDATA uninstall-dist_docDATA \
-	uninstall-dist_pkgsysconfDATA uninstall-dist_sessionunitDATA \
-	uninstall-dist_systemunitDATA uninstall-dist_udevrulesDATA \
+	uninstall-dist_pkgsysconfDATA uninstall-dist_polkitpolicyDATA \
+	uninstall-dist_sessionunitDATA uninstall-dist_systemunitDATA \
+	uninstall-dist_tmpfilesDATA uninstall-dist_udevrulesDATA \
 	uninstall-man uninstall-man1 uninstall-man3 uninstall-man5 \
 	uninstall-man7 uninstall-man8 uninstall-nodist_sessionunitDATA \
 	uninstall-nodist_systemunitDATA uninstall-pamlibLTLIBRARIES \
@@ -4224,21 +4679,21 @@ install-data-hook:
 		$(DESTDIR)$(systemunitdir) \
 		$(DESTDIR)$(sessionunitdir) \
 		$(DESTDIR)$(systemunitdir)/sockets.target.wants \
-		$(DESTDIR)$(systemunitdir)/sysinit.target.wants \
+		$(DESTDIR)$(systemunitdir)/basic.target.wants \
 		$(DESTDIR)$(systemunitdir)/shutdown.target.wants \
+		$(DESTDIR)$(systemunitdir)/local-fs.target.wants \
 		$(DESTDIR)$(systemunitdir)/runlevel1.target.wants \
 		$(DESTDIR)$(systemunitdir)/runlevel2.target.wants \
 		$(DESTDIR)$(systemunitdir)/runlevel3.target.wants \
 		$(DESTDIR)$(systemunitdir)/runlevel4.target.wants \
 		$(DESTDIR)$(systemunitdir)/runlevel5.target.wants \
+		$(DESTDIR)$(systemunitdir)/multi-user.target.wants \
 		$(DESTDIR)$(pkgsysconfdir)/system \
 		$(DESTDIR)$(pkgsysconfdir)/system/getty.target.wants \
 		$(DESTDIR)$(pkgsysconfdir)/system/multi-user.target.wants \
 		$(DESTDIR)$(pkgsysconfdir)/system/graphical.target.wants \
 		$(DESTDIR)$(pkgsysconfdir)/session \
 		$(DESTDIR)$(sysconfdir)/xdg/systemd
-	$(MKDIR_P) -m 0755 $(DESTDIR)/cgroup || \
-		echo "Don't forget to create /cgroup! Couldn't create it for you, continuing anyway."
 	( cd $(DESTDIR)$(sysconfdir)/xdg/systemd/ && \
 		rm -f session && \
 		$(LN_S) $(pkgsysconfdir)/session session )
@@ -4249,22 +4704,35 @@ install-data-hook:
 		$(LN_S) ../systemd-shutdownd.socket systemd-shutdownd.socket )
 	( cd $(DESTDIR)$(systemunitdir)/runlevel1.target.wants && \
 		rm -f systemd-update-utmp-runlevel.service && \
-		$(LN_S) ../systemd-update-utmp-runlevel.service )
+		$(LN_S) ../systemd-update-utmp-runlevel.service systemd-update-utmp-runlevel.service )
 	( cd $(DESTDIR)$(systemunitdir)/runlevel2.target.wants && \
 		rm -f systemd-update-utmp-runlevel.service && \
-		$(LN_S) ../systemd-update-utmp-runlevel.service )
+		$(LN_S) ../systemd-update-utmp-runlevel.service systemd-update-utmp-runlevel.service )
 	( cd $(DESTDIR)$(systemunitdir)/runlevel3.target.wants && \
 		rm -f systemd-update-utmp-runlevel.service && \
-		$(LN_S) ../systemd-update-utmp-runlevel.service )
+		$(LN_S) ../systemd-update-utmp-runlevel.service systemd-update-utmp-runlevel.service )
 	( cd $(DESTDIR)$(systemunitdir)/runlevel4.target.wants && \
 		rm -f systemd-update-utmp-runlevel.service && \
-		$(LN_S) ../systemd-update-utmp-runlevel.service )
+		$(LN_S) ../systemd-update-utmp-runlevel.service systemd-update-utmp-runlevel.service )
 	( cd $(DESTDIR)$(systemunitdir)/runlevel5.target.wants && \
 		rm -f systemd-update-utmp-runlevel.service && \
-		$(LN_S) ../systemd-update-utmp-runlevel.service )
+		$(LN_S) ../systemd-update-utmp-runlevel.service systemd-update-utmp-runlevel.service )
 	( cd $(DESTDIR)$(systemunitdir)/shutdown.target.wants && \
-		rm -f systemd-update-utmp-shutdown.service && \
-		$(LN_S) ../systemd-update-utmp-shutdown.service )
+		rm -f systemd-update-utmp-shutdown.service \
+			hwclock-save.service \
+			systemd-random-seed-save.service && \
+		$(LN_S) ../systemd-update-utmp-shutdown.service systemd-update-utmp-shutdown.service && \
+		$(LN_S) ../hwclock-save.service hwclock-save.service && \
+		$(LN_S) ../systemd-random-seed-save.service systemd-random-seed-save.service )
+	( cd $(DESTDIR)$(systemunitdir)/local-fs.target.wants && \
+		rm -f systemd-remount-api-vfs.service \
+			remount-rootfs.service \
+			var-run.mount \
+			var-lock.mount && \
+		$(LN_S) ../systemd-remount-api-vfs.service systemd-remount-api-vfs.service && \
+		$(LN_S) ../remount-rootfs.service remount-rootfs.service && \
+		$(LN_S) ../var-run.mount var-run.mount && \
+		$(LN_S) ../var-lock.mount var-lock.mount )
 	( cd $(DESTDIR)$(sessionunitdir) && \
 		rm -f shutdown.target sockets.target local-fs.target swap.target bluetooth.target printer.target && \
 		$(LN_S) $(systemunitdir)/shutdown.target shutdown.target && \
@@ -4282,35 +4750,49 @@ install-data-hook:
 		$(LN_S) multi-user.target runlevel4.target && \
 		$(LN_S) graphical.target runlevel5.target && \
 		$(LN_S) reboot.target runlevel6.target )
-	( cd $(DESTDIR)$(pkgsysconfdir)/system && \
-		rm -f default.target ctrl-alt-del.target kbrequest.target && \
-		$(LN_S) $(systemunitdir)/graphical.target default.target && \
-		$(LN_S) $(systemunitdir)/reboot.target ctrl-alt-del.target && \
-		$(LN_S) $(systemunitdir)/rescue.target kbrequest.target )
+	( cd $(DESTDIR)$(systemunitdir) && \
+		rm -f default.target ctrl-alt-del.target && \
+		$(LN_S) graphical.target default.target && \
+		$(LN_S) reboot.target ctrl-alt-del.target )
+	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
+		rm -f getty.target && \
+		$(LN_S) ../getty.target getty.target )
 	( cd $(DESTDIR)$(pkgsysconfdir)/system/getty.target.wants && \
-		rm -f getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service systemd-auto-serial-getty.service && \
+		rm -f getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service && \
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty1.service && \
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty2.service && \
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty3.service && \
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty4.service && \
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty5.service && \
-		$(LN_S) $(systemunitdir)/getty@.service getty@tty6.service && \
-		$(LN_S) $(systemunitdir)/systemd-auto-serial-getty.service systemd-auto-serial-getty.service )
+		$(LN_S) $(systemunitdir)/getty@.service getty@tty6.service )
 	( cd $(DESTDIR)$(pkgsysconfdir)/system/multi-user.target.wants && \
-		rm -f getty.target remote-fs.target && \
-		$(LN_S) $(systemunitdir)/getty.target getty.target && \
+		rm -f remote-fs.target && \
 		$(LN_S) $(systemunitdir)/remote-fs.target remote-fs.target )
-	( cd $(DESTDIR)$(systemunitdir)/sysinit.target.wants && \
+	( cd $(DESTDIR)$(systemunitdir)/basic.target.wants && \
 		rm -f dev-hugepages.automount \
 			dev-mqueue.automount \
 			proc-sys-fs-binfmt_misc.automount \
 			sys-kernel-debug.automount \
-			sys-kernel-security.automount && \
+			sys-kernel-security.automount \
+			systemd-vconsole-setup.service \
+			systemd-modules-load.service \
+			systemd-random-seed-load.service \
+			systemd-tmpfiles.service \
+			sysctl.service \
+			tmpwatch.timer \
+			tmpwatch.service && \
 		$(LN_S) ../dev-hugepages.automount dev-hugepages.automount && \
 		$(LN_S) ../dev-mqueue.automount dev-mqueue.automount && \
 		$(LN_S) ../proc-sys-fs-binfmt_misc.automount proc-sys-fs-binfmt_misc.automount && \
 		$(LN_S) ../sys-kernel-debug.automount sys-kernel-debug.automount && \
-		$(LN_S) ../sys-kernel-security.automount sys-kernel-security.automount )
+		$(LN_S) ../sys-kernel-security.automount sys-kernel-security.automount && \
+		$(LN_S) ../systemd-vconsole-setup.service systemd-vconsole-setup.service && \
+		$(LN_S) ../systemd-modules-load.service systemd-modules-load.service && \
+		$(LN_S) ../systemd-random-seed-load.service systemd-random-seed-load.service && \
+		$(LN_S) ../systemd-tmpfiles.service systemd-tmpfiles.service && \
+		$(LN_S) ../sysctl.service sysctl.service && \
+		$(LN_S) ../tmpwatch.timer tmpwatch.timer && \
+		$(LN_S) ../tmpwatch.service tmpwatch.service )
 	( cd $(DESTDIR)$(dbussessionservicedir) && \
 		rm -f org.freedesktop.systemd1.service && \
 		$(LN_S) ../system-services/org.freedesktop.systemd1.service org.freedesktop.systemd1.service )
@@ -4356,17 +4838,32 @@ install-data-hook:
 @TARGET_GENTOO_TRUE@	( cd $(DESTDIR)$(pkgsysconfdir)/system/graphical.target.wants && \
 @TARGET_GENTOO_TRUE@		rm -f xdm.service && \
 @TARGET_GENTOO_TRUE@		$(LN_S) $(systemunitdir)/xdm.service xdm.service )
-@TARGET_SUSE_FALSE@	( cd $(DESTDIR)$(systemunitdir) && \
-@TARGET_SUSE_FALSE@		rm -f fsck.target && \
-@TARGET_SUSE_FALSE@		$(LN_S) sysinit.target fsck.target )
+@TARGET_DEBIAN_TRUE@	$(MKDIR_P) -m 0755 \
+@TARGET_DEBIAN_TRUE@		$(DESTDIR)$(systemunitdir)/umount.target.wants
+@TARGET_DEBIAN_TRUE@	( cd $(DESTDIR)$(systemunitdir)/umount.target.wants && \
+@TARGET_DEBIAN_TRUE@		rm -f umountfs.service umountnfs.service umountroot.service && \
+@TARGET_DEBIAN_TRUE@		$(LN_S) ../umountfs.service umountfs.service && \
+@TARGET_DEBIAN_TRUE@		$(LN_S) ../umountnfs.service umountnfs.service && \
+@TARGET_DEBIAN_TRUE@		$(LN_S) ../umountroot.service umountroot.service )
+@TARGET_DEBIAN_TRUE@	( cd $(DESTDIR)$(systemunitdir) && \
+@TARGET_DEBIAN_TRUE@		rm -f runlevel5.target && \
+@TARGET_DEBIAN_TRUE@		$(LN_S) multi-user.target runlevel5.target )
+@TARGET_DEBIAN_FALSE@@TARGET_SUSE_FALSE@	( cd $(DESTDIR)$(systemunitdir) && \
+@TARGET_DEBIAN_FALSE@@TARGET_SUSE_FALSE@		rm -f fsck.target && \
+@TARGET_DEBIAN_FALSE@@TARGET_SUSE_FALSE@		$(LN_S) sysinit.target fsck.target )
 
 upload: all distcheck
-	cp -v systemd-$(VERSION).tar.bz2 /home/lennart/cvs.fedora/systemd/devel/
+	cp -v systemd-$(VERSION).tar.bz2 /home/lennart/git.fedora/systemd/
 	scp systemd-$(VERSION).tar.bz2 fdo:/srv/www.freedesktop.org/www/software/systemd/
 	scp man/*.html tango:public/systemd-man/
 
 git-tag:
 	git tag "v$(VERSION)" -m "systemd $(VERSION)"
+
+# Opt out from a few services on Fedora for now, as long as rc.sysinit does this job
+fedora: install
+	rm /lib/systemd/system/local-fs.target.wants/var-run.mount
+	rm /lib/systemd/system/local-fs.target.wants/var-lock.mount
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
