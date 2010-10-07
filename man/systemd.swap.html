@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.swap</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.swap"><a id="systemd.swap"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.swap — systemd swap configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id2807037"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.swap</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.swap"><a id="systemd.swap"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.swap — systemd swap configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id314793"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.swap</code> encodes information about a
                 swap device or file for memory paging controlled and
                 supervised by systemd.</p><p>This man page lists the configuration options
@@ -16,12 +16,12 @@
                 unit file <code class="filename">dev-sda5.swap</code>. For
                 details about the escaping logic used to convert a
                 file system path to a unit name see
-                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p></div><div class="refsect1" title="fstab"><a id="id2806681"/><h2><code class="filename">fstab</code></h2><p>Swap units may either be configured via unit
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p></div><div class="refsect1" title="fstab"><a id="id314847"/><h2><code class="filename">fstab</code></h2><p>Swap units may either be configured via unit
                 files, or via <code class="filename">/etc/fstab</code> (see
                 <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
                 for details).</p><p>If a swap device or file is configured in both
                 <code class="filename">/etc/fstab</code> and a unit file the
-                configuration in the latter takes precedence.</p></div><div class="refsect1" title="Options"><a id="id2806720"/><h2>Options</h2><p>Swap files must include a [Swap] section, which
+                configuration in the latter takes precedence.</p></div><div class="refsect1" title="Options"><a id="id314882"/><h2>Options</h2><p>Swap files must include a [Swap] section, which
                 carries information about the swap device it
                 supervises. The options specific to the [Swap] section
                 of swap units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">What=</code></span></dt><dd><p>Takes an absolute path
@@ -42,7 +42,7 @@
                                 mandatory.</p></dd><dt><span class="term"><code class="varname">Priority=</code></span></dt><dd><p>Swap priority to use
                                 when activating the swap device or
                                 file. This takes an integer. This
-                                setting is optional.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id2805323"/><h2>See Also</h2><p>
+                                setting is optional.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id282306"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

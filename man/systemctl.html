@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and session manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id3031598"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and session manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id361685"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
                 introspect and control the state of the
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
-                system and session manager.</p></div><div class="refsect1" title="Options"><a id="id2990913"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+                system and session manager.</p></div><div class="refsect1" title="Options"><a id="id361707"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--type=</code>, </span><span class="term"><code class="option">-t</code></span></dt><dd><p>When listing units,
                                 limit display to certain unit
                                 types. If not specified units of all
@@ -27,7 +27,8 @@
                                 showing unit/job/manager information,
                                 show all properties regardless whether
                                 they are set or not.</p></dd><dt><span class="term"><code class="option">--full</code></span></dt><dd><p>Do not ellipsize unit
-                                names in the output of
+                                names and truncate unit descriptions
+                                in the output of
                                 <span class="command"><strong>list-units</strong></span> and
                                 <span class="command"><strong>list-jobs</strong></span>.</p></dd><dt><span class="term"><code class="option">--fail</code></span></dt><dd><p>If the requested
                                 operation conflicts with a pending
@@ -40,12 +41,12 @@
                                 <span class="command"><strong>check</strong></span>,
                                 <span class="command"><strong>enable</strong></span> and
                                 <span class="command"><strong>disable</strong></span>.</p></dd><dt><span class="term"><code class="option">--no-block</code></span></dt><dd><p>Do not synchronously wait for
-				the requested operation to finish. If this is
-				not specified the job will be verified,
-				enqueued and <span class="command"><strong>systemctl</strong></span> will
-				wait until it is completed. By passing this
-				argument it is only verified and
-				enqueued.</p></dd><dt><span class="term"><code class="option">--system</code></span></dt><dd><p>Talk to the systemd
+                                the requested operation to finish. If this is
+                                not specified the job will be verified,
+                                enqueued and <span class="command"><strong>systemctl</strong></span> will
+                                wait until it is completed. By passing this
+                                argument it is only verified and
+                                enqueued.</p></dd><dt><span class="term"><code class="option">--system</code></span></dt><dd><p>Talk to the systemd
                                 system manager. (Default)</p></dd><dt><span class="term"><code class="option">--session</code></span></dt><dd><p>Talk to the systemd
                                 session manager of the calling user.</p></dd><dt><span class="term"><code class="option">--order</code>, </span><span class="term"><code class="option">--require</code></span></dt><dd><p>When used in
                                 conjunction with the
@@ -129,8 +130,17 @@
                                 used as equivalent commands to
                                 <span class="command"><strong>reload-or-try-restart</strong></span>.</p></dd><dt><span class="term"><span class="command"><strong>isolate [NAME]</strong></span></span></dt><dd><p>Start the unit
                                 specified on the command line and its
-                                dependencies and stop all
-                                others.</p></dd><dt><span class="term"><span class="command"><strong>is-active [NAME...]</strong></span></span></dt><dd><p>Check whether any of
+                                dependencies and stop all others.</p><p>This is similar to changing the
+                                runlevel in a traditional init system. The
+                                <span class="command"><strong>isolate</strong></span> command will
+                                immediately stop processes that are not
+                                enabled in the new unit, possibly including
+                                the graphical environment or terminal you
+                                are currently using.</p><p>Note that this works only on units
+                                where <code class="option">AllowIsolate=</code> is
+                                enabled. See
+                                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                                for details.</p></dd><dt><span class="term"><span class="command"><strong>is-active [NAME...]</strong></span></span></dt><dd><p>Check whether any of
                                 the specified units is active
                                 (i.e. running). Returns an exit code
                                 0 if at least one is active, non-zero
@@ -164,16 +174,17 @@
                                 required. Use
                                 <span class="command"><strong>status</strong></span> if you are
                                 looking for formatted human-readable
-                                output.</p></dd><dt><span class="term"><span class="command"><strong>reset-maintenance [NAME...]</strong></span></span></dt><dd><p>Reset maintenance
-                                state of the specified units, or if no
-                                unit name is passed of all units. When
-                                a unit fails in some way (i.e. process
-                                exiting with non-zero error code,
-                                terminating abnormally or timing out)
-                                it will automatically enter
-                                maintenance state and its exit codes
-                                and status is recorded for
-                                introspection by the administrator
+                                output.</p></dd><dt><span class="term"><span class="command"><strong>reset-failed [NAME...]</strong></span></span></dt><dd><p>Reset the
+                                '<code class="literal">failed</code>' state of the
+                                specified units, or if no unit name is
+                                passed of all units. When a unit fails
+                                in some way (i.e. process exiting with
+                                non-zero error code, terminating
+                                abnormally or timing out) it will
+                                automatically enter the
+                                '<code class="literal">failed</code>' state and
+                                its exit code and status is recorded
+                                for introspection by the administrator
                                 until the service is restarted or
                                 reset with this
                                 command.</p></dd><dt><span class="term"><span class="command"><strong>enable [NAME...]</strong></span></span></dt><dd><p>Enable one or more
@@ -191,7 +202,7 @@
                                 does not have the effect that any of
                                 the units enabled are also started at
                                 the same time. If this is desired a
-                                seperate <span class="command"><strong>start</strong></span>
+                                separate <span class="command"><strong>start</strong></span>
                                 command must be invoked for the
                                 unit.</p><p>This command will
                                 print the actions executed. This
@@ -405,8 +416,8 @@
                                 <span class="command"><strong>isolate
                                 emergency.target</strong></span> but also
                                 prints a wall message to all
-                                users.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id3041758"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id3041769"/><h2>See Also</h2><p>
+                                users.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id371660"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id371670"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
