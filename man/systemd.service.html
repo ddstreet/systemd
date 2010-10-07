@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id2836596"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id516490"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.service</code> encodes information
                 about a process controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -33,7 +33,7 @@
                 <code class="filename">.service</code> suffix removed) and
                 dynamically creates a service unit from that
                 script. This is useful for compatibility with
-                SysV.</p></div><div class="refsect1" title="Options"><a id="id2836301"/><h2>Options</h2><p>Service files must include a
+                SysV.</p></div><div class="refsect1" title="Options"><a id="id516600"/><h2>Options</h2><p>Service files must include a
                 <code class="literal">[Service]</code> section, which carries
                 information about the service and the process it
                 supervises. A number of options that may be used in
@@ -177,17 +177,20 @@
                                 by the string value of the environment
                                 variable of the same name. Also
                                 <code class="literal">$FOO</code> may appear as
-                                seperate word on the command line in
+                                separate word on the command line in
                                 which case the variable is replaced by
-                                its value split at
-                                whitespaces.</p></dd><dt><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span></dt><dd><p>Additional commands
+                                its value split at whitespaces. Note
+                                that the first argument (i.e. the
+                                binary to execute) may not be a
+                                variable, and must be a literal and
+                                absolute path name.</p></dd><dt><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span></dt><dd><p>Additional commands
                                 that are executed before (resp. after)
                                 the command in
                                 <code class="varname">ExecStart=</code>. Multiple
                                 command lines may be concatenated in a
-                                single directive, by seperating them
+                                single directive, by separating them
                                 by semicolons (these semicolons must
-                                be passed as seperate words). In that
+                                be passed as separate words). In that
                                 case, the commands are executed one
                                 after the other,
                                 serially. Alternatively, these
@@ -276,17 +279,17 @@
                                 60s.</p></dd><dt><span class="term"><code class="varname">Restart=</code></span></dt><dd><p>Configures whether the
                                 main service process shall be restarted when
                                 it exists. Takes one of
-                                <code class="option">once</code>,
-                                <code class="option">restart-on-success</code> or
-                                <code class="option">restart-always</code>. If
-                                set to <code class="option">once</code> (the
+                                <code class="option">no</code>,
+                                <code class="option">on-success</code> or
+                                <code class="option">always</code>. If
+                                set to <code class="option">no</code> (the
                                 default) the service will not be
                                 restarted when it exits. If set to
-                                <code class="option">restart-on-success</code> it
+                                <code class="option">on-success</code> it
                                 will be restarted only when it exited
                                 cleanly, i.e. terminated with an exit
                                 code of 0. If set to
-                                <code class="option">restart-always</code> the
+                                <code class="option">always</code> the
                                 service will be restarted regardless
                                 whether it exited cleanly or not, or
                                 got terminated abnormally by a
@@ -413,7 +416,27 @@
                                 accepted. This option must be set to
                                 open access to the notification socket
                                 when using
-                                <code class="varname">Type=notify</code> (see above).</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id2885898"/><h2>See Also</h2><p>
+                                <code class="varname">Type=notify</code> (see above).</p></dd><dt><span class="term"><code class="varname">Sockets=</code></span></dt><dd><p>Specifies the name of
+                                the socket units this service shall
+                                inherit the sockets from when the
+                                service (ignoring the different suffix
+                                of course) is started. Normally it
+                                should not be necessary to use this
+                                setting as all sockets whose unit
+                                shares the same name as the service
+                                are passed to the spawned
+                                process.</p><p>Note that the same socket may be
+                                passed to multiple processes at the
+                                same time. Also note that a different
+                                service may be activated on incoming
+                                traffic than inherits the sockets. Or
+                                in other words: The
+                                <code class="varname">Service=</code> setting of
+                                <code class="filename">.socket</code> units
+                                doesn't have to match the inverse of the
+                                <code class="varname">Sockets=</code> setting of
+                                the <code class="filename">.service</code> it
+                                refers to.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id525974"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

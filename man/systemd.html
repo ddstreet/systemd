@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd"><a id="systemd"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd, init — systemd System and Session Manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">init [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a id="id2740863"/><h2>Description</h2><p>systemd is a system and session manager for
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd"><a id="systemd"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd, init — systemd System and Session Manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">init [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a id="id442903"/><h2>Description</h2><p>systemd is a system and session manager for
                 Linux operating systems. When run as first process on
                 boot (as PID 1), it acts as init system that brings
                 up and maintains userspace services.</p><p>For compatibility with SysV, if systemd is called
@@ -15,7 +15,7 @@
                 <code class="filename">system.conf</code>, otherwise
                 <code class="filename">session.conf</code>. See
                 <span class="citerefentry"><span class="refentrytitle">systemd.conf</span>(5)</span>
-                for more information.</p></div><div class="refsect1" title="Options"><a id="id2700232"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                for more information.</p></div><div class="refsect1" title="Options"><a id="id442974"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--test</code></span></dt><dd><p>Determine startup
                                 sequence, dump it and exit. This is an
                                 option useful for debugging
@@ -85,7 +85,7 @@
                                 purposes. Argument is a boolean
                                 value. If the argument is omitted
                                 it defaults to
-                                <code class="option">true</code>.</p></dd></dl></div></div><div class="refsect1" title="Concepts"><a id="id2698204"/><h2>Concepts</h2><p>systemd provides a dependency system between
+                                <code class="option">true</code>.</p></dd></dl></div></div><div class="refsect1" title="Concepts"><a id="id410715"/><h2>Concepts</h2><p>systemd provides a dependency system between
                 various entities called "units". Units encapsulate
                 various objects that are relevant for system boot-up
                 and maintenance. The majority of units are configured
@@ -100,7 +100,7 @@
                 as well as in the process of being activated or
                 deactivated, i.e. between the two states (these states
                 are called 'activating', 'deactivating'). A special
-                'maintenance' state is available as well which is very
+                'failed' state is available as well which is very
                 similar to 'inactive' and is entered when the service
                 failed in some way (process returned error code on
                 exit, or crashed, or an operation timed out). If this
@@ -238,7 +238,9 @@
                 <code class="filename">/sys</code> or
                 <code class="filename">/proc</code>.</p><p>For more information about the concepts and
                 ideas behind systemd please refer to the <a class="ulink" href="http://0pointer.de/blog/projects/systemd.html">Original
-                Design Document</a>.</p></div><div class="refsect1" title="Directories"><a id="id2699502"/><h2>Directories</h2><div class="variablelist"><dl><dt><span class="term">System unit directories</span></dt><dd><p>The systemd system
+                Design Document</a>.</p><p>Note that some but not all interfaces provided
+                by systemd are covered by the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise">Interface
+                Stability Promise</a>.</p></div><div class="refsect1" title="Directories"><a id="id452212"/><h2>Directories</h2><div class="variablelist"><dl><dt><span class="term">System unit directories</span></dt><dd><p>The systemd system
                                 manager reads unit configuration from
                                 various directories. Packages that
                                 want to install unit files shall place
@@ -298,7 +300,7 @@
                                 unit with a native unit configuration
                                 file cannot be started by activating it
                                 in the SysV runlevel link
-                                farm.</p></dd></dl></div></div><div class="refsect1" title="Signals"><a id="id2750588"/><h2>Signals</h2><div class="variablelist"><dl><dt><span class="term">SIGTERM</span></dt><dd><p>Upon receiving this
+                                farm.</p></dd></dl></div></div><div class="refsect1" title="Signals"><a id="id452377"/><h2>Signals</h2><div class="variablelist"><dl><dt><span class="term">SIGTERM</span></dt><dd><p>Upon receiving this
                                 signal the systemd system manager
                                 serializes its state, reexecutes
                                 itself and deserializes the saved
@@ -372,7 +374,7 @@
                                 <code class="filename">reboot.target</code>
                                 unit. This is mostly equivalent to
                                 <span class="command"><strong>systemctl start
-                                reboot.target</strong></span>.</p></dd></dl></div></div><div class="refsect1" title="Environment"><a id="id2750941"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_LOG_LEVEL</code></span></dt><dd><p>systemd reads the
+                                reboot.target</strong></span>.</p></dd></dl></div></div><div class="refsect1" title="Environment"><a id="id452690"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_LOG_LEVEL</code></span></dt><dd><p>systemd reads the
                                 log level from this environment
                                 variable. This can be overridden with
                                 <code class="option">--log-level=</code>.</p></dd><dt><span class="term"><code class="varname">$SYSTEMD_LOG_TARGET</code></span></dt><dd><p>systemd reads the
@@ -404,7 +406,7 @@
                                 start-up completion notification. See
                                 <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>
                                 for more information.
-                                </p></dd></dl></div></div><div class="refsect1" title="Kernel Command Line"><a id="id2751151"/><h2>Kernel Command Line</h2><p>When run as system instance systemd parses a few kernel command line arguments:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">systemd.unit=</code></span></dt><dd><p>Overrides the unit to
+                                </p></dd></dl></div></div><div class="refsect1" title="Kernel Command Line"><a id="id452883"/><h2>Kernel Command Line</h2><p>When run as system instance systemd parses a few kernel command line arguments:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">systemd.unit=</code></span></dt><dd><p>Overrides the unit to
                                 activate on boot. Defaults to
                                 <code class="filename">default.target</code>. This
                                 may be used to temporarily boot into a
@@ -449,7 +451,7 @@
                                 <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">systemd.log_target=</code>, </span><span class="term"><code class="varname">systemd.log_level=</code>, </span><span class="term"><code class="varname">systemd.log_color=</code>, </span><span class="term"><code class="varname">systemd.log_location=</code></span></dt><dd><p>Controls log output,
                                 with the same effect as the
                                 <code class="varname">$SYSTEMD_LOG_TARGET</code>, <code class="varname">$SYSTEMD_LOG_LEVEL</code>, <code class="varname">$SYSTEMD_LOG_COLOR</code>, <code class="varname">$SYSTEMD_LOG_LOCATION</code>
-                                environment variables described above.</p></dd></dl></div></div><div class="refsect1" title="Sockets and FIFOs"><a id="id2751395"/><h2>Sockets and FIFOs</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">@/org/freedesktop/systemd1/notify</code></span></dt><dd><p>Daemon status
+                                environment variables described above.</p></dd></dl></div></div><div class="refsect1" title="Sockets and FIFOs"><a id="id453104"/><h2>Sockets and FIFOs</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">@/org/freedesktop/systemd1/notify</code></span></dt><dd><p>Daemon status
                                 notification socket. This is an AF_UNIX
                                 datagram socket in the Linux abstract
                                 namespace, and is used to implement
@@ -482,7 +484,7 @@
                                 unit. This is a named pipe in the file
                                 system. This interface is obsolete and
                                 should not be used in new
-                                applications.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id2751546"/><h2>See Also</h2><p>
+                                applications.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id453235"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd-notify</span>(1)</span>,

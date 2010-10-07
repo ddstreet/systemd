@@ -6,11 +6,14 @@
 #  (at your option) any later version.
 
 [Unit]
-Description=Automatically Spawn getty on Serial Kernel Console
+Description=Power-Off
+DefaultDependencies=no
+Requires=shutdown.target umount.target killall.service
+After=shutdown.target umount.target killall.service
 
 [Service]
 Type=oneshot
-ExecStart=@rootlibexecdir@/systemd-auto-serial-getty
-
-[Install]
-WantedBy=getty.target
+RemainAfterExit=yes
+Environment=RUNLEVEL=0
+ExecStart=/etc/init.d/halt stop
+StandardOutput=tty

@@ -1,5 +1,11 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Canonical host string. */
+#undef CANONICAL_HOST
+
+/* Target Distribution */
+#undef DISTRIBUTION
+
 /* AUDIT available */
 #undef HAVE_AUDIT
 
@@ -47,6 +53,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* SysV init scripts and rcN.d links are supported. */
+#undef HAVE_SYSV_COMPAT
 
 /* Define to 1 if you have the <sys/capability.h> header file. */
 #undef HAVE_SYS_CAPABILITY_H
