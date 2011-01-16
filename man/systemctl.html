@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and session manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id361685"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id364070"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
                 introspect and control the state of the
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
-                system and session manager.</p></div><div class="refsect1" title="Options"><a id="id361707"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
-                                text and exits.</p></dd><dt><span class="term"><code class="option">--type=</code>, </span><span class="term"><code class="option">-t</code></span></dt><dd><p>When listing units,
+                system and service manager.</p></div><div class="refsect1" title="Options"><a id="id364092"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
+                                string and exits.</p></dd><dt><span class="term"><code class="option">--type=</code>, </span><span class="term"><code class="option">-t</code></span></dt><dd><p>When listing units,
                                 limit display to certain unit
                                 types. If not specified units of all
                                 types will be shown. The argument
@@ -38,7 +39,7 @@
                                 if necessary.</p></dd><dt><span class="term"><code class="option">--quiet</code>, </span><span class="term"><code class="option">-q</code></span></dt><dd><p>Suppress output to
                                 STDOUT in
                                 <span class="command"><strong>snapshot</strong></span>,
-                                <span class="command"><strong>check</strong></span>,
+                                <span class="command"><strong>is-active</strong></span>,
                                 <span class="command"><strong>enable</strong></span> and
                                 <span class="command"><strong>disable</strong></span>.</p></dd><dt><span class="term"><code class="option">--no-block</code></span></dt><dd><p>Do not synchronously wait for
                                 the requested operation to finish. If this is
@@ -46,9 +47,10 @@
                                 enqueued and <span class="command"><strong>systemctl</strong></span> will
                                 wait until it is completed. By passing this
                                 argument it is only verified and
-                                enqueued.</p></dd><dt><span class="term"><code class="option">--system</code></span></dt><dd><p>Talk to the systemd
-                                system manager. (Default)</p></dd><dt><span class="term"><code class="option">--session</code></span></dt><dd><p>Talk to the systemd
-                                session manager of the calling user.</p></dd><dt><span class="term"><code class="option">--order</code>, </span><span class="term"><code class="option">--require</code></span></dt><dd><p>When used in
+                                enqueued.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output into a
+				pager.</p></dd><dt><span class="term"><code class="option">--system</code></span></dt><dd><p>Talk to the systemd
+                                system manager. (Default)</p></dd><dt><span class="term"><code class="option">--user</code></span></dt><dd><p>Talk to the systemd
+                                manager of the calling user.</p></dd><dt><span class="term"><code class="option">--order</code>, </span><span class="term"><code class="option">--require</code></span></dt><dd><p>When used in
                                 conjunction with the
                                 <span class="command"><strong>dot</strong></span> command (see
                                 below), selects which dependencies are
@@ -72,18 +74,78 @@
                                 halt, power-off, reboot.</p></dd><dt><span class="term"><code class="option">--global</code></span></dt><dd><p>When used with
                                 <span class="command"><strong>enable</strong></span> and
                                 <span class="command"><strong>disable</strong></span>, operate on the
-                                global session configuŕation
+                                global user configuration
                                 directory, thus enabling or disabling
                                 a unit file globally for all future
-                                sessions of all users.</p></dd><dt><span class="term"><code class="option">--no-reload</code></span></dt><dd><p>When used with
+                                logins of all users.</p></dd><dt><span class="term"><code class="option">--no-reload</code></span></dt><dd><p>When used with
                                 <span class="command"><strong>enable</strong></span> and
                                 <span class="command"><strong>disable</strong></span>, do not
                                 implicitly reload daemon configuration
                                 after executing the
-                                changes.</p></dd><dt><span class="term"><code class="option">--force</code></span></dt><dd><p>When used with
+                                changes.</p></dd><dt><span class="term"><code class="option">--no-ask-password</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>start</strong></span> and related
+                                commands, disables asking for
+                                passwords. Background services may
+                                require input of a password or
+                                passphrase string, for example to
+                                unlock system hard disks or
+                                cryptographic certificates. Unless
+                                this option is specified and the
+                                command is invoked from a terminal
+                                <span class="command"><strong>systemctl</strong></span> will
+                                query the user on the terminal for the
+                                necessary secrets. Use this option to
+                                switch this behavior off. In this
+                                case the password must be supplied by
+                                some other means (for example
+                                graphical password agents) or the
+                                service might fail.</p></dd><dt><span class="term"><code class="option">--kill-mode=</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>kill</strong></span>, choose the
+                                mode how to kill the selected
+                                processes. Must be one of
+                                <code class="option">control-group</code>,
+                                <code class="option">process-group</code> or
+                                <code class="option">process</code> to select
+                                whether to kill the entire control
+                                group, the process group or only the
+                                selected process itself. If omitted
+                                defaults to
+                                <code class="option">control-group</code> if
+                                <code class="option">--kill-who=all</code> is
+                                set, or <code class="option">process</code>
+                                otherwise. You probably never need to
+                                use this switch.</p></dd><dt><span class="term"><code class="option">--kill-who=</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>kill</strong></span>, choose which
+                                processes to kill. Must be one of
+                                <code class="option">main</code>,
+                                <code class="option">control</code> or
+                                <code class="option">all</code> to select whether
+                                to kill only the main process of the
+                                unit, the control process or all
+                                processes of the unit. If omitted
+                                defaults to
+                                <code class="option">all</code>.</p></dd><dt><span class="term"><code class="option">--signal=</code>, </span><span class="term"><code class="option">-s</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>kill</strong></span>, choose which
+                                signal to send to selected
+                                processes. Must be one of the well
+                                known signal specifiers such as
+                                SIGTERM, SIGINT or SIGSTOP. If
+                                omitted defaults to
+                                <code class="option">SIGTERM</code>.</p></dd><dt><span class="term"><code class="option">--force</code>, </span><span class="term"><code class="option">-f</code></span></dt><dd><p>When used with
                                 <span class="command"><strong>enable</strong></span>, override any
                                 existing conflicting
-                                symlinks.</p></dd><dt><span class="term"><code class="option">--defaults</code></span></dt><dd><p>When used with
+                                symlinks.</p><p>When used with
+                                <span class="command"><strong>halt</strong></span>,
+                                <span class="command"><strong>poweroff</strong></span>,
+                                <span class="command"><strong>reboot</strong></span> or
+                                <span class="command"><strong>kexec</strong></span> execute
+                                selected operation without shutting
+                                down all units. However, all processes
+                                will be killed forcibly and all file
+                                systems are unmounted or remounted
+                                read-only. This is hence a drastic but
+                                relatively safe option to request an
+                                immediate reboot.</p></dd><dt><span class="term"><code class="option">--defaults</code></span></dt><dd><p>When used with
                                 <span class="command"><strong>disable</strong></span>, ensures
                                 that only the symlinks created by
                                 <span class="command"><strong>enable</strong></span> are removed,
@@ -120,15 +182,21 @@
                                 units specified on the command
                                 line. If the units are not running yet
                                 the operation will
-                                fail.</p></dd><dt><span class="term"><span class="command"><strong>reload-or-restart [NAME...]</strong></span>, </span><span class="term"><span class="command"><strong>reload-or-try-restart [NAME...]</strong></span></span></dt><dd><p>Reload one or more
+                                fail. Note that for compatibility
+                                with Red Hat init scripts
+                                <span class="command"><strong>condrestart</strong></span> is
+                                equivalent to this command.</p></dd><dt><span class="term"><span class="command"><strong>reload-or-restart [NAME...]</strong></span></span></dt><dd><p>Reload one or more
                                 units if they support it. If not,
-                                restart them instead. Note that for
-                                compatibility with SysV and Red Hat
-                                init scripts
-                                <span class="command"><strong>force-reload</strong></span> and
-                                <span class="command"><strong>condrestart</strong></span> may be
-                                used as equivalent commands to
-                                <span class="command"><strong>reload-or-try-restart</strong></span>.</p></dd><dt><span class="term"><span class="command"><strong>isolate [NAME]</strong></span></span></dt><dd><p>Start the unit
+                                restart them instead. If the units
+                                are not running yet they will be
+                                started.</p></dd><dt><span class="term"><span class="command"><strong>reload-or-try-restart [NAME...]</strong></span></span></dt><dd><p>Reload one or more
+                                units if they support it. If not,
+                                restart them instead. If the units
+                                are not running yet the operation
+                                will fail. Note that for
+                                compatibility with SysV init scripts
+                                <span class="command"><strong>force-reload</strong></span> is
+                                equivalent to this command.</p></dd><dt><span class="term"><span class="command"><strong>isolate [NAME]</strong></span></span></dt><dd><p>Start the unit
                                 specified on the command line and its
                                 dependencies and stop all others.</p><p>This is similar to changing the
                                 runlevel in a traditional init system. The
@@ -140,8 +208,15 @@
                                 where <code class="option">AllowIsolate=</code> is
                                 enabled. See
                                 <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
-                                for details.</p></dd><dt><span class="term"><span class="command"><strong>is-active [NAME...]</strong></span></span></dt><dd><p>Check whether any of
-                                the specified units is active
+                                for details.</p></dd><dt><span class="term"><span class="command"><strong>kill [NAME...]</strong></span></span></dt><dd><p>Send a signal to one
+                                or more processes of the unit. Use
+                                <code class="option">--kill-who=</code> to select
+                                which process to kill. Use
+                                <code class="option">--kill-mode=</code> to
+                                select the kill mode and
+                                <code class="option">--signal=</code> to select
+                                the signal to send.</p></dd><dt><span class="term"><span class="command"><strong>is-active [NAME...]</strong></span></span></dt><dd><p>Check whether any of
+                                the specified units are active
                                 (i.e. running). Returns an exit code
                                 0 if at least one is active, non-zero
                                 otherwise. Unless
@@ -215,7 +290,7 @@
                                 administrator is free to make
                                 additional changes manually, by
                                 placing or removing symlinks in the
-                                directory. This is particular useful
+                                directory. This is particularly useful
                                 to create configurations that deviate
                                 from the suggested default
                                 installation. In this case the
@@ -240,11 +315,11 @@
                                 of socket units), and so
                                 on.</p><p>Depending on whether
                                 <code class="option">--system</code>,
-                                <code class="option">--session</code> or
+                                <code class="option">--user</code> or
                                 <code class="option">--global</code> is specified
                                 this enables the unit for the system,
-                                for sessions of the calling user only
-                                or for all future session of all
+                                for the calling user only
+                                or for all future logins of all
                                 users. Note that in the latter case no
                                 systemd daemon configuration is
                                 reloaded.</p></dd><dt><span class="term"><span class="command"><strong>disable [NAME...]</strong></span></span></dt><dd><p>Disables one or more
@@ -302,7 +377,7 @@
                                 commands.</p></dd><dt><span class="term"><span class="command"><strong>list-jobs</strong></span></span></dt><dd><p>List jobs that are in progress.</p></dd><dt><span class="term"><span class="command"><strong>cancel [JOB...]</strong></span></span></dt><dd><p>Cancel one or more
                                 jobs specified on the command line by
                                 their numeric job
-                                IDs. If not job id is specified cancels all jobs that are pending.</p></dd><dt><span class="term"><span class="command"><strong>monitor</strong></span></span></dt><dd><p>Monitor unit/job
+                                IDs. If no job id is specified, cancel all pending jobs.</p></dd><dt><span class="term"><span class="command"><strong>monitor</strong></span></span></dt><dd><p>Monitor unit/job
                                 changes. This is mostly useful for
                                 debugging purposes and prints a line
                                 each time systemd loads or unloads a
@@ -336,7 +411,7 @@
                                 <code class="option">--quiet</code> is
                                 specified.</p><p>A snapshot refers to a saved
                                 state of the systemd manager. It is
-                                implemented itself as unit that is
+                                implemented itself as a unit that is
                                 generated dynamically with this
                                 command and has dependencies on all
                                 units active at the time. At a later
@@ -367,12 +442,7 @@
                                 the daemon is reexecuted all sockets
                                 systemd listens on on behalf of user
                                 configuration will stay
-                                accessible.</p></dd><dt><span class="term"><span class="command"><strong>daemon-exit</strong></span></span></dt><dd><p>Ask the systemd
-                                manager to quit. This is only
-                                supported for session managers
-                                (i.e. in conjunction with the
-                                <code class="option">--session</code> option) and
-                                will fail otherwise.</p></dd><dt><span class="term"><span class="command"><strong>show-environment</strong></span></span></dt><dd><p>Dump the systemd
+                                accessible.</p></dd><dt><span class="term"><span class="command"><strong>show-environment</strong></span></span></dt><dd><p>Dump the systemd
                                 manager environment block. The
                                 environment block will be dumped in
                                 straight-forward form suitable for
@@ -389,21 +459,7 @@
                                 regardless of its value. If a variable
                                 and a value are specified the variable
                                 is only removed if it has the
-                                specified value.</p></dd><dt><span class="term"><span class="command"><strong>halt</strong></span></span></dt><dd><p>Shut down and halt the
-                                system. This is mostly equivalent to
-                                <span class="command"><strong>start halt.target</strong></span>
-                                but also prints a wall message to all
-                                users.</p></dd><dt><span class="term"><span class="command"><strong>poweroff</strong></span></span></dt><dd><p>Shut down and
-                                power-off the system. This is mostly
-                                equivalent to <span class="command"><strong>start
-                                poweroff.target</strong></span> but also
-                                prints a wall message to all
-                                users.</p></dd><dt><span class="term"><span class="command"><strong>reboot</strong></span></span></dt><dd><p>Shut down and
-                                reboot the system. This is mostly
-                                equivalent to <span class="command"><strong>start
-                                reboot.target</strong></span> but also
-                                prints a wall message to all
-                                users.</p></dd><dt><span class="term"><span class="command"><strong>default</strong></span></span></dt><dd><p>Enter default
+                                specified value.</p></dd><dt><span class="term"><span class="command"><strong>default</strong></span></span></dt><dd><p>Enter default
                                 mode. This is mostly equivalent to
                                 <span class="command"><strong>start
                                 default.target</strong></span>.</p></dd><dt><span class="term"><span class="command"><strong>rescue</strong></span></span></dt><dd><p>Enter rescue
@@ -416,8 +472,59 @@
                                 <span class="command"><strong>isolate
                                 emergency.target</strong></span> but also
                                 prints a wall message to all
-                                users.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id371660"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id371670"/><h2>See Also</h2><p>
+                                users.</p></dd><dt><span class="term"><span class="command"><strong>halt</strong></span></span></dt><dd><p>Shut down and halt the
+                                system. This is mostly equivalent to
+                                <span class="command"><strong>start halt.target</strong></span>
+                                but also prints a wall message to all
+                                users.  If
+                                combined with <code class="option">--force</code>
+                                shutdown of all running services is
+                                skipped, however all processes are killed
+                                and all file systems are unmounted or
+                                mounted read-only, immediately
+                                followed by the
+                                system halt.</p></dd><dt><span class="term"><span class="command"><strong>poweroff</strong></span></span></dt><dd><p>Shut down and
+                                power-off the system. This is mostly
+                                equivalent to <span class="command"><strong>start
+                                poweroff.target</strong></span> but also
+                                prints a wall message to all
+                                users. If
+                                combined with <code class="option">--force</code>
+                                shutdown of all running services is
+                                skipped, however all processes are killed
+                                and all file systems are unmounted or
+                                mounted read-only, immediately
+                                followed by the
+                                powering off.</p></dd><dt><span class="term"><span class="command"><strong>reboot</strong></span></span></dt><dd><p>Shut down and
+                                reboot the system. This is mostly
+                                equivalent to <span class="command"><strong>start
+                                reboot.target</strong></span> but also
+                                prints a wall message to all
+                                users. If
+                                combined with <code class="option">--force</code>
+                                shutdown of all running services is
+                                skipped, however all processes are killed
+                                and all file systems are unmounted or
+                                mounted read-only, immediately
+                                followed by the
+                                reboot.</p></dd><dt><span class="term"><span class="command"><strong>kexec</strong></span></span></dt><dd><p>Shut down and reboot
+                                the system via kexec. This is mostly
+                                equivalent to <span class="command"><strong>start
+                                kexec.target</strong></span> but also prints
+                                a wall message to all users. If
+                                combined with <code class="option">--force</code>
+                                shutdown of all running services is
+                                skipped, however all processes are killed
+                                and all file systems are unmounted or
+                                mounted read-only, immediately
+                                followed by the
+                                reboot.</p></dd><dt><span class="term"><span class="command"><strong>exit</strong></span></span></dt><dd><p>Ask the systemd
+                                manager to quit. This is only
+                                supported for user service managers
+                                (i.e. in conjunction with the
+                                <code class="option">--user</code> option) and
+                                will fail otherwise.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id374250"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id374260"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

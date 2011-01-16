@@ -32,6 +32,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <stddef.h>
+#include <sys/prctl.h>
 
 #include <dbus/dbus.h>
 
@@ -60,10 +61,11 @@ static const char *arg_type = NULL;
 static char **arg_property = NULL;
 static bool arg_all = false;
 static bool arg_fail = false;
-static bool arg_session = false;
+static bool arg_user = false;
 static bool arg_global = false;
 static bool arg_immediate = false;
 static bool arg_no_block = false;
+static bool arg_no_pager = false;
 static bool arg_no_wtmp = false;
 static bool arg_no_sync = false;
 static bool arg_no_wall = false;
@@ -73,7 +75,11 @@ static bool arg_quiet = false;
 static bool arg_full = false;
 static bool arg_force = false;
 static bool arg_defaults = false;
+static bool arg_ask_password = false;
 static char **arg_wall = NULL;
+static const char *arg_kill_who = NULL;
+static const char *arg_kill_mode = NULL;
+static int arg_signal = SIGTERM;
 static usec_t arg_when = 0;
 static enum action {
         ACTION_INVALID,
@@ -81,6 +87,8 @@ static enum action {
         ACTION_HALT,
         ACTION_POWEROFF,
         ACTION_REBOOT,
+        ACTION_KEXEC,
+        ACTION_EXIT,
         ACTION_RUNLEVEL2,
         ACTION_RUNLEVEL3,
         ACTION_RUNLEVEL4,
@@ -102,15 +110,65 @@ static enum dot {
 
 static bool private_bus = false;
 
+static pid_t pager_pid = 0;
+
 static int daemon_reload(DBusConnection *bus, char **args, unsigned n);
+static void pager_open(void);
 
 static bool on_tty(void) {
         static int t = -1;
+
+        /* Note that this is invoked relatively early, before we start
+         * the pager. That means the value we return reflects whether
+         * we originally were started on a tty, not if we currently
+         * are. But this is intended, since we want color, and so on
+         * when run in our own pager. */
 
         if (_unlikely_(t < 0))
                 t = isatty(STDOUT_FILENO) > 0;
 
         return t;
+}
+
+static void spawn_ask_password_agent(void) {
+        pid_t parent, child;
+
+        /* We check STDIN here, not STDOUT, since this is about input,
+         * not output */
+        if (!isatty(STDIN_FILENO))
+                return;
+
+        if (!arg_ask_password)
+                return;
+
+        parent = getpid();
+
+        /* Spawns a temporary TTY agent, making sure it goes away when
+         * we go away */
+
+        if ((child = fork()) < 0)
+                return;
+
+        if (child == 0) {
+                /* In the child */
+
+                const char * const args[] = {
+                        SYSTEMD_TTY_ASK_PASSWORD_AGENT_BINARY_PATH,
+                        "--watch",
+                        NULL
+                };
+
+                if (prctl(PR_SET_PDEATHSIG, SIGTERM) < 0)
+                        _exit(EXIT_FAILURE);
+
+                /* Check whether our parent died before we were able
+                 * to set the death signal */
+                if (getppid() != parent)
+                        _exit(EXIT_SUCCESS);
+
+                execv(args[0], (char **) args);
+                _exit(EXIT_FAILURE);
+        }
 }
 
 static const char *ansi_highlight(bool b) {
@@ -193,6 +251,7 @@ static void warn_wall(enum action action) {
                 [ACTION_HALT]      = "The system is going down for system halt NOW!",
                 [ACTION_REBOOT]    = "The system is going down for reboot NOW!",
                 [ACTION_POWEROFF]  = "The system is going down for power-off NOW!",
+                [ACTION_KEXEC]     = "The system is going down for kexec reboot NOW!",
                 [ACTION_RESCUE]    = "The system is going down to rescue mode NOW!",
                 [ACTION_EMERGENCY] = "The system is going down to emergency mode NOW!"
         };
@@ -209,7 +268,7 @@ static void warn_wall(enum action action) {
                 }
 
                 if (*p) {
-                        utmp_wall(p);
+                        utmp_wall(p, NULL);
                         free(p);
                         return;
                 }
@@ -220,7 +279,7 @@ static void warn_wall(enum action action) {
         if (!table[action])
                 return;
 
-        utmp_wall(table[action]);
+        utmp_wall(table[action], NULL);
 }
 
 struct unit_info {
@@ -262,7 +321,7 @@ static bool output_show_job(const struct unit_info *u) {
 }
 
 static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
-        unsigned active_len, sub_len, job_len;
+        unsigned active_len, sub_len, job_len, n_shown = 0;
         const struct unit_info *u;
 
         active_len = sizeof("ACTIVE")-1;
@@ -297,7 +356,10 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
                 if (!output_show_job(u))
                         continue;
 
-                if (!streq(u->load_state, "loaded")) {
+                n_shown++;
+
+                if (!streq(u->load_state, "loaded") &&
+                    !streq(u->load_state, "banned")) {
                         on_loaded = ansi_highlight(true);
                         off_loaded = ansi_highlight(false);
                 } else
@@ -348,9 +410,9 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
                        "JOB    = Pending job for the unit.\n");
 
                 if (arg_all)
-                        printf("\n%u units listed.\n", c);
+                        printf("\n%u units listed.\n", n_shown);
                 else
-                        printf("\n%u units listed. Pass --all to see inactive units, too.\n", c);
+                        printf("\n%u units listed. Pass --all to see inactive units, too.\n", n_shown);
         }
 }
 
@@ -365,6 +427,8 @@ static int list_units(DBusConnection *bus, char **args, unsigned n) {
         dbus_error_init(&error);
 
         assert(bus);
+
+        pager_open();
 
         if (!(m = dbus_message_new_method_call(
                               "org.freedesktop.systemd1",
@@ -711,6 +775,8 @@ static int list_jobs(DBusConnection *bus, char **args, unsigned n) {
         dbus_error_init(&error);
 
         assert(bus);
+
+        pager_open();
 
         if (!(m = dbus_message_new_method_call(
                               "org.freedesktop.systemd1",
@@ -1110,7 +1176,7 @@ static int wait_for_jobs(DBusConnection *bus, Set *s) {
                 ;
 
         if (!arg_quiet && d.failed)
-                log_error("Job failed, see system logs for details.");
+                log_error("Job failed. See system logs and 'systemctl status' for details.");
 
         r = d.failed ? -EIO : 0;
 
@@ -1182,7 +1248,7 @@ static int start_unit_one(
 
         if (need_daemon_reload(bus, name))
                 log_warning("Unit file of created job changed on disk, 'systemctl %s daemon-reload' recommended.",
-                            arg_session ? "--session" : "--system");
+                            arg_user ? "--user" : "--system");
 
         if (!arg_no_block) {
                 char *p;
@@ -1219,12 +1285,16 @@ static enum action verb_to_action(const char *verb) {
                 return ACTION_POWEROFF;
         else if (streq(verb, "reboot"))
                 return ACTION_REBOOT;
+        else if (streq(verb, "kexec"))
+                return ACTION_KEXEC;
         else if (streq(verb, "rescue"))
                 return ACTION_RESCUE;
         else if (streq(verb, "emergency"))
                 return ACTION_EMERGENCY;
         else if (streq(verb, "default"))
                 return ACTION_DEFAULT;
+        else if (streq(verb, "exit"))
+                return ACTION_EXIT;
         else
                 return ACTION_INVALID;
 }
@@ -1235,13 +1305,15 @@ static int start_unit(DBusConnection *bus, char **args, unsigned n) {
                 [ACTION_HALT] = SPECIAL_HALT_TARGET,
                 [ACTION_POWEROFF] = SPECIAL_POWEROFF_TARGET,
                 [ACTION_REBOOT] = SPECIAL_REBOOT_TARGET,
+                [ACTION_KEXEC] = SPECIAL_KEXEC_TARGET,
                 [ACTION_RUNLEVEL2] = SPECIAL_RUNLEVEL2_TARGET,
                 [ACTION_RUNLEVEL3] = SPECIAL_RUNLEVEL3_TARGET,
                 [ACTION_RUNLEVEL4] = SPECIAL_RUNLEVEL4_TARGET,
                 [ACTION_RUNLEVEL5] = SPECIAL_RUNLEVEL5_TARGET,
                 [ACTION_RESCUE] = SPECIAL_RESCUE_TARGET,
                 [ACTION_EMERGENCY] = SPECIAL_EMERGENCY_TARGET,
-                [ACTION_DEFAULT] = SPECIAL_DEFAULT_TARGET
+                [ACTION_DEFAULT] = SPECIAL_DEFAULT_TARGET,
+                [ACTION_EXIT] = SPECIAL_EXIT_TARGET
         };
 
         int r, ret = 0;
@@ -1253,6 +1325,8 @@ static int start_unit(DBusConnection *bus, char **args, unsigned n) {
         dbus_error_init(&error);
 
         assert(bus);
+
+        spawn_ask_password_agent();
 
         if (arg_action == ACTION_SYSTEMCTL) {
                 method =
@@ -1336,6 +1410,14 @@ static int start_special(DBusConnection *bus, char **args, unsigned n) {
         assert(bus);
         assert(args);
 
+        if (arg_force &&
+            (streq(args[0], "halt") ||
+             streq(args[0], "poweroff") ||
+             streq(args[0], "reboot") ||
+             streq(args[0], "kexec") ||
+             streq(args[0], "exit")))
+                return daemon_reload(bus, args, n);
+
         r = start_unit(bus, args, n);
 
         if (r >= 0)
@@ -1388,6 +1470,7 @@ static int check_unit(DBusConnection *bus, char **args, unsigned n) {
                                 puts("unknown");
 
                         dbus_error_free(&error);
+                        dbus_message_unref(m);
                         continue;
                 }
 
@@ -1451,6 +1534,71 @@ static int check_unit(DBusConnection *bus, char **args, unsigned n) {
 
                 dbus_message_unref(m);
                 dbus_message_unref(reply);
+                m = reply = NULL;
+        }
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        if (reply)
+                dbus_message_unref(reply);
+
+        dbus_error_free(&error);
+
+        return r;
+}
+
+static int kill_unit(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL, *reply = NULL;
+        int r = 0;
+        DBusError error;
+        unsigned i;
+
+        assert(bus);
+        assert(args);
+
+        dbus_error_init(&error);
+
+        if (!arg_kill_who)
+                arg_kill_who = "all";
+
+        if (!arg_kill_mode)
+                arg_kill_mode = streq(arg_kill_who, "all") ? "control-group" : "process";
+
+        for (i = 1; i < n; i++) {
+
+                if (!(m = dbus_message_new_method_call(
+                                      "org.freedesktop.systemd1",
+                                      "/org/freedesktop/systemd1",
+                                      "org.freedesktop.systemd1.Manager",
+                                      "KillUnit"))) {
+                        log_error("Could not allocate message.");
+                        r = -ENOMEM;
+                        goto finish;
+                }
+
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_STRING, &args[i],
+                                              DBUS_TYPE_STRING, &arg_kill_who,
+                                              DBUS_TYPE_STRING, &arg_kill_mode,
+                                              DBUS_TYPE_INT32, &arg_signal,
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        r = -ENOMEM;
+                        goto finish;
+                }
+
+                if (!(reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error))) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        dbus_error_free(&error);
+                        r = -EIO;
+                }
+
+                dbus_message_unref(m);
+
+                if (reply)
+                        dbus_message_unref(reply);
                 m = reply = NULL;
         }
 
@@ -1567,6 +1715,7 @@ typedef struct UnitStatusInfo {
         const char *sub_state;
 
         const char *description;
+        const char *following;
 
         const char *path;
         const char *default_control_group;
@@ -1628,7 +1777,11 @@ static void print_status_info(UnitStatusInfo *i) {
 
         printf("\n");
 
-        if (streq_ptr(i->load_state, "failed")) {
+        if (i->following)
+                printf("\t  Follow: unit currently follows state of %s\n", i->following);
+
+        if (streq_ptr(i->load_state, "failed") ||
+            streq_ptr(i->load_state, "banned")) {
                 on = ansi_highlight(true);
                 off = ansi_highlight(false);
         } else
@@ -1673,17 +1826,17 @@ static void print_status_info(UnitStatusInfo *i) {
         s2 = format_timestamp(since2, sizeof(since2), timestamp);
 
         if (s1)
-                printf(" since [%s; %s]\n", s2, s1);
+                printf(" since %s; %s\n", s2, s1);
         else if (s2)
-                printf(" since [%s]\n", s2);
+                printf(" since %s\n", s2);
         else
                 printf("\n");
 
         if (i->sysfs_path)
                 printf("\t  Device: %s\n", i->sysfs_path);
-        else if (i->where)
+        if (i->where)
                 printf("\t   Where: %s\n", i->where);
-        else if (i->what)
+        if (i->what)
                 printf("\t    What: %s\n", i->what);
 
         if (i->accept)
@@ -1798,7 +1951,7 @@ static void print_status_info(UnitStatusInfo *i) {
                 printf("\n%sWarning:%s Unit file changed on disk, 'systemctl %s daemon-reload' recommended.\n",
                        ansi_highlight(true),
                        ansi_highlight(false),
-                       arg_session ? "--session" : "--system");
+                       arg_user ? "--user" : "--system");
 }
 
 static int status_property(const char *name, DBusMessageIter *iter, UnitStatusInfo *i) {
@@ -1839,6 +1992,8 @@ static int status_property(const char *name, DBusMessageIter *iter, UnitStatusIn
                                 i->where = s;
                         else if (streq(name, "What"))
                                 i->what = s;
+                        else if (streq(name, "Following"))
+                                i->following = s;
                 }
 
                 break;
@@ -2197,7 +2352,7 @@ static int print_property(const char *name, DBusMessageIter *iter) {
         return 0;
 }
 
-static int show_one(DBusConnection *bus, const char *path, bool show_properties, bool *new_line) {
+static int show_one(const char *verb, DBusConnection *bus, const char *path, bool show_properties, bool *new_line) {
         DBusMessage *m = NULL, *reply = NULL;
         const char *interface = "";
         int r;
@@ -2297,7 +2452,8 @@ static int show_one(DBusConnection *bus, const char *path, bool show_properties,
                 print_status_info(&info);
 
         if (!streq_ptr(info.active_state, "active") &&
-            !streq_ptr(info.active_state, "reloading"))
+            !streq_ptr(info.active_state, "reloading") &&
+            streq(verb, "status"))
                 /* According to LSB: "program not running" */
                 r = 3;
 
@@ -2332,11 +2488,14 @@ static int show(DBusConnection *bus, char **args, unsigned n) {
 
         show_properties = !streq(args[0], "status");
 
+        if (show_properties)
+                pager_open();
+
         if (show_properties && n <= 1) {
                 /* If not argument is specified inspect the manager
                  * itself */
 
-                ret = show_one(bus, "/org/freedesktop/systemd1", show_properties, &new_line);
+                ret = show_one(args[0], bus, "/org/freedesktop/systemd1", show_properties, &new_line);
                 goto finish;
         }
 
@@ -2470,7 +2629,7 @@ static int show(DBusConnection *bus, char **args, unsigned n) {
                         goto finish;
                 }
 
-                if ((r = show_one(bus, path, show_properties, &new_line)) != 0)
+                if ((r = show_one(args[0], bus, path, show_properties, &new_line)) != 0)
                         ret = r;
 
                 dbus_message_unref(m);
@@ -2714,6 +2873,8 @@ static int dump(DBusConnection *bus, char **args, unsigned n) {
         const char *text;
 
         dbus_error_init(&error);
+
+        pager_open();
 
         if (!(m = dbus_message_new_method_call(
                               "org.freedesktop.systemd1",
@@ -2960,12 +3121,16 @@ static int daemon_reload(DBusConnection *bus, char **args, unsigned n) {
                 assert(arg_action == ACTION_SYSTEMCTL);
 
                 method =
-                        streq(args[0], "clear-jobs")        ||
-                        streq(args[0], "cancel")            ? "ClearJobs" :
-                        streq(args[0], "daemon-reexec")     ? "Reexecute" :
-                        streq(args[0], "reset-failed")      ? "ResetFailed" :
-                        streq(args[0], "daemon-exit")       ? "Exit" :
-                                                              "Reload";
+                        streq(args[0], "clear-jobs")    ||
+                        streq(args[0], "cancel")        ? "ClearJobs" :
+                        streq(args[0], "daemon-reexec") ? "Reexecute" :
+                        streq(args[0], "reset-failed")  ? "ResetFailed" :
+                        streq(args[0], "halt")          ? "Halt" :
+                        streq(args[0], "poweroff")      ? "PowerOff" :
+                        streq(args[0], "reboot")        ? "Reboot" :
+                        streq(args[0], "kexec")         ? "KExec" :
+                        streq(args[0], "exit")          ? "Exit" :
+                                    /* "daemon-reload" */ "Reload";
         }
 
         if (!(m = dbus_message_new_method_call(
@@ -3072,6 +3237,8 @@ static int show_enviroment(DBusConnection *bus, char **args, unsigned n) {
                 *property = "Environment";
 
         dbus_error_init(&error);
+
+        pager_open();
 
         if (!(m = dbus_message_new_method_call(
                               "org.freedesktop.systemd1",
@@ -3219,6 +3386,7 @@ typedef struct {
 
 static Hashmap *will_install = NULL, *have_installed = NULL;
 static Set *remove_symlinks_to = NULL;
+static unsigned n_symlinks = 0;
 
 static void install_info_free(InstallInfo *i) {
         assert(i);
@@ -3245,7 +3413,7 @@ static int install_info_add(const char *name) {
 
         assert(will_install);
 
-        if (!unit_name_is_valid_no_type(name)) {
+        if (!unit_name_is_valid_no_type(name, true)) {
                 log_warning("Unit name %s is not a valid unit name.", name);
                 return -EINVAL;
         }
@@ -3631,12 +3799,6 @@ static int install_info_symlink_alias(const char *verb, InstallInfo *i, const ch
 
         STRV_FOREACH(s, i->aliases) {
 
-                if (!unit_name_is_valid_no_type(*s)) {
-                        log_error("Invalid name %s.", *s);
-                        r = -EINVAL;
-                        goto finish;
-                }
-
                 free(alias_path);
                 if (!(alias_path = path_make_absolute(*s, config_path))) {
                         log_error("Out of memory");
@@ -3668,7 +3830,7 @@ static int install_info_symlink_wants(const char *verb, InstallInfo *i, const ch
         assert(config_path);
 
         STRV_FOREACH(s, i->wanted_by) {
-                if (!unit_name_is_valid_no_type(*s)) {
+                if (!unit_name_is_valid_no_type(*s, true)) {
                         log_error("Invalid name %s.", *s);
                         r = -EINVAL;
                         goto finish;
@@ -3746,6 +3908,68 @@ static int install_info_apply(const char *verb, LookupPaths *paths, InstallInfo 
         }
 
         if (!f) {
+#if defined(TARGET_FEDORA) && defined (HAVE_SYSV_COMPAT)
+
+                if (endswith(i->name, ".service")) {
+                        char *sysv;
+                        bool exists;
+
+                        if (asprintf(&sysv, SYSTEM_SYSVINIT_PATH "/%s", i->name) < 0) {
+                                log_error("Out of memory");
+                                return -ENOMEM;
+                        }
+
+                        sysv[strlen(sysv) - sizeof(".service") + 1] = 0;
+                        exists = access(sysv, F_OK) >= 0;
+
+                        if (exists) {
+                                pid_t pid;
+                                siginfo_t status;
+
+                                const char *argv[] = {
+                                        "/sbin/chkconfig",
+                                        NULL,
+                                        NULL,
+                                        NULL
+                                };
+
+                                log_info("%s is not a native service, redirecting to /sbin/chkconfig.", i->name);
+
+                                argv[1] = file_name_from_path(sysv);
+                                argv[2] =
+                                        streq(verb, "enable") ? "on" :
+                                        streq(verb, "disable") ? "off" : NULL;
+
+                                log_info("Executing %s %s %s", argv[0], argv[1], strempty(argv[2]));
+
+                                if ((pid = fork()) < 0) {
+                                        log_error("Failed to fork: %m");
+                                        free(sysv);
+                                        return -errno;
+                                } else if (pid == 0) {
+                                        execv(argv[0], (char**) argv);
+                                        _exit(EXIT_FAILURE);
+                                }
+
+                                free(sysv);
+
+                                if ((r = wait_for_terminate(pid, &status)) < 0)
+                                        return r;
+
+                                if (status.si_code == CLD_EXITED) {
+                                        if (status.si_status == 0 && (streq(verb, "enable") || streq(verb, "disable")))
+                                                n_symlinks ++;
+
+                                        return status.si_status == 0 ? 0 : -EINVAL;
+                                } else
+                                        return -EPROTO;
+                        }
+
+                        free(sysv);
+                }
+
+#endif
+
                 log_error("Couldn't find %s.", i->name);
                 return -ENOENT;
         }
@@ -3756,6 +3980,9 @@ static int install_info_apply(const char *verb, LookupPaths *paths, InstallInfo 
                 fclose(f);
                 return r;
         }
+
+        n_symlinks += strv_length(i->aliases);
+        n_symlinks += strv_length(i->wanted_by);
 
         fclose(f);
 
@@ -3776,13 +4003,13 @@ static int install_info_apply(const char *verb, LookupPaths *paths, InstallInfo 
 
 static char *get_config_path(void) {
 
-        if (arg_session && arg_global)
-                return strdup(SESSION_CONFIG_UNIT_PATH);
+        if (arg_user && arg_global)
+                return strdup(USER_CONFIG_UNIT_PATH);
 
-        if (arg_session) {
+        if (arg_user) {
                 char *p;
 
-                if (session_config_home(&p) < 0)
+                if (user_config_home(&p) < 0)
                         return NULL;
 
                 return p;
@@ -3803,7 +4030,7 @@ static int enable_unit(DBusConnection *bus, char **args, unsigned n) {
         dbus_error_init(&error);
 
         zero(paths);
-        if ((r = lookup_paths_init(&paths, arg_session ? MANAGER_SESSION : MANAGER_SYSTEM)) < 0) {
+        if ((r = lookup_paths_init(&paths, arg_user ? MANAGER_USER : MANAGER_SYSTEM)) < 0) {
                 log_error("Failed to determine lookup paths: %s", strerror(-r));
                 goto finish;
         }
@@ -3857,19 +4084,24 @@ static int enable_unit(DBusConnection *bus, char **args, unsigned n) {
 
         if (streq(verb, "is-enabled"))
                 r = r > 0 ? 0 : -ENOENT;
-        else if (bus &&
-                 /* Don't try to reload anything if the user asked us to not do this */
-                 !arg_no_reload &&
-                 /* Don't try to reload anything when updating a unit globally */
-                 !arg_global &&
-                 /* Don't try to reload anything if we are called for system changes but the system wasn't booted with systemd */
-                 (arg_session || sd_booted() > 0) &&
-                 /* Don't try to reload anything if we are running in a chroot environment */
-                 (arg_session || running_in_chroot() <= 0) ) {
-                int q;
+        else {
+                if (n_symlinks <= 0)
+                        log_warning("Unit files contain no applicable installation information. Ignoring.");
 
-                if ((q = daemon_reload(bus, args, n)) < 0)
-                        r = q;
+                if (bus &&
+                    /* Don't try to reload anything if the user asked us to not do this */
+                    !arg_no_reload &&
+                    /* Don't try to reload anything when updating a unit globally */
+                    !arg_global &&
+                    /* Don't try to reload anything if we are called for system changes but the system wasn't booted with systemd */
+                    (arg_user || sd_booted() > 0) &&
+                    /* Don't try to reload anything if we are running in a chroot environment */
+                    (arg_user || running_in_chroot() <= 0) ) {
+                        int q;
+
+                        if ((q = daemon_reload(bus, args, n)) < 0)
+                                r = q;
+                }
         }
 
 finish:
@@ -3889,26 +4121,33 @@ static int systemctl_help(void) {
 
         printf("%s [OPTIONS...] {COMMAND} ...\n\n"
                "Send control commands to or query the systemd manager.\n\n"
-               "  -h --help          Show this help\n"
-               "     --version       Show package version\n"
-               "  -t --type=TYPE     List only units of a particular type\n"
-               "  -p --property=NAME Show only properties by this name\n"
-               "  -a --all           Show all units/properties, including dead/empty ones\n"
-               "     --full          Don't ellipsize unit names on output\n"
-               "     --fail          When queueing a new job, fail if conflicting jobs are\n"
-               "                     pending\n"
-               "  -q --quiet         Suppress output\n"
-               "     --no-block      Do not wait until operation finished\n"
-               "     --system        Connect to system bus\n"
-               "     --session       Connect to session bus\n"
-               "     --order         When generating graph for dot, show only order\n"
-               "     --require       When generating graph for dot, show only requirement\n"
-               "     --no-wall       Don't send wall message before halt/power-off/reboot\n"
-               "     --global        Enable/disable unit files globally\n"
-               "     --no-reload     When enabling/disabling unit files, don't reload daemon\n"
-               "                     configuration\n"
-               "     --force         When enabling unit files, override existing symlinks\n"
-               "     --defaults      When disabling unit files, remove default symlinks only\n\n"
+               "  -h --help           Show this help\n"
+               "     --version        Show package version\n"
+               "  -t --type=TYPE      List only units of a particular type\n"
+               "  -p --property=NAME  Show only properties by this name\n"
+               "  -a --all            Show all units/properties, including dead/empty ones\n"
+               "     --full           Don't ellipsize unit names on output\n"
+               "     --fail           When queueing a new job, fail if conflicting jobs are\n"
+               "                      pending\n"
+               "  -q --quiet          Suppress output\n"
+               "     --no-block       Do not wait until operation finished\n"
+               "     --no-pager       Do not pipe output into a pager.\n"
+               "     --system         Connect to system manager\n"
+               "     --user           Connect to user service manager\n"
+               "     --order          When generating graph for dot, show only order\n"
+               "     --require        When generating graph for dot, show only requirement\n"
+               "     --no-wall        Don't send wall message before halt/power-off/reboot\n"
+               "     --global         Enable/disable unit files globally\n"
+               "     --no-reload      When enabling/disabling unit files, don't reload daemon\n"
+               "                      configuration\n"
+               "     --no-ask-password\n"
+               "                      Do not ask for system passwords\n"
+               "     --kill-mode=MODE How to send signal\n"
+               "     --kill-who=WHO   Who to send signal to\n"
+               "  -s --signal=SIGNAL  Which signal to send\n"
+               "  -f --force          When enabling unit files, override existing symlinks\n"
+               "                      When shutting down, execute action immediately\n"
+               "     --defaults       When disabling unit files, remove default symlinks only\n\n"
                "Commands:\n"
                "  list-units                      List units\n"
                "  start [NAME...]                 Start (activate) one or more units\n"
@@ -3921,6 +4160,7 @@ static int systemctl_help(void) {
                "  reload-or-try-restart [NAME...] Reload one or more units is possible,\n"
                "                                  otherwise restart if active\n"
                "  isolate [NAME]                  Start one unit and stop all others\n"
+               "  kill [NAME...]                  Send signal to processes of a unit\n"
                "  is-active [NAME...]             Check whether units are active\n"
                "  status [NAME...|PID...]         Show runtime status of one or more units\n"
                "  show [NAME...|JOB...]           Show properties of one or more\n"
@@ -3940,16 +4180,17 @@ static int systemctl_help(void) {
                "  delete [NAME...]                Remove one or more snapshots\n"
                "  daemon-reload                   Reload systemd manager configuration\n"
                "  daemon-reexec                   Reexecute systemd manager\n"
-               "  daemon-exit                     Ask the systemd manager to quit\n"
                "  show-environment                Dump environment\n"
                "  set-environment [NAME=VALUE...] Set one or more environment variables\n"
                "  unset-environment [NAME...]     Unset one or more environment variables\n"
+               "  default                         Enter system default mode\n"
+               "  rescue                          Enter system rescue mode\n"
+               "  emergency                       Enter system emergency mode\n"
                "  halt                            Shut down and halt the system\n"
                "  poweroff                        Shut down and power-off the system\n"
                "  reboot                          Shut down and reboot the system\n"
-               "  rescue                          Enter system rescue mode\n"
-               "  emergency                       Enter system emergency mode\n"
-               "  default                         Enter system default mode\n",
+               "  kexec                           Shut down and reboot the system with kexec\n"
+               "  exit                            Ask for user instance termination\n",
                program_invocation_short_name);
 
         return 0;
@@ -4026,17 +4267,20 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
         enum {
                 ARG_FAIL = 0x100,
                 ARG_VERSION,
-                ARG_SESSION,
+                ARG_USER,
                 ARG_SYSTEM,
                 ARG_GLOBAL,
                 ARG_NO_BLOCK,
+                ARG_NO_PAGER,
                 ARG_NO_WALL,
                 ARG_ORDER,
                 ARG_REQUIRE,
                 ARG_FULL,
-                ARG_FORCE,
                 ARG_NO_RELOAD,
-                ARG_DEFAULTS
+                ARG_DEFAULTS,
+                ARG_KILL_MODE,
+                ARG_KILL_WHO,
+                ARG_NO_ASK_PASSWORD
         };
 
         static const struct option options[] = {
@@ -4047,17 +4291,22 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                 { "all",       no_argument,       NULL, 'a'           },
                 { "full",      no_argument,       NULL, ARG_FULL      },
                 { "fail",      no_argument,       NULL, ARG_FAIL      },
-                { "session",   no_argument,       NULL, ARG_SESSION   },
+                { "user",      no_argument,       NULL, ARG_USER      },
                 { "system",    no_argument,       NULL, ARG_SYSTEM    },
                 { "global",    no_argument,       NULL, ARG_GLOBAL    },
                 { "no-block",  no_argument,       NULL, ARG_NO_BLOCK  },
+                { "no-pager",  no_argument,       NULL, ARG_NO_PAGER  },
                 { "no-wall",   no_argument,       NULL, ARG_NO_WALL   },
                 { "quiet",     no_argument,       NULL, 'q'           },
                 { "order",     no_argument,       NULL, ARG_ORDER     },
                 { "require",   no_argument,       NULL, ARG_REQUIRE   },
-                { "force",     no_argument,       NULL, ARG_FORCE     },
+                { "force",     no_argument,       NULL, 'f'           },
                 { "no-reload", no_argument,       NULL, ARG_NO_RELOAD },
                 { "defaults",  no_argument,       NULL, ARG_DEFAULTS  },
+                { "kill-mode", required_argument, NULL, ARG_KILL_MODE },
+                { "kill-who",  required_argument, NULL, ARG_KILL_WHO  },
+                { "signal",    required_argument, NULL, 's'           },
+                { "no-ask-password", no_argument, NULL, ARG_NO_ASK_PASSWORD },
                 { NULL,        0,                 NULL, 0             }
         };
 
@@ -4066,7 +4315,10 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
         assert(argc >= 0);
         assert(argv);
 
-        while ((c = getopt_long(argc, argv, "ht:p:aq", options, NULL)) >= 0) {
+        /* Only when running as systemctl we ask for passwords */
+        arg_ask_password = true;
+
+        while ((c = getopt_long(argc, argv, "ht:p:aqfs:", options, NULL)) >= 0) {
 
                 switch (c) {
 
@@ -4108,16 +4360,20 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                         arg_fail = true;
                         break;
 
-                case ARG_SESSION:
-                        arg_session = true;
+                case ARG_USER:
+                        arg_user = true;
                         break;
 
                 case ARG_SYSTEM:
-                        arg_session = false;
+                        arg_user = false;
                         break;
 
                 case ARG_NO_BLOCK:
                         arg_no_block = true;
+                        break;
+
+                case ARG_NO_PAGER:
+                        arg_no_pager = true;
                         break;
 
                 case ARG_NO_WALL:
@@ -4140,7 +4396,7 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                         arg_quiet = true;
                         break;
 
-                case ARG_FORCE:
+                case 'f':
                         arg_force = true;
                         break;
 
@@ -4150,11 +4406,30 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
 
                 case ARG_GLOBAL:
                         arg_global = true;
-                        arg_session = true;
+                        arg_user = true;
                         break;
 
                 case ARG_DEFAULTS:
                         arg_defaults = true;
+                        break;
+
+                case ARG_KILL_WHO:
+                        arg_kill_who = optarg;
+                        break;
+
+                case ARG_KILL_MODE:
+                        arg_kill_mode = optarg;
+                        break;
+
+                case 's':
+                        if ((arg_signal = signal_from_string_try_harder(optarg)) < 0) {
+                                log_error("Failed to parse signal string %s.", optarg);
+                                return -EINVAL;
+                        }
+                        break;
+
+                case ARG_NO_ASK_PASSWORD:
+                        arg_ask_password = false;
                         break;
 
                 case '?':
@@ -4750,6 +5025,7 @@ static int systemctl_main(DBusConnection *bus, int argc, char *argv[], DBusError
                 { "force-reload",          MORE,  2, start_unit        }, /* For compatibility with SysV */
                 { "condrestart",           MORE,  2, start_unit        }, /* For compatibility with RH */
                 { "isolate",               EQUAL, 2, start_unit        },
+                { "kill",                  MORE,  2, kill_unit         },
                 { "is-active",             MORE,  2, check_unit        },
                 { "check",                 MORE,  2, check_unit        },
                 { "show",                  MORE,  1, show              },
@@ -4761,16 +5037,17 @@ static int systemctl_main(DBusConnection *bus, int argc, char *argv[], DBusError
                 { "delete",                MORE,  2, delete_snapshot   },
                 { "daemon-reload",         EQUAL, 1, daemon_reload     },
                 { "daemon-reexec",         EQUAL, 1, daemon_reload     },
-                { "daemon-exit",           EQUAL, 1, daemon_reload     },
                 { "show-environment",      EQUAL, 1, show_enviroment   },
                 { "set-environment",       MORE,  2, set_environment   },
                 { "unset-environment",     MORE,  2, set_environment   },
                 { "halt",                  EQUAL, 1, start_special     },
                 { "poweroff",              EQUAL, 1, start_special     },
                 { "reboot",                EQUAL, 1, start_special     },
+                { "kexec",                 EQUAL, 1, start_special     },
                 { "default",               EQUAL, 1, start_special     },
                 { "rescue",                EQUAL, 1, start_special     },
                 { "emergency",             EQUAL, 1, start_special     },
+                { "exit",                  EQUAL, 1, start_special     },
                 { "reset-failed",          MORE,  1, reset_failed      },
                 { "enable",                MORE,  2, enable_unit       },
                 { "disable",               MORE,  2, enable_unit       },
@@ -5025,6 +5302,81 @@ static int runlevel_main(void) {
         return 0;
 }
 
+static void pager_open(void) {
+        int fd[2];
+        const char *pager;
+
+        if (pager_pid > 0)
+                return;
+
+        if (!on_tty() || arg_no_pager)
+                return;
+
+        if ((pager = getenv("PAGER")))
+                if (!*pager || streq(pager, "cat"))
+                        return;
+
+        if (pipe(fd) < 0) {
+                log_error("Failed to create pager pipe: %m");
+                return;
+        }
+
+        pager_pid = fork();
+        if (pager_pid < 0) {
+                log_error("Failed to fork pager: %m");
+                close_pipe(fd);
+                return;
+        }
+
+        /* In the child start the pager */
+        if (pager_pid == 0) {
+
+                dup2(fd[0], STDIN_FILENO);
+                close_pipe(fd);
+
+                setenv("LESS", "FRSX", 0);
+
+                prctl(PR_SET_PDEATHSIG, SIGTERM);
+
+                if (pager) {
+                        execlp(pager, pager, NULL);
+                        execl("/bin/sh", "sh", "-c", pager, NULL);
+                } else {
+                        /* Debian's alternatives command for pagers is
+                         * called 'pager'. Note that we do not call
+                         * sensible-pagers here, since that is just a
+                         * shell script that implements a logic that
+                         * is similar to this one anyway, but is
+                         * Debian-specific. */
+                        execlp("pager", "pager", NULL);
+
+                        execlp("less", "less", NULL);
+                        execlp("more", "more", NULL);
+                }
+
+                log_error("Unable to execute pager: %m");
+                _exit(EXIT_FAILURE);
+        }
+
+        /* Return in the parent */
+        if (dup2(fd[1], STDOUT_FILENO) < 0)
+                log_error("Failed to duplicate pager pipe: %m");
+
+        close_pipe(fd);
+}
+
+static void pager_close(void) {
+        siginfo_t dummy;
+
+        if (pager_pid <= 0)
+                return;
+
+        /* Inform pager that we are done */
+        fclose(stdout);
+        wait_for_terminate(pager_pid, &dummy);
+        pager_pid = 0;
+}
+
 int main(int argc, char*argv[]) {
         int r, retval = EXIT_FAILURE;
         DBusConnection *bus = NULL;
@@ -5050,7 +5402,7 @@ int main(int argc, char*argv[]) {
                 goto finish;
         }
 
-        bus_connect(arg_session ? DBUS_BUS_SESSION : DBUS_BUS_SYSTEM, &bus, &private_bus, &error);
+        bus_connect(arg_user ? DBUS_BUS_SESSION : DBUS_BUS_SYSTEM, &bus, &private_bus, &error);
 
         switch (arg_action) {
 
@@ -5104,6 +5456,8 @@ finish:
         dbus_shutdown();
 
         strv_free(arg_property);
+
+        pager_close();
 
         return retval;
 }
