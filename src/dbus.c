@@ -864,7 +864,7 @@ static int bus_init_api(Manager *m) {
         if (m->running_as == MANAGER_SYSTEM && m->system_bus)
                 m->api_bus = m->system_bus;
         else {
-                if (!(m->api_bus = dbus_bus_get_private(m->running_as == MANAGER_SESSION ? DBUS_BUS_SESSION : DBUS_BUS_SYSTEM, &error))) {
+                if (!(m->api_bus = dbus_bus_get_private(m->running_as == MANAGER_USER ? DBUS_BUS_SESSION : DBUS_BUS_SYSTEM, &error))) {
                         log_debug("Failed to get API D-Bus connection, retrying later: %s", error.message);
                         r = 0;
                         goto fail;
@@ -998,7 +998,7 @@ int bus_init(Manager *m) {
                 }
 
         if (m->subscribed_data_slot < 0)
-                if (!dbus_pending_call_allocate_data_slot(&m->subscribed_data_slot)) {
+                if (!dbus_connection_allocate_data_slot(&m->subscribed_data_slot)) {
                         log_error("Not enough memory");
                         return -ENOMEM;
                 }
@@ -1110,7 +1110,7 @@ void bus_done(Manager *m) {
                dbus_pending_call_free_data_slot(&m->name_data_slot);
 
         if (m->subscribed_data_slot >= 0)
-                dbus_pending_call_free_data_slot(&m->subscribed_data_slot);
+                dbus_connection_free_data_slot(&m->subscribed_data_slot);
 }
 
 static void query_pid_pending_cb(DBusPendingCall *pending, void *userdata) {

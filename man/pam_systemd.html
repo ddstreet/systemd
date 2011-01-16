@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>pam_systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="pam_systemd"><a id="pam_systemd"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>pam_systemd — Register user sessions in the systemd control group hierarchy</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">pam_systemd.so</code> </p></div></div><div class="refsect1" title="Description"><a id="id348385"/><h2>Description</h2><p><span class="command"><strong>pam_systemd</strong></span> registers user
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>pam_systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="pam_systemd"><a id="pam_systemd"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>pam_systemd — Register user sessions in the systemd control group hierarchy</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">pam_systemd.so</code> </p></div></div><div class="refsect1" title="Description"><a id="id509353"/><h2>Description</h2><p><span class="command"><strong>pam_systemd</strong></span> registers user
                 sessions in the systemd control group
                 hierarchy.</p><p>On login, this module ensures the following:</p><div class="orderedlist"><ol class="orderedlist"><li class="listitem"><p>If it does not exist yet, the
                         user runtime directory
@@ -25,7 +25,7 @@
                         it.</p></li><li class="listitem"><p>If
                         <code class="option">create-session=0</code> is set, a new
                         control group
-                        <code class="filename">/user/$USER/no-session</code>
+                        <code class="filename">/user/$USER/user</code>
                         is created and the login process moved into
                         it.</p></li></ol></div><p>On logout, this module ensures the following:</p><div class="orderedlist"><ol class="orderedlist"><li class="listitem"><p>If
                         <code class="varname">$XDG_SESSION_ID</code> is set and
@@ -39,13 +39,13 @@
                         remaining processes in the
                         <code class="filename">/user/$USER/$XDG_SESSION_ID</code>
                         control group are migrated to
-                        <code class="filename">/user/$USER/no-session</code> and
+                        <code class="filename">/user/$USER/user</code> and
                         the original control group is
                         removed.</p></li><li class="listitem"><p>If
                         <code class="option">kill-user=1</code> is specified, and
                         no other user session control group remains,
                         except
-                        <code class="filename">/user/$USER/no-session</code>,
+                        <code class="filename">/user/$USER/user</code>,
                         all remaining processes in the
                         <code class="filename">/user/$USER</code> hierarchy
                         are killed and the control group is removed.</p></li><li class="listitem"><p>If
@@ -59,7 +59,7 @@
                         and all its contents are
                         removed, too.</p></li></ol></div><p>If the system was not booted up with systemd as
                 init system, this module does nothing and immediately
-                returns PAM_SUCCESS.</p></div><div class="refsect1" title="Options"><a id="id315950"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">create-session=</code></span></dt><dd><p>Takes a boolean
+                returns PAM_SUCCESS.</p></div><div class="refsect1" title="Options"><a id="id476918"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">create-session=</code></span></dt><dd><p>Takes a boolean
                                 argument. If true, a new session is
                                 created: the
                                 <code class="varname">$XDG_SESSION_ID</code>
@@ -88,13 +88,27 @@
                                 more friendly for users logged in more
                                 than once, as their processes are
                                 terminated only on their complete
-                                logout.</p></dd></dl></div><p>Note that setting <code class="varname">kill-user=1</code>
+                                logout.</p></dd><dt><span class="term"><code class="option">controllers=</code></span></dt><dd><p>Takes a comma
+                                separated list of cgroup controllers
+                                in which hierarchies a user/session
+                                cgroup will be created by default for
+                                each user logging in. If ommited,
+                                defaults to 'cpu', meaning that in
+                                addition to creating per-user and
+                                per-session cgroups in systemd's own
+                                hierarchy, groups are created in the
+                                'cpu' hierarchy, on order to ensure
+                                that every use and every sessions gets
+                                an equal amount of CPU time,
+                                regardless how many processes a user
+                                or session might
+                                own.</p></dd></dl></div><p>Note that setting <code class="varname">kill-user=1</code>
                 or even <code class="varname">kill-session=1</code> will break
                 tools like
                 <span class="citerefentry"><span class="refentrytitle">screen</span>(1)</span>.</p><p>If the options are omitted they default to
                 <code class="option">create-session=1</code>,
                 <code class="option">kill-session=0</code>,
-                <code class="option">kill-user=0</code>.</p></div><div class="refsect1" title="Module Types Provided"><a id="id316138"/><h2>Module Types Provided</h2><p>Only <code class="option">session</code> is provided.</p></div><div class="refsect1" title="Environment"><a id="id316152"/><h2>Environment</h2><p>The following environment variables are set for the processes of the user's session:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">$XDG_SESSION_ID</code></span></dt><dd><p>A session identifier,
+                <code class="option">kill-user=0</code>.</p></div><div class="refsect1" title="Module Types Provided"><a id="id477126"/><h2>Module Types Provided</h2><p>Only <code class="option">session</code> is provided.</p></div><div class="refsect1" title="Environment"><a id="id477140"/><h2>Environment</h2><p>The following environment variables are set for the processes of the user's session:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">$XDG_SESSION_ID</code></span></dt><dd><p>A session identifier,
                                 suitable to be used in file names. The
                                 string itself should be considered
                                 opaque, although often it is just the
@@ -130,14 +144,14 @@
                                 local and offers the greatest possible
                                 file system feature set the
                                 operating system
-                                provides.</p></dd></dl></div></div><div class="refsect1" title="Example"><a id="id316227"/><h2>Example</h2><pre class="programlisting">#%PAM-1.0
+                                provides.</p></dd></dl></div></div><div class="refsect1" title="Example"><a id="id477210"/><h2>Example</h2><pre class="programlisting">#%PAM-1.0
 auth       required     pam_unix.so
 auth       required     pam_nologin.so
 account    required     pam_unix.so
 password   required     pam_unix.so
 session    required     pam_unix.so
 session    required     pam_loginuid.so
-session    required     pam_systemd.so kill-user=1</pre></div><div class="refsect1" title="See Also"><a id="id316242"/><h2>See Also</h2><p>
+session    required     pam_systemd.so kill-user=1</pre></div><div class="refsect1" title="See Also"><a id="id477225"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">pam.conf</span>(5)</span>,
                         <span class="citerefentry"><span class="refentrytitle">pam.d</span>(5)</span>,
                         <span class="citerefentry"><span class="refentrytitle">pam</span>(8)</span>,

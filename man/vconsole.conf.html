@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>vconsole.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="vconsole.conf"><a id="vconsole.conf"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>vconsole.conf — configuration file for the virtual console</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/vconsole.conf</code></p></div><div class="refsect1" title="Description"><a id="id571679"/><h2>Description</h2><p>The <code class="filename">/etc/vconsole.conf</code> file
+                configures the virtual console, i.e. keyboard mapping
+                and console font.</p><p>The basic file format of the
+                <code class="filename">vconsole.conf</code> is a
+                newline-separated list environment-like
+                shell-compatible variable assignments. It is possible
+                to source the configuration from shell scripts,
+                however, beyond mere variable assignments no shell
+                features are supported, allowing applications to read
+                the file without implementing a shell compatible
+                execution engine.</p><p>Note that the kernel command line options
+                <code class="varname">vconsole.keymap=</code>,
+                <code class="varname">vconsole.keymap.toggle=</code>,
+                <code class="varname">vconsole.font=</code>,
+                <code class="varname">vconsole.font.map=</code>,
+                <code class="varname">vconsole.font.unimap=</code> may be used
+                to override the console settings at boot.</p><p>Depending on the operating system other
+                configuration files might be checked for configuration
+                of the virtual console as well, however only as
+                fallback.</p></div><div class="refsect1" title="Options"><a id="id571734"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">KEYMAP=</code>, </span><span class="term"><code class="varname">KEYMAP_TOGGLE=</code></span></dt><dd><p>Configures the key
+                                mapping table of for they
+                                keyboard. <code class="varname">KEYMAP=</code>
+                                defaults to <code class="literal">us</code> if
+                                not set. The
+                                <code class="varname">KEYMAP_TOGGLE=</code> can
+                                be used to configured a second toggle
+                                keymap and is by default
+                                unset.</p></dd><dt><span class="term"><code class="varname">FONT=</code>, </span><span class="term"><code class="varname">FONT_MAP=</code>, </span><span class="term"><code class="varname">FONT_UNIMAP=</code></span></dt><dd><p>Configures the console
+                                font, the console map and the unicode
+                                font map. <code class="varname">FONT=</code>
+                                defaults to
+                                <code class="literal">latarcyrheb-sun16</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id539166"/><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">loadkeys</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">setfont</span>(8)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">locale.conf</span>(5)</span>
+                  </p></div></div></body></html>

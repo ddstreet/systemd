@@ -21,6 +21,9 @@
 /* Define to 1 if you have the <libaudit.h> header file. */
 #undef HAVE_LIBAUDIT_H
 
+/* Define if libcryptsetup is available */
+#undef HAVE_LIBCRYPTSETUP
+
 /* Have tcpwrap? */
 #undef HAVE_LIBWRAP
 
@@ -106,11 +109,14 @@
 /* Target is ArchLinux */
 #undef TARGET_ARCH
 
-/* Target is Debian/Ubuntu */
+/* Target is Debian */
 #undef TARGET_DEBIAN
 
 /* Target is Fedora/RHEL */
 #undef TARGET_FEDORA
+
+/* Target is Frugalware */
+#undef TARGET_FRUGALWARE
 
 /* Target is Gentoo */
 #undef TARGET_GENTOO
@@ -120,6 +126,12 @@
 
 /* Target is openSUSE/SLE */
 #undef TARGET_SUSE
+
+/* Target is Ubuntu */
+#undef TARGET_UBUNTU
+
+/* GID of the 'tty' group */
+#undef TTY_GID
 
 /* Enable extensions on AIX 3, Interix.  */
 #ifndef _ALL_SOURCE

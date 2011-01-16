@@ -26,12 +26,18 @@
 #include <string.h>
 #include <libgen.h>
 #include <assert.h>
+#include <unistd.h>
+#include <ftw.h>
 
 #include "mount-setup.h"
 #include "log.h"
 #include "macro.h"
 #include "util.h"
 #include "label.h"
+
+#ifndef TTY_GID
+#define TTY_GID 5
+#endif
 
 typedef struct MountPoint {
         const char *what;
@@ -46,14 +52,14 @@ static const MountPoint mount_table[] = {
         { "proc",     "/proc",                  "proc",     NULL,                MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
         { "sysfs",    "/sys",                   "sysfs",    NULL,                MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
         { "devtmpfs", "/dev",                   "devtmpfs", "mode=755",          MS_NOSUID,                    true },
-        { "tmpfs",    "/dev/shm",               "tmpfs",    "mode=1777",         MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
-        { "devpts",   "/dev/pts",               "devpts",   NULL,                MS_NOSUID|MS_NOEXEC,          false },
+        { "tmpfs",    "/dev/shm",               "tmpfs",    "mode=1777",         MS_NOSUID|MS_NODEV,           true },
+        { "devpts",   "/dev/pts",               "devpts",   "mode=620,gid=" STRINGIFY(TTY_GID), MS_NOSUID|MS_NOEXEC, false },
         { "tmpfs",    "/sys/fs/cgroup",         "tmpfs",    "mode=755",          MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
         { "cgroup",   "/sys/fs/cgroup/systemd", "cgroup",   "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
 };
 
 /* These are API file systems that might be mounted by other software,
- * we just list them here so that we know that we should igore them */
+ * we just list them here so that we know that we should ignore them */
 
 static const char * const ignore_paths[] = {
         "/selinux",
@@ -72,11 +78,17 @@ bool mount_point_is_api(const char *path) {
                 if (path_equal(path, mount_table[i].where))
                         return true;
 
+        return path_startswith(path, "/sys/fs/cgroup/");
+}
+
+bool mount_point_ignore(const char *path) {
+        unsigned i;
+
         for (i = 0; i < ELEMENTSOF(ignore_paths); i++)
                 if (path_equal(path, ignore_paths[i]))
                         return true;
 
-        return path_startswith(path, "/sys/fs/cgroup/");
+        return false;
 }
 
 static int mount_one(const MountPoint *p) {
@@ -130,8 +142,9 @@ static int mount_cgroup_controllers(void) {
         for (;;) {
                 MountPoint p;
                 char *controller, *where;
+                int enabled = false;
 
-                if (fscanf(f, "%ms %*i %*i %*i", &controller) != 1) {
+                if (fscanf(f, "%ms %*i %*i %i", &controller, &enabled) != 2) {
 
                         if (feof(f))
                                 break;
@@ -139,6 +152,11 @@ static int mount_cgroup_controllers(void) {
                         log_error("Failed to parse /proc/cgroups.");
                         r = -EIO;
                         goto finish;
+                }
+
+                if (!enabled) {
+                        free(controller);
+                        continue;
                 }
 
                 if (asprintf(&where, "/sys/fs/cgroup/%s", controller) < 0) {
@@ -171,13 +189,68 @@ finish:
         return r;
 }
 
+static int symlink_and_label(const char *old_path, const char *new_path) {
+        int r;
+
+        assert(old_path);
+        assert(new_path);
+
+        if ((r = label_symlinkfile_set(new_path)) < 0)
+                return r;
+
+        if (symlink(old_path, new_path) < 0)
+                r = -errno;
+
+        label_file_clear();
+
+        return r;
+}
+
+static int nftw_cb(
+                const char *fpath,
+                const struct stat *sb,
+                int tflag,
+                struct FTW *ftwbuf) {
+
+        /* No need to label /dev twice in a row... */
+        if (ftwbuf->level == 0)
+                return 0;
+
+        label_fix(fpath);
+        return 0;
+};
+
 int mount_setup(void) {
+
+        const char symlinks[] =
+                "/proc/kcore\0"      "/dev/core\0"
+                "/proc/self/fd\0"    "/dev/fd\0"
+                "/proc/self/fd/0\0"  "/dev/stdin\0"
+                "/proc/self/fd/1\0"  "/dev/stdout\0"
+                "/proc/self/fd/2\0"  "/dev/stderr\0"
+                "\0";
+
         int r;
         unsigned i;
+        const char *j, *k;
 
         for (i = 0; i < ELEMENTSOF(mount_table); i ++)
                 if ((r = mount_one(mount_table+i)) < 0)
                         return r;
+
+        /* Nodes in devtmpfs need to be manually updated for the
+         * appropriate labels, after mounting. The other virtual API
+         * file systems do not need. */
+
+        if (unlink("/dev/.systemd/relabel-devtmpfs") >= 0)
+                nftw("/dev", nftw_cb, 64, FTW_MOUNT|FTW_PHYS);
+
+        /* Create a few default symlinks, which are normally created
+         * bei udevd, but some scripts might need them before we start
+         * udevd. */
+
+        NULSTR_FOREACH_PAIR(j, k, symlinks)
+                symlink_and_label(j, k);
 
         return mount_cgroup_controllers();
 }

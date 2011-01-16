@@ -1,0 +1,195 @@
+* figure out what happened to bluez patch
+
+* in pam_systemd: add option to kill normal user sessions on logout but only those with uid != 0
+
+* introduce StandardOutput=syslog+console and StandardOutput=kmsg+console to support fsck output at boot
+
+* Patch systemd-fsck to use -C and pass console fd to it
+
+* sometimes processes seem to remain when we kill a service
+  http://lists.fedoraproject.org/pipermail/devel/2011-January/147559.html
+
+* when launching pager, take number of columns first
+
+* support remote/ssh systemctl/systemadm, and local privileged access
+
+* finish syslog socket stuff
+
+* when starting systemd --user we get "Failed to set udev event buffer size."
+
+* configurable jitter for timer events
+
+* dbus should run with oom adjust set
+
+* support caching password questions in plymouth and on the console
+  https://bugzilla.redhat.com/show_bug.cgi?id=655538
+
+* dep loop when using encrypted swap
+  https://bugzilla.redhat.com/show_bug.cgi?id=657234
+
+* exclude java hsp files by default
+  https://bugzilla.redhat.com/show_bug.cgi?id=527425
+
+* load EnvironmentFile= when starting services, not when reloading configuration
+  https://bugzilla.redhat.com/show_bug.cgi?id=661282
+
+* somehow some /etc/fstab supplied mount params are never applied to api fs
+  https://bugzilla.redhat.com/show_bug.cgi?id=663108
+
+* automount units can cause a segfault:
+  https://bugs.freedesktop.org/show_bug.cgi?id=32076
+
+* support globs in systemd-tmpfiles
+
+* drop IN_ATTRIB from inotify watches for .path units where possible to avoid
+  lots of wakeups due to /dev changing when we watch a subdir of /dev.
+
+* Support ProcessNeededForShutdown=true to allow stuff like mdmon
+  to be killed very late after the rootfs is read only
+
+* Integrate "mdadm --wait-clean". Maybe just let SIGTERM to mdmon trigger the
+  needed action
+
+* bind mounts with 'fsck' fail and block for a minute:
+    /foo /bar none bind 1 1
+  (requesting fsck is wrong, but why do we block for a minute
+   instead of just handling the error)
+
+* oneshot services which do not remain: 'exited' instead of 'dead'?
+  it should be visible in 'systemctl' that they have been run?
+
+* dot output for --test showing the 'initial transaction'
+
+* calendar time support in timer, iCalendar semantics for the timer stuff (RFC2445)
+  - check timerfd() patch: http://lkml.org/lkml/2010/11/23/290
+
+* systemd --user
+  - get PR_SET_ANCHOR merged: http://lkml.org/lkml/2010/2/2/165
+
+* add VT tracking:
+    - provide CK functionality
+    - start getty only when actual vt switch happens (same model as
+      socket on-demand activation). allocate the next free tty and
+      start a getty there. this way, pressing alt-f[1-12] will switch
+      through running X and getty sessions, and any unallocated
+      activated tty will start a new getty. the hardcoding of
+      getty[1-6] will entirely go away.
+    - http://git.kernel.org/?p=linux/kernel/git/gregkh/tty-2.6.git;a=commitdiff;h=fbc92a3455577ab17615cbcb91826399061bd789
+
+* implicitly import "defaults" settings file into all types
+
+* port over to LISTEN_FDS/LISTEN_PID:
+   - uuidd    DONE
+   - dbus     DONE
+   - rsyslog  DONE
+   - rpcbind (/var/run/rpcbind.sock!) DONE
+   - cups     DONE
+   - avahi-daemon (/var/run/avahi-daemon/socket) DONE
+   - ssh      CLASSIC
+   - postfix, saslauthd
+   - apache/samba
+   - libvirtd (/var/run/libvirt/libvirt-sock-ro)
+   - bluetoothd (/var/run/sdp! @/org/bluez/audio!)
+   - distccd
+
+* fingerprint.target, wireless.target, gps.target
+
+* set_put(), hashmap_put() return values check. i.e. == 0 doesn't free()!
+
+* io priority during initialization
+
+* if a service fails too often, make the service enter failed mode, and the socket, too.
+
+* systemctl list-jobs - show dependencies
+
+* accountsservice is borked
+
+* auditd service files
+
+* add systemctl switch to dump transaction without executing it
+
+* suspend, resume
+
+* readahead: btrfs/LVM SSD detection
+
+* when processes remain in a service even though the start command failed enter active
+
+* add seperate man page for [Install] settings
+
+* only add quotacheck deps to .mount units which mention grpquota/usrquota in the mount flags
+
+* systemctl condrestart should return 0 if service isn't running
+
+* tmpfiles: allow specification of .conf files on cmdline
+
+* allow runtime changing of log level and target
+
+* automatically determine TERM= based on tty name even for /dev/console
+    http://git.kernel.org/?p=linux/kernel/git/gregkh/tty-2.6.git;a=commitdiff;h=fbc92a3455577ab17615cbcb91826399061bd789
+    http://git.kernel.org/?p=linux/kernel/git/gregkh/tty-2.6.git;a=commitdiff;h=b7b8de087384cc1954a8cd075af3f9e5977caa2e
+
+* fix hotplug transactions
+
+* isolate multi-user.target doesn't start a getty@tty1 if we run it from graphical.target
+
+* sendmail.service doesn't get rid PID file, fails to kill everything on stop
+
+* global defaults for StandardOuput=xxx
+
+* mkswap/mke2fs is called on wrong devices in crypto devices.
+
+Fedora:
+
+* obsolete readhead in systemd pkg
+
+* chkconfig → systemd enable/daemon-reload glue
+
+* /var/lock, /var/run → what happens if rpm stuff is no %ghosted?
+
+External:
+
+* make cryptsetup lower --iter-time
+
+* patch kernel for xattr support in /dev, /proc/, /sys and /sys/fs/cgroup.
+
+* patch kernel for cpu feature modalias for autoloading aes/kvm/...
+    http://git.kernel.org/?p=linux/kernel/git/ak/linux-misc-2.6.git;a=shortlog;h=refs/heads/cpuid-match
+
+* place /etc/inittab with explaining blurb.
+
+* pam_securetty should honour console=
+
+* procps, psmisc, sysvinit-tools, hostname → util-linux-ng
+
+https://bugzilla.redhat.com/show_bug.cgi?id=614245 -- plymouth
+https://bugzilla.redhat.com/show_bug.cgi?id=612789 -- umount /cgroup on halt
+https://bugzilla.redhat.com/show_bug.cgi?id=612728 -- /etc/rc.d/init.d/functions
+https://bugzilla.redhat.com/show_bug.cgi?id=612712 -- pam_systemd
+https://bugs.freedesktop.org/show_bug.cgi?id=29193 -- accountsservice
+https://bugs.freedesktop.org/show_bug.cgi?id=29194 -- ConsoleKit
+https://bugs.freedesktop.org/show_bug.cgi?id=29205 -- udisks
+http://article.gmane.org/gmane.linux.bluez.kernel/6479 -- bluez
+http://www.spinics.net/lists/linux-nfs/msg14371.html -- rpcbind
+https://bugzilla.redhat.com/show_bug.cgi?id=617328 -- ntp
+https://bugzilla.redhat.com/show_bug.cgi?id=617320 -- at
+https://bugzilla.redhat.com/show_bug.cgi?id=617326 -- fprintd
+https://bugzilla.redhat.com/show_bug.cgi?id=617333 -- yum
+https://bugzilla.redhat.com/show_bug.cgi?id=617317 -- acpid
+https://bugzilla.redhat.com/show_bug.cgi?id=617327 -- gpm
+https://bugzilla.redhat.com/show_bug.cgi?id=617330 -- pcsc-lite
+https://bugzilla.redhat.com/show_bug.cgi?id=617321 -- audit
+https://bugzilla.redhat.com/show_bug.cgi?id=617316 -- abrt
+
+Regularly:
+
+* look for close() vs. close_nointr() vs. close_nointr_nofail()
+
+* check for strerror(r) instead of strerror(-r)
+
+* Use PR_SET_PROCTITLE_AREA if it becomes available in the kernel
+
+* %m in printf() instead of strerror();
+
+* pahole
+
+* CFLAGS="-Wl,--gc-sections -Wl,--print-gc-sections -ffunction-sections -fdata-sections"

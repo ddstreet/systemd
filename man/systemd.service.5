@@ -1,13 +1,22 @@
 '\" t
 .\"     Title: systemd.service
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 10/07/2010
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2011
 .\"    Manual: systemd.service
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SERVICE" "5" "10/07/2010" "systemd" "systemd.service"
+.TH "SYSTEMD\&.SERVICE" "5" "01/08/2011" "systemd" "systemd.service"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -158,11 +167,11 @@ Optionally, if the absolute file name is prefixed with
 argv[0]
 to the executed process, followed by the further arguments specified\&. If the first token is prefixed with
 \-
-an exit code of the command normally considered a failure (i\&.e\&. non\-zero exit status or abormal exit due to signal) is ignored and considered success\&. If both
+an exit code of the command normally considered a failure (i\&.e\&. non\-zero exit status or abnormal exit due to signal) is ignored and considered success\&. If both
 \-
 and
 @
-are used for the same command the former must preceed the latter\&. Unless
+are used for the same command the former must precede the latter\&. Unless
 \fIType=forking\fR
 is set, the process started via this command line will be considered the main process of the daemon\&. The command line accepts % specifiers as described in
 \fBsystemd.unit\fR(5)\&. On top of that basic environment variable substitution is supported, where
@@ -175,7 +184,7 @@ may appear as separate word on the command line in which case the variable is re
 \fIExecStartPre=\fR, \fIExecStartPost=\fR
 .RS 4
 Additional commands that are executed before (resp\&. after) the command in
-\fIExecStart=\fR\&. Multiple command lines may be concatenated in a single directive, by separating them by semicolons (these semicolons must be passed as separate words)\&. In that case, the commands are executed one after the other, serially\&. Alternatively, these directives may be specified more than once whith the same effect\&. However, the latter syntax is not recommended for compatibility with parsers suitable for XDG
+\fIExecStart=\fR\&. Multiple command lines may be concatenated in a single directive, by separating them by semicolons (these semicolons must be passed as separate words)\&. In that case, the commands are executed one after the other, serially\&. Alternatively, these directives may be specified more than once with the same effect\&. However, the latter syntax is not recommended for compatibility with parsers suitable for XDG
 \&.desktop
 files\&. Use of these settings is optional\&. Specifier and environment variable substitution is supported\&.
 .RE
@@ -188,7 +197,7 @@ above\&. Use of this setting is optional\&. Specifier and environment variable s
 \fIExecStart=\fR\&. One special environment variable is set: if known
 $MAINPID
 is set to the main process of the daemon, and may be used for command lines like the following:
-\fB/bin/kill \-HUP $(MAINPID)\fR\&.
+\fB/bin/kill \-HUP $MAINPID\fR\&.
 .RE
 .PP
 \fIExecStop=\fR
@@ -199,7 +208,7 @@ Commands to execute to stop the service started via
 above\&. Use of this setting is optional\&. All processes remaining for a service after the commands configured in this option are run are terminated according to the
 \fIKillMode=\fR
 setting (see below)\&. If this option is not specified the process is terminated right\-away when service stop is requested\&. Specifier and environment variable substitution is supported (including
-$(MAINPID), see above)\&.
+$MAINPID, see above)\&.
 .RE
 .PP
 \fIExecStopPost=\fR
@@ -224,15 +233,21 @@ below\&.) Takes a unit\-less value in seconds, or a time span value such as "5mi
 .PP
 \fIRestart=\fR
 .RS 4
-Configures whether the main service process shall be restarted when it exists\&. Takes one of
+Configures whether the main service process shall be restarted when it exits\&. Takes one of
 \fBno\fR,
-\fBon\-success\fR
+\fBon\-success\fR,
+\fBon\-failure\fR,
+\fBon\-abort\fR
 or
 \fBalways\fR\&. If set to
 \fBno\fR
 (the default) the service will not be restarted when it exits\&. If set to
 \fBon\-success\fR
 it will be restarted only when it exited cleanly, i\&.e\&. terminated with an exit code of 0\&. If set to
+\fBon\-failure\fR
+it will be restarted only when it exited with an exit code not equalling 0, or when terminated by a signal\&. If set to
+\fBon\-abort\fR
+it will be restarted only if it exits due to reception of an uncaught signal\&. If set to
 \fBalways\fR
 the service will be restarted regardless whether it exited cleanly or not, or got terminated abnormally by a signal\&.
 .RE
@@ -296,7 +311,7 @@ only the members of the process group of the main service process are killed\&. 
 only the main process itself is killed\&. If set to
 \fBnone\fR
 no process is killed\&. In this case only the stop command will be executed on service stop, but no process be killed otherwise\&. Processes remaining alive after stop are left in their control group and the control group continues to exist after stop unless it is empty\&. Defaults to
-\fBcontrol\-croup\fR\&.
+\fBcontrol\-group\fR\&.
 .sp
 Processes will first be terminated via SIGTERM\&. If then after a delay (configured via the
 \fITimeoutSec=\fR
@@ -322,11 +337,11 @@ call\&. Takes one of
 or
 \fBall\fR\&. If
 \fBnone\fR
-no daemon status updates are accepted by the service processes, all status update messages are ignored\&. If
+no daemon status updates are accepted from the service processes, all status update messages are ignored\&. If
 \fBmain\fR
 only service updates sent from the main process of the service are accepted\&. If
 \fBall\fR
-all services updates from all members of the service\'s control group are accepted\&. This option must be set to open access to the notification socket when using
+all services updates from all members of the service\*(Aqs control group are accepted\&. This option must be set to open access to the notification socket when using
 \fIType=notify\fR
 (see above)\&.
 .RE
@@ -339,11 +354,25 @@ Note that the same socket may be passed to multiple processes at the same time\&
 \fIService=\fR
 setting of
 \&.socket
-units doesn\'t have to match the inverse of the
+units doesn\*(Aqt have to match the inverse of the
 \fISockets=\fR
 setting of the
 \&.service
 it refers to\&.
+.RE
+.PP
+\fIFsckPassNo=\fR
+.RS 4
+Set the fsck passno priority to use to order this service in relation to other file system checking services\&. This option is only necessary to fix ordering in relation to fsck jobs automatically created for all
+/etc/fstab
+entries with a value in the fs_passno column > 0\&. As such it should only be used as option for fsck services\&. Almost always it is a better choice to add explicit ordering directives via
+\fIAfter=\fR
+or
+\fIBefore=\fR, instead\&. For more details see
+\fBsystemd.unit\fR(5)\&. If used, pass an integer value in the same range as
+/etc/fstab\*(Aqs fs_passno column\&. See
+\fBfstab\fR(5)
+for details\&.
 .RE
 .SH "SEE ALSO"
 .PP

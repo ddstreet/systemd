@@ -90,7 +90,7 @@
         BUS_INTROSPECTABLE_INTERFACE                                    \
         "</node>\n"
 
-const char bus_service_interface[] = BUS_SERVICE_INTERFACE;
+const char bus_service_interface[] _introspect_("Service") = BUS_SERVICE_INTERFACE;
 
 const char bus_service_invalidating_properties[] =
         "ExecStartPre\0"
@@ -140,6 +140,7 @@ DBusHandlerResult bus_service_message_handler(Unit *u, DBusConnection *connectio
                 { "org.freedesktop.systemd1.Service", "SysVRunLevels",          bus_property_append_string, "s", u->service.sysv_runlevels             },
                 { "org.freedesktop.systemd1.Service", "SysVStartPriority",      bus_property_append_int,    "i", &u->service.sysv_start_priority       },
 #endif
+                { "org.freedesktop.systemd1.Service", "FsckPassNo",             bus_property_append_int,    "i", &u->service.fsck_passno               },
                 { NULL, NULL, NULL, NULL, NULL }
         };
 

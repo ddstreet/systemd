@@ -1,13 +1,22 @@
 '\" t
 .\"     Title: systemd.special
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 10/07/2010
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2011
 .\"    Manual: systemd.special
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SPECIAL" "7" "10/07/2010" "systemd" "systemd.special"
+.TH "SYSTEMD\&.SPECIAL" "7" "01/08/2011" "systemd" "systemd.special"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -386,9 +395,9 @@ Mounts that shall be unmounted on system shutdown shall add Conflicts dependenci
 \fIDefaultDependencies=yes\fR
 is set (the default)\&.
 .RE
-.SH "SPECIAL SESSION UNITS"
+.SH "SPECIAL USER UNITS"
 .PP
-When systemd runs as a service instance, the following special units are available, which have similar definitions as their system counterparts:
+When systemd runs as a user instance, the following special units are available, which have similar definitions as their system counterparts:
 default\&.target,
 local\-fs\&.target,
 remote\-fs\&.target,
@@ -400,13 +409,13 @@ In addition the following special unit is understood only when systemd runs as s
 .PP
 exit\&.service
 .RS 4
-A special service unit for shutting down the session\&.
+A special service unit for shutting down the user service manager\&.
 .sp
-Applications wanting to terminate the session should start this unit\&. If systemd receives SIGTERM or SIGINT when running as session daemon it will start this unit\&.
+Applications wanting to terminate the user service manager should start this unit\&. If systemd receives SIGTERM or SIGINT when running as user service daemon it will start this unit\&.
 .sp
 Normally, this pulls in
 shutdown\&.target
-which in turn should be conflicted by all units that want to be shut down on session exit\&.
+which in turn should be conflicted by all units that want to be shut down on user service manager exit\&.
 .RE
 .SH "SEE ALSO"
 .PP
