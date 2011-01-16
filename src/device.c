@@ -188,10 +188,6 @@ static int device_update_unit(Manager *m, struct udev_device *dev, const char *p
         if ((r = device_find_escape_name(m, path, &u)) < 0)
                 return r;
 
-        /* If a different unit already claimed this name then let's do
-         * nothing. This can happen for example when two disks with
-         * the same label are plugged in, and which hence try to get
-         * conflicting symlinks in /dev/disk/by-label/xxxx */
         if (u && DEVICE(u)->sysfs && !path_equal(DEVICE(u)->sysfs, sysfs))
                 return -EEXIST;
 
@@ -405,6 +401,39 @@ static Unit *device_following(Unit *u) {
         return UNIT(first);
 }
 
+static int device_following_set(Unit *u, Set **_s) {
+        Device *d = DEVICE(u);
+        Device *other;
+        Set *s;
+        int r;
+
+        assert(d);
+        assert(_s);
+
+        if (!d->same_sysfs_prev && !d->same_sysfs_next) {
+                *_s = NULL;
+                return 0;
+        }
+
+        if (!(s = set_new(NULL, NULL)))
+                return -ENOMEM;
+
+        for (other = d->same_sysfs_next; other; other = other->same_sysfs_next)
+                if ((r = set_put(s, other)) < 0)
+                        goto fail;
+
+        for (other = d->same_sysfs_prev; other; other = other->same_sysfs_prev)
+                if ((r = set_put(s, other)) < 0)
+                        goto fail;
+
+        *_s = s;
+        return 1;
+
+fail:
+        set_free(s);
+        return r;
+}
+
 static void device_shutdown(Manager *m) {
         assert(m);
 
@@ -438,6 +467,11 @@ static int device_enumerate(Manager *m) {
                         r = -ENOMEM;
                         goto fail;
                 }
+
+                /* This will fail if we are unprivileged, but that
+                 * should not matter much, as user instances won't run
+                 * during boot. */
+                udev_monitor_set_receive_buffer_size(m->udev_monitor, 128*1024*1024);
 
                 if (udev_monitor_filter_add_match_tag(m->udev_monitor, "systemd") < 0) {
                         r = -ENOMEM;
@@ -495,10 +529,21 @@ void device_fd_event(Manager *m, int events) {
         const char *action;
 
         assert(m);
-        assert(events == EPOLLIN);
+
+        if (events != EPOLLIN) {
+                static RATELIMIT_DEFINE(limit, 10*USEC_PER_SEC, 5);
+
+                if (!ratelimit_test(&limit))
+                        log_error("Failed to get udev event: %m");
+                if (!(events & EPOLLIN))
+                        return;
+        }
 
         if (!(dev = udev_monitor_receive_device(m->udev_monitor))) {
-                log_error("Failed to receive device.");
+                /*
+                 * libudev might filter-out devices which pass the bloom filter,
+                 * so getting NULL here is not neccessarily an error
+                 */
                 return;
         }
 
@@ -533,7 +578,6 @@ DEFINE_STRING_TABLE_LOOKUP(device_state, DeviceState);
 const UnitVTable device_vtable = {
         .suffix = ".device",
 
-        .no_requires = true,
         .no_instances = true,
         .no_snapshots = true,
         .no_isolate = true,
@@ -554,6 +598,7 @@ const UnitVTable device_vtable = {
         .bus_invalidating_properties =  bus_device_invalidating_properties,
 
         .following = device_following,
+        .following_set = device_following_set,
 
         .enumerate = device_enumerate,
         .shutdown = device_shutdown

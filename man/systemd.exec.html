@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.exec"><a id="systemd.exec"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.exec — systemd execution environment configuration</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.exec"><a id="systemd.exec"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.exec — systemd execution environment configuration</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
                 <code class="filename">systemd.socket</code>,
-                <code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a id="id499739"/><h2>Description</h2><p>Unit configuration files for services, sockets
+                <code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a id="id508270"/><h2>Description</h2><p>Unit configuration files for services, sockets
                 and mount points share a subset of configuration
                 options which define the execution environment of
                 spawned processes.</p><p>This man page lists the configuration options
@@ -17,7 +17,7 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket] resp. [Mount] section, depending on the unit
-                type.</p></div><div class="refsect1" title="Options"><a id="id499786"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                type.</p></div><div class="refsect1" title="Options"><a id="id508318"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed
                                 processes.</p></dd><dt><span class="term"><code class="varname">RootDirectory=</code></span></dt><dd><p>Takes an absolute
@@ -41,7 +41,7 @@
                                 be specified more than once in which
                                 case all listed groups are set as
                                 supplementary groups. This option does
-                                not override but extend the list of
+                                not override but extends the list of
                                 supplementary groups configured in the
                                 system group database for the
                                 user.</p></dd><dt><span class="term"><code class="varname">Nice=</code></span></dt><dd><p>Sets the default nice
@@ -124,8 +124,13 @@
                                 contain new-line separated variable
                                 assignments. Empty lines and lines
                                 starting with ; or # will be ignored,
-                                which may be used for
-                                commenting.</p></dd><dt><span class="term"><code class="varname">StandardInput=</code></span></dt><dd><p>Controls where file
+                                which may be used for commenting. The
+                                argument passed should be an absolute
+                                file name, optionally prefixed with
+                                "-", which indicates that if the file
+                                does not exist it won't be read and no
+                                error or warning message is
+                                logged.</p></dd><dt><span class="term"><code class="varname">StandardInput=</code></span></dt><dd><p>Controls where file
                                 descriptor 0 (STDIN) of the executed
                                 processes is connected to. Takes one
                                 of <code class="option">null</code>,
@@ -145,10 +150,11 @@
                                 below) and the executed process
                                 becomes the controlling process of the
                                 terminal. If the terminal is already
-                                being controlled by another process it
-                                is waited until that process releases
-                                the
-                                terminal. <code class="option">tty-force</code>
+                                being controlled by another process the
+                                executed process waits until the current
+                                controlling process releases the
+                                terminal.
+                                <code class="option">tty-force</code>
                                 is similar to <code class="option">tty</code>,
                                 but the executed process is forcefully
                                 and immediately made the controlling
@@ -217,7 +223,7 @@
                                 available options are identical to
                                 those of
                                 <code class="varname">StandardOutput=</code>,
-                                whith one exception: if set to
+                                with one exception: if set to
                                 <code class="option">inherit</code> the file
                                 descriptor used for standard output is
                                 duplicated for standard error. This
@@ -310,15 +316,15 @@
                                 <span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(7)</span>.
                                 Defaults to true.</p></dd><dt><span class="term"><code class="varname">TimerSlackNSec=</code></span></dt><dd><p>Sets the timer slack
                                 in nanoseconds for the executed
-                                processes The timer slack controls the
+                                processes. The timer slack controls the
                                 accuracy of wake-ups triggered by
                                 timers. See
                                 <span class="citerefentry"><span class="refentrytitle">prctl</span>(2)</span>
                                 for more information. Note that in
                                 contrast to most other time span
-                                definitions this value is takes a
-                                nano-seconds integer and does not
-                                understand any other
+                                definitions this parameter takes an
+                                integer value in nano-seconds and does
+                                not understand any other
                                 units.</p></dd><dt><span class="term"><code class="varname">LimitCPU=</code>, </span><span class="term"><code class="varname">LimitFSIZE=</code>, </span><span class="term"><code class="varname">LimitDATA=</code>, </span><span class="term"><code class="varname">LimitSTACK=</code>, </span><span class="term"><code class="varname">LimitCORE=</code>, </span><span class="term"><code class="varname">LimitRSS=</code>, </span><span class="term"><code class="varname">LimitNOFILE=</code>, </span><span class="term"><code class="varname">LimitAS=</code>, </span><span class="term"><code class="varname">LimitNPROC=</code>, </span><span class="term"><code class="varname">LimitMEMLOCK=</code>, </span><span class="term"><code class="varname">LimitLOCKS=</code>, </span><span class="term"><code class="varname">LimitSIGPENDING=</code>, </span><span class="term"><code class="varname">LimitMSGQUEUE=</code>, </span><span class="term"><code class="varname">LimitNICE=</code>, </span><span class="term"><code class="varname">LimitRTPRIO=</code>, </span><span class="term"><code class="varname">LimitRTTIME=</code></span></dt><dd><p>These settings control
                                 various resource limits for executed
                                 processes. See
@@ -426,7 +432,7 @@
                                 restricting access with these options
                                 does not extend to submounts of a
                                 directory. You must list submounts
-                                separately in these setttings to
+                                separately in these settings to
                                 ensure the same limited access. These
                                 options may be specified more than
                                 once in which case all directories
@@ -462,7 +468,22 @@
                                 namespace will both receive new mount
                                 points from the main namespace as well
                                 as propagate new mounts to
-                                it.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id509601"/><h2>See Also</h2><p>
+                                it.</p></dd><dt><span class="term"><code class="varname">UtmpIdentifier=</code></span></dt><dd><p>Takes a a four
+                                character identifier string for an
+                                utmp/wtmp entry for this service. This
+                                should only be set for services such
+                                as <span class="command"><strong>getty</strong></span>
+                                implementations where utmp/wtmp
+                                entries must be created and cleared
+                                before and after execution. If the
+                                configured string is longer than four
+                                characters it is truncated and the
+                                terminal four characters are
+                                used. This setting interprets %I style
+                                string replacements. This setting is
+                                unset by default, i.e. no utmp/wtmp
+                                entries are created or cleaned up for
+                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id518092"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
