@@ -51,16 +51,16 @@ static const char * const variable_names[_VARIABLE_MAX] = {
         [VARIABLE_LANG] = "LANG",
         [VARIABLE_LC_CTYPE] = "LC_CTYPE",
         [VARIABLE_LC_NUMERIC] = "LC_NUMERIC",
-        [VARIABLE_LC_TIME] = "TIME",
-        [VARIABLE_LC_COLLATE] = "COLLATE",
-        [VARIABLE_LC_MONETARY] = "MONETARY",
-        [VARIABLE_LC_MESSAGES] = "MESSAGE",
-        [VARIABLE_LC_PAPER] = "PAPER",
-        [VARIABLE_LC_NAME] = "NAME",
-        [VARIABLE_LC_ADDRESS] = "ADDRESS",
-        [VARIABLE_LC_TELEPHONE] = "TELEPHONE",
-        [VARIABLE_LC_MEASUREMENT] = "MEASUREMENT",
-        [VARIABLE_LC_IDENTIFICATION] = "IDENTIFICATION"
+        [VARIABLE_LC_TIME] = "LC_TIME",
+        [VARIABLE_LC_COLLATE] = "LC_COLLATE",
+        [VARIABLE_LC_MONETARY] = "LC_MONETARY",
+        [VARIABLE_LC_MESSAGES] = "LC_MESSAGE",
+        [VARIABLE_LC_PAPER] = "LC_PAPER",
+        [VARIABLE_LC_NAME] = "LC_NAME",
+        [VARIABLE_LC_ADDRESS] = "LC_ADDRESS",
+        [VARIABLE_LC_TELEPHONE] = "LC_TELEPHONE",
+        [VARIABLE_LC_MEASUREMENT] = "LC_MEASUREMENT",
+        [VARIABLE_LC_IDENTIFICATION] = "LC_IDENTIFICATION"
 };
 
 int locale_setup(void) {
@@ -135,7 +135,7 @@ int locale_setup(void) {
                         log_warning("Failed to read /etc/sysconfig/language: %s", strerror(-r));
         }
 
-#elif defined(TARGET_DEBIAN)
+#elif defined(TARGET_DEBIAN) || defined(TARGET_UBUNTU)
         if (r <= 0 &&
             (r = parse_env_file("/etc/default/locale", NEWLINE,
                                 "LANG", &variables[VARIABLE_LANG],

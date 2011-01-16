@@ -1,13 +1,22 @@
 '\" t
 .\"     Title: sd-daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 10/07/2010
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2011
 .\"    Manual: sd-daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD\-DAEMON" "7" "10/07/2010" "systemd" "sd-daemon"
+.TH "SD\-DAEMON" "7" "01/08/2011" "systemd" "sd-daemon"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -70,7 +79,7 @@ these prefixes can be used to encode a log level in lines printed\&. This is sim
 for more information\&.
 .PP
 The log levels are identical to
-\fBsyslog\fR(3)\'s log level system\&. To use these prefixes simply prefix every line with one of these strings\&. A line that is not prefixed will be logged at the default log level SD_INFO\&.
+\fBsyslog\fR(3)\*(Aqs log level system\&. To use these prefixes simply prefix every line with one of these strings\&. A line that is not prefixed will be logged at the default log level SD_INFO\&.
 .PP
 \fBExample\ \&1.\ \&Hello World\fR
 .PP
@@ -94,7 +103,7 @@ In addition, for details about the algorithms check the liberally licensed refer
 resp\&.
 \m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.h\fR\m[]
 .PP
-These APIs are implemented in the reference implementation\'s drop\-in
+These APIs are implemented in the reference implementation\*(Aqs drop\-in
 sd\-daemon\&.c
 and
 sd\-daemon\&.h
