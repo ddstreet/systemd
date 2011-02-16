@@ -2,22 +2,25 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.exec"><a id="systemd.exec"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.exec — systemd execution environment configuration</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
                 <code class="filename">systemd.socket</code>,
-                <code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a id="id508270"/><h2>Description</h2><p>Unit configuration files for services, sockets
-                and mount points share a subset of configuration
-                options which define the execution environment of
-                spawned processes.</p><p>This man page lists the configuration options
+                <code class="filename">systemd.mount</code>,
+                <code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id564358"/><h2>Description</h2><p>Unit configuration files for services, sockets
+                mount points and swap devices share a subset of
+                configuration options which define the execution
+                environment of spawned processes.</p><p>This man page lists the configuration options
                 shared by these three unit types. See
                 <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
                 for the common options of all unit configuration
                 files, and
-                <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>, <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>
+                <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>,
+                <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>,
+                <span class="citerefentry"><span class="refentrytitle">systemd.swap</span>(5)</span>
                 and
                 <span class="citerefentry"><span class="refentrytitle">systemd.mount</span>(5)</span>
                 for more information on the specific unit
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
-                [Socket] resp. [Mount] section, depending on the unit
-                type.</p></div><div class="refsect1" title="Options"><a id="id508318"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                [Socket], [Mount] resp. [Swap] section, depending on the unit
+                type.</p></div><div class="refsect1" title="Options"><a id="id564412"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed
                                 processes.</p></dd><dt><span class="term"><code class="varname">RootDirectory=</code></span></dt><dd><p>Takes an absolute
@@ -483,11 +486,12 @@
                                 string replacements. This setting is
                                 unset by default, i.e. no utmp/wtmp
                                 entries are created or cleaned up for
-                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id518092"/><h2>See Also</h2><p>
+                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id574256"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.swap</span>(5)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.mount</span>(5)</span>
                   </p></div></div></body></html>

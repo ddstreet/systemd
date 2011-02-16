@@ -2,12 +2,12 @@
 .\"     Title: systemd.exec
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/08/2011
+.\"      Date: 01/22/2011
 .\"    Manual: systemd.exec
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.EXEC" "5" "01/08/2011" "systemd" "systemd.exec"
+.TH "SYSTEMD\&.EXEC" "5" "01/22/2011" "systemd" "systemd.exec"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -33,19 +33,21 @@ systemd.exec \- systemd execution environment configuration
 .PP
 systemd\&.service,
 systemd\&.socket,
-systemd\&.mount
+systemd\&.mount,
+systemd\&.swap
 .SH "DESCRIPTION"
 .PP
-Unit configuration files for services, sockets and mount points share a subset of configuration options which define the execution environment of spawned processes\&.
+Unit configuration files for services, sockets mount points and swap devices share a subset of configuration options which define the execution environment of spawned processes\&.
 .PP
 This man page lists the configuration options shared by these three unit types\&. See
 \fBsystemd.unit\fR(5)
 for the common options of all unit configuration files, and
 \fBsystemd.service\fR(5),
-\fBsystemd.socket\fR(5)
+\fBsystemd.socket\fR(5),
+\fBsystemd.swap\fR(5)
 and
 \fBsystemd.mount\fR(5)
-for more information on the specific unit configuration files\&. The execution specific configuration options are configured in the [Service], [Socket] resp\&. [Mount] section, depending on the unit type\&.
+for more information on the specific unit configuration files\&. The execution specific configuration options are configured in the [Service], [Socket], [Mount] resp\&. [Swap] section, depending on the unit type\&.
 .SH "OPTIONS"
 .PP
 \fIWorkingDirectory=\fR
@@ -442,6 +444,7 @@ implementations where utmp/wtmp entries must be created and cleared before and a
 \fBsystemd.unit\fR(5),
 \fBsystemd.service\fR(5),
 \fBsystemd.socket\fR(5),
+\fBsystemd.swap\fR(5),
 \fBsystemd.mount\fR(5)
 .SH "AUTHOR"
 .PP

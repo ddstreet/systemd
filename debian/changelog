@@ -1,3 +1,20 @@
+systemd (17-1) experimental; urgency=low
+
+  [ Tollef Fog Heen ]
+  * New upstream release
+  * Clarify ifupdown instructions in README.Debian somewhat.
+    Closes: #613320
+  * Silently skip masked services in lsb-base-logging.sh instead of
+    failing.  Initial implementation by Michael Biebl.  Closes: #612551
+  * Disable systemd-vconsole-setup.service for now.
+
+  [ Michael Biebl ]
+  * Bump build dependency on valac-0.10 to (>= 0.10.3).
+  * Improve regex in lsb-base-logging.sh for X-Interactive scripts.
+    Closes: #613325
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Wed, 16 Feb 2011 21:06:16 +0100
+
 systemd (16-1) experimental; urgency=low
 
   [ Tollef Fog Heen ]

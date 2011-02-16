@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sd_readahead</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sd_readahead"><a id="sd_notify"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sd_readahead — Control ongoing disk boot-time read-ahead operations</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-daemon.h"</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_readahead</strong>(</code></td><td>const char *<var class="pdparam">action</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a id="id575623"/><h2>Description</h2><p><code class="function">sd_readahead()</code> may be
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sd_readahead</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sd_readahead"><a id="sd_notify"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sd_readahead — Control ongoing disk boot-time read-ahead operations</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-daemon.h"</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_readahead</strong>(</code></td><td>const char *<var class="pdparam">action</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a id="id374339"/><h2>Description</h2><p><code class="function">sd_readahead()</code> may be
                 called by programs involved with early boot-up to
                 control ongoing boot-time disk read-ahead operations. It may be
                 used to terminate read-ahead operations in case an
@@ -16,9 +16,9 @@
                                 read-ahead data collected during this
                                 boot-up around for use during
                                 subsequent boot-ups.</p></dd><dt><span class="term">noreplay</span></dt><dd><p>Terminates read-ahead
-                                replay.</p></dd></dl></div></div><div class="refsect1" title="Return Value"><a id="id575691"/><h2>Return Value</h2><p>On failure, these calls return a negative
+                                replay.</p></dd></dl></div></div><div class="refsect1" title="Return Value"><a id="id374407"/><h2>Return Value</h2><p>On failure, these calls return a negative
                 errno-style error code. It is generally recommended to
-                ignore the return value of this call.</p></div><div class="refsect1" title="Notes"><a id="id575703"/><h2>Notes</h2><p>This function is provided by the reference
+                ignore the return value of this call.</p></div><div class="refsect1" title="Notes"><a id="id374418"/><h2>Notes</h2><p>This function is provided by the reference
                 implementation of APIs for controlling boot-time
                 read-ahead and distributed with the systemd
                 package. The algorithm it implements is simple, and
@@ -39,13 +39,13 @@
                 details about the reference implementation see
                 <span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(7)</span></p><p>If -DDISABLE_SYSTEMD is set during compilation
                 this function will always return 0 and otherwise
-                become a NOP.</p></div><div class="refsect1" title="Examples"><a id="id543126"/><h2>Examples</h2><div class="example"><a id="id543132"/><p class="title"><strong>Example 1. Cancelling all read-ahead operations</strong></p><div class="example-contents"><p>During boots where SELinux has to
+                become a NOP.</p></div><div class="refsect1" title="Examples"><a id="id341842"/><h2>Examples</h2><div class="example"><a id="id341848"/><p class="title"><strong>Example 1. Cancelling all read-ahead operations</strong></p><div class="example-contents"><p>During boots where SELinux has to
                         relabel the file system hierarchy, it will
                         create a large amount of disk accesses that
                         are not necessary during normal boots. Hence
                         it is a good idea to disable both read-ahead replay and read-ahead collection.
                         </p><pre class="programlisting">sd_readahead("cancel");
-sd_readahead("noreplay");</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id543152"/><h2>See Also</h2><p>
+sd_readahead("noreplay");</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id341867"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(7)</span>,
                         <span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span>

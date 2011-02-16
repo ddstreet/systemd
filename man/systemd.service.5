@@ -2,12 +2,12 @@
 .\"     Title: systemd.service
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/08/2011
+.\"      Date: 01/22/2011
 .\"    Manual: systemd.service
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SERVICE" "5" "01/08/2011" "systemd" "systemd.service"
+.TH "SYSTEMD\&.SERVICE" "5" "01/22/2011" "systemd" "systemd.service"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -313,11 +313,24 @@ only the main process itself is killed\&. If set to
 no process is killed\&. In this case only the stop command will be executed on service stop, but no process be killed otherwise\&. Processes remaining alive after stop are left in their control group and the control group continues to exist after stop unless it is empty\&. Defaults to
 \fBcontrol\-group\fR\&.
 .sp
-Processes will first be terminated via SIGTERM\&. If then after a delay (configured via the
+Processes will first be terminated via SIGTERM (unless the signal to send is changed via
+\fIKillSignal=\fR)\&. If then after a delay (configured via the
 \fITimeoutSec=\fR
-option) processes still remain, the termination request is repeated with the SIGKILL signal\&. See
+option) processes still remain, the termination request is repeated with the SIGKILL signal (unless this is disabled via the
+\fISendSIGKILL=\fR
+option)\&. See
 \fBkill\fR(2)
 for more information\&.
+.RE
+.PP
+\fIKillSignal=\fR
+.RS 4
+Specifies which signal to use when killing a service\&. Defaults to SIGTERM\&.
+.RE
+.PP
+\fISendSIGKILL=\fR
+.RS 4
+Specifies whether to send SIGKILL to remaining processes after a timeout, if the normal shutdown procedure left processes of the service around\&. Takes a boolean value\&. Defaults to "yes"\&.
 .RE
 .PP
 \fINonBlocking=\fR
