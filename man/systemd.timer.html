@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.timer</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.timer"><a id="systemd.timer"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.timer — systemd timer configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.timer</code></p></div><div class="refsect1" title="Description"><a id="id356059"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.timer</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.timer"><a id="systemd.timer"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.timer — systemd timer configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.timer</code></p></div><div class="refsect1" title="Description"><a id="id390295"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.timer</code> encodes information about
                 a timer controlled and supervised by systemd, for
                 timer-based activation.</p><p>This man page lists the configuration options
@@ -26,7 +26,7 @@
                 that timer units are stopped cleanly prior to system
                 shutdown. Only timer units involved with early boot or
                 late system shutdown should disable this
-                option.</p></div><div class="refsect1" title="Options"><a id="id356136"/><h2>Options</h2><p>Timer files must include a [Timer] section,
+                option.</p></div><div class="refsect1" title="Options"><a id="id390372"/><h2>Options</h2><p>Timer files must include a [Timer] section,
                 which carries information about the timer it
                 defines. The options specific to the [Timer] section
                 of timer units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">OnActiveSec=</code>, </span><span class="term"><code class="varname">OnBootSec=</code>, </span><span class="term"><code class="varname">OnStartupSec=</code>, </span><span class="term"><code class="varname">OnUnitActiveSec=</code>, </span><span class="term"><code class="varname">OnUnitInactiveSec=</code></span></dt><dd><p>Defines timers
@@ -81,7 +81,7 @@
                                 that the unit name that is activated
                                 and the unit name of the timer unit
                                 are named identically, except for the
-                                suffix.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id323634"/><h2>See Also</h2><p>
+                                suffix.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id357870"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

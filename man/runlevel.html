@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>runlevel</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="runlevel"><a id="runlevel"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>runlevel — Print previous and current SysV runlevel</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">runlevel [options...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id362791"/><h2>Description</h2><p><span class="command"><strong>runlevel</strong></span> prints the previous
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>runlevel</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="runlevel"><a id="runlevel"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>runlevel — Print previous and current SysV runlevel</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">runlevel [options...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id527655"/><h2>Description</h2><p><span class="command"><strong>runlevel</strong></span> prints the previous
                 and current SysV runlevel if they are known.</p><p>The two runlevel characters are separated by a
                 single space character. If a runlevel cannot be
                 determined, N is printed instead. If neither can be
                 determined, the word "unknown" is printed.</p><p>Unless overridden in the environment, this will
                 check the utmp database for recent runlevel
-                changes.</p></div><div class="refsect1" title="Options"><a id="id362816"/><h2>Options</h2><p>The following option is understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
-                                text and exits.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id362841"/><h2>Exit status</h2><p>If one or both runlevels could be determined, 0
-                is returned, a non-zero failure code otherwise.</p></div><div class="refsect1" title="Environment"><a id="id362852"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$RUNLEVEL</code></span></dt><dd><p>If
+                changes.</p></div><div class="refsect1" title="Options"><a id="id527680"/><h2>Options</h2><p>The following option is understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id527705"/><h2>Exit status</h2><p>If one or both runlevels could be determined, 0
+                is returned, a non-zero failure code otherwise.</p></div><div class="refsect1" title="Environment"><a id="id527716"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$RUNLEVEL</code></span></dt><dd><p>If
                                 <code class="varname">$RUNLEVEL</code> is set,
                                 <span class="command"><strong>runlevel</strong></span> will print
                                 this value as current runlevel and
@@ -16,12 +16,12 @@
                                 <code class="varname">$PREVLEVEL</code> is set
                                 <span class="command"><strong>runlevel</strong></span> will print
                                 this value as previous runlevel and
-                                ignore utmp.</p></dd></dl></div></div><div class="refsect1" title="Files"><a id="id362908"/><h2>Files</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">/var/run/utmp</code></span></dt><dd><p>The utmp database
+                                ignore utmp.</p></dd></dl></div></div><div class="refsect1" title="Files"><a id="id527772"/><h2>Files</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">/var/run/utmp</code></span></dt><dd><p>The utmp database
                                 <span class="command"><strong>runlevel</strong></span> reads the
                                 previous and current runlevel
-                                from.</p></dd></dl></div></div><div class="refsect1" title="Notes"><a id="id330291"/><h2>Notes</h2><p>This is a legacy command available for compatibility
+                                from.</p></dd></dl></div></div><div class="refsect1" title="Notes"><a id="id495155"/><h2>Notes</h2><p>This is a legacy command available for compatibility
                 only. It should not be used anymore, as the concept of
-                runlevels is obsolete.</p></div><div class="refsect1" title="See Also"><a id="id330303"/><h2>See Also</h2><p>
+                runlevels is obsolete.</p></div><div class="refsect1" title="See Also"><a id="id495167"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>
                 </p></div></div></body></html>

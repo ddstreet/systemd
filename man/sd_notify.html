@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sd_notify</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sd_notify"><a id="sd_notify"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sd_notify, sd_notifyf — Notify init system about start-up completion and other daemon status changes</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-daemon.h"</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_notify</strong>(</code></td><td>int <var class="pdparam">unset_environment</var>, </td></tr><tr><td> </td><td>const char *<var class="pdparam">state</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_notifyf</strong>(</code></td><td>int <var class="pdparam">unset_environment</var>, </td></tr><tr><td> </td><td>const char *<var class="pdparam">format</var>, </td></tr><tr><td> </td><td>...<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a id="id455891"/><h2>Description</h2><p><code class="function">sd_notify()</code> shall be called
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sd_notify</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sd_notify"><a id="sd_notify"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sd_notify, sd_notifyf — Notify init system about start-up completion and other daemon status changes</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-daemon.h"</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_notify</strong>(</code></td><td>int <var class="pdparam">unset_environment</var>, </td></tr><tr><td> </td><td>const char *<var class="pdparam">state</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_notifyf</strong>(</code></td><td>int <var class="pdparam">unset_environment</var>, </td></tr><tr><td> </td><td>const char *<var class="pdparam">format</var>, </td></tr><tr><td> </td><td>...<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a id="id329734"/><h2>Description</h2><p><code class="function">sd_notify()</code> shall be called
                 by a daemon to notify the init system about status
                 changes. It can be used to send arbitrary information,
                 encoded in an environment-block-like string. Most
@@ -57,7 +57,7 @@
                 for details.</p><p><code class="function">sd_notifyf()</code> is similar to
                 <code class="function">sd_notifyf()</code> but takes a
                 <code class="function">printf()</code>-like format string plus
-                arguments.</p></div><div class="refsect1" title="Return Value"><a id="id423422"/><h2>Return Value</h2><p>On failure, these calls return a negative
+                arguments.</p></div><div class="refsect1" title="Return Value"><a id="id297265"/><h2>Return Value</h2><p>On failure, these calls return a negative
                 errno-style error code. If
                 <code class="varname">$NOTIFY_SOCKET</code> was not set and
                 hence no status data could be sent, 0 is returned. If
@@ -65,7 +65,7 @@
                 positive return value. In order to support both, init
                 systems that implement this scheme and those which
                 don't, it is generally recommended to ignore the return
-                value of this call.</p></div><div class="refsect1" title="Notes"><a id="id423440"/><h2>Notes</h2><p>These functions are provided by the reference
+                value of this call.</p></div><div class="refsect1" title="Notes"><a id="id297283"/><h2>Notes</h2><p>These functions are provided by the reference
                 implementation of APIs for new-style daemons and
                 distributed with the systemd package. The algorithms
                 they implement are simple, and can easily be
@@ -92,22 +92,22 @@
                 more details about the reference implementation see
                 <span class="citerefentry"><span class="refentrytitle">sd_daemon</span>(7)</span></p><p>If -DDISABLE_SYSTEMD is set during compilation
                 this function will always return 0 and otherwise
-                become a NOP.</p></div><div class="refsect1" title="Environment"><a id="id423592"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$NOTIFY_SOCKET</code></span></dt><dd><p>Set by the init system
+                become a NOP.</p></div><div class="refsect1" title="Environment"><a id="id297435"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$NOTIFY_SOCKET</code></span></dt><dd><p>Set by the init system
                                 for supervised processes for status
                                 and start-up completion
                                 notification. This environment variable
                                 specifies the socket
                                 <code class="function">sd_notify()</code> talks
-                                to. See above for details.</p></dd></dl></div></div><div class="refsect1" title="Examples"><a id="id423622"/><h2>Examples</h2><div class="example"><a id="id423628"/><p class="title"><strong>Example 1. Start-up Notification</strong></p><div class="example-contents"><p>When a daemon finished starting up, it
+                                to. See above for details.</p></dd></dl></div></div><div class="refsect1" title="Examples"><a id="id297465"/><h2>Examples</h2><div class="example"><a id="id297471"/><p class="title"><strong>Example 1. Start-up Notification</strong></p><div class="example-contents"><p>When a daemon finished starting up, it
                         might issue the following call to notify
-                        the init system:</p><pre class="programlisting">sd_notify(0, "READY=1");</pre></div></div><br class="example-break"/><div class="example"><a id="id423645"/><p class="title"><strong>Example 2. Extended Start-up Notification</strong></p><div class="example-contents"><p>A daemon could send the following after
+                        the init system:</p><pre class="programlisting">sd_notify(0, "READY=1");</pre></div></div><br class="example-break"/><div class="example"><a id="id297488"/><p class="title"><strong>Example 2. Extended Start-up Notification</strong></p><div class="example-contents"><p>A daemon could send the following after
                         completing initialization:</p><pre class="programlisting">sd_notifyf(0, "READY=1\n"
               "STATUS=Processing requests...\n"
               "MAINPID=%lu",
-              (unsigned long) getpid());</pre></div></div><br class="example-break"/><div class="example"><a id="id423662"/><p class="title"><strong>Example 3. Error Cause Notification</strong></p><div class="example-contents"><p>A daemon could send the following shortly before exiting, on failure</p><pre class="programlisting">sd_notifyf(0, "STATUS=Failed to start up: %s\n"
+              (unsigned long) getpid());</pre></div></div><br class="example-break"/><div class="example"><a id="id297506"/><p class="title"><strong>Example 3. Error Cause Notification</strong></p><div class="example-contents"><p>A daemon could send the following shortly before exiting, on failure</p><pre class="programlisting">sd_notifyf(0, "STATUS=Failed to start up: %s\n"
               "ERRNO=%i",
               strerror(errno),
-              errno);</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id423680"/><h2>See Also</h2><p>
+              errno);</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id297523"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">sd_daemon</span>(7)</span>,
                         <span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span>,

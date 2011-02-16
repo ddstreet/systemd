@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.socket</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.socket"><a id="systemd.socket"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.socket — systemd socket configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.socket</code></p></div><div class="refsect1" title="Description"><a id="id423779"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.socket</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.socket"><a id="systemd.socket"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.socket — systemd socket configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.socket</code></p></div><div class="refsect1" title="Description"><a id="id421322"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.socket</code> encodes information about
                 an IPC or network socket or a file system FIFO
                 controlled and supervised by systemd, for socket-based
@@ -48,7 +48,7 @@
                 boot or late system shutdown should disable this
                 option.</p><p>Socket units may be used to implement on-demand
                 starting of services, as well as parallelized starting
-                of services.</p></div><div class="refsect1" title="Options"><a id="id391276"/><h2>Options</h2><p>Socket files must include a [Socket] section,
+                of services.</p></div><div class="refsect1" title="Options"><a id="id388818"/><h2>Options</h2><p>Socket files must include a [Socket] section,
                 which carries information about the socket or FIFO it
                 supervises. A number of options that may be used in
                 this section are shared with other unit types. These
@@ -311,13 +311,22 @@
                                 to the <code class="option">KillMode=</code>
                                 option of service files. See
                                 <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>
-                                for details.</p></dd><dt><span class="term"><code class="varname">Service=</code></span></dt><dd><p>Specifies the service
+                                for details.</p></dd><dt><span class="term"><code class="varname">KillSignal=</code></span></dt><dd><p>Specifies which signal
+                                to use when killing a process of this
+                                socket. Defaults to SIGTERM.
+                                </p></dd><dt><span class="term"><code class="varname">SendSIGKILL=</code></span></dt><dd><p>Specifies whether to
+                                send SIGKILL to remaining processes
+                                after a timeout, if the normal
+                                shutdown procedure left processes of
+                                the socket around. Takes a boolean
+                                value. Defaults to "yes".
+                                </p></dd><dt><span class="term"><code class="varname">Service=</code></span></dt><dd><p>Specifies the service
                                 unit name to activate on incoming
                                 traffic. This defaults to the service
                                 that bears the same name as the socket
                                 (ignoring the different suffixes). In
                                 most cases it should not be necessary
-                                to use this option.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id433117"/><h2>See Also</h2><p>
+                                to use this option.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id430688"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
