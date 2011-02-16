@@ -55,10 +55,10 @@ diff --git a/units/serial-getty@.service.m4 b/units/serial-getty@.service.m4
 index b6ca80b..485a57f 100644
 --- a/units/serial-getty@.service.m4
 +++ b/units/serial-getty@.service.m4
-@@ -26,7 +26,7 @@ Environment=TERM=vt100-nav
- m4_ifdef(`TARGET_FEDORA',
- ExecStartPre=-/sbin/securetty %I
- )m4_dnl
+@@ -23,7 +23,7 @@ Environment=TERM=vt100-nav
+ 
+ [Service]
+ Environment=TERM=vt100
 -ExecStart=-/sbin/agetty -s %I 115200,38400,9600
 +ExecStart=-/sbin/agetty %I 115200,38400,9600
  Restart=always

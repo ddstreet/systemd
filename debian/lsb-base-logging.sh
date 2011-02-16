@@ -21,7 +21,7 @@ if [ -e /sys/fs/cgroup/systemd ] ; then
         case "$0" in
             /etc/init.d/*)
 		# Don't redirect if the init script has X-Interactive: true
-		if ! grep -qs "X-Interactive: true" "$0"; then
+		if ! grep -qs "^# X-Interactive:.*true" "$0"; then
 		    _use_systemctl=1
 		fi
 		;;
@@ -55,6 +55,13 @@ systemctl_redirect () {
 	esac
 
 	service="${prog%.sh}.service"
+
+	# Don't try to run masked services. Don't check for errors, if
+	# this errors, we'll just call systemctl and possibly explode
+	# there.
+	state=$(systemctl -p LoadState show $service 2>/dev/null)
+	[ "$state" = "LoadState=masked" ] && return 0
+
 	[ "$command" = status ] || log_daemon_msg "$s" "$service"
 	/bin/systemctl $command "$service"
 	rc=$?
