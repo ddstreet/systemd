@@ -38,9 +38,9 @@
 #include "sd-daemon.h"
 #include "tcpwrap.h"
 
-#define STREAMS_MAX 256
+#define STREAMS_MAX 4096
 #define SERVER_FD_MAX 16
-#define TIMEOUT ((int) (10*MSEC_PER_SEC))
+#define TIMEOUT ((int) (5*60*MSEC_PER_SEC))
 
 typedef struct Stream Stream;
 
@@ -84,7 +84,8 @@ struct Stream {
         uid_t uid;
         gid_t gid;
 
-        bool prefix;
+        bool prefix:1;
+        bool tee_console:1;
 
         char buffer[LINE_MAX];
         size_t length;
@@ -228,6 +229,20 @@ static int stream_log(Stream *s, char *p, usec_t ts) {
         } else
                 assert_not_reached("Unknown log target");
 
+        if (s->tee_console) {
+                int console;
+
+                if ((console = open_terminal("/dev/console", O_WRONLY|O_NOCTTY|O_CLOEXEC)) >= 0) {
+                        IOVEC_SET_STRING(iovec[0], s->process);
+                        IOVEC_SET_STRING(iovec[1], header_pid);
+                        IOVEC_SET_STRING(iovec[2], p);
+                        IOVEC_SET_STRING(iovec[3], (char*) "\n");
+
+                        writev(console, iovec, 4);
+                }
+
+        }
+
         return 0;
 }
 
@@ -242,9 +257,9 @@ static int stream_line(Stream *s, char *p, usec_t ts) {
         switch (s->state) {
 
         case STREAM_TARGET:
-                if (streq(p, "syslog"))
+                if (streq(p, "syslog") || streq(p, "syslog+console"))
                         s->target = STREAM_SYSLOG;
-                else if (streq(p, "kmsg")) {
+                else if (streq(p, "kmsg") || streq(p, "kmsg+console")) {
 
                         if (s->server->kmsg_fd >= 0 && s->uid == 0)
                                 s->target = STREAM_KMSG;
@@ -256,6 +271,10 @@ static int stream_line(Stream *s, char *p, usec_t ts) {
                         log_warning("Failed to parse log target line.");
                         return -EBADMSG;
                 }
+
+                if (endswith(p, "+console"))
+                        s->tee_console = true;
+
                 s->state = STREAM_PRIORITY;
                 return 0;
 
@@ -501,7 +520,7 @@ static int server_init(Server *s, unsigned n_sockets) {
 
                 /* We use ev.data.ptr instead of ev.data.fd here,
                  * since on 64bit archs fd is 32bit while a pointer is
-                 * 64bit. To make sure we can easily distuingish fd
+                 * 64bit. To make sure we can easily distinguish fd
                  * values and pointer values we want to make sure to
                  * write the full field unconditionally. */
 

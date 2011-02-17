@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>telinit</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="telinit"><a id="telinit"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>telinit — Change SysV runlevel</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">telinit [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a id="id334230"/><h2>Description</h2><p><span class="command"><strong>telinit</strong></span> may be used to change
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>telinit</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="telinit"><a id="telinit"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>telinit — Change SysV runlevel</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">telinit [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a id="id459349"/><h2>Description</h2><p><span class="command"><strong>telinit</strong></span> may be used to change
                 the SysV system runlevel. Since the concept of SysV
                 runlevels is obsolete the runlevel requests
                 will be transparently translated into systemd unit
-                activation requests.</p></div><div class="refsect1" title="Options"><a id="id334246"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                activation requests.</p></div><div class="refsect1" title="Options"><a id="id459366"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--no-wall</code></span></dt><dd><p>Don't send wall
                                 message before
                                 reboot/halt/power-off.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl><dt><span class="term"><span class="command"><strong>0</strong></span></span></dt><dd><p>Power-off the
@@ -40,10 +40,10 @@
                                 reexecute daemon and deserialize state
                                 again. This is equivalent to
                                 <span class="command"><strong>systemctl
-                                daemon-reexec</strong></span>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id301931"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="Notes"><a id="id301940"/><h2>Notes</h2><p>This is a legacy command available for compatibility
+                                daemon-reexec</strong></span>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id427050"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="Notes"><a id="id427060"/><h2>Notes</h2><p>This is a legacy command available for compatibility
                 only. It should not be used anymore, as the concept of
-                runlevels is obsolete.</p></div><div class="refsect1" title="See Also"><a id="id301952"/><h2>See Also</h2><p>
+                runlevels is obsolete.</p></div><div class="refsect1" title="See Also"><a id="id427071"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span>

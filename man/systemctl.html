@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id528661"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id485947"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
                 introspect and control the state of the
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
-                system and service manager.</p></div><div class="refsect1" title="Options"><a id="id528683"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+                system and service manager.</p></div><div class="refsect1" title="Options"><a id="id485969"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">--type=</code>, </span><span class="term"><code class="option">-t</code></span></dt><dd><p>When listing units,
                                 limit display to certain unit
@@ -27,7 +27,10 @@
                                 state, including inactive units. When
                                 showing unit/job/manager information,
                                 show all properties regardless whether
-                                they are set or not.</p></dd><dt><span class="term"><code class="option">--full</code></span></dt><dd><p>Do not ellipsize unit
+                                they are set or not.</p></dd><dt><span class="term"><code class="option">--failed</code></span></dt><dd><p>When listing units,
+                                show only failed units. Do not confuse
+                                with
+                                <code class="option">--fail</code>.</p></dd><dt><span class="term"><code class="option">--full</code></span></dt><dd><p>Do not ellipsize unit
                                 names and truncate unit descriptions
                                 in the output of
                                 <span class="command"><strong>list-units</strong></span> and
@@ -36,7 +39,18 @@
                                 unfinished job, fail the command. If
                                 this is not specified the requested
                                 operation will replace the pending job,
-                                if necessary.</p></dd><dt><span class="term"><code class="option">--quiet</code>, </span><span class="term"><code class="option">-q</code></span></dt><dd><p>Suppress output to
+                                if necessary. Do not confuse
+                                with
+                                <code class="option">--failed</code>.</p></dd><dt><span class="term"><code class="option">--ignore-dependencies</code></span></dt><dd><p>When enqueuing a new
+                                job ignore all its dependencies and
+                                execute it immediately. If passed no
+                                required units of the unit passed will
+                                be pulled in, and no ordering
+                                dependencies will be honoured. This is
+                                mostly a debugging and rescue tool for
+                                the administrator and should not be
+                                used by
+                                applications.</p></dd><dt><span class="term"><code class="option">--quiet</code>, </span><span class="term"><code class="option">-q</code></span></dt><dd><p>Suppress output to
                                 STDOUT in
                                 <span class="command"><strong>snapshot</strong></span>,
                                 <span class="command"><strong>is-active</strong></span>,
@@ -523,8 +537,8 @@
                                 supported for user service managers
                                 (i.e. in conjunction with the
                                 <code class="option">--user</code> option) and
-                                will fail otherwise.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id538841"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id538851"/><h2>See Also</h2><p>
+                                will fail otherwise.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id496215"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id496225"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
