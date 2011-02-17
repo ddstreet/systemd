@@ -1,0 +1,24 @@
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+
+[Unit]
+Description=Show Plymouth Boot Screen
+DefaultDependencies=no
+Wants=systemd-ask-password-plymouth.path
+After=systemd-vconsole-setup.service udev-settle.service
+Before=systemd-ask-password-plymouth.service
+
+# Dracut informs us with this flag file if plymouth is already running
+ConditionPathExists=!/dev/.systemd/plymouth
+
+[Service]
+ExecStart=/sbin/plymouthd --mode=boot
+ExecStartPost=-/bin/plymouth --show-splash
+Type=forking
+
+# Send SIGRTMIN+20 to systemd, i.e. enable status messages
+ExecStartPost=-/usr/bin/kill -54 1

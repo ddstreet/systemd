@@ -2,12 +2,12 @@
 .\"     Title: systemctl
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: systemctl
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMCTL" "1" "01/22/2011" "systemd" "systemctl"
+.TH "SYSTEMCTL" "1" "03/01/2011" "systemd" "systemctl"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -71,6 +71,12 @@ MainPID\&. If specified more than once all properties with the specified names a
 When listing units, show all units, regardless of their state, including inactive units\&. When showing unit/job/manager information, show all properties regardless whether they are set or not\&.
 .RE
 .PP
+\fB\-\-failed\fR
+.RS 4
+When listing units, show only failed units\&. Do not confuse with
+\fB\-\-fail\fR\&.
+.RE
+.PP
 \fB\-\-full\fR
 .RS 4
 Do not ellipsize unit names and truncate unit descriptions in the output of
@@ -81,7 +87,13 @@ and
 .PP
 \fB\-\-fail\fR
 .RS 4
-If the requested operation conflicts with a pending unfinished job, fail the command\&. If this is not specified the requested operation will replace the pending job, if necessary\&.
+If the requested operation conflicts with a pending unfinished job, fail the command\&. If this is not specified the requested operation will replace the pending job, if necessary\&. Do not confuse with
+\fB\-\-failed\fR\&.
+.RE
+.PP
+\fB\-\-ignore\-dependencies\fR
+.RS 4
+When enqueuing a new job ignore all its dependencies and execute it immediately\&. If passed no required units of the unit passed will be pulled in, and no ordering dependencies will be honoured\&. This is mostly a debugging and rescue tool for the administrator and should not be used by applications\&.
 .RE
 .PP
 \fB\-\-quiet\fR, \fB\-q\fR

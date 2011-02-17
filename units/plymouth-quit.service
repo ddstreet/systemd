@@ -6,13 +6,10 @@
 #  (at your option) any later version.
 
 [Unit]
-Description=Show Plymouth Boot Screen
-DefaultDependencies=no
-Wants=systemd-ask-password-plymouth.path
-After=systemd-vconsole-setup.service udev-settle.service
-Before=systemd-ask-password-plymouth.service
+Description=Terminate Plymouth Boot Screen
+After=rc-local.service plymouth-start.service
 
 [Service]
-ExecStart=/sbin/plymouthd --mode=boot
-ExecStartPost=-/bin/plymouth --show-splash
-Type=forking
+ExecStart=-/bin/plymouth quit
+Type=oneshot
+TimeoutSec=20
