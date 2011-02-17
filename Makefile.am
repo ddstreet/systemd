@@ -41,6 +41,7 @@ rootsbindir=$(rootdir)/sbin
 rootlibexecdir=$(rootdir)/lib/systemd
 systemunitdir=$(rootdir)/lib/systemd/system
 systemgeneratordir=$(rootdir)/lib/systemd/system-generators
+systemshutdowndir=$(rootdir)/lib/systemd/system-shutdown
 
 AM_CPPFLAGS = \
 	-include $(top_builddir)/config.h \
@@ -62,6 +63,7 @@ AM_CPPFLAGS = \
 	-DSYSTEMD_CRYPTSETUP_PATH=\"$(rootlibexecdir)/systemd-cryptsetup\" \
 	-DSYSTEM_GENERATOR_PATH=\"$(systemgeneratordir)\" \
 	-DUSER_GENERATOR_PATH=\"$(usergeneratordir)\" \
+	-DSYSTEM_SHUTDOWN_PATH=\"$(systemshutdowndir)\" \
 	-I $(top_srcdir)/src
 
 if TARGET_GENTOO
@@ -95,7 +97,8 @@ rootbin_PROGRAMS = \
 	systemctl \
 	systemd-notify \
 	systemd-ask-password \
-	systemd-tty-ask-password-agent
+	systemd-tty-ask-password-agent \
+	systemd-tmpfiles
 
 bin_PROGRAMS = \
 	systemd-cgls
@@ -121,12 +124,12 @@ rootlibexec_PROGRAMS = \
 	systemd-reply-password \
 	systemd-readahead-collect \
 	systemd-readahead-replay \
-	systemd-tmpfiles \
 	systemd-user-sessions \
 	systemd-fsck \
 	systemd-quotacheck \
 	systemd-timestamp \
 	systemd-ac-power \
+	systemd-detect-virt \
 	systemd-sysctl
 
 if HAVE_LIBCRYPTSETUP
@@ -233,13 +236,13 @@ dist_systemunit_DATA = \
 	units/hwclock-save.service \
 	units/remount-rootfs.service \
 	units/printer.target \
+	units/sound.target \
 	units/bluetooth.target \
 	units/smartcard.target \
 	units/systemd-readahead-done.timer \
 	units/systemd-tmpfiles-clean.timer \
 	units/quotaon.service \
 	units/systemd-ask-password-wall.path \
-	units/systemd-ask-password-plymouth.path \
 	units/systemd-ask-password-console.path
 
 nodist_systemunit_DATA = \
@@ -266,7 +269,6 @@ nodist_systemunit_DATA = \
 	units/systemd-tmpfiles-clean.service \
 	units/systemd-user-sessions.service \
 	units/systemd-ask-password-wall.service \
-	units/systemd-ask-password-plymouth.service \
 	units/systemd-ask-password-console.service \
 	units/systemd-sysctl.service \
 	units/syslog.target \
@@ -312,7 +314,6 @@ EXTRA_DIST = \
 	units/systemd-tmpfiles-clean.service.in \
 	units/systemd-user-sessions.service.in \
 	units/systemd-ask-password-wall.service.in \
-	units/systemd-ask-password-plymouth.service.in \
 	units/systemd-ask-password-console.service.in \
 	units/systemd-sysctl.service.in \
 	units/syslog.target.in \
@@ -331,14 +332,26 @@ if TARGET_FEDORA
 dist_systemunit_DATA += \
 	units/fedora/prefdm.service \
 	units/fedora/rc-local.service \
-	units/fedora/halt-local.service \
-	units/fedora/plymouth-start.service \
-	units/fedora/plymouth-read-write.service \
-	units/fedora/plymouth-quit.service \
-	units/fedora/plymouth-reboot.service \
-	units/fedora/plymouth-kexec.service \
-	units/fedora/plymouth-poweroff.service \
-	units/fedora/plymouth-halt.service
+	units/fedora/halt-local.service
+endif
+
+if HAVE_PLYMOUTH
+dist_systemunit_DATA += \
+	units/plymouth-start.service \
+	units/plymouth-read-write.service \
+	units/plymouth-quit.service \
+	units/plymouth-quit-wait.service \
+	units/plymouth-reboot.service \
+	units/plymouth-kexec.service \
+	units/plymouth-poweroff.service \
+	units/plymouth-halt.service \
+	units/systemd-ask-password-plymouth.path
+
+nodist_systemunit_DATA += \
+	units/systemd-ask-password-plymouth.service
+
+EXTRA_DIST += \
+	units/systemd-ask-password-plymouth.service.in
 endif
 
 dist_doc_DATA = \
@@ -370,7 +383,8 @@ libsystemd_basic_la_SOURCES = \
 	src/conf-parser.c \
 	src/socket-util.c \
 	src/log.c \
-	src/ratelimit.c
+	src/ratelimit.c \
+	src/exit-status.c
 
 libsystemd_basic_la_CFLAGS = \
 	$(AM_CFLAGS) \
@@ -398,7 +412,6 @@ libsystemd_core_la_SOURCES = \
 	src/load-dropin.c \
 	src/execute.c \
 	src/utmp-wtmp.c \
-	src/exit-status.c \
 	src/dbus.c \
 	src/dbus-manager.c \
 	src/dbus-unit.c \
@@ -480,6 +493,7 @@ MANPAGES = \
 	man/systemctl.1 \
 	man/systemadm.1 \
 	man/systemd-cgls.1 \
+	man/systemd-tmpfiles.8 \
 	man/systemd-notify.1 \
 	man/sd_notify.3 \
 	man/sd_readahead.3 \
@@ -774,6 +788,15 @@ systemd_ac_power_CFLAGS = \
 systemd_ac_power_LDADD = \
 	libsystemd-basic.la \
 	$(UDEV_LIBS)
+
+systemd_detect_virt_SOURCES = \
+	src/detect-virt.c
+
+systemd_detect_virt_CFLAGS = \
+	$(AM_CFLAGS)
+
+systemd_detect_virt_LDADD = \
+	libsystemd-basic.la
 
 systemd_cryptsetup_SOURCES = \
 	src/cryptsetup.c \
@@ -1197,13 +1220,14 @@ install-data-hook:
 		$(LN_S) ../var-run.mount var-run.mount && \
 		$(LN_S) ../var-lock.mount var-lock.mount )
 	( cd $(DESTDIR)$(userunitdir) && \
-		rm -f shutdown.target sockets.target local-fs.target swap.target bluetooth.target printer.target && \
+		rm -f shutdown.target sockets.target local-fs.target swap.target bluetooth.target printer.target sound.target && \
 		$(LN_S) $(systemunitdir)/shutdown.target shutdown.target && \
 		$(LN_S) $(systemunitdir)/sockets.target sockets.target && \
 		$(LN_S) $(systemunitdir)/local-fs.target local-fs.target && \
 		$(LN_S) $(systemunitdir)/swap.target swap.target && \
 		$(LN_S) $(systemunitdir)/bluetooth.target bluetooth.target && \
-		$(LN_S) $(systemunitdir)/printer.target printer.target)
+		$(LN_S) $(systemunitdir)/printer.target printer.target && \
+		$(LN_S) $(systemunitdir)/sound.target sound.target )
 	( cd $(DESTDIR)$(systemunitdir) && \
 		rm -f runlevel0.target runlevel1.target runlevel2.target runlevel3.target runlevel4.target runlevel5.target runlevel6.target && \
 		$(LN_S) poweroff.target runlevel0.target && \
@@ -1271,27 +1295,21 @@ install-data-hook:
 	( cd $(DESTDIR)$(dbussessionservicedir) && \
 		rm -f org.freedesktop.systemd1.service && \
 		$(LN_S) ../system-services/org.freedesktop.systemd1.service org.freedesktop.systemd1.service )
-if TARGET_FEDORA
+if HAVE_PLYMOUTH
 	$(MKDIR_P) -m 0755 \
 		$(DESTDIR)$(SYSTEM_SYSVINIT_PATH) \
 		$(DESTDIR)$(systemunitdir)/reboot.target.wants \
 		$(DESTDIR)$(systemunitdir)/kexec.target.wants \
 		$(DESTDIR)$(systemunitdir)/poweroff.target.wants \
-		$(DESTDIR)$(systemunitdir)/halt.target.wants \
-		$(DESTDIR)$(systemunitdir)/final.target.wants
-	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
-		rm -f rc-local.service && \
-		$(LN_S) $(systemunitdir)/rc-local.service rc-local.service )
-	( cd $(DESTDIR)$(systemunitdir)/final.target.wants && \
-		rm -f halt-local.service && \
-		$(LN_S) $(systemunitdir)/halt-local.service halt-local.service )
+		$(DESTDIR)$(systemunitdir)/halt.target.wants
 	( cd $(DESTDIR)$(systemunitdir)/sysinit.target.wants && \
 		rm -f plymouth-start.service plymouth-read-write.service && \
 		$(LN_S) ../plymouth-start.service plymouth-start.service && \
 		$(LN_S) ../plymouth-read-write.service plymouth-read-write.service )
 	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
-		rm -f plymouth-quit.service  && \
-		$(LN_S) ../plymouth-quit.service plymouth-quit.service )
+		rm -f plymouth-quit.service plymouth-quit-wait.service && \
+		$(LN_S) ../plymouth-quit.service plymouth-quit.service && \
+		$(LN_S) ../plymouth-quit-wait.service plymouth-quit-wait.service )
 	( cd $(DESTDIR)$(systemunitdir)/reboot.target.wants && \
 		rm -f plymouth-reboot.service && \
 		$(LN_S) ../plymouth-reboot.service plymouth-reboot.service )
@@ -1304,6 +1322,16 @@ if TARGET_FEDORA
 	( cd $(DESTDIR)$(systemunitdir)/halt.target.wants && \
 		rm -f plymouth-halt.service && \
 		$(LN_S) ../plymouth-halt.service plymouth-halt.service )
+endif
+
+if TARGET_FEDORA
+	$(MKDIR_P) -m 0755 $(DESTDIR)$(systemunitdir)/final.target.wants
+	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
+		rm -f rc-local.service && \
+		$(LN_S) $(systemunitdir)/rc-local.service rc-local.service )
+	( cd $(DESTDIR)$(systemunitdir)/final.target.wants && \
+		rm -f halt-local.service && \
+		$(LN_S) $(systemunitdir)/halt-local.service halt-local.service )
 	( cd $(DESTDIR)$(systemunitdir) && \
 		rm -f display-manager.service && \
 		$(LN_S) prefdm.service display-manager.service )

@@ -2,12 +2,12 @@
 .\"     Title: tmpfiles.d
 .\"    Author: Brandon Philips <brandon@ifup.org>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: tmpfiles.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "TMPFILES\&.D" "5" "01/22/2011" "systemd" "tmpfiles.d"
+.TH "TMPFILES\&.D" "5" "03/01/2011" "systemd" "tmpfiles.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,19 +28,19 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-tmpfiles.d \- Configuration for creation, deletion and cleaning of temporary and volatile files
+tmpfiles.d \- Configuration for creation, deletion and cleaning of volatile and temporary files
 .SH "SYNOPSIS"
 .PP
 /etc/tmpfiles\&.d/*\&.conf
 .SH "DESCRIPTION"
 .PP
-\fBsystemd\fR
-uses
+\fBsystemd\-tmpfiles\fR
+uses the configuration files in
 /etc/tmpfiles\&.d/
-to describe the creation, cleaning and removal of temporary files and directories which usually reside in
+to describe the creation, cleaning and removal of volatile and temporary files and directories which usually reside in directories such as
 /var/run
 or
-/tmp)\&. Each configuration file is named in the style of
+/tmp\&. Each configuration file is named in the style of
 /etc/tmpfiles\&.d/<program>\&.conf\&.
 .SH "CONFIGURATION FORMAT"
 .PP
@@ -80,24 +80,24 @@ Create or empty a directory
 .PP
 \fIx\fR
 .RS 4
-Ignore a path
+Ignore a path during cleaning\&. Use this type to exclude paths from clean\-up as controlled with the Age parameter\&. Note that lines of this type do not influence the effect of r or R lines\&. Lines of this type accept shell\-style globs in place of of normal path names\&.
 .RE
 .PP
 \fIr\fR
 .RS 4
-Remove a path
+Remove a file or directory if it exists\&. This may not be used to remove non\-empty directories, use R for that\&. Lines of this type accept shell\-style globs in place of normal path names\&.
 .RE
 .PP
 \fIR\fR
 .RS 4
-Recursively remove a path
+Recursively remove a path and all its subdirectories (if it is a directory)\&. Lines of this type accept shell\-style globs in place of normal path names\&.
 .RE
 .SS "Mode"
 .PP
-The file access mode to use for this file or directory\&. If omitted or when set to \- the default is used: 0755 for directories, 0644 for files\&.
+The file access mode to use when creating this file or directory\&. If omitted or when set to \- the default is used: 0755 for directories, 0644 for files\&. This parameter is ignored for x, r, R lines\&.
 .SS "UID, GID"
 .PP
-The user and group to use for this file or directory\&. This may either be a numeric user/group ID or a user or group name\&. If omitted or when set to \- the default 0 is used\&.
+The user and group to use for this file or directory\&. This may either be a numeric user/group ID or a user or group name\&. If omitted or when set to \- the default 0 (root) is used\&. \&. These parameters are ignored for x, r, R lines\&.
 .SS "Age"
 .PP
 The date field, when set, is used to decide what files to delete when cleaning\&. If a file or directory is older than the current time minus the age field it is deleted\&. The field format is a series of integers each followed by one of the following postfixes for the respective time units:
@@ -129,7 +129,8 @@ d /var/run/uscreens 0755 root root 10d12h
 .SH "SEE ALSO"
 .PP
 
-\fBsystemd\fR(1)
+\fBsystemd\fR(1),
+\fBsystemd-tmpfiles\fR(8)
 .SH "AUTHOR"
 .PP
 \fBBrandon Philips\fR <\&brandon@ifup\&.org\&>

@@ -65,7 +65,7 @@ static void device_init(Unit *u) {
 
         /* In contrast to all other unit types we timeout jobs waiting
          * for devices by default. This is because they otherwise wait
-         * indefinetely for plugged in devices, something which cannot
+         * indefinitely for plugged in devices, something which cannot
          * happen for the other units since their operations time out
          * anyway. */
         d->meta.job_timeout = DEFAULT_TIMEOUT_USEC;
@@ -526,7 +526,7 @@ fail:
 void device_fd_event(Manager *m, int events) {
         struct udev_device *dev;
         int r;
-        const char *action;
+        const char *action, *ready;
 
         assert(m);
 
@@ -542,7 +542,7 @@ void device_fd_event(Manager *m, int events) {
         if (!(dev = udev_monitor_receive_device(m->udev_monitor))) {
                 /*
                  * libudev might filter-out devices which pass the bloom filter,
-                 * so getting NULL here is not neccessarily an error
+                 * so getting NULL here is not necessarily an error
                  */
                 return;
         }
@@ -552,7 +552,9 @@ void device_fd_event(Manager *m, int events) {
                 goto fail;
         }
 
-        if (streq(action, "remove")) {
+        ready = udev_device_get_property_value(dev, "SYSTEMD_READY");
+
+        if (streq(action, "remove") || (ready && parse_boolean(ready) == 0)) {
                 if ((r = device_process_removed_device(m, dev)) < 0) {
                         log_error("Failed to process udev device event: %s", strerror(-r));
                         goto fail;

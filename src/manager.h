@@ -93,7 +93,7 @@ struct Watch {
 
 struct Manager {
         /* Note that the set of units we know of is allowed to be
-         * incosistent. However the subset of it that is loaded may
+         * inconsistent. However the subset of it that is loaded may
          * not, and the list of jobs may neither. */
 
         /* Active jobs and units */
@@ -148,7 +148,6 @@ struct Manager {
         dual_timestamp startup_timestamp;
         dual_timestamp finish_timestamp;
 
-        char *console;
         char *generator_unit_path;
 
         /* Data specific to the device subsystem */
@@ -195,7 +194,7 @@ struct Manager {
         int gc_marker;
         unsigned n_in_gc_queue;
 
-        /* Make sure the user cannot accidentaly unmount our cgroup
+        /* Make sure the user cannot accidentally unmount our cgroup
          * file system */
         int pin_cgroupfs_fd;
 
@@ -219,6 +218,8 @@ struct Manager {
 #endif
         bool mount_auto;
         bool swap_auto;
+
+        ExecOutput default_std_output, default_std_error;
 
         int n_deserializing;
 
@@ -256,7 +257,6 @@ unsigned manager_dispatch_load_queue(Manager *m);
 unsigned manager_dispatch_run_queue(Manager *m);
 unsigned manager_dispatch_dbus_queue(Manager *m);
 
-int manager_set_console(Manager *m, const char *console);
 int manager_set_default_controllers(Manager *m, char **controllers);
 
 int manager_loop(Manager *m);

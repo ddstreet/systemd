@@ -556,8 +556,12 @@ int unit_add_exec_dependencies(Unit *u, ExecContext *c) {
 
         if (c->std_output != EXEC_OUTPUT_KMSG &&
             c->std_output != EXEC_OUTPUT_SYSLOG &&
+            c->std_output != EXEC_OUTPUT_KMSG_AND_CONSOLE &&
+            c->std_output != EXEC_OUTPUT_SYSLOG_AND_CONSOLE &&
             c->std_error != EXEC_OUTPUT_KMSG &&
-            c->std_error != EXEC_OUTPUT_SYSLOG)
+            c->std_error != EXEC_OUTPUT_SYSLOG_AND_CONSOLE &&
+            c->std_error != EXEC_OUTPUT_KMSG &&
+            c->std_error != EXEC_OUTPUT_SYSLOG_AND_CONSOLE)
                 return 0;
 
         /* If syslog or kernel logging is requested, make sure our own
@@ -732,7 +736,7 @@ int unit_add_default_target_dependency(Unit *u, Unit *target) {
         if (target->meta.type != UNIT_TARGET)
                 return 0;
 
-        /* Only add the dependency if boths units are loaded, so that
+        /* Only add the dependency if both units are loaded, so that
          * that loop check below is reliable */
         if (u->meta.load_state != UNIT_LOADED ||
             target->meta.load_state != UNIT_LOADED)
@@ -1067,6 +1071,16 @@ static void retroactively_stop_dependencies(Unit *u) {
                         unit_check_unneeded(other);
 }
 
+void unit_trigger_on_failure(Unit *u) {
+        Unit *other;
+        Iterator i;
+
+        assert(u);
+
+        SET_FOREACH(other, u->meta.dependencies[UNIT_ON_FAILURE], i)
+                manager_add_job(u->meta.manager, JOB_START, other, JOB_REPLACE, true, NULL, NULL);
+}
+
 void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success) {
         dual_timestamp ts;
         bool unexpected;
@@ -1110,7 +1124,7 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                         job_add_to_run_queue(u->meta.job);
 
                 /* Let's check whether this state change constitutes a
-                 * finished job, or maybe cotradicts a running job and
+                 * finished job, or maybe contradicts a running job and
                  * hence needs to invalidate jobs. */
 
                 switch (u->meta.job->type) {
@@ -1119,12 +1133,12 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                 case JOB_VERIFY_ACTIVE:
 
                         if (UNIT_IS_ACTIVE_OR_RELOADING(ns))
-                                job_finish_and_invalidate(u->meta.job, true);
+                                job_finish_and_invalidate(u->meta.job, JOB_DONE);
                         else if (u->meta.job->state == JOB_RUNNING && ns != UNIT_ACTIVATING) {
                                 unexpected = true;
 
                                 if (UNIT_IS_INACTIVE_OR_FAILED(ns))
-                                        job_finish_and_invalidate(u->meta.job, ns != UNIT_FAILED);
+                                        job_finish_and_invalidate(u->meta.job, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE);
                         }
 
                         break;
@@ -1134,12 +1148,12 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
 
                         if (u->meta.job->state == JOB_RUNNING) {
                                 if (ns == UNIT_ACTIVE)
-                                        job_finish_and_invalidate(u->meta.job, reload_success);
+                                        job_finish_and_invalidate(u->meta.job, reload_success ? JOB_DONE : JOB_FAILED);
                                 else if (ns != UNIT_ACTIVATING && ns != UNIT_RELOADING) {
                                         unexpected = true;
 
                                         if (UNIT_IS_INACTIVE_OR_FAILED(ns))
-                                                job_finish_and_invalidate(u->meta.job, ns != UNIT_FAILED);
+                                                job_finish_and_invalidate(u->meta.job, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE);
                                 }
                         }
 
@@ -1150,10 +1164,10 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                 case JOB_TRY_RESTART:
 
                         if (UNIT_IS_INACTIVE_OR_FAILED(ns))
-                                job_finish_and_invalidate(u->meta.job, true);
+                                job_finish_and_invalidate(u->meta.job, JOB_DONE);
                         else if (u->meta.job->state == JOB_RUNNING && ns != UNIT_DEACTIVATING) {
                                 unexpected = true;
-                                job_finish_and_invalidate(u->meta.job, false);
+                                job_finish_and_invalidate(u->meta.job, JOB_FAILED);
                         }
 
                         break;
@@ -1179,13 +1193,8 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
         }
 
         if (ns != os && ns == UNIT_FAILED) {
-                Iterator i;
-                Unit *other;
-
-                SET_FOREACH(other, u->meta.dependencies[UNIT_ON_FAILURE], i)
-                        manager_add_job(u->meta.manager, JOB_START, other, JOB_REPLACE, true, NULL, NULL);
-
                 log_notice("Unit %s entered failed state.", u->meta.id);
+                unit_trigger_on_failure(u);
         }
 
         /* Some names are special */
