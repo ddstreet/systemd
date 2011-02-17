@@ -2,12 +2,12 @@
 .\"     Title: systemd.exec
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: systemd.exec
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.EXEC" "5" "01/22/2011" "systemd" "systemd.exec"
+.TH "SYSTEMD\&.EXEC" "5" "03/01/2011" "systemd" "systemd.exec"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -200,7 +200,9 @@ Controls where file descriptor 1 (STDOUT) of the executed processes is connected
 \fBnull\fR,
 \fBtty\fR,
 \fBsyslog\fR,
-\fBkmsg\fR
+\fBkmsg\fR,
+\fBkmsg+console\fR,
+\fBsyslog+console\fR
 or
 \fBsocket\fR\&. If set to
 \fBinherit\fR
@@ -218,6 +220,10 @@ system logger\&.
 \fBkmsg\fR
 connects it with the kernel log buffer which is accessible via
 \fBdmesg\fR(1)\&.
+\fBsyslog+console\fR
+and
+\fBkmsg+console\fR
+work similarly but copy the output to the system console as well\&.
 \fBsocket\fR
 connects standard output to a socket from socket activation, semantics are similar to the respective option of
 \fIStandardInput=\fR\&. This setting defaults to
@@ -239,7 +245,7 @@ Sets the terminal device node to use if standard input, output or stderr are con
 /dev/console\&.
 .RE
 .PP
-\fISyslogIdentifer=\fR
+\fISyslogIdentifier=\fR
 .RS 4
 Sets the process name to prefix log lines sent to syslog or the kernel log buffer with\&. If not set defaults to the process name of the executed process\&. This option is only useful when
 \fIStandardOutput=\fR

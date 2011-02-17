@@ -118,8 +118,11 @@ static void service_init(Unit *u) {
         s->sysv_start_priority = -1;
 #endif
         s->socket_fd = -1;
+        s->guess_main_pid = true;
 
         exec_context_init(&s->exec_context);
+        s->exec_context.std_output = u->meta.manager->default_std_output;
+        s->exec_context.std_error = u->meta.manager->default_std_error;
 
         RATELIMIT_INIT(s->ratelimit, 10*USEC_PER_SEC, 5);
 
@@ -332,7 +335,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 /* Facilities starting with $ are most likely targets */
                 r = unit_name_build(n, NULL, ".target");
         } else if (filename && streq(name, filename))
-                /* Names equalling the file name of the services are redundant */
+                /* Names equaling the file name of the services are redundant */
                 return 0;
         else
                 /* Everything else we assume to be normal service names */
@@ -816,7 +819,7 @@ static int service_load_sysv_path(Service *s, const char *path) {
         s->restart = SERVICE_RESTART_NO;
         s->exec_context.std_output =
                 (s->meta.manager->sysv_console || s->exec_context.std_input == EXEC_INPUT_TTY)
-                ? EXEC_OUTPUT_TTY : EXEC_OUTPUT_NULL;
+                ? EXEC_OUTPUT_TTY : s->meta.manager->default_std_output;
         s->exec_context.kill_mode = KILL_PROCESS_GROUP;
 
         /* We use the long description only if
@@ -1151,6 +1154,7 @@ static void service_dump(Unit *u, FILE *f, const char *prefix) {
                 "%sPermissionsStartOnly: %s\n"
                 "%sRootDirectoryStartOnly: %s\n"
                 "%sRemainAfterExit: %s\n"
+                "%sGuessMainPID: %s\n"
                 "%sType: %s\n"
                 "%sRestart: %s\n"
                 "%sNotifyAccess: %s\n",
@@ -1158,6 +1162,7 @@ static void service_dump(Unit *u, FILE *f, const char *prefix) {
                 prefix, yes_no(s->permissions_start_only),
                 prefix, yes_no(s->root_directory_start_only),
                 prefix, yes_no(s->remain_after_exit),
+                prefix, yes_no(s->guess_main_pid),
                 prefix, service_type_to_string(s->type),
                 prefix, service_restart_to_string(s->restart),
                 prefix, notify_access_to_string(s->notify_access));
@@ -1236,11 +1241,6 @@ static int service_load_pid_file(Service *s) {
 
         assert(s);
 
-        if (s->main_pid_known)
-                return 0;
-
-        assert(s->main_pid <= 0);
-
         if (!s->pid_file)
                 return -ENOENT;
 
@@ -1275,7 +1275,12 @@ static int service_search_main_pid(Service *s) {
 
         assert(s);
 
+        /* If we know it anyway, don't ever fallback to unreliable
+         * heuristics */
         if (s->main_pid_known)
+                return 0;
+
+        if (!s->guess_main_pid)
                 return 0;
 
         assert(s->main_pid <= 0);
@@ -2491,15 +2496,25 @@ static const char *service_sub_state_to_string(Unit *u) {
         return service_state_to_string(SERVICE(u)->state);
 }
 
-#ifdef HAVE_SYSV_COMPAT
 static bool service_check_gc(Unit *u) {
         Service *s = SERVICE(u);
 
         assert(s);
 
-        return !!s->sysv_path;
-}
+        /* Never clean up services that still have a process around,
+         * even if the service is formally dead. */
+        if (cgroup_good(s) > 0 ||
+            main_pid_good(s) > 0 ||
+            control_pid_good(s) > 0)
+                return true;
+
+#ifdef HAVE_SYSV_COMPAT
+        if (s->sysv_path)
+                return true;
 #endif
+
+        return false;
+}
 
 static bool service_check_snapshot(Unit *u) {
         Service *s = SERVICE(u);
@@ -2674,9 +2689,16 @@ static void service_sigchld_event(Unit *u, pid_t pid, int code, int status) {
                                                 log_warning("%s: failed to load PID file %s: %s", s->meta.id, s->pid_file, strerror(-r));
                                 }
 
-                                /* Fall through */
+                                s->reload_failure = !success;
+                                service_enter_running(s, true);
+                                break;
 
                         case SERVICE_RELOAD:
+                                if (success) {
+                                        service_load_pid_file(s);
+                                        service_search_main_pid(s);
+                                }
+
                                 s->reload_failure = !success;
                                 service_enter_running(s, true);
                                 break;
@@ -2755,7 +2777,7 @@ static void service_timer_event(Unit *u, uint64_t elapsed, Watch* w) {
                 break;
 
         case SERVICE_STOP_SIGKILL:
-                /* Uh, wie sent a SIGKILL and it is still not gone?
+                /* Uh, we sent a SIGKILL and it is still not gone?
                  * Must be something we cannot kill, so let's just be
                  * weirded out and continue */
 
@@ -3030,7 +3052,7 @@ static int service_enumerate(Manager *m) {
 
         /* We honour K links only for halt/reboot. For the normal
          * runlevels we assume the stop jobs will be implicitly added
-         * by the core logic. Also, we don't really distuingish here
+         * by the core logic. Also, we don't really distinguish here
          * between the runlevels 0 and 6 and just add them to the
          * special shutdown target. On SUSE the boot.d/ runlevel is
          * also used for shutdown, so we add links for that too to the
@@ -3305,9 +3327,7 @@ const UnitVTable service_vtable = {
         .active_state = service_active_state,
         .sub_state_to_string = service_sub_state_to_string,
 
-#ifdef HAVE_SYSV_COMPAT
         .check_gc = service_check_gc,
-#endif
         .check_snapshot = service_check_snapshot,
 
         .sigchld_event = service_sigchld_event,

@@ -17,13 +17,13 @@ Before=shutdown.target
 [Service]
 Environment=HOME=/root
 WorkingDirectory=/root
-ExecStartPre=-/bin/plymouth --hide-splash
+ExecStartPre=-/bin/plymouth quit
 ExecStartPre=-/bin/echo 'Welcome to rescue mode. Use "systemctl default" or ^D to activate default mode.'
 m4_ifdef(`TARGET_FEDORA',
 `EnvironmentFile=/etc/sysconfig/init
 ExecStart=-/bin/bash -c "exec ${SINGLE}"',
 `ExecStart=-/sbin/sulogin')
-ExecStopPost=/bin/systemctl default
+ExecStopPost=-/bin/systemctl --fail default
 StandardInput=tty-force
 KillMode=process-group
 

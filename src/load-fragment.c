@@ -306,7 +306,7 @@ static int config_parse_nice(
         }
 
         c->nice = priority;
-        c->nice_set = false;
+        c->nice_set = true;
 
         return 0;
 }
@@ -918,7 +918,6 @@ static int config_parse_limit(
 
         struct rlimit **rl = data;
         unsigned long long u;
-        int r;
 
         assert(filename);
         assert(lvalue);
@@ -1504,6 +1503,34 @@ static int config_parse_condition_kernel(
         return 0;
 }
 
+static int config_parse_condition_virt(
+                const char *filename,
+                unsigned line,
+                const char *section,
+                const char *lvalue,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        Unit *u = data;
+        bool negate;
+        Condition *c;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(data);
+
+        if ((negate = rvalue[0] == '!'))
+                rvalue++;
+
+        if (!(c = condition_new(CONDITION_VIRTUALIZATION, rvalue, negate)))
+                return -ENOMEM;
+
+        LIST_PREPEND(Condition, conditions, u->meta.conditions, c);
+        return 0;
+}
+
 static int config_parse_condition_null(
                 const char *filename,
                 unsigned line,
@@ -1715,6 +1742,7 @@ static void dump_items(FILE *f, const ConfigItem *items) {
                 { config_parse_condition_path,   "CONDITION" },
                 { config_parse_condition_kernel, "CONDITION" },
                 { config_parse_condition_null,   "CONDITION" },
+                { config_parse_condition_virt,   "CONDITION" },
         };
 
         assert(f);
@@ -1839,6 +1867,7 @@ static int load_from_path(Unit *u, const char *path) {
                 { "ConditionPathExists",    config_parse_condition_path,  u,                                               "Unit"    },
                 { "ConditionDirectoryNotEmpty", config_parse_condition_path,  u,                                           "Unit"    },
                 { "ConditionKernelCommandLine", config_parse_condition_kernel, u,                                          "Unit"    },
+                { "ConditionVirtualization",config_parse_condition_virt,  u,                                               "Unit"    },
                 { "ConditionNull",          config_parse_condition_null,  u,                                               "Unit"    },
 
                 { "PIDFile",                config_parse_path,            &u->service.pid_file,                            "Service" },
@@ -1855,6 +1884,7 @@ static int load_from_path(Unit *u, const char *path) {
                 { "PermissionsStartOnly",   config_parse_bool,            &u->service.permissions_start_only,              "Service" },
                 { "RootDirectoryStartOnly", config_parse_bool,            &u->service.root_directory_start_only,           "Service" },
                 { "RemainAfterExit",        config_parse_bool,            &u->service.remain_after_exit,                   "Service" },
+                { "GuessMainPID",           config_parse_bool,            &u->service.guess_main_pid,                      "Service" },
 #ifdef HAVE_SYSV_COMPAT
                 { "SysVStartPriority",      config_parse_sysv_priority,   &u->service.sysv_start_priority,                 "Service" },
 #else

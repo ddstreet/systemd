@@ -30,6 +30,7 @@ typedef struct JobDependency JobDependency;
 typedef enum JobType JobType;
 typedef enum JobState JobState;
 typedef enum JobMode JobMode;
+typedef enum JobResult JobResult;
 
 #include "manager.h"
 #include "unit.h"
@@ -66,8 +67,19 @@ enum JobMode {
         JOB_FAIL,
         JOB_REPLACE,
         JOB_ISOLATE,
+        JOB_IGNORE_DEPENDENCIES,
         _JOB_MODE_MAX,
         _JOB_MODE_INVALID = -1
+};
+
+enum JobResult {
+        JOB_DONE,
+        JOB_CANCELED,
+        JOB_TIMEOUT,
+        JOB_FAILED,
+        JOB_DEPENDENCY,
+        _JOB_RESULT_MAX,
+        _JOB_RESULT_INVALID = -1
 };
 
 struct JobDependency {
@@ -109,13 +121,15 @@ struct Job {
         DBusConnection *bus;
         char *bus_client;
 
+        JobResult result;
+
         bool installed:1;
         bool in_run_queue:1;
         bool matters_to_anchor:1;
         bool override:1;
         bool in_dbus_queue:1;
         bool sent_dbus_new_signal:1;
-        bool failed:1;
+        bool ignore_deps:1;
 };
 
 Job* job_new(Manager *m, JobType type, Unit *unit);
@@ -144,7 +158,7 @@ int job_start_timer(Job *j);
 void job_timer_event(Job *j, uint64_t n_elapsed, Watch *w);
 
 int job_run_and_invalidate(Job *j);
-int job_finish_and_invalidate(Job *j, bool success);
+int job_finish_and_invalidate(Job *j, JobResult result);
 
 char *job_dbus_path(Job *j);
 
@@ -156,5 +170,8 @@ JobState job_state_from_string(const char *s);
 
 const char* job_mode_to_string(JobMode t);
 JobMode job_mode_from_string(const char *s);
+
+const char* job_result_to_string(JobResult t);
+JobResult job_result_from_string(const char *s);
 
 #endif

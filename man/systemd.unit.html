@@ -9,7 +9,7 @@
                 <code class="filename">systemd.target</code>,
                 <code class="filename">systemd.path</code>,
                 <code class="filename">systemd.timer</code>,
-                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id566543"/><h2>Description</h2><p>A unit configuration file encodes information
+                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id314352"/><h2>Description</h2><p>A unit configuration file encodes information
                 about a service, a socket, a device, a mount point, an
                 automount point, a swap file or partition, a start-up
                 target, a file system path or a timer controlled and
@@ -123,7 +123,7 @@
                 fully disable a unit, making it impossible to start it
                 even manually.</p><p>The unit file format is covered by the
                 <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise">Interface
-                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id534264"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
+                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id282072"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
                 carries generic information about the unit that is not
                 dependent on the type of unit:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">Names=</code></span></dt><dd><p>Additional names for
                                 this unit. The names listed here must
@@ -385,7 +385,7 @@
                                 timeout set with this option however
                                 is useful to abort only the job
                                 waiting for the unit state to
-                                change.</p></dd><dt><span class="term"><code class="varname">ConditionPathExists=</code>, </span><span class="term"><code class="varname">ConditionDirectoryNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionKernelCommandLine=</code>, </span><span class="term"><code class="varname">ConditionNull=</code></span></dt><dd><p>Before starting a unit
+                                change.</p></dd><dt><span class="term"><code class="varname">ConditionPathExists=</code>, </span><span class="term"><code class="varname">ConditionDirectoryNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionKernelCommandLine=</code>, </span><span class="term"><code class="varname">ConditionVirtualization=</code>, </span><span class="term"><code class="varname">ConditionNull=</code></span></dt><dd><p>Before starting a unit
                                 verify that the specified condition is
                                 true. With
                                 <code class="varname">ConditionPathExists=</code>
@@ -423,7 +423,24 @@
                                 assignment. In the latter case the
                                 exact assignment is looked for with
                                 right and left hand side
-                                matching. Finally,
+                                matching. <code class="varname">ConditionVirtualization=</code>
+                                may be used to check whether the
+                                system is executed in a virtualized
+                                environment and optionally test
+                                whether it is a specific
+                                implementation. Takes either boolean
+                                value to check if being executed in any
+                                virtual environment or one of the
+                                <code class="varname">qemu</code>,
+                                <code class="varname">kvm</code>,
+                                <code class="varname">vmware</code>,
+                                <code class="varname">microsoft</code>,
+                                <code class="varname">oracle</code>,
+                                <code class="varname">xen</code>,
+                                <code class="varname">openvz</code> to test
+                                against a specific implementation. The
+                                test may be negated by prepending an
+                                exclamation mark. Finally,
                                 <code class="varname">ConditionNull=</code> may
                                 be used to add a constant condition
                                 check value to the unit. It takes a
@@ -431,9 +448,9 @@
                                 <code class="varname">false</code> the condition
                                 will always fail, otherwise
                                 succeed. If multiple conditions are
-                                specified the unit will be executed
-                                if at least one of them applies
-                                (i.e. a logical OR is
+                                specified the unit will be executed if
+                                at least one of them applies (i.e. a
+                                logical OR is
                                 applied).</p></dd></dl></div><p>Unit file may include a [Install] section, which
                 carries installation information for the unit. This
                 section is not interpreted by
@@ -494,7 +511,7 @@
                                 <span class="command"><strong>systemctl enable</strong></span>
                                 will automatically install units
                                 listed in this option as
-                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id576142"/><h2>See Also</h2><p>
+                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id323989"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>,
