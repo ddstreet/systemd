@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>os-release</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="os-release"><a id="os-release"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>os-release — Operating system identification</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/os-release</code></p></div><div class="refsect1" title="Description"><a id="id526122"/><h2>Description</h2><p>The <code class="filename">/etc/os-release</code> file
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>os-release</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="os-release"><a id="os-release"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>os-release — Operating system identification</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/os-release</code></p></div><div class="refsect1" title="Description"><a id="id370918"/><h2>Description</h2><p>The <code class="filename">/etc/os-release</code> file
                 contains operating system identification data.</p><p>The basic file format of
                 <code class="filename">os-release</code> is a
                 newline-separated list of environment-like
@@ -14,7 +14,7 @@
                 and should not be changed by the administrator.</p><p>Depending on the operating system other
                 configuration files might be checked for OS
                 identification as well, however only as
-                fallback.</p></div><div class="refsect1" title="Options"><a id="id526163"/><h2>Options</h2><p>The following OS identifications parameters may be set using
+                fallback.</p></div><div class="refsect1" title="Options"><a id="id370959"/><h2>Options</h2><p>The following OS identifications parameters may be set using
                 <code class="filename">/etc/os-release</code>:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">NAME=</code></span></dt><dd><p>A string identifying
                                 the operating system, without a
                                 version string, and not necessarily
@@ -66,12 +66,12 @@
                 not to provide version information, for example to
                 accommodate for rolling releases. In this case VERSION
                 and VERSION_ID may be unset. Applications should not
-                rely on these fields to be set.</p></div><div class="refsect1" title="Example"><a id="id558514"/><h2>Example</h2><pre class="programlisting">NAME=Fedora
+                rely on these fields to be set.</p></div><div class="refsect1" title="Example"><a id="id403310"/><h2>Example</h2><pre class="programlisting">NAME=Fedora
 VERSION=15 (Rawhide)
 ID=fedora
 VERSION_ID=15
 PRETTY_NAME=Fedora 15 (Rawhide)
-ANSI_COLOR=0;34</pre></div><div class="refsect1" title="See Also"><a id="id558528"/><h2>See Also</h2><p>
+ANSI_COLOR=0;34</pre></div><div class="refsect1" title="See Also"><a id="id403323"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">lsb_release</span>(1)</span>
                   </p></div></div></body></html>

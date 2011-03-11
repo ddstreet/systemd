@@ -64,3 +64,16 @@ index b6ca80b..485a57f 100644
  Restart=always
  RestartSec=0
  UtmpIdentifier=%I
+diff --git a/units/getty@.service.m4 b/units/getty@.service.m4
+index 8e1f250..d3fcf2c 100644
+--- a/units/getty@.service.m4
++++ b/units/getty@.service.m4
+@@ -8,7 +8,7 @@
+ [Unit]
+ Description=Getty on %I
+ BindTo=dev-%i.device
+-After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service
++After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service openvpn.service apache2.service
+ m4_ifdef(`TARGET_FEDORA',
+ After=rc-local.service
+ )m4_dnl
