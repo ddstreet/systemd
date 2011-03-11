@@ -1,3 +1,17 @@
+systemd (20-1) unstable; urgency=low
+
+  * New upstream version
+  * Install systemd-machine-id-setup
+  * Call systemd-machine-id-setup in postinst
+  * Cherry-pick b8a021c9e276adc9bed5ebfa39c3cab0077113c6 from upstream to
+    prevent dbus assert error.
+  * Enable TCP wrapper support.  Closes: #618409
+  * Enable SELinux support.  Closes: #618412
+  * Make getty start after Apache2 and OpenVPN (which are the only two
+    known users of X-Interactive: yes).  Closes: #618419
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Fri, 11 Mar 2011 19:14:21 +0100
+
 systemd (19-1) experimental; urgency=low
 
   * New upstream release
