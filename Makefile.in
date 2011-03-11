@@ -68,17 +68,22 @@ host_triplet = @host@
 @TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_TRUE@@TARGET_GENTOO_FALSE@	-DKBD_SETFONT=\"/usr/bin/setfont\" \
 @TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_TRUE@@TARGET_GENTOO_FALSE@	-DDEFAULT_FONT=\"LatArCyrHeb-16\"
 
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@am__append_4 = \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@	-DKBD_SETFONT=\"/bin/setfont\" \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@	-DDEFAULT_FONT=\"latarcyrheb-sun16\"
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_TRUE@am__append_4 = \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_TRUE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_TRUE@	-DKBD_SETFONT=\"/bin/setfont\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_TRUE@	-DDEFAULT_FONT=\"LatArCyrHeb-16\"
+
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@am__append_5 = \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@	-DKBD_SETFONT=\"/bin/setfont\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@	-DDEFAULT_FONT=\"latarcyrheb-sun16\"
 
 rootbin_PROGRAMS = systemd$(EXEEXT) systemctl$(EXEEXT) \
 	systemd-notify$(EXEEXT) systemd-ask-password$(EXEEXT) \
 	systemd-tty-ask-password-agent$(EXEEXT) \
-	systemd-tmpfiles$(EXEEXT)
+	systemd-tmpfiles$(EXEEXT) systemd-machine-id-setup$(EXEEXT)
 bin_PROGRAMS = systemd-cgls$(EXEEXT) $(am__EXEEXT_1)
-@HAVE_GTK_TRUE@am__append_5 = \
+@HAVE_GTK_TRUE@am__append_6 = \
 @HAVE_GTK_TRUE@	systemadm \
 @HAVE_GTK_TRUE@	systemd-gnome-ask-password-agent
 
@@ -95,7 +100,7 @@ rootlibexec_PROGRAMS = systemd-logger$(EXEEXT) \
 	systemd-quotacheck$(EXEEXT) systemd-timestamp$(EXEEXT) \
 	systemd-ac-power$(EXEEXT) systemd-detect-virt$(EXEEXT) \
 	systemd-sysctl$(EXEEXT) $(am__EXEEXT_2)
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_6 = \
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_7 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	systemd-cryptsetup
 
 @HAVE_LIBCRYPTSETUP_TRUE@systemgenerator_PROGRAMS = systemd-cryptsetup-generator$(EXEEXT)
@@ -103,12 +108,17 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 	test-ns$(EXEEXT) test-loopback$(EXEEXT) test-hostname$(EXEEXT) \
 	test-daemon$(EXEEXT) test-cgroup$(EXEEXT) \
 	test-env-replace$(EXEEXT) test-strv$(EXEEXT)
-@TARGET_FEDORA_TRUE@am__append_7 = \
+@TARGET_FEDORA_TRUE@am__append_8 = \
 @TARGET_FEDORA_TRUE@	units/fedora/prefdm.service \
 @TARGET_FEDORA_TRUE@	units/fedora/rc-local.service \
 @TARGET_FEDORA_TRUE@	units/fedora/halt-local.service
 
-@HAVE_PLYMOUTH_TRUE@am__append_8 = \
+@TARGET_MANDRIVA_TRUE@am__append_9 = \
+@TARGET_MANDRIVA_TRUE@	units/mandriva/prefdm.service \
+@TARGET_MANDRIVA_TRUE@	units/fedora/rc-local.service \
+@TARGET_MANDRIVA_TRUE@	units/fedora/halt-local.service
+
+@HAVE_PLYMOUTH_TRUE@am__append_10 = \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-start.service \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-read-write.service \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-quit.service \
@@ -119,19 +129,19 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-halt.service \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.path
 
-@HAVE_PLYMOUTH_TRUE@am__append_9 = \
+@HAVE_PLYMOUTH_TRUE@am__append_11 = \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.service
 
-@HAVE_PLYMOUTH_TRUE@am__append_10 = \
+@HAVE_PLYMOUTH_TRUE@am__append_12 = \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.service.in
 
-@LIBNOTIFY07_TRUE@am__append_11 = \
+@LIBNOTIFY07_TRUE@am__append_13 = \
 @LIBNOTIFY07_TRUE@	-D LIBNOTIFY07
 
-@HAVE_VALAC_TRUE@am__append_12 = \
+@HAVE_VALAC_TRUE@am__append_14 = \
 @HAVE_VALAC_TRUE@	${systemadm_SOURCES:.vala=.c}
 
-@HAVE_XSLTPROC_TRUE@am__append_13 = \
+@HAVE_XSLTPROC_TRUE@am__append_15 = \
 @HAVE_XSLTPROC_TRUE@	$(dist_man_MANS) \
 @HAVE_XSLTPROC_TRUE@	${nodist_man_MANS:=.in} \
 @HAVE_XSLTPROC_TRUE@	${XML_FILES:.xml=.html} \
@@ -160,9 +170,9 @@ DIST_COMMON = README $(am__configure_deps) \
 	systemd_fsck_vala.stamp \
 	systemd_gnome_ask_password_agent_vala.stamp \
 	systemd_initctl_vala.stamp systemd_kmsg_syslogd_vala.stamp \
-	systemd_logger_vala.stamp systemd_modules_load_vala.stamp \
-	systemd_notify_vala.stamp systemd_quotacheck_vala.stamp \
-	systemd_random_seed_vala.stamp \
+	systemd_logger_vala.stamp systemd_machine_id_setup_vala.stamp \
+	systemd_modules_load_vala.stamp systemd_notify_vala.stamp \
+	systemd_quotacheck_vala.stamp systemd_random_seed_vala.stamp \
 	systemd_readahead_collect_vala.stamp \
 	systemd_readahead_replay_vala.stamp \
 	systemd_remount_api_vfs_vala.stamp \
@@ -288,6 +298,7 @@ am_libsystemd_core_la_OBJECTS = src/libsystemd_core_la-unit.lo \
 	src/libsystemd_core_la-loopback-setup.lo \
 	src/libsystemd_core_la-kmod-setup.lo \
 	src/libsystemd_core_la-locale-setup.lo \
+	src/libsystemd_core_la-machine-id-setup.lo \
 	src/libsystemd_core_la-specifier.lo \
 	src/libsystemd_core_la-unit-name.lo \
 	src/libsystemd_core_la-fdset.lo \
@@ -442,6 +453,16 @@ am_systemd_logger_OBJECTS = src/logger.$(OBJEXT) src/tcpwrap.$(OBJEXT)
 systemd_logger_OBJECTS = $(am_systemd_logger_OBJECTS)
 systemd_logger_DEPENDENCIES = libsystemd-basic.la libsystemd-daemon.la \
 	$(am__DEPENDENCIES_1)
+am_systemd_machine_id_setup_OBJECTS =  \
+	src/systemd_machine_id_setup-machine-id-setup.$(OBJEXT) \
+	src/systemd_machine_id_setup-machine-id-main.$(OBJEXT)
+systemd_machine_id_setup_OBJECTS =  \
+	$(am_systemd_machine_id_setup_OBJECTS)
+systemd_machine_id_setup_DEPENDENCIES = libsystemd-basic.la
+systemd_machine_id_setup_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_machine_id_setup_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_systemd_modules_load_OBJECTS =  \
 	src/systemd_modules_load-modules-load.$(OBJEXT)
 systemd_modules_load_OBJECTS = $(am_systemd_modules_load_OBJECTS)
@@ -677,9 +698,9 @@ SOURCES = $(libsystemd_basic_la_SOURCES) $(libsystemd_core_la_SOURCES) \
 	$(systemd_detect_virt_SOURCES) $(systemd_fsck_SOURCES) \
 	$(systemd_gnome_ask_password_agent_SOURCES) \
 	$(systemd_initctl_SOURCES) $(systemd_kmsg_syslogd_SOURCES) \
-	$(systemd_logger_SOURCES) $(systemd_modules_load_SOURCES) \
-	$(systemd_notify_SOURCES) $(systemd_quotacheck_SOURCES) \
-	$(systemd_random_seed_SOURCES) \
+	$(systemd_logger_SOURCES) $(systemd_machine_id_setup_SOURCES) \
+	$(systemd_modules_load_SOURCES) $(systemd_notify_SOURCES) \
+	$(systemd_quotacheck_SOURCES) $(systemd_random_seed_SOURCES) \
 	$(systemd_readahead_collect_SOURCES) \
 	$(systemd_readahead_replay_SOURCES) \
 	$(systemd_remount_api_vfs_SOURCES) \
@@ -705,9 +726,9 @@ DIST_SOURCES = $(libsystemd_basic_la_SOURCES) \
 	$(systemd_detect_virt_SOURCES) $(systemd_fsck_SOURCES) \
 	$(systemd_gnome_ask_password_agent_SOURCES) \
 	$(systemd_initctl_SOURCES) $(systemd_kmsg_syslogd_SOURCES) \
-	$(systemd_logger_SOURCES) $(systemd_modules_load_SOURCES) \
-	$(systemd_notify_SOURCES) $(systemd_quotacheck_SOURCES) \
-	$(systemd_random_seed_SOURCES) \
+	$(systemd_logger_SOURCES) $(systemd_machine_id_setup_SOURCES) \
+	$(systemd_modules_load_SOURCES) $(systemd_notify_SOURCES) \
+	$(systemd_quotacheck_SOURCES) $(systemd_random_seed_SOURCES) \
 	$(systemd_readahead_collect_SOURCES) \
 	$(systemd_readahead_replay_SOURCES) \
 	$(systemd_remount_api_vfs_SOURCES) \
@@ -748,19 +769,20 @@ am__dist_systemunit_DATA_DIST = units/emergency.service \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
 	units/sys-kernel-security.mount units/var-lock.mount \
-	units/var-run.mount units/hwclock-load.service \
-	units/hwclock-save.service units/remount-rootfs.service \
-	units/printer.target units/sound.target units/bluetooth.target \
+	units/var-run.mount units/media.mount \
+	units/hwclock-load.service units/hwclock-save.service \
+	units/remount-rootfs.service units/printer.target \
+	units/sound.target units/bluetooth.target \
 	units/smartcard.target units/systemd-readahead-done.timer \
 	units/systemd-tmpfiles-clean.timer units/quotaon.service \
 	units/systemd-ask-password-wall.path \
 	units/systemd-ask-password-console.path \
 	units/fedora/prefdm.service units/fedora/rc-local.service \
-	units/fedora/halt-local.service units/plymouth-start.service \
-	units/plymouth-read-write.service units/plymouth-quit.service \
-	units/plymouth-quit-wait.service units/plymouth-reboot.service \
-	units/plymouth-kexec.service units/plymouth-poweroff.service \
-	units/plymouth-halt.service \
+	units/fedora/halt-local.service units/mandriva/prefdm.service \
+	units/plymouth-start.service units/plymouth-read-write.service \
+	units/plymouth-quit.service units/plymouth-quit-wait.service \
+	units/plymouth-reboot.service units/plymouth-kexec.service \
+	units/plymouth-poweroff.service units/plymouth-halt.service \
 	units/systemd-ask-password-plymouth.path
 DATA = $(dbusinterface_DATA) $(dist_bashcompletion_DATA) \
 	$(dist_dbuspolicy_DATA) $(dist_dbussystemservice_DATA) \
@@ -974,7 +996,7 @@ AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-DUSER_GENERATOR_PATH=\"$(usergeneratordir)\" \
 	-DSYSTEM_SHUTDOWN_PATH=\"$(systemshutdowndir)\" -I \
 	$(top_srcdir)/src $(am__append_1) $(am__append_2) \
-	$(am__append_3) $(am__append_4)
+	$(am__append_3) $(am__append_4) $(am__append_5)
 @HAVE_PAM_TRUE@pamlib_LTLIBRARIES = \
 @HAVE_PAM_TRUE@	pam_systemd.la
 
@@ -1031,14 +1053,15 @@ dist_systemunit_DATA = units/emergency.service units/emergency.target \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
 	units/sys-kernel-security.mount units/var-lock.mount \
-	units/var-run.mount units/hwclock-load.service \
-	units/hwclock-save.service units/remount-rootfs.service \
-	units/printer.target units/sound.target units/bluetooth.target \
+	units/var-run.mount units/media.mount \
+	units/hwclock-load.service units/hwclock-save.service \
+	units/remount-rootfs.service units/printer.target \
+	units/sound.target units/bluetooth.target \
 	units/smartcard.target units/systemd-readahead-done.timer \
 	units/systemd-tmpfiles-clean.timer units/quotaon.service \
 	units/systemd-ask-password-wall.path \
-	units/systemd-ask-password-console.path $(am__append_7) \
-	$(am__append_8)
+	units/systemd-ask-password-console.path $(am__append_8) \
+	$(am__append_9) $(am__append_10)
 nodist_systemunit_DATA = units/getty@.service \
 	units/serial-getty@.service units/graphical.target \
 	units/remote-fs.target units/multi-user.target \
@@ -1064,7 +1087,7 @@ nodist_systemunit_DATA = units/getty@.service \
 	units/halt.service units/poweroff.service units/reboot.service \
 	units/kexec.service units/fsck@.service \
 	units/fsck-root.service units/quotacheck.service \
-	units/rescue.service $(am__append_9)
+	units/rescue.service $(am__append_11)
 dist_userunit_DATA = \
 	units/user/default.target \
 	units/user/exit.target
@@ -1104,7 +1127,7 @@ EXTRA_DIST = units/getty@.service.m4 units/serial-getty@.service.m4 \
 	units/reboot.service.in units/kexec.service.in \
 	units/user/exit.service.in units/fsck@.service.in \
 	units/fsck-root.service.in units/quotacheck.service.in \
-	systemd.pc.in introspect.awk $(am__append_10) \
+	systemd.pc.in introspect.awk $(am__append_12) \
 	${libsystemd_basic_la_SOURCES:.c=.h} \
 	${libsystemd_core_la_SOURCES:.c=.h} \
 	${libsystemd_daemon_la_SOURCES:.c=.h} src/macro.h src/ioprio.h \
@@ -1195,6 +1218,7 @@ libsystemd_core_la_SOURCES = \
 	src/loopback-setup.c \
 	src/kmod-setup.c \
 	src/locale-setup.c \
+	src/machine-id-setup.c \
 	src/specifier.c \
 	src/unit-name.c \
 	src/fdset.c \
@@ -1257,6 +1281,7 @@ MANPAGES = \
 	man/systemd.conf.5 \
 	man/tmpfiles.d.5 \
 	man/hostname.5 \
+	man/machine-id.5 \
 	man/vconsole.conf.5 \
 	man/locale.conf.5 \
 	man/os-release.5 \
@@ -1452,6 +1477,16 @@ systemd_tmpfiles_CFLAGS = \
 	$(AM_CFLAGS)
 
 systemd_tmpfiles_LDADD = \
+	libsystemd-basic.la
+
+systemd_machine_id_setup_SOURCES = \
+	src/machine-id-setup.c \
+	src/machine-id-main.c
+
+systemd_machine_id_setup_CFLAGS = \
+	$(AM_CFLAGS)
+
+systemd_machine_id_setup_LDADD = \
 	libsystemd-basic.la
 
 systemd_sysctl_SOURCES = \
@@ -1701,7 +1736,7 @@ systemd_gnome_ask_password_agent_CFLAGS = \
 
 systemd_gnome_ask_password_agent_VALAFLAGS = --pkg=posix \
 	--pkg=gtk+-2.0 --pkg=linux --pkg=gio-unix-2.0 --pkg=libnotify \
-	$(am__append_11) -g
+	$(am__append_13) -g
 systemd_gnome_ask_password_agent_LDADD = \
 	$(LIBNOTIFY_LIBS) \
 	$(GTK_LIBS)
@@ -1759,7 +1794,7 @@ M4_PROCESS_USER = \
 
 CLEANFILES = $(nodist_systemunit_DATA) $(nodist_userunit_DATA) \
 	$(nodist_man_MANS) ${XML_IN_FILES:.xml.in=.html} \
-	$(pkgconfigdata_DATA) $(am__append_12) $(am__append_13) \
+	$(pkgconfigdata_DATA) $(am__append_14) $(am__append_15) \
 	$(dbusinterface_DATA)
 @HAVE_XSLTPROC_TRUE@XSLTPROC_FLAGS = \
 @HAVE_XSLTPROC_TRUE@	--nonet \
@@ -1996,6 +2031,8 @@ src/libsystemd_core_la-loopback-setup.lo: src/$(am__dirstamp) \
 src/libsystemd_core_la-kmod-setup.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libsystemd_core_la-locale-setup.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/libsystemd_core_la-machine-id-setup.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libsystemd_core_la-specifier.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -2314,6 +2351,13 @@ src/tcpwrap.$(OBJEXT): src/$(am__dirstamp) \
 systemd-logger$(EXEEXT): $(systemd_logger_OBJECTS) $(systemd_logger_DEPENDENCIES) 
 	@rm -f systemd-logger$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(systemd_logger_OBJECTS) $(systemd_logger_LDADD) $(LIBS)
+src/systemd_machine_id_setup-machine-id-setup.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_machine_id_setup-machine-id-main.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+systemd-machine-id-setup$(EXEEXT): $(systemd_machine_id_setup_OBJECTS) $(systemd_machine_id_setup_DEPENDENCIES) 
+	@rm -f systemd-machine-id-setup$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_machine_id_setup_LINK) $(systemd_machine_id_setup_OBJECTS) $(systemd_machine_id_setup_LDADD) $(LIBS)
 src/systemd_modules_load-modules-load.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 systemd-modules-load$(EXEEXT): $(systemd_modules_load_OBJECTS) $(systemd_modules_load_DEPENDENCIES) 
@@ -2560,6 +2604,8 @@ mostlyclean-compile:
 	-rm -f src/libsystemd_core_la-locale-setup.lo
 	-rm -f src/libsystemd_core_la-loopback-setup.$(OBJEXT)
 	-rm -f src/libsystemd_core_la-loopback-setup.lo
+	-rm -f src/libsystemd_core_la-machine-id-setup.$(OBJEXT)
+	-rm -f src/libsystemd_core_la-machine-id-setup.lo
 	-rm -f src/libsystemd_core_la-manager.$(OBJEXT)
 	-rm -f src/libsystemd_core_la-manager.lo
 	-rm -f src/libsystemd_core_la-mount-setup.$(OBJEXT)
@@ -2636,6 +2682,8 @@ mostlyclean-compile:
 	-rm -f src/systemd_initctl-initctl.$(OBJEXT)
 	-rm -f src/systemd_kmsg_syslogd-fdset.$(OBJEXT)
 	-rm -f src/systemd_kmsg_syslogd-kmsg-syslogd.$(OBJEXT)
+	-rm -f src/systemd_machine_id_setup-machine-id-main.$(OBJEXT)
+	-rm -f src/systemd_machine_id_setup-machine-id-setup.$(OBJEXT)
 	-rm -f src/systemd_modules_load-modules-load.$(OBJEXT)
 	-rm -f src/systemd_quotacheck-quotacheck.$(OBJEXT)
 	-rm -f src/systemd_random_seed-random-seed.$(OBJEXT)
@@ -2720,6 +2768,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-load-fragment.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-locale-setup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-loopback-setup.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-machine-id-setup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-mount-setup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-mount.Plo@am__quote@
@@ -2775,6 +2824,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_initctl-initctl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_kmsg_syslogd-fdset.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_kmsg_syslogd-kmsg-syslogd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_modules_load-modules-load.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_quotacheck-quotacheck.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_random_seed-random-seed.Po@am__quote@
@@ -3240,6 +3291,14 @@ src/libsystemd_core_la-locale-setup.lo: src/locale-setup.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/locale-setup.c' object='src/libsystemd_core_la-locale-setup.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_core_la-locale-setup.lo `test -f 'src/locale-setup.c' || echo '$(srcdir)/'`src/locale-setup.c
+
+src/libsystemd_core_la-machine-id-setup.lo: src/machine-id-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -MT src/libsystemd_core_la-machine-id-setup.lo -MD -MP -MF src/$(DEPDIR)/libsystemd_core_la-machine-id-setup.Tpo -c -o src/libsystemd_core_la-machine-id-setup.lo `test -f 'src/machine-id-setup.c' || echo '$(srcdir)/'`src/machine-id-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libsystemd_core_la-machine-id-setup.Tpo src/$(DEPDIR)/libsystemd_core_la-machine-id-setup.Plo
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/machine-id-setup.c' object='src/libsystemd_core_la-machine-id-setup.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_core_la-machine-id-setup.lo `test -f 'src/machine-id-setup.c' || echo '$(srcdir)/'`src/machine-id-setup.c
 
 src/libsystemd_core_la-specifier.lo: src/specifier.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -MT src/libsystemd_core_la-specifier.lo -MD -MP -MF src/$(DEPDIR)/libsystemd_core_la-specifier.Tpo -c -o src/libsystemd_core_la-specifier.lo `test -f 'src/specifier.c' || echo '$(srcdir)/'`src/specifier.c
@@ -3776,6 +3835,38 @@ src/systemd_kmsg_syslogd-fdset.obj: src/fdset.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/fdset.c' object='src/systemd_kmsg_syslogd-fdset.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_kmsg_syslogd_CFLAGS) $(CFLAGS) -c -o src/systemd_kmsg_syslogd-fdset.obj `if test -f 'src/fdset.c'; then $(CYGPATH_W) 'src/fdset.c'; else $(CYGPATH_W) '$(srcdir)/src/fdset.c'; fi`
+
+src/systemd_machine_id_setup-machine-id-setup.o: src/machine-id-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -MT src/systemd_machine_id_setup-machine-id-setup.o -MD -MP -MF src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Tpo -c -o src/systemd_machine_id_setup-machine-id-setup.o `test -f 'src/machine-id-setup.c' || echo '$(srcdir)/'`src/machine-id-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Tpo src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/machine-id-setup.c' object='src/systemd_machine_id_setup-machine-id-setup.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -c -o src/systemd_machine_id_setup-machine-id-setup.o `test -f 'src/machine-id-setup.c' || echo '$(srcdir)/'`src/machine-id-setup.c
+
+src/systemd_machine_id_setup-machine-id-setup.obj: src/machine-id-setup.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -MT src/systemd_machine_id_setup-machine-id-setup.obj -MD -MP -MF src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Tpo -c -o src/systemd_machine_id_setup-machine-id-setup.obj `if test -f 'src/machine-id-setup.c'; then $(CYGPATH_W) 'src/machine-id-setup.c'; else $(CYGPATH_W) '$(srcdir)/src/machine-id-setup.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Tpo src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/machine-id-setup.c' object='src/systemd_machine_id_setup-machine-id-setup.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -c -o src/systemd_machine_id_setup-machine-id-setup.obj `if test -f 'src/machine-id-setup.c'; then $(CYGPATH_W) 'src/machine-id-setup.c'; else $(CYGPATH_W) '$(srcdir)/src/machine-id-setup.c'; fi`
+
+src/systemd_machine_id_setup-machine-id-main.o: src/machine-id-main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -MT src/systemd_machine_id_setup-machine-id-main.o -MD -MP -MF src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Tpo -c -o src/systemd_machine_id_setup-machine-id-main.o `test -f 'src/machine-id-main.c' || echo '$(srcdir)/'`src/machine-id-main.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Tpo src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/machine-id-main.c' object='src/systemd_machine_id_setup-machine-id-main.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -c -o src/systemd_machine_id_setup-machine-id-main.o `test -f 'src/machine-id-main.c' || echo '$(srcdir)/'`src/machine-id-main.c
+
+src/systemd_machine_id_setup-machine-id-main.obj: src/machine-id-main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -MT src/systemd_machine_id_setup-machine-id-main.obj -MD -MP -MF src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Tpo -c -o src/systemd_machine_id_setup-machine-id-main.obj `if test -f 'src/machine-id-main.c'; then $(CYGPATH_W) 'src/machine-id-main.c'; else $(CYGPATH_W) '$(srcdir)/src/machine-id-main.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Tpo src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/machine-id-main.c' object='src/systemd_machine_id_setup-machine-id-main.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_machine_id_setup_CFLAGS) $(CFLAGS) -c -o src/systemd_machine_id_setup-machine-id-main.obj `if test -f 'src/machine-id-main.c'; then $(CYGPATH_W) 'src/machine-id-main.c'; else $(CYGPATH_W) '$(srcdir)/src/machine-id-main.c'; fi`
 
 src/systemd_modules_load-modules-load.o: src/modules-load.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_modules_load_CFLAGS) $(CFLAGS) -MT src/systemd_modules_load-modules-load.o -MD -MP -MF src/$(DEPDIR)/systemd_modules_load-modules-load.Tpo -c -o src/systemd_modules_load-modules-load.o `test -f 'src/modules-load.c' || echo '$(srcdir)/'`src/modules-load.c
@@ -4401,6 +4492,9 @@ $(srcdir)/src/systemd-interfaces.c: $(srcdir)/systemadm_vala.stamp
 	fi
 systemadm_vala.stamp: $(systemadm_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(systemadm_VALAFLAGS) $(VALAFLAGS) -C $(systemadm_SOURCES)
+	$(AM_V_at)touch $@
+systemd_machine_id_setup_vala.stamp: $(systemd_machine_id_setup_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_machine_id_setup_SOURCES)
 	$(AM_V_at)touch $@
 test_daemon_vala.stamp: $(test_daemon_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(test_daemon_SOURCES)
@@ -5187,6 +5281,7 @@ maintainer-clean-generic:
 	-rm -f systemd_initctl_vala.stamp
 	-rm -f systemd_kmsg_syslogd_vala.stamp
 	-rm -f systemd_logger_vala.stamp
+	-rm -f systemd_machine_id_setup_vala.stamp
 	-rm -f systemd_modules_load_vala.stamp
 	-rm -f systemd_notify_vala.stamp
 	-rm -f systemd_quotacheck_vala.stamp
@@ -5486,12 +5581,14 @@ install-data-hook:
 			fsck-root.service \
 			remount-rootfs.service \
 			var-run.mount \
-			var-lock.mount && \
+			var-lock.mount \
+			media.mount && \
 		$(LN_S) ../systemd-remount-api-vfs.service systemd-remount-api-vfs.service && \
 		$(LN_S) ../fsck-root.service fsck-root.service && \
 		$(LN_S) ../remount-rootfs.service remount-rootfs.service && \
 		$(LN_S) ../var-run.mount var-run.mount && \
-		$(LN_S) ../var-lock.mount var-lock.mount )
+		$(LN_S) ../var-lock.mount var-lock.mount && \
+		$(LN_S) ../media.mount media.mount )
 	( cd $(DESTDIR)$(userunitdir) && \
 		rm -f shutdown.target sockets.target local-fs.target swap.target bluetooth.target printer.target sound.target && \
 		$(LN_S) $(systemunitdir)/shutdown.target shutdown.target && \
@@ -5549,6 +5646,7 @@ install-data-hook:
 			systemd-tmpfiles-setup.service \
 			systemd-sysctl.service \
 			systemd-ask-password-console.path \
+			systemd-kmsg-syslogd.service \
 			cryptsetup.target && \
 		$(LN_S) ../dev-hugepages.automount dev-hugepages.automount && \
 		$(LN_S) ../dev-mqueue.automount dev-mqueue.automount && \
@@ -5561,6 +5659,7 @@ install-data-hook:
 		$(LN_S) ../systemd-tmpfiles-setup.service systemd-tmpfiles-setup.service && \
 		$(LN_S) ../systemd-sysctl.service systemd-sysctl.service && \
 		$(LN_S) ../systemd-ask-password-console.path systemd-ask-password-console.path && \
+		$(LN_S) ../systemd-kmsg-syslogd.service && \
 		$(LN_S) ../cryptsetup.target cryptsetup.target )
 	( cd $(DESTDIR)$(systemunitdir)/basic.target.wants && \
 		rm -f systemd-tmpfiles-clean.timer && \
@@ -5608,6 +5707,21 @@ install-data-hook:
 @TARGET_FEDORA_TRUE@	( cd $(DESTDIR)$(systemunitdir)/graphical.target.wants && \
 @TARGET_FEDORA_TRUE@		rm -f display-manager.service && \
 @TARGET_FEDORA_TRUE@		$(LN_S) $(systemunitdir)/display-manager.service display-manager.service )
+
+@TARGET_MANDRIVA_TRUE@	$(MKDIR_P) -m 0755 $(DESTDIR)$(systemunitdir)/final.target.wants
+@TARGET_MANDRIVA_TRUE@	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
+@TARGET_MANDRIVA_TRUE@		rm -f rc-local.service && \
+@TARGET_MANDRIVA_TRUE@		$(LN_S) $(systemunitdir)/rc-local.service rc-local.service )
+@TARGET_MANDRIVA_TRUE@	( cd $(DESTDIR)$(systemunitdir)/final.target.wants && \
+@TARGET_MANDRIVA_TRUE@		rm -f halt-local.service && \
+@TARGET_MANDRIVA_TRUE@		$(LN_S) $(systemunitdir)/halt-local.service halt-local.service )
+@TARGET_MANDRIVA_TRUE@	( cd $(DESTDIR)$(systemunitdir) && \
+@TARGET_MANDRIVA_TRUE@		rm -f display-manager.service && \
+@TARGET_MANDRIVA_TRUE@		$(LN_S) prefdm.service display-manager.service )
+@TARGET_MANDRIVA_TRUE@	( cd $(DESTDIR)$(systemunitdir)/graphical.target.wants && \
+@TARGET_MANDRIVA_TRUE@		rm -f display-manager.service && \
+@TARGET_MANDRIVA_TRUE@		$(LN_S) $(systemunitdir)/display-manager.service display-manager.service )
+
 @TARGET_DEBIAN_OR_UBUNTU_TRUE@	( cd $(DESTDIR)$(systemunitdir) && \
 @TARGET_DEBIAN_OR_UBUNTU_TRUE@		rm -f runlevel5.target && \
 @TARGET_DEBIAN_OR_UBUNTU_TRUE@		$(LN_S) multi-user.target runlevel5.target )
