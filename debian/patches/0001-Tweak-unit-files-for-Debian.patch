@@ -14,13 +14,11 @@ diff --git a/units/remote-fs.target.m4 b/units/remote-fs.target.m4
 index f70fda4..1fbc0b7 100644
 --- a/units/remote-fs.target.m4
 +++ b/units/remote-fs.target.m4
-@@ -12,8 +12,8 @@ Description=Remote File Systems
+@@ -12,7 +12,7 @@ Description=Remote File Systems
  m4_dnl
  m4_ifdef(`FOR_SYSTEM',
  m4_dnl When running in system mode we need the network up
--Requires=network.target
 -After=network.target
-+Requires=network.target local-fs.target
 +After=network.target local-fs.target
  )m4_dnl
  
@@ -32,30 +30,30 @@ index 3130901..2a3154c 100644
 @@ -10,7 +10,7 @@ Description=Remount Root FS
  DefaultDependencies=no
  Conflicts=shutdown.target
- After=systemd-readahead-collect.service systemd-readahead-replay.service
+ After=systemd-readahead-collect.service systemd-readahead-replay.service fsck-root.service
 -Before=local-fs.target shutdown.target
 +Before=local-fs.target shutdown.target mountoverflowtmp.service
  
  [Service]
  Type=oneshot
-diff --git a/units/var-lock.mount b/units/var-lock.mount
-index 0ea2599..491280a 100644
---- a/units/var-lock.mount
-+++ b/units/var-lock.mount
-@@ -13,4 +13,4 @@ Before=local-fs.target
- What=tmpfs
- Where=/var/lock
- Type=tmpfs
--Options=mode=775,gid=lock,nosuid,nodev,noexec
-+Options=mode=1777,nosuid,nodev,noexec
--- 
-1.7.2.3
-
+diff --git a/tmpfiles.d/legacy.conf b/tmpfiles.d/legacy.conf
+index 9198e89..fe2155d 100644
+--- a/tmpfiles.d/legacy.conf
++++ b/tmpfiles.d/legacy.conf
+@@ -17,6 +17,6 @@
+ # On modern systems a BSD file lock is a better choice if
+ # serialization is needed on those devices.
+ 
+-d /run/lock 0755 root root -
++d /run/lock 1777 root root -
+ d /run/lock/subsys 0755 root root -
+-d /run/lock/lockdev 0775 root lock -
++d /run/lock/lockdev 0775 root root -
 diff --git a/units/serial-getty@.service.m4 b/units/serial-getty@.service.m4
 index b6ca80b..485a57f 100644
 --- a/units/serial-getty@.service.m4
 +++ b/units/serial-getty@.service.m4
-@@ -23,7 +23,7 @@ Environment=TERM=vt100-nav
+@@ -32,7 +32,7 @@ Environment=TERM=vt100-nav
  
  [Service]
  Environment=TERM=vt100

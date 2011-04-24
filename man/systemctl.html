@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id364398"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id330346"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
                 introspect and control the state of the
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
-                system and service manager.</p></div><div class="refsect1" title="Options"><a id="id364420"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+                system and service manager.</p></div><div class="refsect1" title="Options"><a id="id330368"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">--type=</code>, </span><span class="term"><code class="option">-t</code></span></dt><dd><p>When listing units,
                                 limit display to certain unit
@@ -117,13 +117,11 @@
                                 <span class="command"><strong>kill</strong></span>, choose the
                                 mode how to kill the selected
                                 processes. Must be one of
-                                <code class="option">control-group</code>,
-                                <code class="option">process-group</code> or
+                                <code class="option">control-group</code> or
                                 <code class="option">process</code> to select
                                 whether to kill the entire control
-                                group, the process group or only the
-                                selected process itself. If omitted
-                                defaults to
+                                group or only the selected process
+                                itself. If omitted defaults to
                                 <code class="option">control-group</code> if
                                 <code class="option">--kill-who=all</code> is
                                 set, or <code class="option">process</code>
@@ -165,7 +163,14 @@
                                 <span class="command"><strong>enable</strong></span> are removed,
                                 not all symlinks pointing to the unit
                                 file that shall be
-                                disabled.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl><dt><span class="term"><span class="command"><strong>list-units</strong></span></span></dt><dd><p>List known units.</p></dd><dt><span class="term"><span class="command"><strong>start [NAME...]</strong></span></span></dt><dd><p>Start (activate) one
+                                disabled.</p></dd><dt><span class="term"><code class="option">-H</code>, </span><span class="term"><code class="option">--host</code></span></dt><dd><p>Execute operation
+                                remotely. Specifiy a hostname, or
+                                username and hostname seperated by @,
+                                to connect to. This will use SSH to
+                                talk to the remote systemd
+                                instance.</p></dd><dt><span class="term"><code class="option">-P</code>, </span><span class="term"><code class="option">--privileged</code></span></dt><dd><p>Acquire privileges via
+                                PolicyKit before executing the
+                                operation.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl><dt><span class="term"><span class="command"><strong>list-units</strong></span></span></dt><dd><p>List known units.</p></dd><dt><span class="term"><span class="command"><strong>start [NAME...]</strong></span></span></dt><dd><p>Start (activate) one
                                 or more units specified on the command
                                 line.</p></dd><dt><span class="term"><span class="command"><strong>stop [NAME...]</strong></span></span></dt><dd><p>Stop (deactivate) one
                                 or more units specified on the command
@@ -194,9 +199,9 @@
                                 they will be
                                 started.</p></dd><dt><span class="term"><span class="command"><strong>try-restart [NAME...]</strong></span></span></dt><dd><p>Restart one or more
                                 units specified on the command
-                                line. If the units are not running yet
-                                the operation will
-                                fail. Note that for compatibility
+                                line if the units are running. Do
+                                nothing if units are not running.
+                                Note that for compatibility
                                 with Red Hat init scripts
                                 <span class="command"><strong>condrestart</strong></span> is
                                 equivalent to this command.</p></dd><dt><span class="term"><span class="command"><strong>reload-or-restart [NAME...]</strong></span></span></dt><dd><p>Reload one or more
@@ -205,12 +210,13 @@
                                 are not running yet they will be
                                 started.</p></dd><dt><span class="term"><span class="command"><strong>reload-or-try-restart [NAME...]</strong></span></span></dt><dd><p>Reload one or more
                                 units if they support it. If not,
-                                restart them instead. If the units
-                                are not running yet the operation
-                                will fail. Note that for
-                                compatibility with SysV init scripts
+                                restart them instead. Do nothing if
+                                the units are not running. Note that
+                                for compatibility with SysV init
+                                scripts
                                 <span class="command"><strong>force-reload</strong></span> is
-                                equivalent to this command.</p></dd><dt><span class="term"><span class="command"><strong>isolate [NAME]</strong></span></span></dt><dd><p>Start the unit
+                                equivalent to this
+                                command.</p></dd><dt><span class="term"><span class="command"><strong>isolate [NAME]</strong></span></span></dt><dd><p>Start the unit
                                 specified on the command line and its
                                 dependencies and stop all others.</p><p>This is similar to changing the
                                 runlevel in a traditional init system. The
@@ -537,8 +543,8 @@
                                 supported for user service managers
                                 (i.e. in conjunction with the
                                 <code class="option">--user</code> option) and
-                                will fail otherwise.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id374666"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id374676"/><h2>See Also</h2><p>
+                                will fail otherwise.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id340645"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id340656"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

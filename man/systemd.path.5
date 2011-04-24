@@ -2,12 +2,12 @@
 .\"     Title: systemd.path
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: systemd.path
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.PATH" "5" "03/08/2011" "systemd" "systemd.path"
+.TH "SYSTEMD\&.PATH" "5" "04/21/2011" "systemd" "systemd.path"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -92,6 +92,22 @@ If a path is already existing (in case of
 .RS 4
 The unit to activate when any of the configured paths changes\&. The argument is a unit name, whose suffix is not
 \&.path\&. If not specified, this value defaults to a service that has the same name as the path unit, except for the suffix\&. (See above\&.) It is recommended that the unit name that is activated and the unit name of the path unit are named identical, except for the suffix\&.
+.RE
+.PP
+\fIMakeDirectory=\fR
+.RS 4
+Takes a boolean argument\&. If true the directories to watch are created before watching\&. This option is ignored for
+\fIPathExists=\fR
+settings\&. Defaults to
+\fBfalse\fR\&.
+.RE
+.PP
+\fIDirectoryMode=\fR
+.RS 4
+If
+\fIMakeDirectory=\fR
+is enabled use the mode specified here to create the directories in question\&. Takes an access mode in octal notation\&. Defaults to
+\fB0755\fR\&.
 .RE
 .SH "SEE ALSO"
 .PP

@@ -2,12 +2,12 @@
 .\"     Title: systemctl
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: systemctl
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMCTL" "1" "03/08/2011" "systemd" "systemctl"
+.TH "SYSTEMCTL" "1" "04/21/2011" "systemd" "systemctl"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -185,11 +185,10 @@ will query the user on the terminal for the necessary secrets\&. Use this option
 .RS 4
 When used with
 \fBkill\fR, choose the mode how to kill the selected processes\&. Must be one of
-\fBcontrol\-group\fR,
-\fBprocess\-group\fR
+\fBcontrol\-group\fR
 or
 \fBprocess\fR
-to select whether to kill the entire control group, the process group or only the selected process itself\&. If omitted defaults to
+to select whether to kill the entire control group or only the selected process itself\&. If omitted defaults to
 \fBcontrol\-group\fR
 if
 \fB\-\-kill\-who=all\fR
@@ -238,6 +237,16 @@ When used with
 are removed, not all symlinks pointing to the unit file that shall be disabled\&.
 .RE
 .PP
+\fB\-H\fR, \fB\-\-host\fR
+.RS 4
+Execute operation remotely\&. Specifiy a hostname, or username and hostname seperated by @, to connect to\&. This will use SSH to talk to the remote systemd instance\&.
+.RE
+.PP
+\fB\-P\fR, \fB\-\-privileged\fR
+.RS 4
+Acquire privileges via PolicyKit before executing the operation\&.
+.RE
+.PP
 The following commands are understood:
 .PP
 \fBlist\-units\fR
@@ -279,7 +288,7 @@ Restart one or more units specified on the command line\&. If the units are not 
 .PP
 \fBtry\-restart [NAME\&.\&.\&.]\fR
 .RS 4
-Restart one or more units specified on the command line\&. If the units are not running yet the operation will fail\&. Note that for compatibility with Red Hat init scripts
+Restart one or more units specified on the command line if the units are running\&. Do nothing if units are not running\&. Note that for compatibility with Red Hat init scripts
 \fBcondrestart\fR
 is equivalent to this command\&.
 .RE
@@ -291,7 +300,7 @@ Reload one or more units if they support it\&. If not, restart them instead\&. I
 .PP
 \fBreload\-or\-try\-restart [NAME\&.\&.\&.]\fR
 .RS 4
-Reload one or more units if they support it\&. If not, restart them instead\&. If the units are not running yet the operation will fail\&. Note that for compatibility with SysV init scripts
+Reload one or more units if they support it\&. If not, restart them instead\&. Do nothing if the units are not running\&. Note that for compatibility with SysV init scripts
 \fBforce\-reload\fR
 is equivalent to this command\&.
 .RE

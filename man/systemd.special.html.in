@@ -3,7 +3,6 @@
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.special</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.special"><a id="systemd.special"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.special — special systemd units</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">basic.target</code>,
                 <code class="filename">ctrl-alt-del.target</code>,
                 <code class="filename">dbus.service</code>,
-                <code class="filename">dbus.target</code>,
                 <code class="filename">default.target</code>,
                 <code class="filename">display-manager.service</code>,
                 <code class="filename">emergency.target</code>,
@@ -21,7 +20,7 @@
                 <code class="filename">remote-fs.target</code>,
                 <code class="filename">rescue.target</code>,
                 <code class="filename">rpcbind.target</code>,
-                <code class="filename">rtc-set.target</code>,
+                <code class="filename">time-sync.target</code>,
                 <code class="filename">runlevel2.target</code>,
                 <code class="filename">runlevel3.target</code>,
                 <code class="filename">runlevel4.target</code>,
@@ -31,15 +30,14 @@
                 <code class="filename">sockets.target</code>,
                 <code class="filename">swap.target</code>,
                 <code class="filename">sysinit.target</code>,
-                <code class="filename">@SPECIAL_SYSLOG_SERVICE@</code>,
                 <code class="filename">syslog.target</code>,
                 <code class="filename">systemd-initctl.service</code>,
                 <code class="filename">systemd-initctl.socket</code>,
                 <code class="filename">systemd-logger.service</code>,
                 <code class="filename">systemd-logger.socket</code>,
-                <code class="filename">umount.target</code></p></div><div class="refsect1" title="Description"><a id="id345418"/><h2>Description</h2><p>A few units are treated specially by
+                <code class="filename">umount.target</code></p></div><div class="refsect1" title="Description"><a id="id531198"/><h2>Description</h2><p>A few units are treated specially by
                 systemd. They have special internal semantics and
-                cannot be renamed.</p></div><div class="refsect1" title="Special System Units"><a id="id345429"/><h2>Special System Units</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">basic.target</code></span></dt><dd><p>A special target unit
+                cannot be renamed.</p></div><div class="refsect1" title="Special System Units"><a id="id531209"/><h2>Special System Units</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">basic.target</code></span></dt><dd><p>A special target unit
                                         covering early boot-up.</p><p>systemd automatically
                                         adds dependencies of the types
                                         Requires and After for this
@@ -64,21 +62,7 @@
                                         this service is fully started
                                         up systemd will connect to it
                                         and register its
-                                        service.</p><p>Units should generally
-                                        avoid depending on this unit
-                                        directly and instead refer to
-                                        the
-                                        <code class="filename">dbus.target</code>
-                                        unit instead, which pulls this
-                                        one in directly or indirectly
-                                        via socket-based activation.</p></dd><dt><span class="term"><code class="filename">dbus.target</code></span></dt><dd><p>Administrators should
-                                        ensure that this target pulls
-                                        in a service unit with the
-                                        name or alias of
-                                        <code class="filename">dbus.service</code>
-                                        (or a socket unit that
-                                        activates this
-                                        service).</p></dd><dt><span class="term"><code class="filename">default.target</code></span></dt><dd><p>The default unit systemd
+                                        service.</p></dd><dt><span class="term"><code class="filename">default.target</code></span></dt><dd><p>The default unit systemd
                                         starts at bootup. Usually this
                                         should be aliased (symlinked)
                                         to
@@ -87,7 +71,7 @@
                                         <code class="filename">graphical.target</code>.</p><p>The default unit systemd
                                         starts at bootup can be
                                         overriden with the
-                                        <code class="varname">systemd.default=</code>
+                                        <code class="varname">systemd.unit=</code>
                                         kernel command line option.</p></dd><dt><span class="term"><code class="filename">display-manager.service</code></span></dt><dd><p>The display manager
                                         service. Usually this should
                                         be aliased (symlinked) to
@@ -107,7 +91,7 @@
                                         console. This unit is supposed
                                         to be used with the kernel
                                         command line option
-                                        <code class="varname">systemd.default=</code>
+                                        <code class="varname">systemd.unit=</code>
                                         and has otherwise little use.
                                         </p></dd><dt><span class="term"><code class="filename">graphical.target</code></span></dt><dd><p>A special target unit
                                         for setting up a graphical
@@ -213,7 +197,7 @@
                                         units with an LSB header
                                         referring to the
                                         <code class="literal">$rpcbind</code>
-                                        facility.</p></dd><dt><span class="term"><code class="filename">rtc-set.target</code></span></dt><dd><p>systemd automatically
+                                        facility.</p></dd><dt><span class="term"><code class="filename">time-sync.target</code></span></dt><dd><p>systemd automatically
                                         adds dependencies of type
                                         After for this target unit to
                                         all SysV init script service
@@ -289,34 +273,14 @@
                                         This covers the special
                                         boot-up runlevels some
                                         distributions have, such as S
-                                        or b.</p></dd><dt><span class="term"><code class="filename">@SPECIAL_SYSLOG_SERVICE@</code></span></dt><dd><p>A special unit for the
-                                        syslog daemon. As soon as
-                                        this service is fully started
-                                        up systemd will connect to it
-                                        and use it for logging if it
-                                        has been configured for
-                                        that.</p><p>Units should generally
-                                        avoid depending on this unit
-                                        directly and instead refer to
-                                        the
-                                        <code class="filename">syslog.target</code>
-                                        unit instead, which pulls this
-                                        one in directly or indirectly
-                                        via socket-based activation.</p></dd><dt><span class="term"><code class="filename">syslog.target</code></span></dt><dd><p>systemd automatically
+                                        or b.</p></dd><dt><span class="term"><code class="filename">syslog.target</code></span></dt><dd><p>systemd automatically
                                         adds dependencies of type
                                         After for this target unit to
                                         all SysV init script service
                                         units with an LSB header
                                         referring to the
                                         <code class="literal">$syslog</code>
-                                        facility.</p><p>Administrators should
-                                        ensure that this target pulls
-                                        in a service unit with the
-                                        name or alias of
-                                        <code class="filename">@SPECIAL_SYSLOG_SERVICE@</code>
-                                        (or a socket unit that
-                                        activates this
-                                        service).</p></dd><dt><span class="term"><code class="filename">systemd-initctl.service</code></span></dt><dd><p>This provides
+                                        facility.</p></dd><dt><span class="term"><code class="filename">systemd-initctl.service</code></span></dt><dd><p>This provides
                                         compatibility with the SysV
                                         /dev/initctl file system FIFO
                                         for communication with the
@@ -355,7 +319,7 @@
                                         their mount unit, which is
                                         implicitly done when
                                         <code class="varname">DefaultDependencies=yes</code>
-                                        is set (the default).</p></dd></dl></div></div><div class="refsect1" title="Special User Units"><a id="id355177"/><h2>Special User Units</h2><p>When systemd runs as a user instance, the
+                                        is set (the default).</p></dd></dl></div></div><div class="refsect1" title="Special User Units"><a id="id540883"/><h2>Special User Units</h2><p>When systemd runs as a user instance, the
                 following special units are available, which have
                 similar definitions as their system counterparts:
                 <code class="filename">default.target</code>,
@@ -377,7 +341,7 @@
                                         which in turn should be
                                         conflicted by all units that
                                         want to be shut down on
-                                        user service manager exit.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id355262"/><h2>See Also</h2><p>
+                                        user service manager exit.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id540968"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>,

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.path</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.path"><a id="systemd.path"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.path — systemd path configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.path</code></p></div><div class="refsect1" title="Description"><a id="id484752"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.path</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.path"><a id="systemd.path"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.path — systemd path configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.path</code></p></div><div class="refsect1" title="Description"><a id="id542051"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.path</code> encodes information about
                 a path monitored by systemd, for
                 path-based activation.</p><p>This man page lists the configuration options
@@ -33,7 +33,7 @@
                 that path units are terminated cleanly prior to system
                 shutdown. Only path units involved with early boot or
                 late system shutdown should disable this
-                option.</p></div><div class="refsect1" title="Options"><a id="id484846"/><h2>Options</h2><p>Path files must include a [Path] section,
+                option.</p></div><div class="refsect1" title="Options"><a id="id542145"/><h2>Options</h2><p>Path files must include a [Path] section,
                 which carries information about the path(s) it
                 monitors. The options specific to the [Path] section
                 of path units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PathExists=</code>, </span><span class="term"><code class="varname">PathChanged=</code>, </span><span class="term"><code class="varname">DirectoryNotEmpty=</code></span></dt><dd><p>Defines paths to
@@ -77,7 +77,19 @@
                                 unit name that is activated and the
                                 unit name of the path unit are named
                                 identical, except for the
-                                suffix.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id517114"/><h2>See Also</h2><p>
+                                suffix.</p></dd><dt><span class="term"><code class="varname">MakeDirectory=</code></span></dt><dd><p>Takes a boolean
+                                argument. If true the directories to
+                                watch are created before
+                                watching. This option is ignored for
+                                <code class="varname">PathExists=</code>
+                                settings. Defaults to
+                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">DirectoryMode=</code></span></dt><dd><p>If
+                                <code class="varname">MakeDirectory=</code> is
+                                enabled use the mode specified here to
+                                create the directories in
+                                question. Takes an access mode in
+                                octal notation. Defaults to
+                                <code class="option">0755</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id509650"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
