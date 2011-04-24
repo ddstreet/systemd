@@ -83,6 +83,9 @@ struct timespec *timespec_store(struct timespec *ts, usec_t u);
 usec_t timeval_load(const struct timeval *tv);
 struct timeval *timeval_store(struct timeval *tv, usec_t u);
 
+size_t page_size(void);
+#define PAGE_ALIGN(l) ALIGN_TO((l), page_size())
+
 #define streq(a,b) (strcmp((a),(b)) == 0)
 #define strneq(a, b, n) (strncmp((a), (b), (n)) == 0)
 
@@ -112,6 +115,10 @@ static inline const char *strna(const char *s) {
 
 static inline bool is_path_absolute(const char *p) {
         return *p == '/';
+}
+
+static inline bool isempty(const char *p) {
+        return !p || !p[0];
 }
 
 bool endswith(const char *s, const char *postfix);
@@ -189,6 +196,7 @@ char *split_quoted(const char *c, size_t *l, char **state);
 char **split_path_and_make_absolute(const char *p);
 
 pid_t get_parent_of_pid(pid_t pid, pid_t *ppid);
+int get_starttime_of_pid(pid_t pid, unsigned long long *st);
 
 int write_one_line_file(const char *fn, const char *line);
 int read_one_line_file(const char *fn, char **line);
@@ -196,6 +204,7 @@ int read_full_file(const char *fn, char **contents);
 
 int parse_env_file(const char *fname, const char *separator, ...) _sentinel_;
 int load_env_file(const char *fname, char ***l);
+int write_env_file(const char *fname, char **l);
 
 char *strappend(const char *s, const char *suffix);
 char *strnappend(const char *s, const char *suffix, size_t length);
@@ -337,7 +346,7 @@ int getttyname_malloc(int fd, char **r);
 int getttyname_harder(int fd, char **r);
 
 int get_ctty_devnr(dev_t *d);
-int get_ctty(char **r);
+int get_ctty(char **r, dev_t *_devnr);
 
 int chmod_and_chown(const char *path, mode_t mode, uid_t uid, gid_t gid);
 
@@ -380,11 +389,25 @@ bool tty_is_vc(const char *tty);
 const char *default_term_for_tty(const char *tty);
 
 int detect_vm(const char **id);
+int detect_container(const char **id);
 int detect_virtualization(const char **id);
 
 void execute_directory(const char *directory, DIR *_d, char *argv[]);
 
 int kill_and_sigcont(pid_t pid, int sig);
+
+bool nulstr_contains(const char*nulstr, const char *needle);
+
+bool plymouth_running(void);
+
+void parse_syslog_priority(char **p, int *priority);
+
+int have_effective_cap(int value);
+
+bool hostname_is_valid(const char *s);
+char* hostname_cleanup(char *s);
+
+char* strshorten(char *s, size_t l);
 
 #define NULSTR_FOREACH(i, l)                                    \
         for ((i) = (l); (i) && *(i); (i) = strchr((i), 0)+1)
@@ -398,8 +421,8 @@ int ioprio_class_from_string(const char *s);
 const char *sigchld_code_to_string(int i);
 int sigchld_code_from_string(const char *s);
 
-const char *log_facility_to_string(int i);
-int log_facility_from_string(const char *s);
+const char *log_facility_unshifted_to_string(int i);
+int log_facility_unshifted_from_string(const char *s);
 
 const char *log_level_to_string(int i);
 int log_level_from_string(const char *s);

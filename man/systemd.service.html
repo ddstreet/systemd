@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id480265"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id420526"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.service</code> encodes information
                 about a process controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -33,7 +33,7 @@
                 <code class="filename">.service</code> suffix removed) and
                 dynamically creates a service unit from that
                 script. This is useful for compatibility with
-                SysV.</p></div><div class="refsect1" title="Options"><a id="id480375"/><h2>Options</h2><p>Service files must include a
+                SysV.</p></div><div class="refsect1" title="Options"><a id="id420638"/><h2>Options</h2><p>Service files must include a
                 <code class="literal">[Service]</code> section, which carries
                 information about the service and the process it
                 supervises. A number of options that may be used in
@@ -98,7 +98,7 @@
                                 acquired. Service units with this
                                 option configured implicitly gain
                                 dependencies on the
-                                <code class="filename">dbus.target</code>
+                                <code class="filename">dbus.socket</code>
                                 unit.</p><p>Behaviour of
                                 <code class="option">notify</code> is similar to
                                 <code class="option">simple</code>, however it is
@@ -297,7 +297,7 @@
                                 time span value such as "5min
                                 20s". Pass 0 to disable the timeout
                                 logic. Defaults to
-                                60s.</p></dd><dt><span class="term"><code class="varname">Restart=</code></span></dt><dd><p>Configures whether the
+                                3min.</p></dd><dt><span class="term"><code class="varname">Restart=</code></span></dt><dd><p>Configures whether the
                                 main service process shall be
                                 restarted when it exits. Takes one of
                                 <code class="option">no</code>,
@@ -382,7 +382,6 @@
                                 processes of this service shall be
                                 killed. One of
                                 <code class="option">control-group</code>,
-                                <code class="option">process-group</code>,
                                 <code class="option">process</code>,
                                 <code class="option">none</code>.</p><p>If set to
                                 <code class="option">control-group</code> all
@@ -392,10 +391,6 @@
                                 stop command (as configured with
                                 <code class="varname">ExecStop=</code>) is
                                 executed. If set to
-                                <code class="option">process-group</code> only
-                                the members of the process group of
-                                the main service process are
-                                killed. If set to
                                 <code class="option">process</code> only the main
                                 process itself is killed. If set to
                                 <code class="option">none</code> no process is
@@ -502,7 +497,7 @@
                                 <code class="filename">/etc/fstab</code>'s
                                 fs_passno column. See
                                 <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
-                                for details.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id489891"/><h2>See Also</h2><p>
+                                for details.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id462512"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

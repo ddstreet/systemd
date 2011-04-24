@@ -368,7 +368,7 @@ void unit_free(Unit *u) {
                 u->meta.manager->n_in_gc_queue--;
         }
 
-        cgroup_bonding_free_list(u->meta.cgroup_bondings);
+        cgroup_bonding_free_list(u->meta.cgroup_bondings, u->meta.manager->n_serializing <= 0);
 
         free(u->meta.description);
         free(u->meta.fragment_path);
@@ -567,11 +567,8 @@ int unit_add_exec_dependencies(Unit *u, ExecContext *c) {
         /* If syslog or kernel logging is requested, make sure our own
          * logging daemon is run first. */
 
-        if ((r = unit_add_dependency_by_name(u, UNIT_AFTER, SPECIAL_LOGGER_SOCKET, NULL, true)) < 0)
-                return r;
-
         if (u->meta.manager->running_as == MANAGER_SYSTEM)
-                if ((r = unit_add_dependency_by_name(u, UNIT_REQUIRES, SPECIAL_LOGGER_SOCKET, NULL, true)) < 0)
+                if ((r = unit_add_two_dependencies_by_name(u, UNIT_REQUIRES, UNIT_AFTER, SPECIAL_LOGGER_SOCKET, NULL, true)) < 0)
                         return r;
 
         return 0;
@@ -647,6 +644,13 @@ void unit_dump(Unit *u, FILE *f, const char *prefix) {
 
         condition_dump_list(u->meta.conditions, f, prefix);
 
+        if (dual_timestamp_is_set(&u->meta.condition_timestamp))
+                fprintf(f,
+                        "%s\tCondition Timestamp: %s\n"
+                        "%s\tCondition Result: %s\n",
+                        prefix, strna(format_timestamp(timestamp1, sizeof(timestamp1), u->meta.condition_timestamp.realtime)),
+                        prefix, yes_no(u->meta.condition_result));
+
         for (d = 0; d < _UNIT_DEPENDENCY_MAX; d++) {
                 Unit *other;
 
@@ -659,11 +663,15 @@ void unit_dump(Unit *u, FILE *f, const char *prefix) {
                         "%s\tStopWhenUnneeded: %s\n"
                         "%s\tRefuseManualStart: %s\n"
                         "%s\tRefuseManualStop: %s\n"
-                        "%s\tDefaultDependencies: %s\n",
+                        "%s\tDefaultDependencies: %s\n"
+                        "%s\tOnFailureIsolate: %s\n"
+                        "%s\tIgnoreOnIsolate: %s\n",
                         prefix, yes_no(u->meta.stop_when_unneeded),
                         prefix, yes_no(u->meta.refuse_manual_start),
                         prefix, yes_no(u->meta.refuse_manual_stop),
-                        prefix, yes_no(u->meta.default_dependencies));
+                        prefix, yes_no(u->meta.default_dependencies),
+                        prefix, yes_no(u->meta.on_failure_isolate),
+                        prefix, yes_no(u->meta.ignore_on_isolate));
 
                 LIST_FOREACH(by_unit, b, u->meta.cgroup_bondings)
                         fprintf(f, "%s\tControlGroup: %s:%s\n",
@@ -808,6 +816,16 @@ int unit_load(Unit *u) {
                 if ((r = unit_add_default_dependencies(u)) < 0)
                         goto fail;
 
+        if (u->meta.on_failure_isolate &&
+            set_size(u->meta.dependencies[UNIT_ON_FAILURE]) > 1) {
+
+                log_error("More than one OnFailure= dependencies specified for %s but OnFailureIsolate= enabled. Refusing.",
+                          u->meta.id);
+
+                r = -EINVAL;
+                goto fail;
+        }
+
         assert((u->meta.load_state != UNIT_MERGED) == !u->meta.merged_into);
 
         unit_add_to_dbus_queue(unit_follow_merge(u));
@@ -823,6 +841,15 @@ fail:
         log_debug("Failed to load configuration for %s: %s", u->meta.id, strerror(-r));
 
         return r;
+}
+
+bool unit_condition_test(Unit *u) {
+        assert(u);
+
+        dual_timestamp_get(&u->meta.condition_timestamp);
+        u->meta.condition_result = condition_test_list(u->meta.conditions);
+
+        return u->meta.condition_result;
 }
 
 /* Errors:
@@ -849,7 +876,7 @@ int unit_start(Unit *u) {
                 return -EALREADY;
 
         /* If the conditions failed, don't do anything at all */
-        if (!condition_test_list(u->meta.conditions)) {
+        if (!unit_condition_test(u)) {
                 log_debug("Starting of %s requested but condition failed. Ignoring.", u->meta.id);
                 return -EALREADY;
         }
@@ -1080,12 +1107,20 @@ void unit_trigger_on_failure(Unit *u) {
 
         assert(u);
 
-        SET_FOREACH(other, u->meta.dependencies[UNIT_ON_FAILURE], i)
-                manager_add_job(u->meta.manager, JOB_START, other, JOB_REPLACE, true, NULL, NULL);
+        if (set_size(u->meta.dependencies[UNIT_ON_FAILURE]) <= 0)
+                return;
+
+        log_info("Triggering OnFailure= dependencies of %s.", u->meta.id);
+
+        SET_FOREACH(other, u->meta.dependencies[UNIT_ON_FAILURE], i) {
+                int r;
+
+                if ((r = manager_add_job(u->meta.manager, JOB_START, other, u->meta.on_failure_isolate ? JOB_ISOLATE : JOB_REPLACE, true, NULL, NULL)) < 0)
+                        log_error("Failed to enqueue OnFailure= job: %s", strerror(-r));
+        }
 }
 
 void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success) {
-        dual_timestamp ts;
         bool unexpected;
 
         assert(u);
@@ -1098,23 +1133,27 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
          * behaviour here. For example: if a mount point is remounted
          * this function will be called too! */
 
-        dual_timestamp_get(&ts);
+        if (u->meta.manager->n_deserializing <= 0) {
+                dual_timestamp ts;
 
-        if (UNIT_IS_INACTIVE_OR_FAILED(os) && !UNIT_IS_INACTIVE_OR_FAILED(ns))
-                u->meta.inactive_exit_timestamp = ts;
-        else if (!UNIT_IS_INACTIVE_OR_FAILED(os) && UNIT_IS_INACTIVE_OR_FAILED(ns))
-                u->meta.inactive_enter_timestamp = ts;
+                dual_timestamp_get(&ts);
 
-        if (!UNIT_IS_ACTIVE_OR_RELOADING(os) && UNIT_IS_ACTIVE_OR_RELOADING(ns))
-                u->meta.active_enter_timestamp = ts;
-        else if (UNIT_IS_ACTIVE_OR_RELOADING(os) && !UNIT_IS_ACTIVE_OR_RELOADING(ns))
-                u->meta.active_exit_timestamp = ts;
+                if (UNIT_IS_INACTIVE_OR_FAILED(os) && !UNIT_IS_INACTIVE_OR_FAILED(ns))
+                        u->meta.inactive_exit_timestamp = ts;
+                else if (!UNIT_IS_INACTIVE_OR_FAILED(os) && UNIT_IS_INACTIVE_OR_FAILED(ns))
+                        u->meta.inactive_enter_timestamp = ts;
+
+                if (!UNIT_IS_ACTIVE_OR_RELOADING(os) && UNIT_IS_ACTIVE_OR_RELOADING(ns))
+                        u->meta.active_enter_timestamp = ts;
+                else if (UNIT_IS_ACTIVE_OR_RELOADING(os) && !UNIT_IS_ACTIVE_OR_RELOADING(ns))
+                        u->meta.active_exit_timestamp = ts;
+
+                timer_unit_notify(u, ns);
+                path_unit_notify(u, ns);
+        }
 
         if (UNIT_IS_INACTIVE_OR_FAILED(ns))
                 cgroup_bonding_trim_list(u->meta.cgroup_bondings, true);
-
-        timer_unit_notify(u, ns);
-        path_unit_notify(u, ns);
 
         if (u->meta.job) {
                 unexpected = false;
@@ -1182,40 +1221,40 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
         } else
                 unexpected = true;
 
-        /* If this state change happened without being requested by a
-         * job, then let's retroactively start or stop
-         * dependencies. We skip that step when deserializing, since
-         * we don't want to create any additional jobs just because
-         * something is already activated. */
+        if (u->meta.manager->n_deserializing <= 0) {
 
-        if (unexpected && u->meta.manager->n_deserializing <= 0) {
-                if (UNIT_IS_INACTIVE_OR_FAILED(os) && UNIT_IS_ACTIVE_OR_ACTIVATING(ns))
-                        retroactively_start_dependencies(u);
-                else if (UNIT_IS_ACTIVE_OR_ACTIVATING(os) && UNIT_IS_INACTIVE_OR_DEACTIVATING(ns))
-                        retroactively_stop_dependencies(u);
-        }
+                /* If this state change happened without being
+                 * requested by a job, then let's retroactively start
+                 * or stop dependencies. We skip that step when
+                 * deserializing, since we don't want to create any
+                 * additional jobs just because something is already
+                 * activated. */
 
-        if (ns != os && ns == UNIT_FAILED) {
-                log_notice("Unit %s entered failed state.", u->meta.id);
-                unit_trigger_on_failure(u);
+                if (unexpected) {
+                        if (UNIT_IS_INACTIVE_OR_FAILED(os) && UNIT_IS_ACTIVE_OR_ACTIVATING(ns))
+                                retroactively_start_dependencies(u);
+                        else if (UNIT_IS_ACTIVE_OR_ACTIVATING(os) && UNIT_IS_INACTIVE_OR_DEACTIVATING(ns))
+                                retroactively_stop_dependencies(u);
+                }
+
+                if (ns != os && ns == UNIT_FAILED) {
+                        log_notice("Unit %s entered failed state.", u->meta.id);
+                        unit_trigger_on_failure(u);
+                }
         }
 
         /* Some names are special */
         if (UNIT_IS_ACTIVE_OR_RELOADING(ns)) {
+
                 if (unit_has_name(u, SPECIAL_DBUS_SERVICE))
                         /* The bus just might have become available,
                          * hence try to connect to it, if we aren't
                          * yet connected. */
                         bus_init(u->meta.manager, true);
 
-                if (unit_has_name(u, SPECIAL_SYSLOG_SERVICE))
-                        /* The syslog daemon just might have become
-                         * available, hence try to connect to it, if
-                         * we aren't yet connected. */
-                        log_open();
-
                 if (u->meta.type == UNIT_SERVICE &&
-                    !UNIT_IS_ACTIVE_OR_RELOADING(os)) {
+                    !UNIT_IS_ACTIVE_OR_RELOADING(os) &&
+                    u->meta.manager->n_deserializing <= 0) {
                         /* Write audit record if we have just finished starting up */
                         manager_send_unit_audit(u->meta.manager, u, AUDIT_SERVICE_START, true);
                         u->meta.in_audit = true;
@@ -1226,18 +1265,13 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
 
         } else {
 
-                if (unit_has_name(u, SPECIAL_SYSLOG_SERVICE))
-                        /* The syslog daemon might just have
-                         * terminated, hence try to disconnect from
-                         * it. */
-                        log_close_syslog();
-
                 /* We don't care about D-Bus here, since we'll get an
                  * asynchronous notification for it anyway. */
 
                 if (u->meta.type == UNIT_SERVICE &&
                     UNIT_IS_INACTIVE_OR_FAILED(ns) &&
-                    !UNIT_IS_INACTIVE_OR_FAILED(os)) {
+                    !UNIT_IS_INACTIVE_OR_FAILED(os) &&
+                    u->meta.manager->n_deserializing <= 0) {
 
                         /* Hmm, if there was no start record written
                          * write it now, so that we always have a nice
@@ -1254,6 +1288,8 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                         u->meta.in_audit = false;
                 }
         }
+
+        manager_recheck_syslog(u->meta.manager);
 
         /* Maybe we finished startup and are now ready for being
          * stopped because unneeded? */
@@ -1842,6 +1878,9 @@ int unit_add_default_cgroups(Unit *u) {
         /* Adds in the default cgroups, if they weren't specified
          * otherwise. */
 
+        if (!u->meta.manager->cgroup_hierarchy)
+                return 0;
+
         if ((r = unit_add_one_default_cgroup(u, NULL)) < 0)
                 return r;
 
@@ -2019,8 +2058,7 @@ char **unit_full_printf_strv(Unit *u, char **l) {
         return r;
 
 fail:
-        j--;
-        while (j >= r)
+        for (j--; j >= r; j--)
                 free(*j);
 
         free(r);
@@ -2071,6 +2109,10 @@ int unit_serialize(Unit *u, FILE *f, FDSet *fds) {
         dual_timestamp_serialize(f, "active-enter-timestamp", &u->meta.active_enter_timestamp);
         dual_timestamp_serialize(f, "active-exit-timestamp", &u->meta.active_exit_timestamp);
         dual_timestamp_serialize(f, "inactive-enter-timestamp", &u->meta.inactive_enter_timestamp);
+        dual_timestamp_serialize(f, "condition-timestamp", &u->meta.condition_timestamp);
+
+        if (dual_timestamp_is_set(&u->meta.condition_timestamp))
+                unit_serialize_item(u, f, "condition-result", yes_no(u->meta.condition_result));
 
         /* End marker */
         fputc('\n', f);
@@ -2115,7 +2157,7 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
                 return 0;
 
         for (;;) {
-                char line[1024], *l, *v;
+                char line[LINE_MAX], *l, *v;
                 size_t k;
 
                 if (!fgets(line, sizeof(line), f)) {
@@ -2159,6 +2201,18 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
                         continue;
                 } else if (streq(l, "inactive-enter-timestamp")) {
                         dual_timestamp_deserialize(v, &u->meta.inactive_enter_timestamp);
+                        continue;
+                } else if (streq(l, "condition-timestamp")) {
+                        dual_timestamp_deserialize(v, &u->meta.condition_timestamp);
+                        continue;
+                } else if (streq(l, "condition-result")) {
+                        int b;
+
+                        if ((b = parse_boolean(v)) < 0)
+                                log_debug("Failed to parse condition result value %s", v);
+                        else
+                                u->meta.condition_result = b;
+
                         continue;
                 }
 
@@ -2211,7 +2265,7 @@ int unit_coldplug(Unit *u) {
                         return r;
 
         if (u->meta.deserialized_job >= 0) {
-                if ((r = manager_add_job(u->meta.manager, u->meta.deserialized_job, u, JOB_FAIL, false, NULL, NULL)) < 0)
+                if ((r = manager_add_job(u->meta.manager, u->meta.deserialized_job, u, JOB_IGNORE_REQUIREMENTS, false, NULL, NULL)) < 0)
                         return r;
 
                 u->meta.deserialized_job = _JOB_TYPE_INVALID;
@@ -2232,7 +2286,10 @@ void unit_status_printf(Unit *u, const char *format, ...) {
         if (u->meta.manager->running_as != MANAGER_SYSTEM)
                 return;
 
-        if (!u->meta.manager->show_status)
+        /* If Plymouth is running make sure we show the status, so
+         * that there's something nice to see when people press Esc */
+
+        if (!u->meta.manager->show_status && !plymouth_running())
                 return;
 
         if (!manager_is_booting_or_shutting_down(u->meta.manager))

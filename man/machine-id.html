@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>machine-id</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="machine-id"><a id="machine-id"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>machine-id — local machine ID configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1" title="Description"><a id="id347434"/><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>machine-id</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="machine-id"><a id="machine-id"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>machine-id — local machine ID configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1" title="Description"><a id="id424428"/><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
                 configures the unique machine id of the local system
                 that is set during installation. It should contain a
                 single newline-terminated, hexadecimal, lowercase 16
@@ -8,21 +8,23 @@
                 random source during system installation and stays
                 constant for all subsequent boots. Optionally, for
                 stateless systems it is generated during runtime at
-                boot.</p><p>The machine ID does not change based on user
+                boot if it is found to be empty.</p><p>The machine ID does not change based on user
                 configuration, or when hardware is replaced.</p><p>This machine id follows the same format and
                 logic as the D-Bus machine ID.</p><p>Programs may use this ID to identify the host
                 with a globally unique ID in the network, that does
                 not change even if the local network configuration
                 changes. Due to this and its greater length it is
-                a more useful replacement than the
+                a more useful replacement for the
                 <span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span>
-                call POSIX specifies.</p></div><div class="refsect1" title="History"><a id="id347478"/><h2>History</h2><p>The simple configuration file format of
+                call POSIX specifies.</p></div><div class="refsect1" title="History"><a id="id424472"/><h2>History</h2><p>The simple configuration file format of
                 <code class="filename">/etc/machine-id</code> originates in the
                 <code class="filename">/var/lib/dbus/machine-id</code> file
                 introduced by D-Bus. In fact this latter file might be a
                 symlink to the
-                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1" title="See Also"><a id="id347505"/><h2>See Also</h2><p>
+                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1" title="See Also"><a id="id424498"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span>
+                          <span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">machine-info</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span>
                   </p></div></div></body></html>

@@ -63,7 +63,7 @@ int cgroup_bonding_realize_list(CGroupBonding *first) {
         return 0;
 }
 
-void cgroup_bonding_free(CGroupBonding *b) {
+void cgroup_bonding_free(CGroupBonding *b, bool remove_or_trim) {
         assert(b);
 
         if (b->unit) {
@@ -82,7 +82,7 @@ void cgroup_bonding_free(CGroupBonding *b) {
                 }
         }
 
-        if (b->realized && b->ours) {
+        if (b->realized && b->ours && remove_or_trim) {
 
                 if (cgroup_bonding_is_empty(b) > 0)
                         cg_delete(b->controller, b->path);
@@ -95,11 +95,11 @@ void cgroup_bonding_free(CGroupBonding *b) {
         free(b);
 }
 
-void cgroup_bonding_free_list(CGroupBonding *first) {
+void cgroup_bonding_free_list(CGroupBonding *first, bool remove_or_trim) {
         CGroupBonding *b, *n;
 
         LIST_FOREACH_SAFE(by_unit, b, n, first)
-                cgroup_bonding_free(b);
+                cgroup_bonding_free(b, remove_or_trim);
 }
 
 void cgroup_bonding_trim(CGroupBonding *b, bool delete_root) {
@@ -225,9 +225,17 @@ int manager_setup_cgroup(Manager *m) {
 
         assert(m);
 
+        /* 0. Be nice to Ingo Molnar #628004 */
+        if (path_is_mount_point("/sys/fs/cgroup/systemd") <= 0) {
+                log_warning("No control group support available, not creating root group.");
+                return 0;
+        }
+
         /* 1. Determine hierarchy */
-        if ((r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 0, &current)) < 0)
+        if ((r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 0, &current)) < 0) {
+                log_error("Cannot determine cgroup we are running in: %s", strerror(-r));
                 goto finish;
+        }
 
         if (m->running_as == MANAGER_SYSTEM)
                 strcpy(suffix, "/system");
@@ -246,14 +254,17 @@ int manager_setup_cgroup(Manager *m) {
                 /* We need a new root cgroup */
                 m->cgroup_hierarchy = NULL;
                 if (asprintf(&m->cgroup_hierarchy, "%s%s", streq(current, "/") ? "" : current, suffix) < 0) {
+                        log_error("Out of memory");
                         r = -ENOMEM;
                         goto finish;
                 }
         }
 
         /* 2. Show data */
-        if ((r = cg_get_path(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, NULL, &path)) < 0)
+        if ((r = cg_get_path(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, NULL, &path)) < 0) {
+                log_error("Cannot find cgroup mount point: %s", strerror(-r));
                 goto finish;
+        }
 
         log_debug("Using cgroup controller " SYSTEMD_CGROUP_CONTROLLER ". File system hierarchy is at %s.", path);
 
@@ -276,6 +287,7 @@ int manager_setup_cgroup(Manager *m) {
                 close_nointr_nofail(m->pin_cgroupfs_fd);
 
         if ((m->pin_cgroupfs_fd = open(path, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY|O_NONBLOCK)) < 0) {
+                log_error("Failed to open pin file: %m");
                 r = -errno;
                 goto finish;
         }

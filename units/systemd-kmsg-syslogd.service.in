@@ -8,10 +8,12 @@
 # See systemd.special(7) for details
 
 [Unit]
-Description=systemd Syslog Kernel Log Buffer Bridge
+Description=Syslog Kernel Log Buffer Bridge
 DefaultDependencies=no
 
 [Service]
 ExecStart=@rootlibexecdir@/systemd-kmsg-syslogd
 NotifyAccess=all
+StandardOutput=null
 Sockets=syslog.socket
+CapabilityBoundingSet=CAP_DAC_OVERRIDE

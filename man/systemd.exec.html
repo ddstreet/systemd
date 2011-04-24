@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.exec"><a id="systemd.exec"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.exec — systemd execution environment configuration</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
                 <code class="filename">systemd.socket</code>,
                 <code class="filename">systemd.mount</code>,
-                <code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id417322"/><h2>Description</h2><p>Unit configuration files for services, sockets
+                <code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id356383"/><h2>Description</h2><p>Unit configuration files for services, sockets
                 mount points and swap devices share a subset of
                 configuration options which define the execution
                 environment of spawned processes.</p><p>This man page lists the configuration options
@@ -20,7 +20,7 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket], [Mount] resp. [Swap] section, depending on the unit
-                type.</p></div><div class="refsect1" title="Options"><a id="id417376"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                type.</p></div><div class="refsect1" title="Options"><a id="id356437"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed
                                 processes.</p></dd><dt><span class="term"><code class="varname">RootDirectory=</code></span></dt><dd><p>Takes an absolute
@@ -348,7 +348,10 @@
                                 various resource limits for executed
                                 processes. See
                                 <span class="citerefentry"><span class="refentrytitle">setrlimit</span>(2)</span>
-                                for details.</p></dd><dt><span class="term"><code class="varname">PAMName=</code></span></dt><dd><p>Sets the PAM service
+                                for details. Use the string
+                                <code class="varname">infinity</code> to
+                                configure no limit on a specific
+                                resource.</p></dd><dt><span class="term"><code class="varname">PAMName=</code></span></dt><dd><p>Sets the PAM service
                                 name to set up a session as. If set
                                 the executed process will be
                                 registered as a PAM session under the
@@ -373,15 +376,32 @@
                                 will fail and the connection is
                                 terminated. See
                                 <span class="citerefentry"><span class="refentrytitle">tcpd</span>(8)</span>
-                                for details.</p></dd><dt><span class="term"><code class="varname">Capabilities=</code></span></dt><dd><p>Controls the
+                                for details.</p></dd><dt><span class="term"><code class="varname">CapabilityBoundingSet=</code></span></dt><dd><p>Controls which
+                                capabilities to include in the
+                                capability bounding set for the
+                                executed process. See
                                 <span class="citerefentry"><span class="refentrytitle">capabilities</span>(7)</span>
-                                set for the executed process. Take a
-                                capability string as described in
-                                <span class="citerefentry"><span class="refentrytitle">cap_from_text</span>(3)</span>.
-                                Note that this capability set is
-                                usually influenced by the capabilities
-                                attached to the executed
-                                file.</p></dd><dt><span class="term"><code class="varname">SecureBits=</code></span></dt><dd><p>Controls the secure
+                                for details. Takes a whitespace
+                                seperated list of capability names as
+                                read by
+                                <span class="citerefentry"><span class="refentrytitle">cap_from_name</span>(3)</span>.
+                                Capabilities listed will be included
+                                in the bounding set, all others are
+                                removed. If the list of capabilities
+                                is prefixed with ~ all but the listed
+                                capabilities will be included, the
+                                effect of this assignment
+                                inverted. Note that this option does
+                                not actually set or unset any
+                                capabilities in the effective,
+                                permitted or inherited capability
+                                sets. That's what
+                                <code class="varname">Capabilities=</code> is
+                                for. If this option is not used the
+                                capability bounding set is not
+                                modified on process execution, hence
+                                no limits on the capabilities of the
+                                process are enforced.</p></dd><dt><span class="term"><code class="varname">SecureBits=</code></span></dt><dd><p>Controls the secure
                                 bits set for the executed process. See
                                 <span class="citerefentry"><span class="refentrytitle">capabilities</span>(7)</span>
                                 for details. Takes a list of strings:
@@ -391,14 +411,20 @@
                                 <code class="option">no-setuid-fixup-locked</code>,
                                 <code class="option">no-setuid-noroot</code> and/or
                                 <code class="option">no-setuid-noroot-locked</code>.
-                                </p></dd><dt><span class="term"><code class="varname">CapabilityBoundingSetDrop=</code></span></dt><dd><p>Controls the
-                                capability bounding set drop set for
-                                the executed process. See
+                                </p></dd><dt><span class="term"><code class="varname">Capabilities=</code></span></dt><dd><p>Controls the
                                 <span class="citerefentry"><span class="refentrytitle">capabilities</span>(7)</span>
-                                for details. Takes a list of
-                                capability names as read by
-                                <span class="citerefentry"><span class="refentrytitle">cap_from_name</span>(3)</span>.
-                                </p></dd><dt><span class="term"><code class="varname">ControlGroup=</code></span></dt><dd><p>Controls the control
+                                set for the executed process. Take a
+                                capability string describing the
+                                effective, permitted and inherited
+                                capability sets as documented in
+                                <span class="citerefentry"><span class="refentrytitle">cap_from_text</span>(3)</span>.
+                                Note that these capability sets are
+                                usually influenced by the capabilities
+                                attached to the executed file. Due to
+                                that
+                                <code class="varname">CapabilityBoundingSet=</code>
+                                is probably the much more useful
+                                setting.</p></dd><dt><span class="term"><code class="varname">ControlGroup=</code></span></dt><dd><p>Controls the control
                                 groups the executed processes shall be
                                 made members of. Takes a
                                 space-separated list of cgroup
@@ -502,7 +528,7 @@
                                 string replacements. This setting is
                                 unset by default, i.e. no utmp/wtmp
                                 entries are created or cleaned up for
-                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id459539"/><h2>See Also</h2><p>
+                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id366335"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
