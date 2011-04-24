@@ -12,7 +12,7 @@ diff --git a/src/fsck.c b/src/fsck.c
 index fdcf6b4..dfaf221 100644
 --- a/src/fsck.c
 +++ b/src/fsck.c
-@@ -142,7 +142,7 @@ static void test_files(void) {
+@@ -145,7 +145,7 @@ static void test_files(void) {
  }
  
  int main(int argc, char *argv[]) {
@@ -21,7 +21,7 @@ index fdcf6b4..dfaf221 100644
          int i = 0, r = EXIT_FAILURE, q;
          pid_t pid;
          siginfo_t status;
-@@ -213,7 +213,6 @@ int main(int argc, char *argv[]) {
+@@ -216,7 +216,6 @@ int main(int argc, char *argv[]) {
          cmdline[i++] = "/sbin/fsck";
          cmdline[i++] = "-a";
          cmdline[i++] = "-T";

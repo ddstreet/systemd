@@ -24,6 +24,7 @@
 #include "dbus.h"
 #include "log.h"
 #include "dbus-job.h"
+#include "dbus-common.h"
 
 #define BUS_JOB_INTERFACE                                             \
         " <interface name=\"org.freedesktop.systemd1.Job\">\n"        \
@@ -45,19 +46,21 @@
 
 const char bus_job_interface[] _introspect_("Job") = BUS_JOB_INTERFACE;
 
+#define INTERFACES_LIST                              \
+        BUS_GENERIC_INTERFACES_LIST                  \
+        "org.freedesktop.systemd1.Job\0"
+
 #define INVALIDATING_PROPERTIES                 \
-        "State\0"                               \
-        "\0"                                    \
+        "State\0"
 
 static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_job_append_state, job_state, JobState);
 static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_job_append_type, job_type, JobType);
 
-static int bus_job_append_unit(Manager *m, DBusMessageIter *i, const char *property, void *data) {
+static int bus_job_append_unit(DBusMessageIter *i, const char *property, void *data) {
         Job *j = data;
         DBusMessageIter sub;
         char *p;
 
-        assert(m);
         assert(i);
         assert(property);
         assert(j);
@@ -100,7 +103,7 @@ static DBusHandlerResult bus_job_message_dispatch(Job *j, DBusConnection *connec
                 job_finish_and_invalidate(j, JOB_CANCELED);
 
         } else
-                return bus_default_message_handler(j->manager, connection, message, INTROSPECTION, properties);
+                return bus_default_message_handler(connection, message, INTROSPECTION, INTERFACES_LIST, properties);
 
         if (reply) {
                 if (!dbus_connection_send(connection, reply, NULL))
@@ -195,11 +198,13 @@ static DBusHandlerResult bus_job_message_handler(DBusConnection *connection, DBu
 
                 if (r == -ENOENT) {
                         DBusError e;
+
+                        dbus_error_init(&e);
                         dbus_set_error_const(&e, DBUS_ERROR_UNKNOWN_OBJECT, "Unknown job");
-                        return bus_send_error_reply(m, connection, message, &e, r);
+                        return bus_send_error_reply(connection, message, &e, r);
                 }
 
-                return bus_send_error_reply(m, connection, message, NULL, r);
+                return bus_send_error_reply(connection, message, NULL, r);
         }
 
         return bus_job_message_dispatch(j, connection, message);

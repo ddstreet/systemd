@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>binfmt.d</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="binfmt.d"><a id="binfmt.d"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>binfmt.d — Configure additional binary formats at boot</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/binfmt.d/*.conf</code></p></div><div class="refsect1" title="Description"><a id="id311375"/><h2>Description</h2><p><span class="command"><strong>systemd</strong></span> uses
+		<code class="filename">/etc/binfmt.d/</code> to configure
+		additional binary formats to register during boot in
+		the kernel.  Each configuration file is named in the
+		style of
+		<code class="filename">/etc/binfmt.d/&lt;program&gt;.conf</code>.</p></div><div class="refsect1" title="Configuration Format"><a id="id311404"/><h2>Configuration Format</h2><p>Each file contains a list of binfmt_misc kernel
+                binary format rules. Consult <a class="ulink" href="http://www.kernel.org/doc/Documentation/binfmt_misc.txt">binfmt_misc.txt</a>
+                for more information on registration of additional
+                binary formats and how to write rules.</p><p>Empty lines and lines beginning with ; and # are
+                ignored. Note that this means you may not use ; and #
+                as delimiter in binary format rules.</p><p>Configuration files are loaded in alphabetical
+                order. To ensure that a specific rule takes precedence
+                over another place it in a file with an alphabetically
+                later name.</p></div><div class="refsect1" title="Example"><a id="id311431"/><h2>Example</h2><div class="example"><a id="id311437"/><p class="title"><strong>Example 1. /etc/binfmt.d/wine.conf example:</strong></p><div class="example-contents"><pre class="programlisting"># Start WINE on Windows executables
+:DOSWin:M::MZ::/usr/bin/wine:</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id311450"/><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">wine</span>(8)</span>
+                </p></div></div></body></html>

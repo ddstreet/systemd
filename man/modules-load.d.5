@@ -2,12 +2,12 @@
 .\"     Title: modules-load.d
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: modules-load.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "MODULES\-LOAD\&.D" "5" "03/08/2011" "systemd" "modules-load.d"
+.TH "MODULES\-LOAD\&.D" "5" "04/21/2011" "systemd" "modules-load.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -44,14 +44,14 @@ to configure kernel modules to load during boot in a static list\&. Each configu
 The configuration files should simply contain a list of kernel module names to load, separated by newlines\&. Empty lines and lines whose first non\-whitespace character is # or ; are ignored\&.
 .SH "EXAMPLE"
 .PP
-\fBExample\ \&1.\ \&/etc/modules-load.d/uinput.conf example:\fR
+\fBExample\ \&1.\ \&/etc/modules-load.d/virtio-net.conf example:\fR
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-# Load uinput\&.ko at boot
-uinput
+# Load virtio\-net\&.ko at boot
+virtio\-net
 .fi
 .if n \{\
 .RE

@@ -1,3 +1,20 @@
+systemd (25-1) experimental; urgency=low
+
+  * New upstream release, target experimental due to initscripts
+    dependency.
+    - Fixes where to look for locale config.  Closes: #619166
+  * Depend on initscripts >= 2.88dsf-13.4 for /run transition.
+  * Add Conflicts on klogd, since it doesn't work correctly with the
+    kmg→/dev/log bridge.  Closes: #622555
+  * Add suggests on Python for systemd-analyze.
+  * Divert /lib/lsb/init-functions instead of (ab)using
+    /etc/lsb-base-logging.sh for diverting calls to /etc/init.d/*
+  * Remove obsolete conffile /etc/lsb-base-logging.sh.  Closes: #619093
+  * Backport 3a90ae048233021833ae828c1fc6bf0eeab46197 from master:
+    mkdir /run/systemd/system when starting up
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Sun, 24 Apr 2011 09:02:04 +0200
+
 systemd (20-1) unstable; urgency=low
 
   * New upstream version

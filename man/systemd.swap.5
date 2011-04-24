@@ -2,12 +2,12 @@
 .\"     Title: systemd.swap
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: systemd.swap
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SWAP" "5" "03/08/2011" "systemd" "systemd.swap"
+.TH "SYSTEMD\&.SWAP" "5" "04/21/2011" "systemd" "systemd.swap"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -42,11 +42,19 @@ This man page lists the configuration options specific to this unit type\&. See
 \fBsystemd.unit\fR(5)
 for the common options of all unit configuration files\&. The common configuration items are configured in the generic [Unit] and [Install] sections\&. The swap specific configuration options are configured in the [Swap] section\&.
 .PP
-Swap units must be named after the devices they control\&. Example: the swap device
+Swap units must be named after the devices (resp\&. files) they control\&. Example: the swap device
 /dev/sda5
 must be configured in a unit file
 dev\-sda5\&.swap\&. For details about the escaping logic used to convert a file system path to a unit name see
 \fBsystemd.unit\fR(5)\&.
+.PP
+All swap units automatically get the appropriate dependencies on the devices (resp\&. on the mount points of the files) they are actived from\&.
+.PP
+Swap units with
+\fIDefaultDependencies=\fR
+enabled implicitly acquire a conflicting dependency to
+umount\&.target
+so that they are deactivated at shutdown\&.
 .SH "FSTAB"
 .PP
 Swap units may either be configured via unit files, or via
@@ -58,6 +66,13 @@ for details)\&.
 If a swap device or file is configured in both
 /etc/fstab
 and a unit file the configuration in the latter takes precedence\&.
+.PP
+Unless the
+\fBnoauto\fR
+option is set for them all swap units configured in
+/etc/fstab
+are also added as requirements to
+swap\&.target, so that they are waited for and activated during boot\&.
 .SH "OPTIONS"
 .PP
 Swap files must include a [Swap] section, which carries information about the swap device it supervises\&. A number of options that may be used in this section are shared with other unit types\&. These options are documented in
@@ -83,14 +98,13 @@ Swap priority to use when activating the swap device or file\&. This takes an in
 .RS 4
 Configures the time to wait for the swapon command to finish\&. If a command does not exit within the configured time the swap will be considered failed and be shut down again\&. All commands still running will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL\&. (See
 \fBKillMode=\fR
-below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 60s\&.
+below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 3min\&.
 .RE
 .PP
 \fIKillMode=\fR
 .RS 4
 Specifies how processes of this swap shall be killed\&. One of
 \fBcontrol\-group\fR,
-\fBprocess\-group\fR,
 \fBprocess\fR,
 \fBnone\fR\&.
 .sp

@@ -2,12 +2,12 @@
 .\"     Title: systemd.exec
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: systemd.exec
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.EXEC" "5" "03/08/2011" "systemd" "systemd.exec"
+.TH "SYSTEMD\&.EXEC" "5" "04/21/2011" "systemd" "systemd.exec"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -342,7 +342,9 @@ for more information\&. Note that in contrast to most other time span definition
 .RS 4
 These settings control various resource limits for executed processes\&. See
 \fBsetrlimit\fR(2)
-for details\&.
+for details\&. Use the string
+\fIinfinity\fR
+to configure no limit on a specific resource\&.
 .RE
 .PP
 \fIPAMName=\fR
@@ -361,12 +363,14 @@ If this is a socket\-activated service this sets the tcpwrap service name to che
 for details\&.
 .RE
 .PP
-\fICapabilities=\fR
+\fICapabilityBoundingSet=\fR
 .RS 4
-Controls the
+Controls which capabilities to include in the capability bounding set for the executed process\&. See
 \fBcapabilities\fR(7)
-set for the executed process\&. Take a capability string as described in
-\fBcap_from_text\fR(3)\&. Note that this capability set is usually influenced by the capabilities attached to the executed file\&.
+for details\&. Takes a whitespace seperated list of capability names as read by
+\fBcap_from_name\fR(3)\&. Capabilities listed will be included in the bounding set, all others are removed\&. If the list of capabilities is prefixed with ~ all but the listed capabilities will be included, the effect of this assignment inverted\&. Note that this option does not actually set or unset any capabilities in the effective, permitted or inherited capability sets\&. That\*(Aqs what
+\fICapabilities=\fR
+is for\&. If this option is not used the capability bounding set is not modified on process execution, hence no limits on the capabilities of the process are enforced\&.
 .RE
 .PP
 \fISecureBits=\fR
@@ -383,12 +387,14 @@ and/or
 \fBno\-setuid\-noroot\-locked\fR\&.
 .RE
 .PP
-\fICapabilityBoundingSetDrop=\fR
+\fICapabilities=\fR
 .RS 4
-Controls the capability bounding set drop set for the executed process\&. See
+Controls the
 \fBcapabilities\fR(7)
-for details\&. Takes a list of capability names as read by
-\fBcap_from_name\fR(3)\&.
+set for the executed process\&. Take a capability string describing the effective, permitted and inherited capability sets as documented in
+\fBcap_from_text\fR(3)\&. Note that these capability sets are usually influenced by the capabilities attached to the executed file\&. Due to that
+\fICapabilityBoundingSet=\fR
+is probably the much more useful setting\&.
 .RE
 .PP
 \fIControlGroup=\fR

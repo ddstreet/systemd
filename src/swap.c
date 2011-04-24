@@ -37,6 +37,7 @@
 #include "special.h"
 #include "bus-errors.h"
 #include "exit-status.h"
+#include "def.h"
 
 static const UnitActiveState state_translation_table[_SWAP_STATE_MAX] = {
         [SWAP_DEAD] = UNIT_INACTIVE,
@@ -89,6 +90,8 @@ static void swap_unset_proc_swaps(Swap *s) {
         s->timer_watch.type = WATCH_INVALID;
 
         s->control_command_id = _MOUNT_EXEC_COMMAND_INVALID;
+
+        s->meta.ignore_on_isolate = true;
 }
 
 static void swap_unwatch_control_pid(Swap *s) {
@@ -660,9 +663,7 @@ static void swap_enter_signal(Swap *s, SwapState state, bool success) {
                            state == SWAP_DEACTIVATING_SIGTERM) ? s->exec_context.kill_signal : SIGKILL;
 
                 if (s->control_pid > 0) {
-                        if (kill_and_sigcont(s->exec_context.kill_mode == KILL_PROCESS_GROUP ?
-                                             -s->control_pid :
-                                             s->control_pid, sig) < 0 && errno != ESRCH)
+                        if (kill_and_sigcont(s->control_pid, sig) < 0 && errno != ESRCH)
 
                                 log_warning("Failed to kill control process %li: %m", (long) s->control_pid);
                         else
@@ -688,6 +689,7 @@ static void swap_enter_signal(Swap *s, SwapState state, bool success) {
                                 wait_for_exit = true;
 
                         set_free(pid_set);
+                        pid_set = NULL;
                 }
         }
 
@@ -1285,7 +1287,7 @@ static int swap_kill(Unit *u, KillWho who, KillMode mode, int signo, DBusError *
         }
 
         if (s->control_pid > 0)
-                if (kill(mode == KILL_PROCESS_GROUP ? -s->control_pid : s->control_pid, signo) < 0)
+                if (kill(s->control_pid, signo) < 0)
                         r = -errno;
 
         if (mode == KILL_CONTROL_GROUP) {
@@ -1339,7 +1341,6 @@ const UnitVTable swap_vtable = {
 
         .no_alias = true,
         .no_instances = true,
-        .no_isolate = true,
         .show_status = true,
 
         .init = swap_init,
