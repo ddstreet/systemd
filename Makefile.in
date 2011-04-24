@@ -34,6 +34,7 @@
 
 
 
+
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -73,17 +74,23 @@ host_triplet = @host@
 @TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_TRUE@	-DKBD_SETFONT=\"/bin/setfont\" \
 @TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_TRUE@	-DDEFAULT_FONT=\"LatArCyrHeb-16\"
 
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@am__append_5 = \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@	-DKBD_SETFONT=\"/bin/setfont\" \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@	-DDEFAULT_FONT=\"latarcyrheb-sun16\"
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_TRUE@am__append_5 = \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_TRUE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_TRUE@	-DKBD_SETFONT=\"/bin/setfont\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_TRUE@	-DDEFAULT_FONT=\"LatArCyrHeb-16\"
+
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@am__append_6 = \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_SETFONT=\"/bin/setfont\" \
+@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DDEFAULT_FONT=\"latarcyrheb-sun16\"
 
 rootbin_PROGRAMS = systemd$(EXEEXT) systemctl$(EXEEXT) \
 	systemd-notify$(EXEEXT) systemd-ask-password$(EXEEXT) \
 	systemd-tty-ask-password-agent$(EXEEXT) \
 	systemd-tmpfiles$(EXEEXT) systemd-machine-id-setup$(EXEEXT)
-bin_PROGRAMS = systemd-cgls$(EXEEXT) $(am__EXEEXT_1)
-@HAVE_GTK_TRUE@am__append_6 = \
+bin_PROGRAMS = systemd-cgls$(EXEEXT) systemd-stdio-bridge$(EXEEXT) \
+	systemd-nspawn$(EXEEXT) $(am__EXEEXT_1)
+@HAVE_GTK_TRUE@am__append_7 = \
 @HAVE_GTK_TRUE@	systemadm \
 @HAVE_GTK_TRUE@	systemd-gnome-ask-password-agent
 
@@ -99,26 +106,40 @@ rootlibexec_PROGRAMS = systemd-logger$(EXEEXT) \
 	systemd-user-sessions$(EXEEXT) systemd-fsck$(EXEEXT) \
 	systemd-quotacheck$(EXEEXT) systemd-timestamp$(EXEEXT) \
 	systemd-ac-power$(EXEEXT) systemd-detect-virt$(EXEEXT) \
-	systemd-sysctl$(EXEEXT) $(am__EXEEXT_2)
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_7 = \
+	systemd-sysctl$(EXEEXT) systemd-binfmt$(EXEEXT) \
+	systemd-hostnamed$(EXEEXT) $(am__EXEEXT_2)
+systemgenerator_PROGRAMS = systemd-getty-generator$(EXEEXT) \
+	$(am__EXEEXT_3)
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_8 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	systemd-cryptsetup
 
-@HAVE_LIBCRYPTSETUP_TRUE@systemgenerator_PROGRAMS = systemd-cryptsetup-generator$(EXEEXT)
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_9 = \
+@HAVE_LIBCRYPTSETUP_TRUE@	systemd-cryptsetup-generator
+
 noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 	test-ns$(EXEEXT) test-loopback$(EXEEXT) test-hostname$(EXEEXT) \
 	test-daemon$(EXEEXT) test-cgroup$(EXEEXT) \
 	test-env-replace$(EXEEXT) test-strv$(EXEEXT)
-@TARGET_FEDORA_TRUE@am__append_8 = \
+@HAVE_SYSV_COMPAT_TRUE@am__append_10 = \
+@HAVE_SYSV_COMPAT_TRUE@	tmpfiles.d/legacy.conf
+
+@HAVE_SYSV_COMPAT_TRUE@am__append_11 = \
+@HAVE_SYSV_COMPAT_TRUE@	units/var-lock.mount
+
+@TARGET_FEDORA_TRUE@am__append_12 = \
 @TARGET_FEDORA_TRUE@	units/fedora/prefdm.service \
 @TARGET_FEDORA_TRUE@	units/fedora/rc-local.service \
 @TARGET_FEDORA_TRUE@	units/fedora/halt-local.service
 
-@TARGET_MANDRIVA_TRUE@am__append_9 = \
+@TARGET_MANDRIVA_TRUE@am__append_13 = \
 @TARGET_MANDRIVA_TRUE@	units/mandriva/prefdm.service \
 @TARGET_MANDRIVA_TRUE@	units/fedora/rc-local.service \
 @TARGET_MANDRIVA_TRUE@	units/fedora/halt-local.service
 
-@HAVE_PLYMOUTH_TRUE@am__append_10 = \
+@TARGET_FRUGALWARE_TRUE@am__append_14 = \
+@TARGET_FRUGALWARE_TRUE@	units/frugalware/display-manager.service
+
+@HAVE_PLYMOUTH_TRUE@am__append_15 = \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-start.service \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-read-write.service \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-quit.service \
@@ -129,19 +150,19 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-halt.service \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.path
 
-@HAVE_PLYMOUTH_TRUE@am__append_11 = \
+@HAVE_PLYMOUTH_TRUE@am__append_16 = \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.service
 
-@HAVE_PLYMOUTH_TRUE@am__append_12 = \
+@HAVE_PLYMOUTH_TRUE@am__append_17 = \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.service.in
 
-@LIBNOTIFY07_TRUE@am__append_13 = \
+@LIBNOTIFY07_TRUE@am__append_18 = \
 @LIBNOTIFY07_TRUE@	-D LIBNOTIFY07
 
-@HAVE_VALAC_TRUE@am__append_14 = \
+@HAVE_VALAC_TRUE@am__append_19 = \
 @HAVE_VALAC_TRUE@	${systemadm_SOURCES:.vala=.c}
 
-@HAVE_XSLTPROC_TRUE@am__append_15 = \
+@HAVE_XSLTPROC_TRUE@am__append_20 = \
 @HAVE_XSLTPROC_TRUE@	$(dist_man_MANS) \
 @HAVE_XSLTPROC_TRUE@	${nodist_man_MANS:=.in} \
 @HAVE_XSLTPROC_TRUE@	${XML_FILES:.xml=.html} \
@@ -149,11 +170,12 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 
 subdir = .
 DIST_COMMON = README $(am__configure_deps) \
-	$(am__dist_systemunit_DATA_DIST) $(dist_bashcompletion_DATA) \
-	$(dist_dbuspolicy_DATA) $(dist_dbussystemservice_DATA) \
-	$(dist_doc_DATA) $(dist_man_MANS) $(dist_noinst_DATA) \
-	$(dist_pkgsysconf_DATA) $(dist_polkitpolicy_DATA) \
-	$(dist_tmpfiles_DATA) $(dist_udevrules_DATA) \
+	$(am__dist_systemunit_DATA_DIST) \
+	$(am__dist_tmpfiles_DATA_DIST) $(dist_bashcompletion_DATA) \
+	$(dist_bin_SCRIPTS) $(dist_dbuspolicy_DATA) \
+	$(dist_dbussystemservice_DATA) $(dist_doc_DATA) \
+	$(dist_man_MANS) $(dist_noinst_DATA) $(dist_pkgsysconf_DATA) \
+	$(dist_polkitpolicy_DATA) $(dist_udevrules_DATA) \
 	$(dist_userunit_DATA) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
 	$(top_srcdir)/configure TODO compile config.guess config.sub \
@@ -163,22 +185,25 @@ DIST_COMMON = README $(am__configure_deps) \
 	src/gnome-ask-password-agent.c src/systemadm.c \
 	src/systemd-interfaces.c systemadm_vala.stamp \
 	systemctl_vala.stamp systemd_ac_power_vala.stamp \
-	systemd_ask_password_vala.stamp systemd_cgls_vala.stamp \
-	systemd_cgroups_agent_vala.stamp \
+	systemd_ask_password_vala.stamp systemd_binfmt_vala.stamp \
+	systemd_cgls_vala.stamp systemd_cgroups_agent_vala.stamp \
 	systemd_cryptsetup_generator_vala.stamp \
 	systemd_cryptsetup_vala.stamp systemd_detect_virt_vala.stamp \
-	systemd_fsck_vala.stamp \
+	systemd_fsck_vala.stamp systemd_getty_generator_vala.stamp \
 	systemd_gnome_ask_password_agent_vala.stamp \
-	systemd_initctl_vala.stamp systemd_kmsg_syslogd_vala.stamp \
-	systemd_logger_vala.stamp systemd_machine_id_setup_vala.stamp \
+	systemd_hostnamed_vala.stamp systemd_initctl_vala.stamp \
+	systemd_kmsg_syslogd_vala.stamp systemd_logger_vala.stamp \
+	systemd_machine_id_setup_vala.stamp \
 	systemd_modules_load_vala.stamp systemd_notify_vala.stamp \
-	systemd_quotacheck_vala.stamp systemd_random_seed_vala.stamp \
+	systemd_nspawn_vala.stamp systemd_quotacheck_vala.stamp \
+	systemd_random_seed_vala.stamp \
 	systemd_readahead_collect_vala.stamp \
 	systemd_readahead_replay_vala.stamp \
 	systemd_remount_api_vfs_vala.stamp \
 	systemd_reply_password_vala.stamp systemd_shutdown_vala.stamp \
-	systemd_shutdownd_vala.stamp systemd_sysctl_vala.stamp \
-	systemd_timestamp_vala.stamp systemd_tmpfiles_vala.stamp \
+	systemd_shutdownd_vala.stamp systemd_stdio_bridge_vala.stamp \
+	systemd_sysctl_vala.stamp systemd_timestamp_vala.stamp \
+	systemd_tmpfiles_vala.stamp \
 	systemd_tty_ask_password_agent_vala.stamp \
 	systemd_update_utmp_vala.stamp \
 	systemd_user_sessions_vala.stamp systemd_vala.stamp \
@@ -224,17 +249,17 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(rootbindir)" "$(DESTDIR)$(rootlibexecdir)" \
-	"$(DESTDIR)$(systemgeneratordir)" "$(DESTDIR)$(man1dir)" \
-	"$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man5dir)" \
-	"$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" \
-	"$(DESTDIR)$(dbusinterfacedir)" \
+	"$(DESTDIR)$(systemgeneratordir)" "$(DESTDIR)$(bindir)" \
+	"$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" \
+	"$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man7dir)" \
+	"$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" \
 	"$(DESTDIR)$(bashcompletiondir)" "$(DESTDIR)$(dbuspolicydir)" \
 	"$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" \
 	"$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(polkitpolicydir)" \
 	"$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(tmpfilesdir)" \
 	"$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" \
-	"$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(userunitdir)" \
-	"$(DESTDIR)$(pkgconfigdatadir)"
+	"$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(systemunitdir)" \
+	"$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(pkgconfigdatadir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(pamlib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libsystemd_basic_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -305,7 +330,8 @@ am_libsystemd_core_la_OBJECTS = src/libsystemd_core_la-unit.lo \
 	src/libsystemd_core_la-namespace.lo \
 	src/libsystemd_core_la-tcpwrap.lo \
 	src/libsystemd_core_la-cgroup-util.lo \
-	src/libsystemd_core_la-condition.lo
+	src/libsystemd_core_la-condition.lo \
+	src/libsystemd_core_la-dbus-common.lo
 libsystemd_core_la_OBJECTS = $(am_libsystemd_core_la_OBJECTS)
 libsystemd_core_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -327,6 +353,7 @@ pam_systemd_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @HAVE_GTK_TRUE@am__EXEEXT_1 = systemadm$(EXEEXT) \
 @HAVE_GTK_TRUE@	systemd-gnome-ask-password-agent$(EXEEXT)
 @HAVE_LIBCRYPTSETUP_TRUE@am__EXEEXT_2 = systemd-cryptsetup$(EXEEXT)
+@HAVE_LIBCRYPTSETUP_TRUE@am__EXEEXT_3 = systemd-cryptsetup-generator$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(rootbin_PROGRAMS) \
 	$(rootlibexec_PROGRAMS) $(systemgenerator_PROGRAMS)
 am_systemadm_OBJECTS = src/systemadm-systemadm.$(OBJEXT) \
@@ -368,6 +395,13 @@ am_systemd_ask_password_OBJECTS = src/ask-password.$(OBJEXT) \
 	src/ask-password-api.$(OBJEXT)
 systemd_ask_password_OBJECTS = $(am_systemd_ask_password_OBJECTS)
 systemd_ask_password_DEPENDENCIES = libsystemd-basic.la
+am_systemd_binfmt_OBJECTS = src/systemd_binfmt-binfmt.$(OBJEXT)
+systemd_binfmt_OBJECTS = $(am_systemd_binfmt_OBJECTS)
+systemd_binfmt_DEPENDENCIES = libsystemd-basic.la
+systemd_binfmt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_binfmt_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o \
+	$@
 am_systemd_cgls_OBJECTS = src/systemd_cgls-cgls.$(OBJEXT) \
 	src/systemd_cgls-cgroup-show.$(OBJEXT) \
 	src/systemd_cgls-cgroup-util.$(OBJEXT)
@@ -421,6 +455,16 @@ systemd_fsck_DEPENDENCIES = libsystemd-basic.la $(am__DEPENDENCIES_1) \
 systemd_fsck_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(systemd_fsck_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_systemd_getty_generator_OBJECTS =  \
+	src/systemd_getty_generator-getty-generator.$(OBJEXT) \
+	src/systemd_getty_generator-unit-name.$(OBJEXT)
+systemd_getty_generator_OBJECTS =  \
+	$(am_systemd_getty_generator_OBJECTS)
+systemd_getty_generator_DEPENDENCIES = libsystemd-basic.la
+systemd_getty_generator_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_getty_generator_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_systemd_gnome_ask_password_agent_OBJECTS = src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.$(OBJEXT)
 systemd_gnome_ask_password_agent_OBJECTS =  \
 	$(am_systemd_gnome_ask_password_agent_OBJECTS)
@@ -430,6 +474,16 @@ systemd_gnome_ask_password_agent_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(systemd_gnome_ask_password_agent_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_systemd_hostnamed_OBJECTS =  \
+	src/systemd_hostnamed-hostnamed.$(OBJEXT) \
+	src/systemd_hostnamed-dbus-common.$(OBJEXT)
+systemd_hostnamed_OBJECTS = $(am_systemd_hostnamed_OBJECTS)
+systemd_hostnamed_DEPENDENCIES = libsystemd-basic.la \
+	libsystemd-daemon.la $(am__DEPENDENCIES_1)
+systemd_hostnamed_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_hostnamed_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
 am_systemd_initctl_OBJECTS = src/systemd_initctl-initctl.$(OBJEXT) \
 	src/systemd_initctl-dbus-common.$(OBJEXT)
 systemd_initctl_OBJECTS = $(am_systemd_initctl_OBJECTS)
@@ -475,6 +529,14 @@ am_systemd_notify_OBJECTS = src/notify.$(OBJEXT) \
 	src/sd-readahead.$(OBJEXT)
 systemd_notify_OBJECTS = $(am_systemd_notify_OBJECTS)
 systemd_notify_DEPENDENCIES = libsystemd-basic.la libsystemd-daemon.la
+am_systemd_nspawn_OBJECTS = src/systemd_nspawn-nspawn.$(OBJEXT) \
+	src/systemd_nspawn-cgroup-util.$(OBJEXT)
+systemd_nspawn_OBJECTS = $(am_systemd_nspawn_OBJECTS)
+systemd_nspawn_DEPENDENCIES = libsystemd-basic.la libsystemd-daemon.la
+systemd_nspawn_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(systemd_nspawn_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o \
+	$@
 am_systemd_quotacheck_OBJECTS =  \
 	src/systemd_quotacheck-quotacheck.$(OBJEXT)
 systemd_quotacheck_OBJECTS = $(am_systemd_quotacheck_OBJECTS)
@@ -548,6 +610,9 @@ systemd_shutdownd_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(systemd_shutdownd_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
+am_systemd_stdio_bridge_OBJECTS = src/bridge.$(OBJEXT)
+systemd_stdio_bridge_OBJECTS = $(am_systemd_stdio_bridge_OBJECTS)
+systemd_stdio_bridge_DEPENDENCIES = libsystemd-basic.la
 am_systemd_sysctl_OBJECTS = src/systemd_sysctl-sysctl.$(OBJEXT)
 systemd_sysctl_OBJECTS = $(am_systemd_sysctl_OBJECTS)
 systemd_sysctl_DEPENDENCIES = libsystemd-basic.la
@@ -655,6 +720,7 @@ test_strv_DEPENDENCIES = libsystemd-basic.la
 test_strv_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(test_strv_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+SCRIPTS = $(dist_bin_SCRIPTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -692,21 +758,25 @@ SOURCES = $(libsystemd_basic_la_SOURCES) $(libsystemd_core_la_SOURCES) \
 	$(libsystemd_daemon_la_SOURCES) $(pam_systemd_la_SOURCES) \
 	$(systemadm_SOURCES) $(systemctl_SOURCES) $(systemd_SOURCES) \
 	$(systemd_ac_power_SOURCES) $(systemd_ask_password_SOURCES) \
-	$(systemd_cgls_SOURCES) $(systemd_cgroups_agent_SOURCES) \
-	$(systemd_cryptsetup_SOURCES) \
+	$(systemd_binfmt_SOURCES) $(systemd_cgls_SOURCES) \
+	$(systemd_cgroups_agent_SOURCES) $(systemd_cryptsetup_SOURCES) \
 	$(systemd_cryptsetup_generator_SOURCES) \
 	$(systemd_detect_virt_SOURCES) $(systemd_fsck_SOURCES) \
+	$(systemd_getty_generator_SOURCES) \
 	$(systemd_gnome_ask_password_agent_SOURCES) \
-	$(systemd_initctl_SOURCES) $(systemd_kmsg_syslogd_SOURCES) \
-	$(systemd_logger_SOURCES) $(systemd_machine_id_setup_SOURCES) \
+	$(systemd_hostnamed_SOURCES) $(systemd_initctl_SOURCES) \
+	$(systemd_kmsg_syslogd_SOURCES) $(systemd_logger_SOURCES) \
+	$(systemd_machine_id_setup_SOURCES) \
 	$(systemd_modules_load_SOURCES) $(systemd_notify_SOURCES) \
-	$(systemd_quotacheck_SOURCES) $(systemd_random_seed_SOURCES) \
+	$(systemd_nspawn_SOURCES) $(systemd_quotacheck_SOURCES) \
+	$(systemd_random_seed_SOURCES) \
 	$(systemd_readahead_collect_SOURCES) \
 	$(systemd_readahead_replay_SOURCES) \
 	$(systemd_remount_api_vfs_SOURCES) \
 	$(systemd_reply_password_SOURCES) $(systemd_shutdown_SOURCES) \
-	$(systemd_shutdownd_SOURCES) $(systemd_sysctl_SOURCES) \
-	$(systemd_timestamp_SOURCES) $(systemd_tmpfiles_SOURCES) \
+	$(systemd_shutdownd_SOURCES) $(systemd_stdio_bridge_SOURCES) \
+	$(systemd_sysctl_SOURCES) $(systemd_timestamp_SOURCES) \
+	$(systemd_tmpfiles_SOURCES) \
 	$(systemd_tty_ask_password_agent_SOURCES) \
 	$(systemd_update_utmp_SOURCES) \
 	$(systemd_user_sessions_SOURCES) \
@@ -720,21 +790,25 @@ DIST_SOURCES = $(libsystemd_basic_la_SOURCES) \
 	$(pam_systemd_la_SOURCES) $(systemadm_SOURCES) \
 	$(systemctl_SOURCES) $(systemd_SOURCES) \
 	$(systemd_ac_power_SOURCES) $(systemd_ask_password_SOURCES) \
-	$(systemd_cgls_SOURCES) $(systemd_cgroups_agent_SOURCES) \
-	$(systemd_cryptsetup_SOURCES) \
+	$(systemd_binfmt_SOURCES) $(systemd_cgls_SOURCES) \
+	$(systemd_cgroups_agent_SOURCES) $(systemd_cryptsetup_SOURCES) \
 	$(systemd_cryptsetup_generator_SOURCES) \
 	$(systemd_detect_virt_SOURCES) $(systemd_fsck_SOURCES) \
+	$(systemd_getty_generator_SOURCES) \
 	$(systemd_gnome_ask_password_agent_SOURCES) \
-	$(systemd_initctl_SOURCES) $(systemd_kmsg_syslogd_SOURCES) \
-	$(systemd_logger_SOURCES) $(systemd_machine_id_setup_SOURCES) \
+	$(systemd_hostnamed_SOURCES) $(systemd_initctl_SOURCES) \
+	$(systemd_kmsg_syslogd_SOURCES) $(systemd_logger_SOURCES) \
+	$(systemd_machine_id_setup_SOURCES) \
 	$(systemd_modules_load_SOURCES) $(systemd_notify_SOURCES) \
-	$(systemd_quotacheck_SOURCES) $(systemd_random_seed_SOURCES) \
+	$(systemd_nspawn_SOURCES) $(systemd_quotacheck_SOURCES) \
+	$(systemd_random_seed_SOURCES) \
 	$(systemd_readahead_collect_SOURCES) \
 	$(systemd_readahead_replay_SOURCES) \
 	$(systemd_remount_api_vfs_SOURCES) \
 	$(systemd_reply_password_SOURCES) $(systemd_shutdown_SOURCES) \
-	$(systemd_shutdownd_SOURCES) $(systemd_sysctl_SOURCES) \
-	$(systemd_timestamp_SOURCES) $(systemd_tmpfiles_SOURCES) \
+	$(systemd_shutdownd_SOURCES) $(systemd_stdio_bridge_SOURCES) \
+	$(systemd_sysctl_SOURCES) $(systemd_timestamp_SOURCES) \
+	$(systemd_tmpfiles_SOURCES) \
 	$(systemd_tty_ask_password_agent_SOURCES) \
 	$(systemd_update_utmp_SOURCES) \
 	$(systemd_user_sessions_SOURCES) \
@@ -750,48 +824,52 @@ man7dir = $(mandir)/man7
 man8dir = $(mandir)/man8
 NROFF = nroff
 MANS = $(dist_man_MANS) $(nodist_man_MANS)
-am__dist_systemunit_DATA_DIST = units/emergency.service \
+am__dist_systemunit_DATA_DIST = units/graphical.target \
+	units/multi-user.target units/emergency.service \
 	units/emergency.target units/sysinit.target units/basic.target \
 	units/getty.target units/halt.target units/kexec.target \
 	units/local-fs.target units/cryptsetup.target \
 	units/network.target units/nss-lookup.target \
 	units/mail-transfer-agent.target units/http-daemon.target \
 	units/poweroff.target units/reboot.target units/rescue.target \
-	units/rpcbind.target units/rtc-set.target \
+	units/rpcbind.target units/time-sync.target \
 	units/shutdown.target units/final.target units/umount.target \
 	units/sigpwr.target units/sockets.target units/swap.target \
-	units/dbus.target units/systemd-initctl.socket \
-	units/systemd-logger.socket units/systemd-shutdownd.socket \
-	units/syslog.socket units/dev-hugepages.automount \
-	units/dev-hugepages.mount units/dev-mqueue.automount \
-	units/dev-mqueue.mount units/proc-sys-fs-binfmt_misc.automount \
+	units/systemd-initctl.socket units/systemd-logger.socket \
+	units/systemd-shutdownd.socket units/syslog.socket \
+	units/dev-hugepages.automount units/dev-hugepages.mount \
+	units/dev-mqueue.automount units/dev-mqueue.mount \
+	units/proc-sys-fs-binfmt_misc.automount \
 	units/proc-sys-fs-binfmt_misc.mount \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
-	units/sys-kernel-security.mount units/var-lock.mount \
-	units/var-run.mount units/media.mount \
-	units/hwclock-load.service units/hwclock-save.service \
-	units/remount-rootfs.service units/printer.target \
-	units/sound.target units/bluetooth.target \
+	units/sys-kernel-security.mount units/var-run.mount \
+	units/media.mount units/hwclock-load.service \
+	units/hwclock-save.service units/remount-rootfs.service \
+	units/printer.target units/sound.target units/bluetooth.target \
 	units/smartcard.target units/systemd-readahead-done.timer \
 	units/systemd-tmpfiles-clean.timer units/quotaon.service \
 	units/systemd-ask-password-wall.path \
-	units/systemd-ask-password-console.path \
-	units/fedora/prefdm.service units/fedora/rc-local.service \
-	units/fedora/halt-local.service units/mandriva/prefdm.service \
+	units/systemd-ask-password-console.path units/syslog.target \
+	units/var-lock.mount units/fedora/prefdm.service \
+	units/fedora/rc-local.service units/fedora/halt-local.service \
+	units/mandriva/prefdm.service \
+	units/frugalware/display-manager.service \
 	units/plymouth-start.service units/plymouth-read-write.service \
 	units/plymouth-quit.service units/plymouth-quit-wait.service \
 	units/plymouth-reboot.service units/plymouth-kexec.service \
 	units/plymouth-poweroff.service units/plymouth-halt.service \
 	units/systemd-ask-password-plymouth.path
+am__dist_tmpfiles_DATA_DIST = tmpfiles.d/systemd.conf \
+	tmpfiles.d/x11.conf tmpfiles.d/legacy.conf
 DATA = $(dbusinterface_DATA) $(dist_bashcompletion_DATA) \
 	$(dist_dbuspolicy_DATA) $(dist_dbussystemservice_DATA) \
 	$(dist_doc_DATA) $(dist_noinst_DATA) $(dist_pkgsysconf_DATA) \
 	$(dist_polkitpolicy_DATA) $(dist_systemunit_DATA) \
 	$(dist_tmpfiles_DATA) $(dist_udevrules_DATA) \
 	$(dist_userunit_DATA) $(nodist_noinst_DATA) \
-	$(nodist_systemunit_DATA) $(nodist_userunit_DATA) \
-	$(pkgconfigdata_DATA)
+	$(nodist_polkitpolicy_DATA) $(nodist_systemunit_DATA) \
+	$(nodist_userunit_DATA) $(pkgconfigdata_DATA)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -884,7 +962,6 @@ SELINUX_CFLAGS = @SELINUX_CFLAGS@
 SELINUX_LIBS = @SELINUX_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
-SPECIAL_SYSLOG_SERVICE = @SPECIAL_SYSLOG_SERVICE@
 STOW = @STOW@
 STRINGS = @STRINGS@
 STRIP = @STRIP@
@@ -966,15 +1043,14 @@ bashcompletiondir = $(sysconfdir)/bash_completion.d
 
 # Our own, non-special dirs
 pkgsysconfdir = $(sysconfdir)/systemd
-userunitdir = $(pkgdatadir)/user
+userunitdir = $(prefix)/lib/systemd/user
 tmpfilesdir = $(sysconfdir)/tmpfiles.d
 usergeneratordir = $(pkglibexecdir)/user-generators
 rootbindir = $(rootdir)/bin
-rootsbindir = $(rootdir)/sbin
 rootlibexecdir = $(rootdir)/lib/systemd
+systemgeneratordir = $(rootlibexecdir)/system-generators
+systemshutdowndir = $(rootlibexecdir)/system-shutdown
 systemunitdir = $(rootdir)/lib/systemd/system
-systemgeneratordir = $(rootdir)/lib/systemd/system-generators
-systemshutdowndir = $(rootdir)/lib/systemd/system-shutdown
 AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-DSYSTEM_CONFIG_FILE=\"$(pkgsysconfdir)/system.conf\" \
 	-DSYSTEM_CONFIG_UNIT_PATH=\"$(pkgsysconfdir)/system\" \
@@ -989,14 +1065,19 @@ AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-DSYSTEMD_SHUTDOWN_BINARY_PATH=\"$(rootlibexecdir)/systemd-shutdown\" \
 	-DSYSTEMCTL_BINARY_PATH=\"$(rootbindir)/systemctl\" \
 	-DSYSTEMD_TTY_ASK_PASSWORD_AGENT_BINARY_PATH=\"$(rootbindir)/systemd-tty-ask-password-agent\" \
-	-DRUNTIME_DIR=\"$(localstatedir)/run\" \
+	-DSYSTEMD_STDIO_BRIDGE_BINARY_PATH=\"$(bindir)/systemd-stdio-bridge\" \
+	-DRUNTIME_DIR=\"/run\" \
 	-DRANDOM_SEED=\"$(localstatedir)/lib/random-seed\" \
 	-DSYSTEMD_CRYPTSETUP_PATH=\"$(rootlibexecdir)/systemd-cryptsetup\" \
 	-DSYSTEM_GENERATOR_PATH=\"$(systemgeneratordir)\" \
 	-DUSER_GENERATOR_PATH=\"$(usergeneratordir)\" \
 	-DSYSTEM_SHUTDOWN_PATH=\"$(systemshutdowndir)\" -I \
 	$(top_srcdir)/src $(am__append_1) $(am__append_2) \
-	$(am__append_3) $(am__append_4) $(am__append_5)
+	$(am__append_3) $(am__append_4) $(am__append_5) \
+	$(am__append_6)
+dist_bin_SCRIPTS = \
+	src/systemd-analyze
+
 @HAVE_PAM_TRUE@pamlib_LTLIBRARIES = \
 @HAVE_PAM_TRUE@	pam_systemd.la
 
@@ -1004,10 +1085,12 @@ dist_pkgsysconf_DATA = \
 	src/system.conf
 
 dist_dbuspolicy_DATA = \
-	src/org.freedesktop.systemd1.conf
+	src/org.freedesktop.systemd1.conf \
+        src/org.freedesktop.hostname1.conf
 
 dist_dbussystemservice_DATA = \
-	src/org.freedesktop.systemd1.service
+	src/org.freedesktop.systemd1.service \
+        src/org.freedesktop.hostname1.service
 
 dist_udevrules_DATA = \
 	src/99-systemd.rules
@@ -1028,22 +1111,21 @@ dbusinterface_DATA = \
 	org.freedesktop.systemd1.Path.xml
 
 dist_bashcompletion_DATA = \
-        src/systemctl-bash-completion.sh
+	src/systemctl-bash-completion.sh
 
-dist_tmpfiles_DATA = \
-	tmpfiles.d/systemd.conf \
-	tmpfiles.d/x11.conf
-
-dist_systemunit_DATA = units/emergency.service units/emergency.target \
+dist_tmpfiles_DATA = tmpfiles.d/systemd.conf tmpfiles.d/x11.conf \
+	$(am__append_10)
+dist_systemunit_DATA = units/graphical.target units/multi-user.target \
+	units/emergency.service units/emergency.target \
 	units/sysinit.target units/basic.target units/getty.target \
 	units/halt.target units/kexec.target units/local-fs.target \
 	units/cryptsetup.target units/network.target \
 	units/nss-lookup.target units/mail-transfer-agent.target \
 	units/http-daemon.target units/poweroff.target \
 	units/reboot.target units/rescue.target units/rpcbind.target \
-	units/rtc-set.target units/shutdown.target units/final.target \
-	units/umount.target units/sigpwr.target units/sockets.target \
-	units/swap.target units/dbus.target \
+	units/time-sync.target units/shutdown.target \
+	units/final.target units/umount.target units/sigpwr.target \
+	units/sockets.target units/swap.target \
 	units/systemd-initctl.socket units/systemd-logger.socket \
 	units/systemd-shutdownd.socket units/syslog.socket \
 	units/dev-hugepages.automount units/dev-hugepages.mount \
@@ -1052,21 +1134,21 @@ dist_systemunit_DATA = units/emergency.service units/emergency.target \
 	units/proc-sys-fs-binfmt_misc.mount \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
-	units/sys-kernel-security.mount units/var-lock.mount \
-	units/var-run.mount units/media.mount \
-	units/hwclock-load.service units/hwclock-save.service \
-	units/remount-rootfs.service units/printer.target \
-	units/sound.target units/bluetooth.target \
+	units/sys-kernel-security.mount units/var-run.mount \
+	units/media.mount units/hwclock-load.service \
+	units/hwclock-save.service units/remount-rootfs.service \
+	units/printer.target units/sound.target units/bluetooth.target \
 	units/smartcard.target units/systemd-readahead-done.timer \
 	units/systemd-tmpfiles-clean.timer units/quotaon.service \
 	units/systemd-ask-password-wall.path \
-	units/systemd-ask-password-console.path $(am__append_8) \
-	$(am__append_9) $(am__append_10)
+	units/systemd-ask-password-console.path units/syslog.target \
+	$(am__append_11) $(am__append_12) $(am__append_13) \
+	$(am__append_14) $(am__append_15)
 nodist_systemunit_DATA = units/getty@.service \
-	units/serial-getty@.service units/graphical.target \
-	units/remote-fs.target units/multi-user.target \
-	units/systemd-initctl.service units/systemd-logger.service \
-	units/systemd-shutdownd.service \
+	units/serial-getty@.service units/console-shell.service \
+	units/remote-fs.target units/systemd-initctl.service \
+	units/systemd-logger.service units/systemd-shutdownd.service \
+	units/systemd-hostnamed.service \
 	units/systemd-kmsg-syslogd.service \
 	units/systemd-modules-load.service \
 	units/systemd-vconsole-setup.service \
@@ -1083,11 +1165,11 @@ nodist_systemunit_DATA = units/getty@.service \
 	units/systemd-user-sessions.service \
 	units/systemd-ask-password-wall.service \
 	units/systemd-ask-password-console.service \
-	units/systemd-sysctl.service units/syslog.target \
+	units/systemd-sysctl.service units/systemd-binfmt.service \
 	units/halt.service units/poweroff.service units/reboot.service \
 	units/kexec.service units/fsck@.service \
 	units/fsck-root.service units/quotacheck.service \
-	units/rescue.service $(am__append_11)
+	units/rescue.service $(am__append_16)
 dist_userunit_DATA = \
 	units/user/default.target \
 	units/user/exit.target
@@ -1101,11 +1183,11 @@ nodist_userunit_DATA = \
 # rules for C programs, but not Vala programs.  We therefore can't
 # list the .h files as dependencies if we want make dist to work.
 EXTRA_DIST = units/getty@.service.m4 units/serial-getty@.service.m4 \
-	units/graphical.target.m4 units/multi-user.target.m4 \
-	units/remote-fs.target.m4 units/rescue.service.m4 \
-	units/systemd-initctl.service.in \
+	units/console-shell.service.m4 units/remote-fs.target.m4 \
+	units/rescue.service.m4 units/systemd-initctl.service.in \
 	units/systemd-logger.service.in \
 	units/systemd-shutdownd.service.in \
+	units/systemd-hostnamed.service.in \
 	units/systemd-kmsg-syslogd.service.in \
 	units/systemd-modules-load.service.in \
 	units/systemd-vconsole-setup.service.in \
@@ -1122,16 +1204,17 @@ EXTRA_DIST = units/getty@.service.m4 units/serial-getty@.service.m4 \
 	units/systemd-user-sessions.service.in \
 	units/systemd-ask-password-wall.service.in \
 	units/systemd-ask-password-console.service.in \
-	units/systemd-sysctl.service.in units/syslog.target.in \
-	units/halt.service.in units/poweroff.service.in \
-	units/reboot.service.in units/kexec.service.in \
-	units/user/exit.service.in units/fsck@.service.in \
-	units/fsck-root.service.in units/quotacheck.service.in \
-	systemd.pc.in introspect.awk $(am__append_12) \
+	units/systemd-sysctl.service.in \
+	units/systemd-binfmt.service.in units/halt.service.in \
+	units/poweroff.service.in units/reboot.service.in \
+	units/kexec.service.in units/user/exit.service.in \
+	units/fsck@.service.in units/fsck-root.service.in \
+	units/quotacheck.service.in systemd.pc.in introspect.awk \
+	src/org.freedesktop.systemd1.policy.in $(am__append_17) \
 	${libsystemd_basic_la_SOURCES:.c=.h} \
 	${libsystemd_core_la_SOURCES:.c=.h} \
-	${libsystemd_daemon_la_SOURCES:.c=.h} src/macro.h src/ioprio.h \
-	src/missing.h src/list.h src/securebits.h \
+	${libsystemd_daemon_la_SOURCES:.c=.h} src/macro.h src/def.h \
+	src/ioprio.h src/missing.h src/list.h src/securebits.h \
 	src/linux/auto_dev-ioctl.h src/linux/fanotify.h src/initreq.h \
 	src/sd-readahead.h src/special.h src/dbus-common.h \
 	src/bus-errors.h src/cgroup-show.h src/build.h src/shutdownd.h \
@@ -1150,8 +1233,11 @@ dist_doc_DATA = \
 pkgconfigdata_DATA = \
 	systemd.pc
 
-dist_polkitpolicy_DATA = \
+nodist_polkitpolicy_DATA = \
 	src/org.freedesktop.systemd1.policy
+
+dist_polkitpolicy_DATA = \
+        src/org.freedesktop.hostname1.policy
 
 noinst_LTLIBRARIES = \
 	libsystemd-basic.la \
@@ -1225,7 +1311,8 @@ libsystemd_core_la_SOURCES = \
 	src/namespace.c \
 	src/tcpwrap.c \
 	src/cgroup-util.c \
-	src/condition.c
+	src/condition.c \
+        src/dbus-common.c
 
 libsystemd_core_la_CFLAGS = \
 	$(AM_CFLAGS) \
@@ -1251,6 +1338,7 @@ MANPAGES = \
 	man/systemctl.1 \
 	man/systemadm.1 \
 	man/systemd-cgls.1 \
+	man/systemd-nspawn.1 \
 	man/systemd-tmpfiles.8 \
 	man/systemd-notify.1 \
 	man/sd_notify.3 \
@@ -1285,7 +1373,11 @@ MANPAGES = \
 	man/vconsole.conf.5 \
 	man/locale.conf.5 \
 	man/os-release.5 \
-	man/modules-load.d.5
+        man/machine-info.5 \
+	man/modules-load.d.5 \
+	man/binfmt.d.5 \
+	man/sysctl.d.5 \
+        man/systemd-ask-password.1
 
 MANPAGES_ALIAS = \
 	man/reboot.8 \
@@ -1448,6 +1540,19 @@ systemd_shutdownd_LDADD = \
 	libsystemd-basic.la \
 	libsystemd-daemon.la
 
+systemd_hostnamed_SOURCES = \
+	src/hostnamed.c \
+        src/dbus-common.c
+
+systemd_hostnamed_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(DBUS_CFLAGS)
+
+systemd_hostnamed_LDADD = \
+	libsystemd-basic.la \
+	libsystemd-daemon.la \
+	$(DBUS_LIBS)
+
 systemd_shutdown_SOURCES = \
 	src/mount-setup.c \
 	src/umount.c \
@@ -1496,6 +1601,15 @@ systemd_sysctl_CFLAGS = \
 	$(AM_CFLAGS)
 
 systemd_sysctl_LDADD = \
+	libsystemd-basic.la
+
+systemd_binfmt_SOURCES = \
+	src/binfmt.c
+
+systemd_binfmt_CFLAGS = \
+	$(AM_CFLAGS)
+
+systemd_binfmt_LDADD = \
 	libsystemd-basic.la
 
 systemd_fsck_SOURCES = \
@@ -1572,6 +1686,16 @@ systemd_cryptsetup_generator_CFLAGS = \
 	$(AM_CFLAGS)
 
 systemd_cryptsetup_generator_LDADD = \
+	libsystemd-basic.la
+
+systemd_getty_generator_SOURCES = \
+	src/getty-generator.c \
+	src/unit-name.c
+
+systemd_getty_generator_CFLAGS = \
+	$(AM_CFLAGS)
+
+systemd_getty_generator_LDADD = \
 	libsystemd-basic.la
 
 systemd_user_sessions_SOURCES = \
@@ -1702,6 +1826,23 @@ systemd_cgls_CFLAGS = \
 systemd_cgls_LDADD = \
 	libsystemd-basic.la
 
+systemd_nspawn_SOURCES = \
+	src/nspawn.c \
+	src/cgroup-util.c
+
+systemd_nspawn_CFLAGS = \
+	$(AM_CFLAGS)
+
+systemd_nspawn_LDADD = \
+	libsystemd-basic.la \
+	libsystemd-daemon.la
+
+systemd_stdio_bridge_SOURCES = \
+	src/bridge.c
+
+systemd_stdio_bridge_LDADD = \
+	libsystemd-basic.la
+
 systemadm_SOURCES = \
 	src/systemadm.vala \
 	src/systemd-interfaces.vala
@@ -1736,7 +1877,7 @@ systemd_gnome_ask_password_agent_CFLAGS = \
 
 systemd_gnome_ask_password_agent_VALAFLAGS = --pkg=posix \
 	--pkg=gtk+-2.0 --pkg=linux --pkg=gio-unix-2.0 --pkg=libnotify \
-	$(am__append_13) -g
+	$(am__append_18) -g
 systemd_gnome_ask_password_agent_LDADD = \
 	$(LIBNOTIFY_LIBS) \
 	$(GTK_LIBS)
@@ -1771,13 +1912,15 @@ pam_systemd_la_LIBADD = \
 SED_PROCESS = \
 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
 	$(SED)  -e 's,@rootlibexecdir\@,$(rootlibexecdir),g' \
-                -e 's,@rootbindir\@,$(rootbindir),g' \
-		-e 's,@SPECIAL_SYSLOG_SERVICE\@,$(SPECIAL_SYSLOG_SERVICE),g' \
+		-e 's,@rootbindir\@,$(rootbindir),g' \
+		-e 's,@bindir\@,$(bindir),g' \
 		-e 's,@SYSTEMCTL\@,$(rootbindir)/systemctl,g' \
 		-e 's,@SYSTEMD_NOTIFY\@,$(rootbindir)/systemd-notify,g' \
 		-e 's,@pkgsysconfdir\@,$(pkgsysconfdir),g' \
 		-e 's,@pkgdatadir\@,$(pkgdatadir),g' \
+		-e 's,@pkglibexecdir\@,$(pkglibexecdir),g' \
 		-e 's,@systemunitdir\@,$(systemunitdir),g' \
+		-e 's,@userunitdir\@,$(userunitdir),g' \
 		-e 's,@PACKAGE_VERSION\@,$(PACKAGE_VERSION),g' \
 		-e 's,@PACKAGE_NAME\@,$(PACKAGE_NAME),g' \
 		-e 's,@PACKAGE_URL\@,$(PACKAGE_URL),g' \
@@ -1794,8 +1937,8 @@ M4_PROCESS_USER = \
 
 CLEANFILES = $(nodist_systemunit_DATA) $(nodist_userunit_DATA) \
 	$(nodist_man_MANS) ${XML_IN_FILES:.xml.in=.html} \
-	$(pkgconfigdata_DATA) $(am__append_14) $(am__append_15) \
-	$(dbusinterface_DATA)
+	$(pkgconfigdata_DATA) src/org.freedesktop.systemd1.policy \
+	$(am__append_19) $(am__append_20) $(dbusinterface_DATA)
 @HAVE_XSLTPROC_TRUE@XSLTPROC_FLAGS = \
 @HAVE_XSLTPROC_TRUE@	--nonet \
 @HAVE_XSLTPROC_TRUE@	--param funcsynopsis.style "'ansi'"
@@ -2048,6 +2191,8 @@ src/libsystemd_core_la-cgroup-util.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libsystemd_core_la-condition.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/libsystemd_core_la-dbus-common.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 libsystemd-core.la: $(libsystemd_core_la_OBJECTS) $(libsystemd_core_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libsystemd_core_la_LINK)  $(libsystemd_core_la_OBJECTS) $(libsystemd_core_la_LIBADD) $(LIBS)
 src/sd-daemon.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
@@ -2283,6 +2428,11 @@ src/ask-password-api.$(OBJEXT): src/$(am__dirstamp) \
 systemd-ask-password$(EXEEXT): $(systemd_ask_password_OBJECTS) $(systemd_ask_password_DEPENDENCIES) 
 	@rm -f systemd-ask-password$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(systemd_ask_password_OBJECTS) $(systemd_ask_password_LDADD) $(LIBS)
+src/systemd_binfmt-binfmt.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-binfmt$(EXEEXT): $(systemd_binfmt_OBJECTS) $(systemd_binfmt_DEPENDENCIES) 
+	@rm -f systemd-binfmt$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_binfmt_LINK) $(systemd_binfmt_OBJECTS) $(systemd_binfmt_LDADD) $(LIBS)
 src/systemd_cgls-cgls.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/systemd_cgls-cgroup-show.$(OBJEXT): src/$(am__dirstamp) \
@@ -2325,11 +2475,25 @@ src/systemd_fsck-dbus-common.$(OBJEXT): src/$(am__dirstamp) \
 systemd-fsck$(EXEEXT): $(systemd_fsck_OBJECTS) $(systemd_fsck_DEPENDENCIES) 
 	@rm -f systemd-fsck$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_fsck_LINK) $(systemd_fsck_OBJECTS) $(systemd_fsck_LDADD) $(LIBS)
+src/systemd_getty_generator-getty-generator.$(OBJEXT):  \
+	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_getty_generator-unit-name.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-getty-generator$(EXEEXT): $(systemd_getty_generator_OBJECTS) $(systemd_getty_generator_DEPENDENCIES) 
+	@rm -f systemd-getty-generator$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_getty_generator_LINK) $(systemd_getty_generator_OBJECTS) $(systemd_getty_generator_LDADD) $(LIBS)
 src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.$(OBJEXT):  \
 	src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 systemd-gnome-ask-password-agent$(EXEEXT): $(systemd_gnome_ask_password_agent_OBJECTS) $(systemd_gnome_ask_password_agent_DEPENDENCIES) 
 	@rm -f systemd-gnome-ask-password-agent$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_gnome_ask_password_agent_LINK) $(systemd_gnome_ask_password_agent_OBJECTS) $(systemd_gnome_ask_password_agent_LDADD) $(LIBS)
+src/systemd_hostnamed-hostnamed.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_hostnamed-dbus-common.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-hostnamed$(EXEEXT): $(systemd_hostnamed_OBJECTS) $(systemd_hostnamed_DEPENDENCIES) 
+	@rm -f systemd-hostnamed$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_hostnamed_LINK) $(systemd_hostnamed_OBJECTS) $(systemd_hostnamed_LDADD) $(LIBS)
 src/systemd_initctl-initctl.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/systemd_initctl-dbus-common.$(OBJEXT): src/$(am__dirstamp) \
@@ -2370,6 +2534,13 @@ src/sd-readahead.$(OBJEXT): src/$(am__dirstamp) \
 systemd-notify$(EXEEXT): $(systemd_notify_OBJECTS) $(systemd_notify_DEPENDENCIES) 
 	@rm -f systemd-notify$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(systemd_notify_OBJECTS) $(systemd_notify_LDADD) $(LIBS)
+src/systemd_nspawn-nspawn.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/systemd_nspawn-cgroup-util.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-nspawn$(EXEEXT): $(systemd_nspawn_OBJECTS) $(systemd_nspawn_DEPENDENCIES) 
+	@rm -f systemd-nspawn$(EXEEXT)
+	$(AM_V_CCLD)$(systemd_nspawn_LINK) $(systemd_nspawn_OBJECTS) $(systemd_nspawn_LDADD) $(LIBS)
 src/systemd_quotacheck-quotacheck.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 systemd-quotacheck$(EXEEXT): $(systemd_quotacheck_OBJECTS) $(systemd_quotacheck_DEPENDENCIES) 
@@ -2424,6 +2595,11 @@ src/systemd_shutdownd-shutdownd.$(OBJEXT): src/$(am__dirstamp) \
 systemd-shutdownd$(EXEEXT): $(systemd_shutdownd_OBJECTS) $(systemd_shutdownd_DEPENDENCIES) 
 	@rm -f systemd-shutdownd$(EXEEXT)
 	$(AM_V_CCLD)$(systemd_shutdownd_LINK) $(systemd_shutdownd_OBJECTS) $(systemd_shutdownd_LDADD) $(LIBS)
+src/bridge.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+systemd-stdio-bridge$(EXEEXT): $(systemd_stdio_bridge_OBJECTS) $(systemd_stdio_bridge_DEPENDENCIES) 
+	@rm -f systemd-stdio-bridge$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(systemd_stdio_bridge_OBJECTS) $(systemd_stdio_bridge_LDADD) $(LIBS)
 src/systemd_sysctl-sysctl.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 systemd-sysctl$(EXEEXT): $(systemd_sysctl_OBJECTS) $(systemd_sysctl_DEPENDENCIES) 
@@ -2520,11 +2696,46 @@ src/test_strv-specifier.$(OBJEXT): src/$(am__dirstamp) \
 test-strv$(EXEEXT): $(test_strv_OBJECTS) $(test_strv_DEPENDENCIES) 
 	@rm -f test-strv$(EXEEXT)
 	$(AM_V_CCLD)$(test_strv_LINK) $(test_strv_OBJECTS) $(test_strv_LDADD) $(LIBS)
+install-dist_binSCRIPTS: $(dist_bin_SCRIPTS)
+	@$(NORMAL_INSTALL)
+	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
+	@list='$(dist_bin_SCRIPTS)'; test -n "$(bindir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  if test -f "$$d$$p"; then echo "$$d$$p"; echo "$$p"; else :; fi; \
+	done | \
+	sed -e 'p;s,.*/,,;n' \
+	    -e 'h;s|.*|.|' \
+	    -e 'p;x;s,.*/,,;$(transform)' | sed 'N;N;N;s,\n, ,g' | \
+	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1; } \
+	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
+	    if ($$2 == $$4) { files[d] = files[d] " " $$1; \
+	      if (++n[d] == $(am__install_max)) { \
+		print "f", d, files[d]; n[d] = 0; files[d] = "" } } \
+	    else { print "f", d "/" $$4, $$1 } } \
+	  END { for (d in files) print "f", d, files[d] }' | \
+	while read type dir files; do \
+	     if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+	     test -z "$$files" || { \
+	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	     } \
+	; done
+
+uninstall-dist_binSCRIPTS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_bin_SCRIPTS)'; test -n "$(bindir)" || exit 0; \
+	files=`for p in $$list; do echo "$$p"; done | \
+	       sed -e 's,.*/,,;$(transform)'`; \
+	test -n "$$list" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(bindir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(bindir)" && rm -f $$files
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f src/ask-password-api.$(OBJEXT)
 	-rm -f src/ask-password.$(OBJEXT)
+	-rm -f src/bridge.$(OBJEXT)
 	-rm -f src/hostname-setup.$(OBJEXT)
 	-rm -f src/libsystemd_basic_la-conf-parser.$(OBJEXT)
 	-rm -f src/libsystemd_basic_la-conf-parser.lo
@@ -2556,6 +2767,8 @@ mostlyclean-compile:
 	-rm -f src/libsystemd_core_la-condition.lo
 	-rm -f src/libsystemd_core_la-dbus-automount.$(OBJEXT)
 	-rm -f src/libsystemd_core_la-dbus-automount.lo
+	-rm -f src/libsystemd_core_la-dbus-common.$(OBJEXT)
+	-rm -f src/libsystemd_core_la-dbus-common.lo
 	-rm -f src/libsystemd_core_la-dbus-device.$(OBJEXT)
 	-rm -f src/libsystemd_core_la-dbus-device.lo
 	-rm -f src/libsystemd_core_la-dbus-execute.$(OBJEXT)
@@ -2665,6 +2878,7 @@ mostlyclean-compile:
 	-rm -f src/systemctl-utmp-wtmp.$(OBJEXT)
 	-rm -f src/systemd-main.$(OBJEXT)
 	-rm -f src/systemd_ac_power-ac-power.$(OBJEXT)
+	-rm -f src/systemd_binfmt-binfmt.$(OBJEXT)
 	-rm -f src/systemd_cgls-cgls.$(OBJEXT)
 	-rm -f src/systemd_cgls-cgroup-show.$(OBJEXT)
 	-rm -f src/systemd_cgls-cgroup-util.$(OBJEXT)
@@ -2677,7 +2891,11 @@ mostlyclean-compile:
 	-rm -f src/systemd_detect_virt-detect-virt.$(OBJEXT)
 	-rm -f src/systemd_fsck-dbus-common.$(OBJEXT)
 	-rm -f src/systemd_fsck-fsck.$(OBJEXT)
+	-rm -f src/systemd_getty_generator-getty-generator.$(OBJEXT)
+	-rm -f src/systemd_getty_generator-unit-name.$(OBJEXT)
 	-rm -f src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.$(OBJEXT)
+	-rm -f src/systemd_hostnamed-dbus-common.$(OBJEXT)
+	-rm -f src/systemd_hostnamed-hostnamed.$(OBJEXT)
 	-rm -f src/systemd_initctl-dbus-common.$(OBJEXT)
 	-rm -f src/systemd_initctl-initctl.$(OBJEXT)
 	-rm -f src/systemd_kmsg_syslogd-fdset.$(OBJEXT)
@@ -2685,6 +2903,8 @@ mostlyclean-compile:
 	-rm -f src/systemd_machine_id_setup-machine-id-main.$(OBJEXT)
 	-rm -f src/systemd_machine_id_setup-machine-id-setup.$(OBJEXT)
 	-rm -f src/systemd_modules_load-modules-load.$(OBJEXT)
+	-rm -f src/systemd_nspawn-cgroup-util.$(OBJEXT)
+	-rm -f src/systemd_nspawn-nspawn.$(OBJEXT)
 	-rm -f src/systemd_quotacheck-quotacheck.$(OBJEXT)
 	-rm -f src/systemd_random_seed-random-seed.$(OBJEXT)
 	-rm -f src/systemd_readahead_collect-readahead-collect.$(OBJEXT)
@@ -2728,6 +2948,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/ask-password-api.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/ask-password.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/bridge.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/hostname-setup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-conf-parser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-exit-status.Plo@am__quote@
@@ -2744,6 +2965,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-cgroup.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-condition.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-dbus-automount.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-dbus-common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-dbus-device.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-dbus-execute.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-dbus-job.Plo@am__quote@
@@ -2807,6 +3029,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemctl-utmp-wtmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_ac_power-ac-power.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_binfmt-binfmt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_cgls-cgls.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_cgls-cgroup-show.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_cgls-cgroup-util.Po@am__quote@
@@ -2819,7 +3042,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_detect_virt-detect-virt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_fsck-dbus-common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_fsck-fsck.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_getty_generator-getty-generator.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_getty_generator-unit-name.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_gnome_ask_password_agent-gnome-ask-password-agent.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_hostnamed-dbus-common.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_hostnamed-hostnamed.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_initctl-dbus-common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_initctl-initctl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_kmsg_syslogd-fdset.Po@am__quote@
@@ -2827,6 +3054,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_machine_id_setup-machine-id-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_machine_id_setup-machine-id-setup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_modules_load-modules-load.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_nspawn-cgroup-util.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_nspawn-nspawn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_quotacheck-quotacheck.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_random_seed-random-seed.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/systemd_readahead_collect-readahead-collect.Po@am__quote@
@@ -3356,6 +3585,14 @@ src/libsystemd_core_la-condition.lo: src/condition.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_core_la-condition.lo `test -f 'src/condition.c' || echo '$(srcdir)/'`src/condition.c
 
+src/libsystemd_core_la-dbus-common.lo: src/dbus-common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -MT src/libsystemd_core_la-dbus-common.lo -MD -MP -MF src/$(DEPDIR)/libsystemd_core_la-dbus-common.Tpo -c -o src/libsystemd_core_la-dbus-common.lo `test -f 'src/dbus-common.c' || echo '$(srcdir)/'`src/dbus-common.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libsystemd_core_la-dbus-common.Tpo src/$(DEPDIR)/libsystemd_core_la-dbus-common.Plo
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/dbus-common.c' object='src/libsystemd_core_la-dbus-common.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_core_la-dbus-common.lo `test -f 'src/dbus-common.c' || echo '$(srcdir)/'`src/dbus-common.c
+
 src/pam_systemd_la-pam-module.lo: src/pam-module.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(pam_systemd_la_CFLAGS) $(CFLAGS) -MT src/pam_systemd_la-pam-module.lo -MD -MP -MF src/$(DEPDIR)/pam_systemd_la-pam-module.Tpo -c -o src/pam_systemd_la-pam-module.lo `test -f 'src/pam-module.c' || echo '$(srcdir)/'`src/pam-module.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/pam_systemd_la-pam-module.Tpo src/$(DEPDIR)/pam_systemd_la-pam-module.Plo
@@ -3564,6 +3801,22 @@ src/systemd_ac_power-ac-power.obj: src/ac-power.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_ac_power_CFLAGS) $(CFLAGS) -c -o src/systemd_ac_power-ac-power.obj `if test -f 'src/ac-power.c'; then $(CYGPATH_W) 'src/ac-power.c'; else $(CYGPATH_W) '$(srcdir)/src/ac-power.c'; fi`
 
+src/systemd_binfmt-binfmt.o: src/binfmt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_binfmt_CFLAGS) $(CFLAGS) -MT src/systemd_binfmt-binfmt.o -MD -MP -MF src/$(DEPDIR)/systemd_binfmt-binfmt.Tpo -c -o src/systemd_binfmt-binfmt.o `test -f 'src/binfmt.c' || echo '$(srcdir)/'`src/binfmt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_binfmt-binfmt.Tpo src/$(DEPDIR)/systemd_binfmt-binfmt.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/binfmt.c' object='src/systemd_binfmt-binfmt.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_binfmt_CFLAGS) $(CFLAGS) -c -o src/systemd_binfmt-binfmt.o `test -f 'src/binfmt.c' || echo '$(srcdir)/'`src/binfmt.c
+
+src/systemd_binfmt-binfmt.obj: src/binfmt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_binfmt_CFLAGS) $(CFLAGS) -MT src/systemd_binfmt-binfmt.obj -MD -MP -MF src/$(DEPDIR)/systemd_binfmt-binfmt.Tpo -c -o src/systemd_binfmt-binfmt.obj `if test -f 'src/binfmt.c'; then $(CYGPATH_W) 'src/binfmt.c'; else $(CYGPATH_W) '$(srcdir)/src/binfmt.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_binfmt-binfmt.Tpo src/$(DEPDIR)/systemd_binfmt-binfmt.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/binfmt.c' object='src/systemd_binfmt-binfmt.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_binfmt_CFLAGS) $(CFLAGS) -c -o src/systemd_binfmt-binfmt.obj `if test -f 'src/binfmt.c'; then $(CYGPATH_W) 'src/binfmt.c'; else $(CYGPATH_W) '$(srcdir)/src/binfmt.c'; fi`
+
 src/systemd_cgls-cgls.o: src/cgls.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_cgls_CFLAGS) $(CFLAGS) -MT src/systemd_cgls-cgls.o -MD -MP -MF src/$(DEPDIR)/systemd_cgls-cgls.Tpo -c -o src/systemd_cgls-cgls.o `test -f 'src/cgls.c' || echo '$(srcdir)/'`src/cgls.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_cgls-cgls.Tpo src/$(DEPDIR)/systemd_cgls-cgls.Po
@@ -3756,6 +4009,38 @@ src/systemd_fsck-dbus-common.obj: src/dbus-common.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_fsck_CFLAGS) $(CFLAGS) -c -o src/systemd_fsck-dbus-common.obj `if test -f 'src/dbus-common.c'; then $(CYGPATH_W) 'src/dbus-common.c'; else $(CYGPATH_W) '$(srcdir)/src/dbus-common.c'; fi`
 
+src/systemd_getty_generator-getty-generator.o: src/getty-generator.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -MT src/systemd_getty_generator-getty-generator.o -MD -MP -MF src/$(DEPDIR)/systemd_getty_generator-getty-generator.Tpo -c -o src/systemd_getty_generator-getty-generator.o `test -f 'src/getty-generator.c' || echo '$(srcdir)/'`src/getty-generator.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_getty_generator-getty-generator.Tpo src/$(DEPDIR)/systemd_getty_generator-getty-generator.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/getty-generator.c' object='src/systemd_getty_generator-getty-generator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -c -o src/systemd_getty_generator-getty-generator.o `test -f 'src/getty-generator.c' || echo '$(srcdir)/'`src/getty-generator.c
+
+src/systemd_getty_generator-getty-generator.obj: src/getty-generator.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -MT src/systemd_getty_generator-getty-generator.obj -MD -MP -MF src/$(DEPDIR)/systemd_getty_generator-getty-generator.Tpo -c -o src/systemd_getty_generator-getty-generator.obj `if test -f 'src/getty-generator.c'; then $(CYGPATH_W) 'src/getty-generator.c'; else $(CYGPATH_W) '$(srcdir)/src/getty-generator.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_getty_generator-getty-generator.Tpo src/$(DEPDIR)/systemd_getty_generator-getty-generator.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/getty-generator.c' object='src/systemd_getty_generator-getty-generator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -c -o src/systemd_getty_generator-getty-generator.obj `if test -f 'src/getty-generator.c'; then $(CYGPATH_W) 'src/getty-generator.c'; else $(CYGPATH_W) '$(srcdir)/src/getty-generator.c'; fi`
+
+src/systemd_getty_generator-unit-name.o: src/unit-name.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -MT src/systemd_getty_generator-unit-name.o -MD -MP -MF src/$(DEPDIR)/systemd_getty_generator-unit-name.Tpo -c -o src/systemd_getty_generator-unit-name.o `test -f 'src/unit-name.c' || echo '$(srcdir)/'`src/unit-name.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_getty_generator-unit-name.Tpo src/$(DEPDIR)/systemd_getty_generator-unit-name.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/unit-name.c' object='src/systemd_getty_generator-unit-name.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -c -o src/systemd_getty_generator-unit-name.o `test -f 'src/unit-name.c' || echo '$(srcdir)/'`src/unit-name.c
+
+src/systemd_getty_generator-unit-name.obj: src/unit-name.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -MT src/systemd_getty_generator-unit-name.obj -MD -MP -MF src/$(DEPDIR)/systemd_getty_generator-unit-name.Tpo -c -o src/systemd_getty_generator-unit-name.obj `if test -f 'src/unit-name.c'; then $(CYGPATH_W) 'src/unit-name.c'; else $(CYGPATH_W) '$(srcdir)/src/unit-name.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_getty_generator-unit-name.Tpo src/$(DEPDIR)/systemd_getty_generator-unit-name.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/unit-name.c' object='src/systemd_getty_generator-unit-name.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_getty_generator_CFLAGS) $(CFLAGS) -c -o src/systemd_getty_generator-unit-name.obj `if test -f 'src/unit-name.c'; then $(CYGPATH_W) 'src/unit-name.c'; else $(CYGPATH_W) '$(srcdir)/src/unit-name.c'; fi`
+
 src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.o: src/gnome-ask-password-agent.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_gnome_ask_password_agent_CFLAGS) $(CFLAGS) -MT src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.o -MD -MP -MF src/$(DEPDIR)/systemd_gnome_ask_password_agent-gnome-ask-password-agent.Tpo -c -o src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.o `test -f 'src/gnome-ask-password-agent.c' || echo '$(srcdir)/'`src/gnome-ask-password-agent.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_gnome_ask_password_agent-gnome-ask-password-agent.Tpo src/$(DEPDIR)/systemd_gnome_ask_password_agent-gnome-ask-password-agent.Po
@@ -3771,6 +4056,38 @@ src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.obj: src/gnome-ask
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/gnome-ask-password-agent.c' object='src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_gnome_ask_password_agent_CFLAGS) $(CFLAGS) -c -o src/systemd_gnome_ask_password_agent-gnome-ask-password-agent.obj `if test -f 'src/gnome-ask-password-agent.c'; then $(CYGPATH_W) 'src/gnome-ask-password-agent.c'; else $(CYGPATH_W) '$(srcdir)/src/gnome-ask-password-agent.c'; fi`
+
+src/systemd_hostnamed-hostnamed.o: src/hostnamed.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -MT src/systemd_hostnamed-hostnamed.o -MD -MP -MF src/$(DEPDIR)/systemd_hostnamed-hostnamed.Tpo -c -o src/systemd_hostnamed-hostnamed.o `test -f 'src/hostnamed.c' || echo '$(srcdir)/'`src/hostnamed.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_hostnamed-hostnamed.Tpo src/$(DEPDIR)/systemd_hostnamed-hostnamed.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/hostnamed.c' object='src/systemd_hostnamed-hostnamed.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -c -o src/systemd_hostnamed-hostnamed.o `test -f 'src/hostnamed.c' || echo '$(srcdir)/'`src/hostnamed.c
+
+src/systemd_hostnamed-hostnamed.obj: src/hostnamed.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -MT src/systemd_hostnamed-hostnamed.obj -MD -MP -MF src/$(DEPDIR)/systemd_hostnamed-hostnamed.Tpo -c -o src/systemd_hostnamed-hostnamed.obj `if test -f 'src/hostnamed.c'; then $(CYGPATH_W) 'src/hostnamed.c'; else $(CYGPATH_W) '$(srcdir)/src/hostnamed.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_hostnamed-hostnamed.Tpo src/$(DEPDIR)/systemd_hostnamed-hostnamed.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/hostnamed.c' object='src/systemd_hostnamed-hostnamed.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -c -o src/systemd_hostnamed-hostnamed.obj `if test -f 'src/hostnamed.c'; then $(CYGPATH_W) 'src/hostnamed.c'; else $(CYGPATH_W) '$(srcdir)/src/hostnamed.c'; fi`
+
+src/systemd_hostnamed-dbus-common.o: src/dbus-common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -MT src/systemd_hostnamed-dbus-common.o -MD -MP -MF src/$(DEPDIR)/systemd_hostnamed-dbus-common.Tpo -c -o src/systemd_hostnamed-dbus-common.o `test -f 'src/dbus-common.c' || echo '$(srcdir)/'`src/dbus-common.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_hostnamed-dbus-common.Tpo src/$(DEPDIR)/systemd_hostnamed-dbus-common.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/dbus-common.c' object='src/systemd_hostnamed-dbus-common.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -c -o src/systemd_hostnamed-dbus-common.o `test -f 'src/dbus-common.c' || echo '$(srcdir)/'`src/dbus-common.c
+
+src/systemd_hostnamed-dbus-common.obj: src/dbus-common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -MT src/systemd_hostnamed-dbus-common.obj -MD -MP -MF src/$(DEPDIR)/systemd_hostnamed-dbus-common.Tpo -c -o src/systemd_hostnamed-dbus-common.obj `if test -f 'src/dbus-common.c'; then $(CYGPATH_W) 'src/dbus-common.c'; else $(CYGPATH_W) '$(srcdir)/src/dbus-common.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_hostnamed-dbus-common.Tpo src/$(DEPDIR)/systemd_hostnamed-dbus-common.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/dbus-common.c' object='src/systemd_hostnamed-dbus-common.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_hostnamed_CFLAGS) $(CFLAGS) -c -o src/systemd_hostnamed-dbus-common.obj `if test -f 'src/dbus-common.c'; then $(CYGPATH_W) 'src/dbus-common.c'; else $(CYGPATH_W) '$(srcdir)/src/dbus-common.c'; fi`
 
 src/systemd_initctl-initctl.o: src/initctl.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_initctl_CFLAGS) $(CFLAGS) -MT src/systemd_initctl-initctl.o -MD -MP -MF src/$(DEPDIR)/systemd_initctl-initctl.Tpo -c -o src/systemd_initctl-initctl.o `test -f 'src/initctl.c' || echo '$(srcdir)/'`src/initctl.c
@@ -3883,6 +4200,38 @@ src/systemd_modules_load-modules-load.obj: src/modules-load.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/modules-load.c' object='src/systemd_modules_load-modules-load.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_modules_load_CFLAGS) $(CFLAGS) -c -o src/systemd_modules_load-modules-load.obj `if test -f 'src/modules-load.c'; then $(CYGPATH_W) 'src/modules-load.c'; else $(CYGPATH_W) '$(srcdir)/src/modules-load.c'; fi`
+
+src/systemd_nspawn-nspawn.o: src/nspawn.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -MT src/systemd_nspawn-nspawn.o -MD -MP -MF src/$(DEPDIR)/systemd_nspawn-nspawn.Tpo -c -o src/systemd_nspawn-nspawn.o `test -f 'src/nspawn.c' || echo '$(srcdir)/'`src/nspawn.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_nspawn-nspawn.Tpo src/$(DEPDIR)/systemd_nspawn-nspawn.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/nspawn.c' object='src/systemd_nspawn-nspawn.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -c -o src/systemd_nspawn-nspawn.o `test -f 'src/nspawn.c' || echo '$(srcdir)/'`src/nspawn.c
+
+src/systemd_nspawn-nspawn.obj: src/nspawn.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -MT src/systemd_nspawn-nspawn.obj -MD -MP -MF src/$(DEPDIR)/systemd_nspawn-nspawn.Tpo -c -o src/systemd_nspawn-nspawn.obj `if test -f 'src/nspawn.c'; then $(CYGPATH_W) 'src/nspawn.c'; else $(CYGPATH_W) '$(srcdir)/src/nspawn.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_nspawn-nspawn.Tpo src/$(DEPDIR)/systemd_nspawn-nspawn.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/nspawn.c' object='src/systemd_nspawn-nspawn.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -c -o src/systemd_nspawn-nspawn.obj `if test -f 'src/nspawn.c'; then $(CYGPATH_W) 'src/nspawn.c'; else $(CYGPATH_W) '$(srcdir)/src/nspawn.c'; fi`
+
+src/systemd_nspawn-cgroup-util.o: src/cgroup-util.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -MT src/systemd_nspawn-cgroup-util.o -MD -MP -MF src/$(DEPDIR)/systemd_nspawn-cgroup-util.Tpo -c -o src/systemd_nspawn-cgroup-util.o `test -f 'src/cgroup-util.c' || echo '$(srcdir)/'`src/cgroup-util.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_nspawn-cgroup-util.Tpo src/$(DEPDIR)/systemd_nspawn-cgroup-util.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/cgroup-util.c' object='src/systemd_nspawn-cgroup-util.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -c -o src/systemd_nspawn-cgroup-util.o `test -f 'src/cgroup-util.c' || echo '$(srcdir)/'`src/cgroup-util.c
+
+src/systemd_nspawn-cgroup-util.obj: src/cgroup-util.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -MT src/systemd_nspawn-cgroup-util.obj -MD -MP -MF src/$(DEPDIR)/systemd_nspawn-cgroup-util.Tpo -c -o src/systemd_nspawn-cgroup-util.obj `if test -f 'src/cgroup-util.c'; then $(CYGPATH_W) 'src/cgroup-util.c'; else $(CYGPATH_W) '$(srcdir)/src/cgroup-util.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/systemd_nspawn-cgroup-util.Tpo src/$(DEPDIR)/systemd_nspawn-cgroup-util.Po
+@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/cgroup-util.c' object='src/systemd_nspawn-cgroup-util.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_nspawn_CFLAGS) $(CFLAGS) -c -o src/systemd_nspawn-cgroup-util.obj `if test -f 'src/cgroup-util.c'; then $(CYGPATH_W) 'src/cgroup-util.c'; else $(CYGPATH_W) '$(srcdir)/src/cgroup-util.c'; fi`
 
 src/systemd_quotacheck-quotacheck.o: src/quotacheck.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(systemd_quotacheck_CFLAGS) $(CFLAGS) -MT src/systemd_quotacheck-quotacheck.o -MD -MP -MF src/$(DEPDIR)/systemd_quotacheck-quotacheck.Tpo -c -o src/systemd_quotacheck-quotacheck.o `test -f 'src/quotacheck.c' || echo '$(srcdir)/'`src/quotacheck.c
@@ -4388,8 +4737,14 @@ systemd_shutdownd_vala.stamp: $(systemd_shutdownd_SOURCES)
 systemd_readahead_replay_vala.stamp: $(systemd_readahead_replay_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_readahead_replay_SOURCES)
 	$(AM_V_at)touch $@
+systemd_getty_generator_vala.stamp: $(systemd_getty_generator_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_getty_generator_SOURCES)
+	$(AM_V_at)touch $@
 systemd_ask_password_vala.stamp: $(systemd_ask_password_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_ask_password_SOURCES)
+	$(AM_V_at)touch $@
+systemd_nspawn_vala.stamp: $(systemd_nspawn_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_nspawn_SOURCES)
 	$(AM_V_at)touch $@
 systemd_cgroups_agent_vala.stamp: $(systemd_cgroups_agent_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_cgroups_agent_SOURCES)
@@ -4433,6 +4788,9 @@ systemd_random_seed_vala.stamp: $(systemd_random_seed_SOURCES)
 systemd_vconsole_setup_vala.stamp: $(systemd_vconsole_setup_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_vconsole_setup_SOURCES)
 	$(AM_V_at)touch $@
+systemd_binfmt_vala.stamp: $(systemd_binfmt_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_binfmt_SOURCES)
+	$(AM_V_at)touch $@
 systemd_cryptsetup_vala.stamp: $(systemd_cryptsetup_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_cryptsetup_SOURCES)
 	$(AM_V_at)touch $@
@@ -4455,6 +4813,9 @@ systemd_gnome_ask_password_agent_vala.stamp: $(systemd_gnome_ask_password_agent_
 	$(AM_V_at)touch $@
 systemd_tmpfiles_vala.stamp: $(systemd_tmpfiles_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_tmpfiles_SOURCES)
+	$(AM_V_at)touch $@
+systemd_hostnamed_vala.stamp: $(systemd_hostnamed_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_hostnamed_SOURCES)
 	$(AM_V_at)touch $@
 systemd_quotacheck_vala.stamp: $(systemd_quotacheck_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_quotacheck_SOURCES)
@@ -4507,6 +4868,9 @@ systemd_cryptsetup_generator_vala.stamp: $(systemd_cryptsetup_generator_SOURCES)
 	$(AM_V_at)touch $@
 systemd_timestamp_vala.stamp: $(systemd_timestamp_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_timestamp_SOURCES)
+	$(AM_V_at)touch $@
+systemd_stdio_bridge_vala.stamp: $(systemd_stdio_bridge_SOURCES)
+	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_stdio_bridge_SOURCES)
 	$(AM_V_at)touch $@
 systemd_sysctl_vala.stamp: $(systemd_sysctl_SOURCES)
 	$(AM_V_VALAC)$(VALAC) $(AM_VALAFLAGS) $(VALAFLAGS) -C $(systemd_sysctl_SOURCES)
@@ -4952,6 +5316,26 @@ uninstall-dist_userunitDATA:
 	test -n "$$files" || exit 0; \
 	echo " ( cd '$(DESTDIR)$(userunitdir)' && rm -f" $$files ")"; \
 	cd "$(DESTDIR)$(userunitdir)" && rm -f $$files
+install-nodist_polkitpolicyDATA: $(nodist_polkitpolicy_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(polkitpolicydir)" || $(MKDIR_P) "$(DESTDIR)$(polkitpolicydir)"
+	@list='$(nodist_polkitpolicy_DATA)'; test -n "$(polkitpolicydir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(polkitpolicydir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(polkitpolicydir)" || exit $$?; \
+	done
+
+uninstall-nodist_polkitpolicyDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(nodist_polkitpolicy_DATA)'; test -n "$(polkitpolicydir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	test -n "$$files" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(polkitpolicydir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(polkitpolicydir)" && rm -f $$files
 install-nodist_systemunitDATA: $(nodist_systemunit_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(systemunitdir)" || $(MKDIR_P) "$(DESTDIR)$(systemunitdir)"
@@ -5227,9 +5611,10 @@ distcleancheck: distclean
 	       exit 1; } >&2
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(MANS) $(DATA) config.h
+all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(SCRIPTS) $(MANS) $(DATA) \
+		config.h
 installdirs:
-	for dir in "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(rootbindir)" "$(DESTDIR)$(rootlibexecdir)" "$(DESTDIR)$(systemgeneratordir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" "$(DESTDIR)$(bashcompletiondir)" "$(DESTDIR)$(dbuspolicydir)" "$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" "$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(tmpfilesdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(pkgconfigdatadir)"; do \
+	for dir in "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(rootbindir)" "$(DESTDIR)$(rootlibexecdir)" "$(DESTDIR)$(systemgeneratordir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" "$(DESTDIR)$(bashcompletiondir)" "$(DESTDIR)$(dbuspolicydir)" "$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" "$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(tmpfilesdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(pkgconfigdatadir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -5271,19 +5656,23 @@ maintainer-clean-generic:
 	-rm -f systemctl_vala.stamp
 	-rm -f systemd_ac_power_vala.stamp
 	-rm -f systemd_ask_password_vala.stamp
+	-rm -f systemd_binfmt_vala.stamp
 	-rm -f systemd_cgls_vala.stamp
 	-rm -f systemd_cgroups_agent_vala.stamp
 	-rm -f systemd_cryptsetup_generator_vala.stamp
 	-rm -f systemd_cryptsetup_vala.stamp
 	-rm -f systemd_detect_virt_vala.stamp
 	-rm -f systemd_fsck_vala.stamp
+	-rm -f systemd_getty_generator_vala.stamp
 	-rm -f systemd_gnome_ask_password_agent_vala.stamp
+	-rm -f systemd_hostnamed_vala.stamp
 	-rm -f systemd_initctl_vala.stamp
 	-rm -f systemd_kmsg_syslogd_vala.stamp
 	-rm -f systemd_logger_vala.stamp
 	-rm -f systemd_machine_id_setup_vala.stamp
 	-rm -f systemd_modules_load_vala.stamp
 	-rm -f systemd_notify_vala.stamp
+	-rm -f systemd_nspawn_vala.stamp
 	-rm -f systemd_quotacheck_vala.stamp
 	-rm -f systemd_random_seed_vala.stamp
 	-rm -f systemd_readahead_collect_vala.stamp
@@ -5292,6 +5681,7 @@ maintainer-clean-generic:
 	-rm -f systemd_reply_password_vala.stamp
 	-rm -f systemd_shutdown_vala.stamp
 	-rm -f systemd_shutdownd_vala.stamp
+	-rm -f systemd_stdio_bridge_vala.stamp
 	-rm -f systemd_sysctl_vala.stamp
 	-rm -f systemd_timestamp_vala.stamp
 	-rm -f systemd_tmpfiles_vala.stamp
@@ -5342,17 +5732,18 @@ install-data-am: install-dbusinterfaceDATA \
 	install-dist_pkgsysconfDATA install-dist_polkitpolicyDATA \
 	install-dist_systemunitDATA install-dist_tmpfilesDATA \
 	install-dist_udevrulesDATA install-dist_userunitDATA \
-	install-man install-nodist_systemunitDATA \
-	install-nodist_userunitDATA install-pamlibLTLIBRARIES \
-	install-pkgconfigdataDATA install-rootbinPROGRAMS \
-	install-systemgeneratorPROGRAMS
+	install-man install-nodist_polkitpolicyDATA \
+	install-nodist_systemunitDATA install-nodist_userunitDATA \
+	install-pamlibLTLIBRARIES install-pkgconfigdataDATA \
+	install-rootbinPROGRAMS install-systemgeneratorPROGRAMS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-binPROGRAMS install-rootlibexecPROGRAMS
+install-exec-am: install-binPROGRAMS install-dist_binSCRIPTS \
+	install-rootlibexecPROGRAMS
 
 install-html: install-html-am
 
@@ -5396,16 +5787,16 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-binPROGRAMS uninstall-dbusinterfaceDATA \
-	uninstall-dist_bashcompletionDATA \
+	uninstall-dist_bashcompletionDATA uninstall-dist_binSCRIPTS \
 	uninstall-dist_dbuspolicyDATA \
 	uninstall-dist_dbussystemserviceDATA uninstall-dist_docDATA \
 	uninstall-dist_pkgsysconfDATA uninstall-dist_polkitpolicyDATA \
 	uninstall-dist_systemunitDATA uninstall-dist_tmpfilesDATA \
 	uninstall-dist_udevrulesDATA uninstall-dist_userunitDATA \
-	uninstall-man uninstall-nodist_systemunitDATA \
-	uninstall-nodist_userunitDATA uninstall-pamlibLTLIBRARIES \
-	uninstall-pkgconfigdataDATA uninstall-rootbinPROGRAMS \
-	uninstall-rootlibexecPROGRAMS \
+	uninstall-man uninstall-nodist_polkitpolicyDATA \
+	uninstall-nodist_systemunitDATA uninstall-nodist_userunitDATA \
+	uninstall-pamlibLTLIBRARIES uninstall-pkgconfigdataDATA \
+	uninstall-rootbinPROGRAMS uninstall-rootlibexecPROGRAMS \
 	uninstall-systemgeneratorPROGRAMS
 
 uninstall-man: uninstall-man1 uninstall-man3 uninstall-man5 \
@@ -5425,15 +5816,16 @@ uninstall-man: uninstall-man1 uninstall-man3 uninstall-man5 \
 	distuninstallcheck dvi dvi-am html html-am info info-am \
 	install install-am install-binPROGRAMS install-data \
 	install-data-am install-data-hook install-dbusinterfaceDATA \
-	install-dist_bashcompletionDATA install-dist_dbuspolicyDATA \
-	install-dist_dbussystemserviceDATA install-dist_docDATA \
-	install-dist_pkgsysconfDATA install-dist_polkitpolicyDATA \
-	install-dist_systemunitDATA install-dist_tmpfilesDATA \
-	install-dist_udevrulesDATA install-dist_userunitDATA \
-	install-dvi install-dvi-am install-exec install-exec-am \
-	install-html install-html-am install-info install-info-am \
-	install-man install-man1 install-man3 install-man5 \
-	install-man7 install-man8 install-nodist_systemunitDATA \
+	install-dist_bashcompletionDATA install-dist_binSCRIPTS \
+	install-dist_dbuspolicyDATA install-dist_dbussystemserviceDATA \
+	install-dist_docDATA install-dist_pkgsysconfDATA \
+	install-dist_polkitpolicyDATA install-dist_systemunitDATA \
+	install-dist_tmpfilesDATA install-dist_udevrulesDATA \
+	install-dist_userunitDATA install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-man1 \
+	install-man3 install-man5 install-man7 install-man8 \
+	install-nodist_polkitpolicyDATA install-nodist_systemunitDATA \
 	install-nodist_userunitDATA install-pamlibLTLIBRARIES \
 	install-pdf install-pdf-am install-pkgconfigdataDATA \
 	install-ps install-ps-am install-rootbinPROGRAMS \
@@ -5443,17 +5835,18 @@ uninstall-man: uninstall-man1 uninstall-man3 uninstall-man5 \
 	mostlyclean mostlyclean-compile mostlyclean-generic \
 	mostlyclean-libtool pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am uninstall-binPROGRAMS uninstall-dbusinterfaceDATA \
-	uninstall-dist_bashcompletionDATA \
+	uninstall-dist_bashcompletionDATA uninstall-dist_binSCRIPTS \
 	uninstall-dist_dbuspolicyDATA \
 	uninstall-dist_dbussystemserviceDATA uninstall-dist_docDATA \
 	uninstall-dist_pkgsysconfDATA uninstall-dist_polkitpolicyDATA \
 	uninstall-dist_systemunitDATA uninstall-dist_tmpfilesDATA \
 	uninstall-dist_udevrulesDATA uninstall-dist_userunitDATA \
 	uninstall-man uninstall-man1 uninstall-man3 uninstall-man5 \
-	uninstall-man7 uninstall-man8 uninstall-nodist_systemunitDATA \
-	uninstall-nodist_userunitDATA uninstall-pamlibLTLIBRARIES \
-	uninstall-pkgconfigdataDATA uninstall-rootbinPROGRAMS \
-	uninstall-rootlibexecPROGRAMS \
+	uninstall-man7 uninstall-man8 \
+	uninstall-nodist_polkitpolicyDATA \
+	uninstall-nodist_systemunitDATA uninstall-nodist_userunitDATA \
+	uninstall-pamlibLTLIBRARIES uninstall-pkgconfigdataDATA \
+	uninstall-rootbinPROGRAMS uninstall-rootlibexecPROGRAMS \
 	uninstall-systemgeneratorPROGRAMS
 
 
@@ -5473,6 +5866,9 @@ man/%: man/%.in Makefile
 	$(SED_PROCESS)
 
 %.pc: %.pc.in Makefile
+	$(SED_PROCESS)
+
+src/%.policy: src/%.policy.in Makefile
 	$(SED_PROCESS)
 
 units/%: units/%.m4 Makefile
@@ -5523,6 +5919,14 @@ org.freedesktop.systemd1.%.xml: systemd
 		$(DBUS_PREPROCESS) -o $@ - && rm $@.tmp
 
 install-data-hook:
+	$(MKDIR_P) -m 0755 \
+		$(DESTDIR)$(tmpfilesdir) \
+		$(DESTDIR)$(sysconfdir)/modules-load.d \
+		$(DESTDIR)$(sysconfdir)/sysctl.d \
+		$(DESTDIR)$(sysconfdir)/binfmt.d \
+		$(DESTDIR)$(systemshutdowndir) \
+		$(DESTDIR)$(systemgeneratordir) \
+		$(DESTDIR)$(usergeneratordir)
 	$(MKDIR_P) -m 0755 \
 		$(DESTDIR)$(systemunitdir) \
 		$(DESTDIR)$(userunitdir) \
@@ -5581,13 +5985,11 @@ install-data-hook:
 			fsck-root.service \
 			remount-rootfs.service \
 			var-run.mount \
-			var-lock.mount \
 			media.mount && \
 		$(LN_S) ../systemd-remount-api-vfs.service systemd-remount-api-vfs.service && \
 		$(LN_S) ../fsck-root.service fsck-root.service && \
 		$(LN_S) ../remount-rootfs.service remount-rootfs.service && \
 		$(LN_S) ../var-run.mount var-run.mount && \
-		$(LN_S) ../var-lock.mount var-lock.mount && \
 		$(LN_S) ../media.mount media.mount )
 	( cd $(DESTDIR)$(userunitdir) && \
 		rm -f shutdown.target sockets.target local-fs.target swap.target bluetooth.target printer.target sound.target && \
@@ -5608,9 +6010,10 @@ install-data-hook:
 		$(LN_S) graphical.target runlevel5.target && \
 		$(LN_S) reboot.target runlevel6.target )
 	( cd $(DESTDIR)$(systemunitdir) && \
-		rm -f default.target ctrl-alt-del.target && \
+		rm -f default.target ctrl-alt-del.target dbus-org.freedesktop.hostname1.service && \
 		$(LN_S) graphical.target default.target && \
-		$(LN_S) reboot.target ctrl-alt-del.target )
+		$(LN_S) reboot.target ctrl-alt-del.target && \
+                $(LN_S) systemd-hostnamed.service dbus-org.freedesktop.hostname1.service )
 	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
 		rm -f getty.target systemd-user-sessions.service systemd-ask-password-wall.path && \
 		$(LN_S) ../getty.target getty.target && \
@@ -5624,10 +6027,6 @@ install-data-hook:
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty4.service && \
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty5.service && \
 		$(LN_S) $(systemunitdir)/getty@.service getty@tty6.service )
-	( cd $(DESTDIR)$(pkgsysconfdir)/system/local-fs.target.wants && \
-		rm -f quotaon.service quotacheck.service && \
-		$(LN_S) $(systemunitdir)/quotacheck.service quotacheck.service && \
-		$(LN_S) $(systemunitdir)/quotaon.service quotaon.service )
 	( cd $(DESTDIR)$(pkgsysconfdir)/system/multi-user.target.wants && \
 		rm -f remote-fs.target && \
 		$(LN_S) $(systemunitdir)/remote-fs.target remote-fs.target )
@@ -5645,6 +6044,7 @@ install-data-hook:
 			systemd-random-seed-load.service \
 			systemd-tmpfiles-setup.service \
 			systemd-sysctl.service \
+			systemd-binfmt.service \
 			systemd-ask-password-console.path \
 			systemd-kmsg-syslogd.service \
 			cryptsetup.target && \
@@ -5658,6 +6058,7 @@ install-data-hook:
 		$(LN_S) ../systemd-random-seed-load.service systemd-random-seed-load.service && \
 		$(LN_S) ../systemd-tmpfiles-setup.service systemd-tmpfiles-setup.service && \
 		$(LN_S) ../systemd-sysctl.service systemd-sysctl.service && \
+		$(LN_S) ../systemd-binfmt.service systemd-binfmt.service && \
 		$(LN_S) ../systemd-ask-password-console.path systemd-ask-password-console.path && \
 		$(LN_S) ../systemd-kmsg-syslogd.service && \
 		$(LN_S) ../cryptsetup.target cryptsetup.target )
@@ -5693,6 +6094,18 @@ install-data-hook:
 @HAVE_PLYMOUTH_TRUE@	( cd $(DESTDIR)$(systemunitdir)/halt.target.wants && \
 @HAVE_PLYMOUTH_TRUE@		rm -f plymouth-halt.service && \
 @HAVE_PLYMOUTH_TRUE@		$(LN_S) ../plymouth-halt.service plymouth-halt.service )
+@TARGET_MEEGO_TRUE@	$(MKDIR_P) -m 0755 $(DESTDIR)$(systemunitdir)/final.target.wants
+@TARGET_MEEGO_TRUE@	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
+@TARGET_MEEGO_TRUE@		rm -f network.target && \
+@TARGET_MEEGO_TRUE@		$(LN_S) $(systemunitdir)/network.target network.target )
+@TARGET_MEEGO_TRUE@	( cd $(DESTDIR)$(pkgsysconfdir)/system/sysinit.target.wants && \
+@TARGET_MEEGO_TRUE@		rm -f * )
+@TARGET_MEEGO_TRUE@	( cd $(DESTDIR)$(pkgsysconfdir)/system/local-fs.target.wants && \
+@TARGET_MEEGO_TRUE@		rm -f * )
+@TARGET_MEEGO_TRUE@	( cd $(DESTDIR)$(pkgsysconfdir)/system/multi-user.target.wants && \
+@TARGET_MEEGO_TRUE@		rm -f * )
+@TARGET_MEEGO_TRUE@	( cd $(DESTDIR)$(pkgsysconfdir)/system/getty.target.wants && \
+@TARGET_MEEGO_TRUE@		rm -f * )
 
 @TARGET_FEDORA_TRUE@	$(MKDIR_P) -m 0755 $(DESTDIR)$(systemunitdir)/final.target.wants
 @TARGET_FEDORA_TRUE@	( cd $(DESTDIR)$(systemunitdir)/multi-user.target.wants && \
@@ -5702,8 +6115,9 @@ install-data-hook:
 @TARGET_FEDORA_TRUE@		rm -f halt-local.service && \
 @TARGET_FEDORA_TRUE@		$(LN_S) $(systemunitdir)/halt-local.service halt-local.service )
 @TARGET_FEDORA_TRUE@	( cd $(DESTDIR)$(systemunitdir) && \
-@TARGET_FEDORA_TRUE@		rm -f display-manager.service && \
-@TARGET_FEDORA_TRUE@		$(LN_S) prefdm.service display-manager.service )
+@TARGET_FEDORA_TRUE@		rm -f display-manager.service single.service && \
+@TARGET_FEDORA_TRUE@		$(LN_S) prefdm.service display-manager.service && \
+@TARGET_FEDORA_TRUE@		$(LN_S) rescue.service single.service )
 @TARGET_FEDORA_TRUE@	( cd $(DESTDIR)$(systemunitdir)/graphical.target.wants && \
 @TARGET_FEDORA_TRUE@		rm -f display-manager.service && \
 @TARGET_FEDORA_TRUE@		$(LN_S) $(systemunitdir)/display-manager.service display-manager.service )
@@ -5716,8 +6130,10 @@ install-data-hook:
 @TARGET_MANDRIVA_TRUE@		rm -f halt-local.service && \
 @TARGET_MANDRIVA_TRUE@		$(LN_S) $(systemunitdir)/halt-local.service halt-local.service )
 @TARGET_MANDRIVA_TRUE@	( cd $(DESTDIR)$(systemunitdir) && \
-@TARGET_MANDRIVA_TRUE@		rm -f display-manager.service && \
-@TARGET_MANDRIVA_TRUE@		$(LN_S) prefdm.service display-manager.service )
+@TARGET_MANDRIVA_TRUE@		rm -f display-manager.service dm.service single.service && \
+@TARGET_MANDRIVA_TRUE@		$(LN_S) prefdm.service display-manager.service && \
+@TARGET_MANDRIVA_TRUE@		$(LN_S) prefdm.service dm.service && \
+@TARGET_MANDRIVA_TRUE@		$(LN_S) rescue.service single.service )
 @TARGET_MANDRIVA_TRUE@	( cd $(DESTDIR)$(systemunitdir)/graphical.target.wants && \
 @TARGET_MANDRIVA_TRUE@		rm -f display-manager.service && \
 @TARGET_MANDRIVA_TRUE@		$(LN_S) $(systemunitdir)/display-manager.service display-manager.service )
@@ -5725,6 +6141,10 @@ install-data-hook:
 @TARGET_DEBIAN_OR_UBUNTU_TRUE@	( cd $(DESTDIR)$(systemunitdir) && \
 @TARGET_DEBIAN_OR_UBUNTU_TRUE@		rm -f runlevel5.target && \
 @TARGET_DEBIAN_OR_UBUNTU_TRUE@		$(LN_S) multi-user.target runlevel5.target )
+
+@HAVE_SYSV_COMPAT_TRUE@	( cd $(DESTDIR)$(systemunitdir)/local-fs.target.wants && \
+@HAVE_SYSV_COMPAT_TRUE@		rm -f var-lock.mount && \
+@HAVE_SYSV_COMPAT_TRUE@		$(LN_S) ../var-lock.mount var-lock.mount )
 
 upload: all distcheck
 	cp -v systemd-$(VERSION).tar.bz2 /home/lennart/git.fedora/systemd/

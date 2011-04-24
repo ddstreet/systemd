@@ -2,12 +2,12 @@
 .\"     Title: systemd.special
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: systemd.special
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SPECIAL" "7" "03/08/2011" "systemd" "systemd.special"
+.TH "SYSTEMD\&.SPECIAL" "7" "04/21/2011" "systemd" "systemd.special"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -34,7 +34,6 @@ systemd.special \- special systemd units
 basic\&.target,
 ctrl\-alt\-del\&.target,
 dbus\&.service,
-dbus\&.target,
 default\&.target,
 display\-manager\&.service,
 emergency\&.target,
@@ -52,7 +51,7 @@ reboot\&.target,
 remote\-fs\&.target,
 rescue\&.target,
 rpcbind\&.target,
-rtc\-set\&.target,
+time\-sync\&.target,
 runlevel2\&.target,
 runlevel3\&.target,
 runlevel4\&.target,
@@ -62,7 +61,6 @@ sigpwr\&.target,
 sockets\&.target,
 swap\&.target,
 sysinit\&.target,
-@SPECIAL_SYSLOG_SERVICE@,
 syslog\&.target,
 systemd\-initctl\&.service,
 systemd\-initctl\&.socket,
@@ -92,17 +90,6 @@ reboot\&.target\&.
 dbus\&.service
 .RS 4
 A special unit for the D\-Bus system bus\&. As soon as this service is fully started up systemd will connect to it and register its service\&.
-.sp
-Units should generally avoid depending on this unit directly and instead refer to the
-dbus\&.target
-unit instead, which pulls this one in directly or indirectly via socket\-based activation\&.
-.RE
-.PP
-dbus\&.target
-.RS 4
-Administrators should ensure that this target pulls in a service unit with the name or alias of
-dbus\&.service
-(or a socket unit that activates this service)\&.
 .RE
 .PP
 default\&.target
@@ -113,7 +100,7 @@ or
 graphical\&.target\&.
 .sp
 The default unit systemd starts at bootup can be overriden with the
-\fIsystemd\&.default=\fR
+\fIsystemd\&.unit=\fR
 kernel command line option\&.
 .RE
 .PP
@@ -131,7 +118,7 @@ facility, for compatibility with Debian\&.
 emergency\&.target
 .RS 4
 A special target unit that starts an emergency shell on the main console\&. This unit is supposed to be used with the kernel command line option
-\fIsystemd\&.default=\fR
+\fIsystemd\&.unit=\fR
 and has otherwise little use\&.
 .RE
 .PP
@@ -250,7 +237,7 @@ $rpcbind
 facility\&.
 .RE
 .PP
-rtc\-set\&.target
+time\-sync\&.target
 .RS 4
 systemd automatically adds dependencies of type After for this target unit to all SysV init script service units with an LSB header referring to the
 $time
@@ -323,24 +310,11 @@ A special target unit covering early boot\-up scripts\&.
 systemd automatically adds dependencies of the types Wants and After for all SysV service units configured for runlevels that are not 0 to 6 to this target unit\&. This covers the special boot\-up runlevels some distributions have, such as S or b\&.
 .RE
 .PP
-@SPECIAL_SYSLOG_SERVICE@
-.RS 4
-A special unit for the syslog daemon\&. As soon as this service is fully started up systemd will connect to it and use it for logging if it has been configured for that\&.
-.sp
-Units should generally avoid depending on this unit directly and instead refer to the
-syslog\&.target
-unit instead, which pulls this one in directly or indirectly via socket\-based activation\&.
-.RE
-.PP
 syslog\&.target
 .RS 4
 systemd automatically adds dependencies of type After for this target unit to all SysV init script service units with an LSB header referring to the
 $syslog
 facility\&.
-.sp
-Administrators should ensure that this target pulls in a service unit with the name or alias of
-@SPECIAL_SYSLOG_SERVICE@
-(or a socket unit that activates this service)\&.
 .RE
 .PP
 systemd\-initctl\&.service

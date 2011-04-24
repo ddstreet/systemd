@@ -9,10 +9,10 @@
 Description=File System Check on Root Device
 DefaultDependencies=no
 After=systemd-readahead-collect.service systemd-readahead-replay.service
-Before=local-fs.target shutdown.target remount-rootfs.service quotacheck.service
+Before=local-fs.target shutdown.target
 
 # Dracut informs us with this flag file if the root fsck was already run
-ConditionPathExists=!/dev/.initramfs/fsck
+ConditionPathExists=!/run/initramfs/root-fsck
 
 [Service]
 Type=oneshot

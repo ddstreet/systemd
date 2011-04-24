@@ -1,0 +1,24 @@
+From 3a90ae048233021833ae828c1fc6bf0eeab46197 Mon Sep 17 00:00:00 2001
+From: Tollef Fog Heen <tfheen@err.no>
+Date: Sat, 23 Apr 2011 22:06:18 +0200
+Subject: [PATCH] manager: mkdir /run/systemd/system when starting up
+
+---
+ src/mount-setup.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/src/mount-setup.c b/src/mount-setup.c
+index db5c253..77be8fe 100644
+--- a/src/mount-setup.c
++++ b/src/mount-setup.c
+@@ -257,6 +257,7 @@ int mount_setup(void) {
+ 
+         /* Create a few directories we always want around */
+         mkdir("/run/systemd", 0755);
++        mkdir("/run/systemd/system", 0755);
+ 
+         return mount_cgroup_controllers();
+ }
+-- 
+1.7.4.1
+

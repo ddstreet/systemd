@@ -2,12 +2,12 @@
 .\"     Title: daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "DAEMON" "7" "03/08/2011" "systemd" "daemon"
+.TH "DAEMON" "7" "04/21/2011" "systemd" "daemon"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -714,7 +714,7 @@ To facilitate upgrades from a package version that shipped only SysV init script
 .\}
 .nf
 %triggerun \-\- foobar < 0\&.47\&.11\-1
-if /sbin/chkconfig \-\-level 3 foobar ; then
+if /sbin/chkconfig \-\-level 5 foobar ; then
         /bin/systemctl \-\-no\-reload enable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 fi
 .fi
