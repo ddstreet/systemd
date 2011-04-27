@@ -12,7 +12,7 @@ Description=Remote File Systems
 m4_dnl
 m4_ifdef(`FOR_SYSTEM',
 m4_dnl When running in system mode we need the network up
-After=network.target
+After=network.target local-fs.target
 )m4_dnl
 
 [Install]
