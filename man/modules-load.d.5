@@ -2,12 +2,12 @@
 .\"     Title: modules-load.d
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: modules-load.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "MODULES\-LOAD\&.D" "5" "04/21/2011" "systemd" "modules-load.d"
+.TH "MODULES\-LOAD\&.D" "5" "06/16/2011" "systemd" "modules-load.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -31,17 +31,33 @@
 modules-load.d \- Configure kernel modules to load at boot
 .SH "SYNOPSIS"
 .PP
+/usr/lib/modules\-load\&.d/*\&.conf
+.PP
 /etc/modules\-load\&.d/*\&.conf
+.PP
+/run/modules\-load\&.d/*\&.conf
 .SH "DESCRIPTION"
 .PP
 \fBsystemd\fR
-uses
-/etc/modules\-load\&.d/
-to configure kernel modules to load during boot in a static list\&. Each configuration file is named in the style of
+uses files from the above directories to configure kernel modules to load during boot in a static list\&. Each configuration file is named in the style of
 /etc/modules\-load\&.d/<program>\&.conf\&. Note that it is usually a better idea to use the automatic module loading by PCI ID, by DMI ID or similar triggers configured in the kernel modules themselves instead of relying on static configuration like this\&.
 .SH "CONFIGURATION FORMAT"
 .PP
 The configuration files should simply contain a list of kernel module names to load, separated by newlines\&. Empty lines and lines whose first non\-whitespace character is # or ; are ignored\&.
+.PP
+Each configuration file is named in the style of
+<program>\&.conf\&. Files in
+/etc/
+overwrite files with the same name in
+/usr/lib/\&. Files in
+/run
+overwrite files with the same name in
+/etc/
+and
+/usr/lib/\&. Packages should install their configuration files in
+/usr/lib/, files in
+/etc/
+are reserved for the local administration, which possibly decides to overwrite the configurations installed from packages\&. All files are sorted by filename in alphabetical order, regardless in which of the directories they reside, to ensure that a specific configuration file takes precedence over another file with an alphabetically later name\&.
 .SH "EXAMPLE"
 .PP
 \fBExample\ \&1.\ \&/etc/modules-load.d/virtio-net.conf example:\fR

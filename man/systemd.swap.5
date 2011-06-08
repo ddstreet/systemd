@@ -2,12 +2,12 @@
 .\"     Title: systemd.swap
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: systemd.swap
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SWAP" "5" "04/21/2011" "systemd" "systemd.swap"
+.TH "SYSTEMD\&.SWAP" "5" "06/16/2011" "systemd" "systemd.swap"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -98,7 +98,7 @@ Swap priority to use when activating the swap device or file\&. This takes an in
 .RS 4
 Configures the time to wait for the swapon command to finish\&. If a command does not exit within the configured time the swap will be considered failed and be shut down again\&. All commands still running will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL\&. (See
 \fBKillMode=\fR
-below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 3min\&.
+below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
 .RE
 .PP
 \fIKillMode=\fR

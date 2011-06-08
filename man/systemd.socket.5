@@ -2,12 +2,12 @@
 .\"     Title: systemd.socket
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: systemd.socket
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SOCKET" "5" "04/21/2011" "systemd" "systemd.socket"
+.TH "SYSTEMD\&.SOCKET" "5" "06/16/2011" "systemd" "systemd.socket"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -150,6 +150,13 @@ or
 directive above\&.
 .RE
 .PP
+\fIListenMessageQueue=\fR
+.RS 4
+Specifies a POSIX message queue name to listen on\&. This expects a valid message queue name (i\&.e\&. beginning with /)\&. Behaviour otherwise is very similar to the
+\fIListenFIFO=\fR
+directive above\&. On Linux message queue descriptors are actually file descriptors and can be inherited between processes\&.
+.RE
+.PP
 \fIBindIPv6Only=\fR
 .RS 4
 Takes a one of
@@ -269,9 +276,28 @@ Takes an integer value\&. Controls the pipe buffer size of FIFOs configured in t
 for details\&.
 .RE
 .PP
+\fIMessageQueueMaxMessages=\fR, \fIMessageQueueMessageSize=\fR
+.RS 4
+These two settings take integer values and control the mq_maxmsg resp\&. mq_msgsize field when creating the message queue\&. Note that either none or both of these variables need to be set\&. See
+\fBmq_setattr\fR(3)
+for details\&.
+.RE
+.PP
 \fIFreeBind=\fR
 .RS 4
 Takes a boolean value\&. Controls whether the socket can be bound to non\-local IP addresses\&. This is useful to configure sockets listening on specific IP addresses before those IP addresses are successfully configured on a network interface\&. This sets the IP_FREEBIND socket option\&. For robustness reasons it is recommended to use this option whenever you bind a socket to a specific IP address\&. Defaults to
+\fBfalse\fR\&.
+.RE
+.PP
+\fITransparent=\fR
+.RS 4
+Takes a boolean value\&. Controls the IP_TRANSPARENT option\&. Defaults to
+\fBfalse\fR\&.
+.RE
+.PP
+\fIBroadcast=\fR
+.RS 4
+Takes a boolean value\&. This controls the SO_BROADCAST option, which allows boradcast datagrams to be sent from this socket\&. Defaults to
 \fBfalse\fR\&.
 .RE
 .PP
@@ -304,7 +330,7 @@ and
 \fIExecStopPost=\fR
 to finish\&. If a command does not exit within the configured time, the socket will be considered failed and be shut down again\&. All commands still running, will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL\&. (See
 \fBKillMode=\fR
-below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 3min\&.
+below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
 .RE
 .PP
 \fIKillMode=\fR
