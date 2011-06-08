@@ -1,4 +1,8 @@
 0001-Tweak-unit-files-for-Debian.patch
-0003-Revert-fsck-add-new-l-switch-to-fsck-mount-options.patch
-0001-manager-mkdir-run-systemd-system-when-starting-up.patch
-0001-dbus-don-t-hit-assert-when-dumping-properties.patch
+#0003-Revert-fsck-add-new-l-switch-to-fsck-mount-options.patch
+#0001-manager-mkdir-run-systemd-system-when-starting-up.patch
+#0001-dbus-don-t-hit-assert-when-dumping-properties.patch
+
+0001-execute-don-t-choke-when-systemd-was-compiled-with-a.patch
+0001-Don-t-show-a-warning-message-in-non-enforcing-mode.patch
+0001-units-enable-dev-hugepages.automount-and-dev-mqueue..patch

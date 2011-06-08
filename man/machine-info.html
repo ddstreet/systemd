@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>machine-info</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="machine-info"><a id="machine-info"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>machine-info — Local machine information file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-info</code></p></div><div class="refsect1" title="Description"><a id="id491978"/><h2>Description</h2><p>The <code class="filename">/etc/machine-info</code> file
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>machine-info</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="machine-info"><a id="machine-info"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>machine-info — Local machine information file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-info</code></p></div><div class="refsect1" title="Description"><a id="id333951"/><h2>Description</h2><p>The <code class="filename">/etc/machine-info</code> file
                 contains machine meta data.</p><p>The basic file format of
                 <code class="filename">machine-info</code> is a
                 newline-separated list of environment-like
@@ -13,7 +13,7 @@
                 meta data about the machine that is set by the user or
                 administrator.</p><p>Depending on the operating system other
                 configuration files might be checked for machine
-                information as well, however only as fallback.</p></div><div class="refsect1" title="Options"><a id="id492019"/><h2>Options</h2><p>The following machine meta data parameters may
+                information as well, however only as fallback.</p></div><div class="refsect1" title="Options"><a id="id333992"/><h2>Options</h2><p>The following machine meta data parameters may
                 be set using
                 <code class="filename">/etc/machine-info</code>:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PRETTY_HOSTNAME=</code></span></dt><dd><p>A pretty
                                 human-readable UTF8 machine identifier
@@ -40,8 +40,8 @@
                                 this parameter is not set an
                                 application should fall back to
                                 <code class="literal">computer</code> or a
-                                similar icon name.</p></dd></dl></div></div><div class="refsect1" title="Example"><a id="id459464"/><h2>Example</h2><pre class="programlisting">PRETTY_NAME="Lennart's Computer"
-ICON_NAME=computer-laptop</pre></div><div class="refsect1" title="See Also"><a id="id459476"/><h2>See Also</h2><p>
+                                similar icon name.</p></dd></dl></div></div><div class="refsect1" title="Example"><a id="id366246"/><h2>Example</h2><pre class="programlisting">PRETTY_NAME="Lennart's Computer"
+ICON_NAME=computer-laptop</pre></div><div class="refsect1" title="See Also"><a id="id366258"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span>,
                           <span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span>,

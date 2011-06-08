@@ -2,12 +2,12 @@
 .\"     Title: os-release
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: os-release
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "OS\-RELEASE" "5" "04/21/2011" "systemd" "os-release"
+.TH "OS\-RELEASE" "5" "06/16/2011" "systemd" "os-release"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -70,14 +70,14 @@ VERSION="15 (Rawhide)"\&.
 .PP
 \fIID=\fR
 .RS 4
-A lower\-case string identifying the operating system, excluding any version information and suitable for processing by scripts\&. If not set defaults to
+A lower\-case string (no spaces) identifying the operating system, excluding any version information and suitable for processing by scripts or usage in generated file names\&. If not set defaults to
 linux\&. Example:
 ID=fedora\&.
 .RE
 .PP
 \fIVERSION_ID=\fR
 .RS 4
-A lower\-case string (mostly numeric) identifying the operating system version, excluding any name information and suitable for processing by scripts\&. Example:
+A lower\-case string (mostly numeric, no spaces) identifying the operating system version, excluding any name information and suitable for processing by scripts or usage in generated file names\&. Example:
 VERSION_ID=15\&.
 .RE
 .PP

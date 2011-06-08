@@ -1,0 +1,34 @@
+From a97d50e8f8f8c784fd89178c3b147284161170f3 Mon Sep 17 00:00:00 2001
+From: Michael Biebl <biebl@debian.org>
+Date: Fri, 1 Jul 2011 05:55:57 +0200
+Subject: [PATCH] Don't show a warning message in non-enforcing mode.
+
+If we fail to load the SELinux policy only log an error message in
+enforcing mode.
+---
+ src/selinux-setup.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/selinux-setup.c b/src/selinux-setup.c
+index 9ff27dc..b6181fb 100644
+--- a/src/selinux-setup.c
++++ b/src/selinux-setup.c
+@@ -59,12 +59,13 @@ int selinux_setup(char *const argv[]) {
+                return -errno;
+ 
+        } else {
+-               log_full(enforce > 0 ? LOG_ERR : LOG_WARNING, "Failed to load SELinux policy.");
+ 
+                unlink("/dev/.systemd-relabel-run-dev");
+ 
+-               if (enforce > 0)
++               if (enforce > 0) {
++                       log_full(LOG_ERR, "Failed to load SELinux policy.");
+                        return -EIO;
++               }
+        }
+ #endif
+ 
+-- 
+1.7.5.4
+

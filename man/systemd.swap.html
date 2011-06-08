@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.swap</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.swap"><a id="systemd.swap"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.swap — systemd swap configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id460575"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.swap</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.swap"><a id="systemd.swap"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.swap — systemd swap configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id369586"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.swap</code> encodes information about a
                 swap device or file for memory paging controlled and
                 supervised by systemd.</p><p>This man page lists the configuration options
@@ -22,7 +22,7 @@
                 <code class="varname">DefaultDependencies=</code> enabled
                 implicitly acquire a conflicting dependency to
                 <code class="filename">umount.target</code> so that they are
-                deactivated at shutdown.</p></div><div class="refsect1" title="fstab"><a id="id460647"/><h2><code class="filename">fstab</code></h2><p>Swap units may either be configured via unit
+                deactivated at shutdown.</p></div><div class="refsect1" title="fstab"><a id="id369658"/><h2><code class="filename">fstab</code></h2><p>Swap units may either be configured via unit
                 files, or via <code class="filename">/etc/fstab</code> (see
                 <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
                 for details).</p><p>If a swap device or file is configured in both
@@ -32,7 +32,7 @@
                 <code class="filename">/etc/fstab</code> are also added as
                 requirements to <code class="filename">swap.target</code>, so
                 that they are waited for and activated during
-                boot.</p></div><div class="refsect1" title="Options"><a id="id428057"/><h2>Options</h2><p>Swap files must include a [Swap] section, which
+                boot.</p></div><div class="refsect1" title="Options"><a id="id401875"/><h2>Options</h2><p>Swap files must include a [Swap] section, which
                 carries information about the swap device it
                 supervises. A number of options that may be used in
                 this section are shared with other unit types. These
@@ -71,7 +71,7 @@
                                 a time span value such as "5min
                                 20s". Pass 0 to disable the timeout
                                 logic. Defaults to
-                                3min.</p></dd><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
+                                90s.</p></dd><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
                                 processes of this swap shall be
                                 killed. One of
                                 <code class="option">control-group</code>,
@@ -89,7 +89,7 @@
                                 shutdown procedure left processes of
                                 the swap around. Takes a boolean
                                 value. Defaults to "yes".
-                                </p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id428438"/><h2>See Also</h2><p>
+                                </p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id369544"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

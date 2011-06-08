@@ -1,28 +1,15 @@
-From 15e5fff6108630bbbbb6b8adc2f46f9f92517a2a Mon Sep 17 00:00:00 2001
-From: Michael Biebl <biebl@debian.org>
-Date: Wed, 24 Nov 2010 10:09:31 +0100
-Subject: [PATCH 1/3] Tweak unit files for Debian
-
----
- units/remote-fs.target.m4      |    4 ++--
- units/remount-rootfs.service   |    2 +-
- units/serial-getty@.service.m4 |    2 +-
- units/var-lock.mount           |    2 +-
- 5 files changed, 6 insertions(+), 6 deletions(-)
-
-diff --git a/units/remote-fs.target.m4 b/units/remote-fs.target.m4
-index f70fda4..1fbc0b7 100644
---- a/units/remote-fs.target.m4
-+++ b/units/remote-fs.target.m4
-@@ -12,7 +12,7 @@ Description=Remote File Systems
- m4_dnl
- m4_ifdef(`FOR_SYSTEM',
- m4_dnl When running in system mode we need the network up
--After=network.target
-+After=network.target local-fs.target
- )m4_dnl
+diff --git a/units/remote-fs.target b/units/remote-fs.target
+index a48f87e..61920d8 100644
+--- a/units/remote-fs.target
++++ b/units/remote-fs.target
+@@ -9,6 +9,7 @@
+ 
+ [Unit]
+ Description=Remote File Systems
++After=local-fs.target
  
  [Install]
+ WantedBy=multi-user.target
 diff --git a/units/remount-rootfs.service b/units/remount-rootfs.service
 index 3130901..2a3154c 100644
 --- a/units/remount-rootfs.service
