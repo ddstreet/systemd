@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.socket</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.socket"><a id="systemd.socket"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.socket — systemd socket configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.socket</code></p></div><div class="refsect1" title="Description"><a id="id574478"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.socket</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.socket"><a id="systemd.socket"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.socket — systemd socket configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.socket</code></p></div><div class="refsect1" title="Description"><a id="id386516"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.socket</code> encodes information about
                 an IPC or network socket or a file system FIFO
                 controlled and supervised by systemd, for socket-based
@@ -57,7 +57,7 @@
                 <span class="citerefentry"><span class="refentrytitle">inetd</span>(8)</span>-style
                 socket passing (i.e. sockets passed in via STDIN and
                 STDOUT, using <code class="varname">StandardInput=socket</code>
-                in the service file).</p></div><div class="refsect1" title="Options"><a id="id541999"/><h2>Options</h2><p>Socket files must include a [Socket] section,
+                in the service file).</p></div><div class="refsect1" title="Options"><a id="id418845"/><h2>Options</h2><p>Socket files must include a [Socket] section,
                 which carries information about the socket or FIFO it
                 supervises. A number of options that may be used in
                 this section are shared with other unit types. These
@@ -136,7 +136,16 @@
                                 group integer. Behaviour otherwise is
                                 very similar to the
                                 <code class="varname">ListenDatagram=</code>
-                                directive above.</p></dd><dt><span class="term"><code class="varname">BindIPv6Only=</code></span></dt><dd><p>Takes a one of
+                                directive above.</p></dd><dt><span class="term"><code class="varname">ListenMessageQueue=</code></span></dt><dd><p>Specifies a POSIX
+                                message queue name to listen on. This
+                                expects a valid message queue name
+                                (i.e. beginning with /). Behaviour
+                                otherwise is very similar to the
+                                <code class="varname">ListenFIFO=</code>
+                                directive above. On Linux message
+                                queue descriptors are actually file
+                                descriptors and can be inherited
+                                between processes.</p></dd><dt><span class="term"><code class="varname">BindIPv6Only=</code></span></dt><dd><p>Takes a one of
                                 <code class="option">default</code>,
                                 <code class="option">both</code> or
                                 <code class="option">ipv6-only</code>. Controls
@@ -276,6 +285,14 @@
                                 of FIFOs configured in this socket
                                 unit.  See
                                 <span class="citerefentry"><span class="refentrytitle">fcntl</span>(2)</span>
+                                for details.</p></dd><dt><span class="term"><code class="varname">MessageQueueMaxMessages=</code>,
+                                <code class="varname">MessageQueueMessageSize=</code></span></dt><dd><p>These two settings
+                                take integer values and control the
+                                mq_maxmsg resp. mq_msgsize field when
+                                creating the message queue. Note that
+                                either none or both of these variables
+                                need to be set. See
+                                <span class="citerefentry"><span class="refentrytitle">mq_setattr</span>(3)</span>
                                 for details.</p></dd><dt><span class="term"><code class="varname">FreeBind=</code></span></dt><dd><p>Takes a boolean
                                 value. Controls whether the socket can
                                 be bound to non-local IP
@@ -288,7 +305,15 @@
                                 robustness reasons it is recommended
                                 to use this option whenever you bind a
                                 socket to a specific IP
-                                address. Defaults to <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">TCPCongestion=</code></span></dt><dd><p>Takes a string
+                                address. Defaults to <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">Transparent=</code></span></dt><dd><p>Takes a boolean
+                                value. Controls the IP_TRANSPARENT
+                                option. Defaults to
+                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">Broadcast=</code></span></dt><dd><p>Takes a boolean
+                                value. This controls the SO_BROADCAST
+                                option, which allows boradcast
+                                datagrams to be sent from this
+                                socket. Defaults to
+                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">TCPCongestion=</code></span></dt><dd><p>Takes a string
                                 value. Controls the TCP congestion
                                 algorithm used by this socket. Should
                                 be one of "westwood", "veno", "cubic",
@@ -331,7 +356,7 @@
                                 a time span value such as "5min
                                 20s". Pass 0 to disable the timeout
                                 logic. Defaults to
-                                3min.</p></dd><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
+                                90s.</p></dd><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
                                 processes of this socket unit shall be
                                 killed. One of
                                 <code class="option">control-group</code>,
@@ -355,7 +380,7 @@
                                 that bears the same name as the socket
                                 (ignoring the different suffixes). In
                                 most cases it should not be necessary
-                                to use this option.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id583980"/><h2>See Also</h2><p>
+                                to use this option.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id428392"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
