@@ -140,6 +140,19 @@ static const char *tty_path(const ExecContext *context) {
         return "/dev/console";
 }
 
+void exec_context_tty_reset(const ExecContext *context) {
+        assert(context);
+
+        if (context->tty_vhangup)
+                terminal_vhangup(tty_path(context));
+
+        if (context->tty_reset)
+                reset_terminal(tty_path(context));
+
+        if (context->tty_vt_disallocate && context->tty_path)
+                vt_disallocate(context->tty_path);
+}
+
 static int open_null_as(int flags, int nfd) {
         int fd, r;
 
@@ -944,9 +957,12 @@ static int do_capability_bounding_set_drop(uint64_t drop) {
                 }
         }
 
-        for (i = 0; i <= CAP_LAST_CAP; i++)
+        for (i = 0; i <= MAX(63LU, (unsigned long) CAP_LAST_CAP); i++)
                 if (drop & ((uint64_t) 1ULL << (uint64_t) i)) {
                         if (prctl(PR_CAPBSET_DROP, i) < 0) {
+                                if (errno == EINVAL)
+                                        break;
+
                                 r = -errno;
                                 goto finish;
                         }
@@ -1088,6 +1104,8 @@ int exec_spawn(ExecCommand *command,
                                 }
                         }
                 }
+
+                exec_context_tty_reset(context);
 
                 /* We skip the confirmation step if we shall not apply the TTY */
                 if (confirm_spawn &&
@@ -1700,8 +1718,14 @@ void exec_context_dump(ExecContext *c, FILE* f, const char *prefix) {
 
         if (c->tty_path)
                 fprintf(f,
-                        "%sTTYPath: %s\n",
-                        prefix, c->tty_path);
+                        "%sTTYPath: %s\n"
+                        "%sTTYReset: %s\n"
+                        "%sTTYVHangup: %s\n"
+                        "%sTTYVTDisallocate: %s\n",
+                        prefix, c->tty_path,
+                        prefix, yes_no(c->tty_reset),
+                        prefix, yes_no(c->tty_vhangup),
+                        prefix, yes_no(c->tty_vt_disallocate));
 
         if (c->std_output == EXEC_OUTPUT_SYSLOG || c->std_output == EXEC_OUTPUT_KMSG ||
             c->std_output == EXEC_OUTPUT_SYSLOG_AND_CONSOLE || c->std_output == EXEC_OUTPUT_KMSG_AND_CONSOLE ||
@@ -1733,13 +1757,14 @@ void exec_context_dump(ExecContext *c, FILE* f, const char *prefix) {
                         (c->secure_bits & SECURE_NOROOT_LOCKED) ? "noroot-locked" : "");
 
         if (c->capability_bounding_set_drop) {
+                unsigned long l;
                 fprintf(f, "%sCapabilityBoundingSet:", prefix);
 
-                for (i = 0; i <= CAP_LAST_CAP; i++)
-                        if (!(c->capability_bounding_set_drop & ((uint64_t) 1ULL << (uint64_t) i))) {
+                for (l = 0; l <= (unsigned long) CAP_LAST_CAP; l++)
+                        if (!(c->capability_bounding_set_drop & ((uint64_t) 1ULL << (uint64_t) l))) {
                                 char *t;
 
-                                if ((t = cap_to_name(i))) {
+                                if ((t = cap_to_name(l))) {
                                         fprintf(f, " %s", t);
                                         cap_free(t);
                                 }
@@ -1802,7 +1827,7 @@ void exec_status_start(ExecStatus *s, pid_t pid) {
         dual_timestamp_get(&s->start_timestamp);
 }
 
-void exec_status_exit(ExecStatus *s, pid_t pid, int code, int status, const char *utmp_id) {
+void exec_status_exit(ExecStatus *s, ExecContext *context, pid_t pid, int code, int status) {
         assert(s);
 
         if ((s->pid && s->pid != pid) ||
@@ -1815,8 +1840,12 @@ void exec_status_exit(ExecStatus *s, pid_t pid, int code, int status, const char
         s->code = code;
         s->status = status;
 
-        if (utmp_id)
-                utmp_put_dead_process(utmp_id, pid, code, status);
+        if (context) {
+                if (context->utmp_id)
+                        utmp_put_dead_process(context->utmp_id, pid, code, status);
+
+                exec_context_tty_reset(context);
+        }
 }
 
 void exec_status_dump(ExecStatus *s, FILE *f, const char *prefix) {

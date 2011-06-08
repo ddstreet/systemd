@@ -9,7 +9,7 @@
                 <code class="filename">systemd.target</code>,
                 <code class="filename">systemd.path</code>,
                 <code class="filename">systemd.timer</code>,
-                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id552958"/><h2>Description</h2><p>A unit configuration file encodes information
+                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id379069"/><h2>Description</h2><p>A unit configuration file encodes information
                 about a service, a socket, a device, a mount point, an
                 automount point, a swap file or partition, a start-up
                 target, a file system path or a timer controlled and
@@ -126,7 +126,7 @@
                 fully disable a unit, making it impossible to start it
                 even manually.</p><p>The unit file format is covered by the
                 <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise">Interface
-                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id520685"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
+                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id346795"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
                 carries generic information about the unit that is not
                 dependent on the type of unit:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">Description=</code></span></dt><dd><p>A free-form string
                                 describing the unit. This is intended
@@ -309,7 +309,13 @@
                                 argument. If <code class="option">true</code>
                                 this unit will not be stopped when
                                 isolating another unit. Defaults to
-                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">StopWhenUnneeded=</code></span></dt><dd><p>Takes a boolean
+                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">IgnoreOnSnapshot=</code></span></dt><dd><p>Takes a boolean
+                                argument. If <code class="option">true</code>
+                                this unit will not be included in
+                                snapshots. Defaults to
+                                <code class="option">false</code> for device and
+                                snapshot units, <code class="option">true</code>
+                                for the others.</p></dd><dt><span class="term"><code class="varname">StopWhenUnneeded=</code></span></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit will be stopped when it is
                                 no longer used. Note that in order to
@@ -565,7 +571,7 @@
                                 <span class="command"><strong>systemctl enable</strong></span>
                                 will automatically install units
                                 listed in this option as
-                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id562637"/><h2>See Also</h2><p>
+                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id388756"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>,

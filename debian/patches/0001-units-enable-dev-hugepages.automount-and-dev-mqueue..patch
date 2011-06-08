@@ -1,0 +1,38 @@
+From 520c06000411dabf9da49181faab33bc93412262 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Sat, 2 Jul 2011 01:00:00 +0200
+Subject: [PATCH] units: enable dev-hugepages.automount and
+ dev-mqueue.automount only when enabled in kernel
+
+---
+ units/dev-hugepages.automount |    1 +
+ units/dev-mqueue.automount    |    1 +
+ 2 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/units/dev-hugepages.automount b/units/dev-hugepages.automount
+index dfd3868..6e03df3 100644
+--- a/units/dev-hugepages.automount
++++ b/units/dev-hugepages.automount
+@@ -9,6 +9,7 @@
+ Description=Huge Pages File System Automount Point
+ DefaultDependencies=no
+ Before=sysinit.target
++ConditionPathExists=/sys/kernel/mm/hugepages
+ 
+ [Automount]
+ Where=/dev/hugepages
+diff --git a/units/dev-mqueue.automount b/units/dev-mqueue.automount
+index 73c4110..1061597 100644
+--- a/units/dev-mqueue.automount
++++ b/units/dev-mqueue.automount
+@@ -9,6 +9,7 @@
+ Description=POSIX Message Queue File System Automount Point
+ DefaultDependencies=no
+ Before=sysinit.target
++ConditionPathExists=/proc/sys/fs/mqueue
+ 
+ [Automount]
+ Where=/dev/mqueue
+-- 
+1.7.5.4
+

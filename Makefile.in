@@ -79,10 +79,15 @@ host_triplet = @host@
 @TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_TRUE@	-DKBD_SETFONT=\"/bin/setfont\" \
 @TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_TRUE@	-DDEFAULT_FONT=\"LatArCyrHeb-16\"
 
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@am__append_6 = \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_SETFONT=\"/bin/setfont\" \
-@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DDEFAULT_FONT=\"latarcyrheb-sun16\"
+@TARGET_ANGSTROM_TRUE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@am__append_6 = \
+@TARGET_ANGSTROM_TRUE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_LOADKEYS=\"/usr/bin/loadkeys\" \
+@TARGET_ANGSTROM_TRUE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_SETFONT=\"/usr/bin/setfont\" \
+@TARGET_ANGSTROM_TRUE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DDEFAULT_FONT=\"LatArCyrHeb-16\"
+
+@TARGET_ANGSTROM_FALSE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@am__append_7 = \
+@TARGET_ANGSTROM_FALSE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_LOADKEYS=\"/bin/loadkeys\" \
+@TARGET_ANGSTROM_FALSE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DKBD_SETFONT=\"/bin/setfont\" \
+@TARGET_ANGSTROM_FALSE@@TARGET_ARCH_FALSE@@TARGET_FRUGALWARE_FALSE@@TARGET_GENTOO_FALSE@@TARGET_MANDRIVA_FALSE@@TARGET_MEEGO_FALSE@	-DDEFAULT_FONT=\"latarcyrheb-sun16\"
 
 rootbin_PROGRAMS = systemd$(EXEEXT) systemctl$(EXEEXT) \
 	systemd-notify$(EXEEXT) systemd-ask-password$(EXEEXT) \
@@ -90,7 +95,7 @@ rootbin_PROGRAMS = systemd$(EXEEXT) systemctl$(EXEEXT) \
 	systemd-tmpfiles$(EXEEXT) systemd-machine-id-setup$(EXEEXT)
 bin_PROGRAMS = systemd-cgls$(EXEEXT) systemd-stdio-bridge$(EXEEXT) \
 	systemd-nspawn$(EXEEXT) $(am__EXEEXT_1)
-@HAVE_GTK_TRUE@am__append_7 = \
+@HAVE_GTK_TRUE@am__append_8 = \
 @HAVE_GTK_TRUE@	systemadm \
 @HAVE_GTK_TRUE@	systemd-gnome-ask-password-agent
 
@@ -106,40 +111,53 @@ rootlibexec_PROGRAMS = systemd-logger$(EXEEXT) \
 	systemd-user-sessions$(EXEEXT) systemd-fsck$(EXEEXT) \
 	systemd-quotacheck$(EXEEXT) systemd-timestamp$(EXEEXT) \
 	systemd-ac-power$(EXEEXT) systemd-detect-virt$(EXEEXT) \
-	systemd-sysctl$(EXEEXT) systemd-binfmt$(EXEEXT) \
-	systemd-hostnamed$(EXEEXT) $(am__EXEEXT_2)
+	systemd-sysctl$(EXEEXT) systemd-hostnamed$(EXEEXT) \
+	$(am__EXEEXT_2) $(am__EXEEXT_3)
+@ENABLE_BINFMT_TRUE@am__append_9 = \
+@ENABLE_BINFMT_TRUE@	systemd-binfmt
+
 systemgenerator_PROGRAMS = systemd-getty-generator$(EXEEXT) \
-	$(am__EXEEXT_3)
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_8 = \
+	$(am__EXEEXT_4)
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_10 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	systemd-cryptsetup
 
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_9 = \
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_11 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	systemd-cryptsetup-generator
 
 noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 	test-ns$(EXEEXT) test-loopback$(EXEEXT) test-hostname$(EXEEXT) \
 	test-daemon$(EXEEXT) test-cgroup$(EXEEXT) \
 	test-env-replace$(EXEEXT) test-strv$(EXEEXT)
-@HAVE_SYSV_COMPAT_TRUE@am__append_10 = \
+@HAVE_SYSV_COMPAT_TRUE@am__append_12 = \
 @HAVE_SYSV_COMPAT_TRUE@	tmpfiles.d/legacy.conf
 
-@HAVE_SYSV_COMPAT_TRUE@am__append_11 = \
+@HAVE_SYSV_COMPAT_TRUE@am__append_13 = \
 @HAVE_SYSV_COMPAT_TRUE@	units/var-lock.mount
 
-@TARGET_FEDORA_TRUE@am__append_12 = \
+@ENABLE_BINFMT_TRUE@am__append_14 = \
+@ENABLE_BINFMT_TRUE@	units/proc-sys-fs-binfmt_misc.automount \
+@ENABLE_BINFMT_TRUE@	units/proc-sys-fs-binfmt_misc.mount
+
+@ENABLE_BINFMT_TRUE@am__append_15 = \
+@ENABLE_BINFMT_TRUE@	units/systemd-binfmt.service
+
+@ENABLE_BINFMT_TRUE@am__append_16 = \
+@ENABLE_BINFMT_TRUE@	units/systemd-binfmt.service.in
+
+@TARGET_FEDORA_TRUE@am__append_17 = \
 @TARGET_FEDORA_TRUE@	units/fedora/prefdm.service \
 @TARGET_FEDORA_TRUE@	units/fedora/rc-local.service \
 @TARGET_FEDORA_TRUE@	units/fedora/halt-local.service
 
-@TARGET_MANDRIVA_TRUE@am__append_13 = \
+@TARGET_MANDRIVA_TRUE@am__append_18 = \
 @TARGET_MANDRIVA_TRUE@	units/mandriva/prefdm.service \
 @TARGET_MANDRIVA_TRUE@	units/fedora/rc-local.service \
 @TARGET_MANDRIVA_TRUE@	units/fedora/halt-local.service
 
-@TARGET_FRUGALWARE_TRUE@am__append_14 = \
+@TARGET_FRUGALWARE_TRUE@am__append_19 = \
 @TARGET_FRUGALWARE_TRUE@	units/frugalware/display-manager.service
 
-@HAVE_PLYMOUTH_TRUE@am__append_15 = \
+@HAVE_PLYMOUTH_TRUE@am__append_20 = \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-start.service \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-read-write.service \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-quit.service \
@@ -150,19 +168,22 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @HAVE_PLYMOUTH_TRUE@	units/plymouth-halt.service \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.path
 
-@HAVE_PLYMOUTH_TRUE@am__append_16 = \
+@HAVE_PLYMOUTH_TRUE@am__append_21 = \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.service
 
-@HAVE_PLYMOUTH_TRUE@am__append_17 = \
+@HAVE_PLYMOUTH_TRUE@am__append_22 = \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.service.in
 
-@LIBNOTIFY07_TRUE@am__append_18 = \
+@ENABLE_BINFMT_TRUE@am__append_23 = \
+@ENABLE_BINFMT_TRUE@	man/binfmt.d.5
+
+@LIBNOTIFY07_TRUE@am__append_24 = \
 @LIBNOTIFY07_TRUE@	-D LIBNOTIFY07
 
-@HAVE_VALAC_TRUE@am__append_19 = \
+@HAVE_VALAC_TRUE@am__append_25 = \
 @HAVE_VALAC_TRUE@	${systemadm_SOURCES:.vala=.c}
 
-@HAVE_XSLTPROC_TRUE@am__append_20 = \
+@HAVE_XSLTPROC_TRUE@am__append_26 = \
 @HAVE_XSLTPROC_TRUE@	$(dist_man_MANS) \
 @HAVE_XSLTPROC_TRUE@	${nodist_man_MANS:=.in} \
 @HAVE_XSLTPROC_TRUE@	${XML_FILES:.xml=.html} \
@@ -352,8 +373,9 @@ pam_systemd_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @HAVE_PAM_TRUE@am_pam_systemd_la_rpath = -rpath $(pamlibdir)
 @HAVE_GTK_TRUE@am__EXEEXT_1 = systemadm$(EXEEXT) \
 @HAVE_GTK_TRUE@	systemd-gnome-ask-password-agent$(EXEEXT)
-@HAVE_LIBCRYPTSETUP_TRUE@am__EXEEXT_2 = systemd-cryptsetup$(EXEEXT)
-@HAVE_LIBCRYPTSETUP_TRUE@am__EXEEXT_3 = systemd-cryptsetup-generator$(EXEEXT)
+@ENABLE_BINFMT_TRUE@am__EXEEXT_2 = systemd-binfmt$(EXEEXT)
+@HAVE_LIBCRYPTSETUP_TRUE@am__EXEEXT_3 = systemd-cryptsetup$(EXEEXT)
+@HAVE_LIBCRYPTSETUP_TRUE@am__EXEEXT_4 = systemd-cryptsetup-generator$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(rootbin_PROGRAMS) \
 	$(rootlibexec_PROGRAMS) $(systemgenerator_PROGRAMS)
 am_systemadm_OBJECTS = src/systemadm-systemadm.$(OBJEXT) \
@@ -828,32 +850,31 @@ am__dist_systemunit_DATA_DIST = units/graphical.target \
 	units/multi-user.target units/emergency.service \
 	units/emergency.target units/sysinit.target units/basic.target \
 	units/getty.target units/halt.target units/kexec.target \
-	units/local-fs.target units/cryptsetup.target \
-	units/network.target units/nss-lookup.target \
-	units/mail-transfer-agent.target units/http-daemon.target \
-	units/poweroff.target units/reboot.target units/rescue.target \
-	units/rpcbind.target units/time-sync.target \
-	units/shutdown.target units/final.target units/umount.target \
-	units/sigpwr.target units/sockets.target units/swap.target \
+	units/local-fs.target units/remote-fs.target \
+	units/cryptsetup.target units/network.target \
+	units/nss-lookup.target units/mail-transfer-agent.target \
+	units/http-daemon.target units/poweroff.target \
+	units/reboot.target units/rescue.target units/rpcbind.target \
+	units/time-sync.target units/shutdown.target \
+	units/final.target units/umount.target units/sigpwr.target \
+	units/sockets.target units/swap.target \
 	units/systemd-initctl.socket units/systemd-logger.socket \
 	units/systemd-shutdownd.socket units/syslog.socket \
 	units/dev-hugepages.automount units/dev-hugepages.mount \
 	units/dev-mqueue.automount units/dev-mqueue.mount \
-	units/proc-sys-fs-binfmt_misc.automount \
-	units/proc-sys-fs-binfmt_misc.mount \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
 	units/sys-kernel-security.mount units/var-run.mount \
-	units/media.mount units/hwclock-load.service \
-	units/hwclock-save.service units/remount-rootfs.service \
+	units/media.mount units/remount-rootfs.service \
 	units/printer.target units/sound.target units/bluetooth.target \
 	units/smartcard.target units/systemd-readahead-done.timer \
 	units/systemd-tmpfiles-clean.timer units/quotaon.service \
 	units/systemd-ask-password-wall.path \
 	units/systemd-ask-password-console.path units/syslog.target \
-	units/var-lock.mount units/fedora/prefdm.service \
-	units/fedora/rc-local.service units/fedora/halt-local.service \
-	units/mandriva/prefdm.service \
+	units/var-lock.mount units/proc-sys-fs-binfmt_misc.automount \
+	units/proc-sys-fs-binfmt_misc.mount \
+	units/fedora/prefdm.service units/fedora/rc-local.service \
+	units/fedora/halt-local.service units/mandriva/prefdm.service \
 	units/frugalware/display-manager.service \
 	units/plymouth-start.service units/plymouth-read-write.service \
 	units/plymouth-quit.service units/plymouth-quit-wait.service \
@@ -1044,7 +1065,7 @@ bashcompletiondir = $(sysconfdir)/bash_completion.d
 # Our own, non-special dirs
 pkgsysconfdir = $(sysconfdir)/systemd
 userunitdir = $(prefix)/lib/systemd/user
-tmpfilesdir = $(sysconfdir)/tmpfiles.d
+tmpfilesdir = $(prefix)/lib/tmpfiles.d
 usergeneratordir = $(pkglibexecdir)/user-generators
 rootbindir = $(rootdir)/bin
 rootlibexecdir = $(rootdir)/lib/systemd
@@ -1074,7 +1095,7 @@ AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-DSYSTEM_SHUTDOWN_PATH=\"$(systemshutdowndir)\" -I \
 	$(top_srcdir)/src $(am__append_1) $(am__append_2) \
 	$(am__append_3) $(am__append_4) $(am__append_5) \
-	$(am__append_6)
+	$(am__append_6) $(am__append_7)
 dist_bin_SCRIPTS = \
 	src/systemd-analyze
 
@@ -1114,40 +1135,37 @@ dist_bashcompletion_DATA = \
 	src/systemctl-bash-completion.sh
 
 dist_tmpfiles_DATA = tmpfiles.d/systemd.conf tmpfiles.d/x11.conf \
-	$(am__append_10)
+	$(am__append_12)
 dist_systemunit_DATA = units/graphical.target units/multi-user.target \
 	units/emergency.service units/emergency.target \
 	units/sysinit.target units/basic.target units/getty.target \
 	units/halt.target units/kexec.target units/local-fs.target \
-	units/cryptsetup.target units/network.target \
-	units/nss-lookup.target units/mail-transfer-agent.target \
-	units/http-daemon.target units/poweroff.target \
-	units/reboot.target units/rescue.target units/rpcbind.target \
-	units/time-sync.target units/shutdown.target \
-	units/final.target units/umount.target units/sigpwr.target \
-	units/sockets.target units/swap.target \
+	units/remote-fs.target units/cryptsetup.target \
+	units/network.target units/nss-lookup.target \
+	units/mail-transfer-agent.target units/http-daemon.target \
+	units/poweroff.target units/reboot.target units/rescue.target \
+	units/rpcbind.target units/time-sync.target \
+	units/shutdown.target units/final.target units/umount.target \
+	units/sigpwr.target units/sockets.target units/swap.target \
 	units/systemd-initctl.socket units/systemd-logger.socket \
 	units/systemd-shutdownd.socket units/syslog.socket \
 	units/dev-hugepages.automount units/dev-hugepages.mount \
 	units/dev-mqueue.automount units/dev-mqueue.mount \
-	units/proc-sys-fs-binfmt_misc.automount \
-	units/proc-sys-fs-binfmt_misc.mount \
 	units/sys-kernel-debug.automount units/sys-kernel-debug.mount \
 	units/sys-kernel-security.automount \
 	units/sys-kernel-security.mount units/var-run.mount \
-	units/media.mount units/hwclock-load.service \
-	units/hwclock-save.service units/remount-rootfs.service \
+	units/media.mount units/remount-rootfs.service \
 	units/printer.target units/sound.target units/bluetooth.target \
 	units/smartcard.target units/systemd-readahead-done.timer \
 	units/systemd-tmpfiles-clean.timer units/quotaon.service \
 	units/systemd-ask-password-wall.path \
 	units/systemd-ask-password-console.path units/syslog.target \
-	$(am__append_11) $(am__append_12) $(am__append_13) \
-	$(am__append_14) $(am__append_15)
+	$(am__append_13) $(am__append_14) $(am__append_17) \
+	$(am__append_18) $(am__append_19) $(am__append_20)
 nodist_systemunit_DATA = units/getty@.service \
 	units/serial-getty@.service units/console-shell.service \
-	units/remote-fs.target units/systemd-initctl.service \
-	units/systemd-logger.service units/systemd-shutdownd.service \
+	units/systemd-initctl.service units/systemd-logger.service \
+	units/systemd-shutdownd.service \
 	units/systemd-hostnamed.service \
 	units/systemd-kmsg-syslogd.service \
 	units/systemd-modules-load.service \
@@ -1165,17 +1183,16 @@ nodist_systemunit_DATA = units/getty@.service \
 	units/systemd-user-sessions.service \
 	units/systemd-ask-password-wall.service \
 	units/systemd-ask-password-console.service \
-	units/systemd-sysctl.service units/systemd-binfmt.service \
-	units/halt.service units/poweroff.service units/reboot.service \
+	units/systemd-sysctl.service units/halt.service \
+	units/poweroff.service units/reboot.service \
 	units/kexec.service units/fsck@.service \
 	units/fsck-root.service units/quotacheck.service \
-	units/rescue.service $(am__append_16)
+	units/rescue.service $(am__append_15) $(am__append_21)
 dist_userunit_DATA = \
 	units/user/default.target \
 	units/user/exit.target
 
 nodist_userunit_DATA = \
-	units/user/remote-fs.target \
 	units/user/exit.service
 
 
@@ -1183,8 +1200,8 @@ nodist_userunit_DATA = \
 # rules for C programs, but not Vala programs.  We therefore can't
 # list the .h files as dependencies if we want make dist to work.
 EXTRA_DIST = units/getty@.service.m4 units/serial-getty@.service.m4 \
-	units/console-shell.service.m4 units/remote-fs.target.m4 \
-	units/rescue.service.m4 units/systemd-initctl.service.in \
+	units/console-shell.service.m4 units/rescue.service.m4 \
+	units/systemd-initctl.service.in \
 	units/systemd-logger.service.in \
 	units/systemd-shutdownd.service.in \
 	units/systemd-hostnamed.service.in \
@@ -1204,14 +1221,13 @@ EXTRA_DIST = units/getty@.service.m4 units/serial-getty@.service.m4 \
 	units/systemd-user-sessions.service.in \
 	units/systemd-ask-password-wall.service.in \
 	units/systemd-ask-password-console.service.in \
-	units/systemd-sysctl.service.in \
-	units/systemd-binfmt.service.in units/halt.service.in \
+	units/systemd-sysctl.service.in units/halt.service.in \
 	units/poweroff.service.in units/reboot.service.in \
 	units/kexec.service.in units/user/exit.service.in \
 	units/fsck@.service.in units/fsck-root.service.in \
 	units/quotacheck.service.in systemd.pc.in introspect.awk \
-	src/org.freedesktop.systemd1.policy.in $(am__append_17) \
-	${libsystemd_basic_la_SOURCES:.c=.h} \
+	src/org.freedesktop.systemd1.policy.in $(am__append_16) \
+	$(am__append_22) ${libsystemd_basic_la_SOURCES:.c=.h} \
 	${libsystemd_core_la_SOURCES:.c=.h} \
 	${libsystemd_daemon_la_SOURCES:.c=.h} src/macro.h src/def.h \
 	src/ioprio.h src/missing.h src/list.h src/securebits.h \
@@ -1333,52 +1349,20 @@ libsystemd_core_la_LIBADD = \
 libsystemd_daemon_la_SOURCES = \
 	src/sd-daemon.c
 
-MANPAGES = \
-	man/systemd.1 \
-	man/systemctl.1 \
-	man/systemadm.1 \
-	man/systemd-cgls.1 \
-	man/systemd-nspawn.1 \
-	man/systemd-tmpfiles.8 \
-	man/systemd-notify.1 \
-	man/sd_notify.3 \
-	man/sd_readahead.3 \
-	man/sd_booted.3 \
-	man/sd_listen_fds.3 \
-	man/sd_is_fifo.3 \
-	man/systemd.unit.5 \
-	man/systemd.service.5 \
-	man/systemd.socket.5 \
-	man/systemd.mount.5 \
-	man/systemd.automount.5 \
-	man/systemd.swap.5 \
-	man/systemd.timer.5 \
-	man/systemd.path.5 \
-	man/systemd.target.5 \
-	man/systemd.device.5 \
-	man/systemd.snapshot.5 \
-	man/systemd.exec.5 \
-	man/daemon.7 \
-	man/sd-daemon.7 \
-	man/sd-readahead.7 \
-	man/runlevel.8 \
-	man/telinit.8 \
-	man/halt.8 \
-	man/shutdown.8 \
-	man/pam_systemd.8 \
-	man/systemd.conf.5 \
-	man/tmpfiles.d.5 \
-	man/hostname.5 \
-	man/machine-id.5 \
-	man/vconsole.conf.5 \
-	man/locale.conf.5 \
-	man/os-release.5 \
-        man/machine-info.5 \
-	man/modules-load.d.5 \
-	man/binfmt.d.5 \
-	man/sysctl.d.5 \
-        man/systemd-ask-password.1
-
+MANPAGES = man/systemd.1 man/systemctl.1 man/systemadm.1 \
+	man/systemd-cgls.1 man/systemd-nspawn.1 man/systemd-tmpfiles.8 \
+	man/systemd-notify.1 man/sd_notify.3 man/sd_readahead.3 \
+	man/sd_booted.3 man/sd_listen_fds.3 man/sd_is_fifo.3 \
+	man/systemd.unit.5 man/systemd.service.5 man/systemd.socket.5 \
+	man/systemd.mount.5 man/systemd.automount.5 man/systemd.swap.5 \
+	man/systemd.timer.5 man/systemd.path.5 man/systemd.target.5 \
+	man/systemd.device.5 man/systemd.snapshot.5 man/systemd.exec.5 \
+	man/daemon.7 man/sd-daemon.7 man/sd-readahead.7 man/runlevel.8 \
+	man/telinit.8 man/halt.8 man/shutdown.8 man/pam_systemd.8 \
+	man/systemd.conf.5 man/tmpfiles.d.5 man/hostname.5 \
+	man/machine-id.5 man/vconsole.conf.5 man/locale.conf.5 \
+	man/os-release.5 man/machine-info.5 man/modules-load.d.5 \
+	man/sysctl.d.5 man/systemd-ask-password.1 $(am__append_23)
 MANPAGES_ALIAS = \
 	man/reboot.8 \
 	man/poweroff.8 \
@@ -1877,7 +1861,7 @@ systemd_gnome_ask_password_agent_CFLAGS = \
 
 systemd_gnome_ask_password_agent_VALAFLAGS = --pkg=posix \
 	--pkg=gtk+-2.0 --pkg=linux --pkg=gio-unix-2.0 --pkg=libnotify \
-	$(am__append_18) -g
+	$(am__append_24) -g
 systemd_gnome_ask_password_agent_LDADD = \
 	$(LIBNOTIFY_LIBS) \
 	$(GTK_LIBS)
@@ -1938,7 +1922,7 @@ M4_PROCESS_USER = \
 CLEANFILES = $(nodist_systemunit_DATA) $(nodist_userunit_DATA) \
 	$(nodist_man_MANS) ${XML_IN_FILES:.xml.in=.html} \
 	$(pkgconfigdata_DATA) src/org.freedesktop.systemd1.policy \
-	$(am__append_19) $(am__append_20) $(dbusinterface_DATA)
+	$(am__append_25) $(am__append_26) $(dbusinterface_DATA)
 @HAVE_XSLTPROC_TRUE@XSLTPROC_FLAGS = \
 @HAVE_XSLTPROC_TRUE@	--nonet \
 @HAVE_XSLTPROC_TRUE@	--param funcsynopsis.style "'ansi'"
@@ -5921,12 +5905,17 @@ org.freedesktop.systemd1.%.xml: systemd
 install-data-hook:
 	$(MKDIR_P) -m 0755 \
 		$(DESTDIR)$(tmpfilesdir) \
+		$(DESTDIR)$(sysconfdir)/tmpfiles.d \
+		$(DESTDIR)$(prefix)/lib/modules-load.d \
 		$(DESTDIR)$(sysconfdir)/modules-load.d \
+		$(DESTDIR)$(prefix)/lib/sysctl.d \
 		$(DESTDIR)$(sysconfdir)/sysctl.d \
-		$(DESTDIR)$(sysconfdir)/binfmt.d \
 		$(DESTDIR)$(systemshutdowndir) \
 		$(DESTDIR)$(systemgeneratordir) \
 		$(DESTDIR)$(usergeneratordir)
+@ENABLE_BINFMT_TRUE@	$(MKDIR_P) -m 0755 \
+@ENABLE_BINFMT_TRUE@		$(DESTDIR)$(prefix)/lib/binfmt.d \
+@ENABLE_BINFMT_TRUE@		$(DESTDIR)$(sysconfdir)/binfmt.d
 	$(MKDIR_P) -m 0755 \
 		$(DESTDIR)$(systemunitdir) \
 		$(DESTDIR)$(userunitdir) \
@@ -5948,6 +5937,7 @@ install-data-hook:
 		$(DESTDIR)$(pkgsysconfdir)/system/multi-user.target.wants \
 		$(DESTDIR)$(pkgsysconfdir)/system/getty.target.wants \
 		$(DESTDIR)$(pkgsysconfdir)/user \
+		$(DESTDIR)$(dbussessionservicedir) \
 		$(DESTDIR)$(sysconfdir)/xdg/systemd
 	( cd $(DESTDIR)$(sysconfdir)/xdg/systemd/ && \
 		rm -f user && \
@@ -5975,10 +5965,8 @@ install-data-hook:
 		$(LN_S) ../systemd-update-utmp-runlevel.service systemd-update-utmp-runlevel.service )
 	( cd $(DESTDIR)$(systemunitdir)/shutdown.target.wants && \
 		rm -f systemd-update-utmp-shutdown.service \
-			hwclock-save.service \
 			systemd-random-seed-save.service && \
 		$(LN_S) ../systemd-update-utmp-shutdown.service systemd-update-utmp-shutdown.service && \
-		$(LN_S) ../hwclock-save.service hwclock-save.service && \
 		$(LN_S) ../systemd-random-seed-save.service systemd-random-seed-save.service )
 	( cd $(DESTDIR)$(systemunitdir)/local-fs.target.wants && \
 		rm -f systemd-remount-api-vfs.service \
@@ -5992,11 +5980,9 @@ install-data-hook:
 		$(LN_S) ../var-run.mount var-run.mount && \
 		$(LN_S) ../media.mount media.mount )
 	( cd $(DESTDIR)$(userunitdir) && \
-		rm -f shutdown.target sockets.target local-fs.target swap.target bluetooth.target printer.target sound.target && \
+		rm -f shutdown.target sockets.target bluetooth.target printer.target sound.target && \
 		$(LN_S) $(systemunitdir)/shutdown.target shutdown.target && \
 		$(LN_S) $(systemunitdir)/sockets.target sockets.target && \
-		$(LN_S) $(systemunitdir)/local-fs.target local-fs.target && \
-		$(LN_S) $(systemunitdir)/swap.target swap.target && \
 		$(LN_S) $(systemunitdir)/bluetooth.target bluetooth.target && \
 		$(LN_S) $(systemunitdir)/printer.target printer.target && \
 		$(LN_S) $(systemunitdir)/sound.target sound.target )
@@ -6030,13 +6016,9 @@ install-data-hook:
 	( cd $(DESTDIR)$(pkgsysconfdir)/system/multi-user.target.wants && \
 		rm -f remote-fs.target && \
 		$(LN_S) $(systemunitdir)/remote-fs.target remote-fs.target )
-	( cd $(DESTDIR)$(pkgsysconfdir)/system/sysinit.target.wants && \
-		rm -f hwclock-load.service && \
-		$(LN_S) $(systemunitdir)/hwclock-load.service hwclock-load.service )
 	( cd $(DESTDIR)$(systemunitdir)/sysinit.target.wants && \
 		rm -f dev-hugepages.automount \
 			dev-mqueue.automount \
-			proc-sys-fs-binfmt_misc.automount \
 			sys-kernel-debug.automount \
 			sys-kernel-security.automount \
 			systemd-vconsole-setup.service \
@@ -6044,13 +6026,11 @@ install-data-hook:
 			systemd-random-seed-load.service \
 			systemd-tmpfiles-setup.service \
 			systemd-sysctl.service \
-			systemd-binfmt.service \
 			systemd-ask-password-console.path \
 			systemd-kmsg-syslogd.service \
 			cryptsetup.target && \
 		$(LN_S) ../dev-hugepages.automount dev-hugepages.automount && \
 		$(LN_S) ../dev-mqueue.automount dev-mqueue.automount && \
-		$(LN_S) ../proc-sys-fs-binfmt_misc.automount proc-sys-fs-binfmt_misc.automount && \
 		$(LN_S) ../sys-kernel-debug.automount sys-kernel-debug.automount && \
 		$(LN_S) ../sys-kernel-security.automount sys-kernel-security.automount && \
 		$(LN_S) ../systemd-vconsole-setup.service systemd-vconsole-setup.service && \
@@ -6058,10 +6038,14 @@ install-data-hook:
 		$(LN_S) ../systemd-random-seed-load.service systemd-random-seed-load.service && \
 		$(LN_S) ../systemd-tmpfiles-setup.service systemd-tmpfiles-setup.service && \
 		$(LN_S) ../systemd-sysctl.service systemd-sysctl.service && \
-		$(LN_S) ../systemd-binfmt.service systemd-binfmt.service && \
 		$(LN_S) ../systemd-ask-password-console.path systemd-ask-password-console.path && \
 		$(LN_S) ../systemd-kmsg-syslogd.service && \
 		$(LN_S) ../cryptsetup.target cryptsetup.target )
+@ENABLE_BINFMT_TRUE@	( cd $(DESTDIR)$(systemunitdir)/sysinit.target.wants && \
+@ENABLE_BINFMT_TRUE@		rm -f systemd-binfmt.service \
+@ENABLE_BINFMT_TRUE@			proc-sys-fs-binfmt_misc.automount && \
+@ENABLE_BINFMT_TRUE@		$(LN_S) ../systemd-binfmt.service systemd-binfmt.service && \
+@ENABLE_BINFMT_TRUE@		$(LN_S) ../proc-sys-fs-binfmt_misc.automount proc-sys-fs-binfmt_misc.automount )
 	( cd $(DESTDIR)$(systemunitdir)/basic.target.wants && \
 		rm -f systemd-tmpfiles-clean.timer && \
 		$(LN_S) ../systemd-tmpfiles-clean.timer systemd-tmpfiles-clean.timer )

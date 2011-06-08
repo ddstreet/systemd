@@ -117,7 +117,7 @@ static int mount_all(const char *dest) {
                 { "sysfs",     "/sys",      "sysfs",     NULL,        MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_RDONLY, true },
                 { "tmpfs",     "/dev",      "tmpfs",     "mode=755",  MS_NOSUID, true },
                 { "/dev/pts",  "/dev/pts",  "bind",      NULL,        MS_BIND, true },
-                { "tmpfs",     "/run",      "tmpfs",     "mode=755",  MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+                { "tmpfs",     "/run",      "tmpfs",     "mode=755",  MS_NOSUID|MS_NODEV, true },
 #ifdef HAVE_SELINUX
                 { "selinux",   "/selinux",  "selinuxfs", NULL,        MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_RDONLY, false },
 #endif
@@ -332,7 +332,7 @@ static int drop_capabilities(void) {
 
         unsigned long l;
 
-        for (l = 0; l <= MAX(63LU, (unsigned long) CAP_LAST_CAP); l ++) {
+        for (l = 0; l <= MAX(63LU, (unsigned long) CAP_LAST_CAP); l++) {
                 unsigned i;
 
                 for (i = 0; i < ELEMENTSOF(retain); i++)
@@ -347,7 +347,7 @@ static int drop_capabilities(void) {
                         /* If this capability is not known, EINVAL
                          * will be returned, let's ignore this. */
                         if (errno == EINVAL)
-                                continue;
+                                break;
 
                         log_error("PR_CAPBSET_DROP failed: %m");
                         return -errno;
