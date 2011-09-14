@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd"><a id="systemd"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd, init — systemd System and Service Manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">init [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a id="id329971"/><h2>Description</h2><p>systemd is a system and service manager for
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd"><a id="systemd"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd, init — systemd System and Service Manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">init [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a id="id543864"/><h2>Description</h2><p>systemd is a system and service manager for
                 Linux operating systems. When run as first process on
                 boot (as PID 1), it acts as init system that brings
                 up and maintains userspace services.</p><p>For compatibility with SysV, if systemd is called
@@ -15,7 +15,7 @@
                 <code class="filename">system.conf</code>, otherwise
                 <code class="filename">user.conf</code>. See
                 <span class="citerefentry"><span class="refentrytitle">systemd.conf</span>(5)</span>
-                for more information.</p></div><div class="refsect1" title="Options"><a id="id330043"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                for more information.</p></div><div class="refsect1" title="Options"><a id="id543935"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--test</code></span></dt><dd><p>Determine startup
                                 sequence, dump it and exit. This is an
                                 option useful for debugging
@@ -105,7 +105,7 @@
                                 services and sockets, i.e. controls
                                 the default for
                                 <code class="option">StandardOutput=</code>
-                                resp. <code class="option">StandardExecute=</code>
+                                resp. <code class="option">StandardError=</code>
                                 (see
                                 <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>
                                 for details). Takes one of
@@ -116,8 +116,13 @@
                                 <code class="option">syslog+console</code>,
                                 <code class="option">kmsg</code>,
                                 <code class="option">kmsg+console</code>.  If the
-                                argument is omitted it defaults to
-                                <code class="option">inherit</code>.</p></dd></dl></div></div><div class="refsect1" title="Concepts"><a id="id338915"/><h2>Concepts</h2><p>systemd provides a dependency system between
+                                argument is omitted
+                                <code class="option">--default-standard-output=</code>
+                                defaults to <code class="option">syslog</code>
+                                and
+                                <code class="option">--default-standard-error=</code>
+                                to
+                                <code class="option">inherit</code>.</p></dd></dl></div></div><div class="refsect1" title="Concepts"><a id="id552819"/><h2>Concepts</h2><p>systemd provides a dependency system between
                 various entities called "units". Units encapsulate
                 various objects that are relevant for system boot-up
                 and maintenance. The majority of units are configured
@@ -272,7 +277,7 @@
                 ideas behind systemd please refer to the <a class="ulink" href="http://0pointer.de/blog/projects/systemd.html">Original
                 Design Document</a>.</p><p>Note that some but not all interfaces provided
                 by systemd are covered by the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise">Interface
-                Stability Promise</a>.</p></div><div class="refsect1" title="Directories"><a id="id339281"/><h2>Directories</h2><div class="variablelist"><dl><dt><span class="term">System unit directories</span></dt><dd><p>The systemd system
+                Stability Promise</a>.</p></div><div class="refsect1" title="Directories"><a id="id553257"/><h2>Directories</h2><div class="variablelist"><dl><dt><span class="term">System unit directories</span></dt><dd><p>The systemd system
                                 manager reads unit configuration from
                                 various directories. Packages that
                                 want to install unit files shall place
@@ -332,7 +337,7 @@
                                 unit with a native unit configuration
                                 file cannot be started by activating it
                                 in the SysV runlevel link
-                                farm.</p></dd></dl></div></div><div class="refsect1" title="Signals"><a id="id296908"/><h2>Signals</h2><div class="variablelist"><dl><dt><span class="term">SIGTERM</span></dt><dd><p>Upon receiving this
+                                farm.</p></dd></dl></div></div><div class="refsect1" title="Signals"><a id="id553427"/><h2>Signals</h2><div class="variablelist"><dl><dt><span class="term">SIGTERM</span></dt><dd><p>Upon receiving this
                                 signal the systemd system manager
                                 serializes its state, reexecutes
                                 itself and deserializes the saved
@@ -421,7 +426,30 @@
                                 controlled via
                                 <code class="varname">systemd.show_status=0</code>
                                 on the kernel command
-                                line.</p></dd></dl></div></div><div class="refsect1" title="Environment"><a id="id339930"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_LOG_LEVEL</code></span></dt><dd><p>systemd reads the
+                                line.</p></dd><dt><span class="term">SIGRTMIN+22, </span><span class="term">SIGRTMIN+23</span></dt><dd><p>Sets the log level to
+                                <code class="literal">debug</code>
+                                (resp. <code class="literal">info</code> on
+                                <code class="literal">SIGRTMIN+32</code>), as
+                                controlled via
+                                <code class="varname">systemd.log_level=debug</code>
+                                (resp. <code class="varname">systemd.log_level=info</code>
+                                on <code class="literal">SIGRTMIN+23</code>) on
+                                the kernel command
+                                line.</p></dd><dt><span class="term">SIGRTMIN+27, </span><span class="term">SIGRTMIN+28, </span><span class="term">SIGRTMIN+29</span></dt><dd><p>Sets the log level to
+                                <code class="literal">console</code>
+                                (resp. <code class="literal">kmsg</code> on
+                                <code class="literal">SIGRTMIN+28</code>;
+                                resp. <code class="literal">syslog-or-kmsg</code>
+                                on <code class="literal">SIGRTMIN+29</code>), as
+                                controlled via
+                                <code class="varname">systemd.log_target=console</code>
+                                (resp. <code class="varname">systemd.log_target=kmsg</code>
+                                on <code class="literal">SIGRTMIN+28</code>;
+                                resp
+                                <code class="varname">systemd.log_target=syslog-or-kmsg</code>
+                                on <code class="literal">SIGRTMIN+29</code>) on
+                                the kernel command
+                                line.</p></dd></dl></div></div><div class="refsect1" title="Environment"><a id="id553949"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_LOG_LEVEL</code></span></dt><dd><p>systemd reads the
                                 log level from this environment
                                 variable. This can be overridden with
                                 <code class="option">--log-level=</code>.</p></dd><dt><span class="term"><code class="varname">$SYSTEMD_LOG_TARGET</code></span></dt><dd><p>systemd reads the
@@ -453,7 +481,7 @@
                                 start-up completion notification. See
                                 <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>
                                 for more information.
-                                </p></dd></dl></div></div><div class="refsect1" title="Kernel Command Line"><a id="id340124"/><h2>Kernel Command Line</h2><p>When run as system instance systemd parses a few kernel command line arguments:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">systemd.unit=</code></span></dt><dd><p>Overrides the unit to
+                                </p></dd></dl></div></div><div class="refsect1" title="Kernel Command Line"><a id="id554143"/><h2>Kernel Command Line</h2><p>When run as system instance systemd parses a few kernel command line arguments:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">systemd.unit=</code></span></dt><dd><p>Overrides the unit to
                                 activate on boot. Defaults to
                                 <code class="filename">default.target</code>. This
                                 may be used to temporarily boot into a
@@ -504,13 +532,13 @@
                                 <code class="option">--default-standard-output=</code>
                                 resp. <code class="option">--default-standard-error=</code>
                                 command line arguments described
-                                above.</p></dd></dl></div></div><div class="refsect1" title="Sockets and FIFOs"><a id="id340370"/><h2>Sockets and FIFOs</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">/run/systemd/notify</code></span></dt><dd><p>Daemon status
+                                above.</p></dd></dl></div></div><div class="refsect1" title="Sockets and FIFOs"><a id="id554389"/><h2>Sockets and FIFOs</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">/run/systemd/notify</code></span></dt><dd><p>Daemon status
                                 notification socket. This is an
                                 AF_UNIX datagram socket and is used to
                                 implement the daemon notification
                                 logic as implemented by
-                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>.</p></dd><dt><span class="term"><code class="filename">/run/systemd/logger</code></span></dt><dd><p>Used internally by the
-                                <code class="filename">systemd-logger.service</code>
+                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>.</p></dd><dt><span class="term"><code class="filename">/run/systemd/stdout-syslog-bridge</code></span></dt><dd><p>Used internally by the
+                                <code class="filename">systemd-stdout-syslog-bridge.service</code>
                                 unit to connect STDOUT and/or STDERR
                                 of spawned processes to
                                 <span class="citerefentry"><span class="refentrytitle">syslog</span>(3)</span>
@@ -534,7 +562,7 @@
                                 unit. This is a named pipe in the file
                                 system. This interface is obsolete and
                                 should not be used in new
-                                applications.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id340499"/><h2>See Also</h2><p>
+                                applications.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id554518"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd-notify</span>(1)</span>,

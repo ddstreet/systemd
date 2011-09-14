@@ -379,7 +379,7 @@ static int process_event(Server *s, struct epoll_event *ev) {
                         return -errno;
                 }
 
-                log_debug("Received SIG%s", strna(signal_to_string(sfsi.ssi_signo)));
+                log_debug("Received SIG%s", signal_to_string(sfsi.ssi_signo));
                 return 0;
 
         } else {
@@ -454,6 +454,8 @@ int main(int argc, char *argv[]) {
         log_set_target(LOG_TARGET_KMSG);
         log_parse_environment();
         log_open();
+
+        umask(0022);
 
         if ((n = sd_listen_fds(true)) < 0) {
                 log_error("Failed to read listening file descriptors from environment: %s", strerror(-r));

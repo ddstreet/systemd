@@ -2,12 +2,12 @@
 .\"     Title: systemd.conf
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: systemd.conf
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.CONF" "5" "06/16/2011" "systemd" "systemd.conf"
+.TH "SYSTEMD\&.CONF" "5" "09/23/2011" "systemd" "systemd.conf"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -66,6 +66,11 @@ Configures whether systemd should automatically activate all swap or mounts list
 \fIDefaultControllers=cpu\fR
 .RS 4
 Configures in which cgroup controller hierarchies to create per\-service cgroups automatically, in addition to the name=systemd named hierarchy\&. Defaults to \*(Aqcpu\*(Aq\&. Takes a space separated list of controller names\&. Pass an empty string to ensure that systemd does not touch any hierarchies but its own\&.
+.RE
+.PP
+\fIJoinControllers=cpu,cpuacct\fR
+.RS 4
+Configures controllers that shall be mounted in a single hierarchy\&. By default systemd will mount all controllers which are enabled in the kernel in individual hierachies, with the exception of those listed in this setting\&. Takes a space separated list of comma separated controller names, in order to allow multiple joined hierarchies\&. Defaults to \*(Aqcpu,cpuacct\*(Aq\&. Pass an empty string to ensure that systemd mounts all controllers in separate hierarchies\&.
 .RE
 .SH "SEE ALSO"
 .PP

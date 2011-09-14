@@ -2,12 +2,12 @@
 .\"     Title: locale.conf
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: locale.conf
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "LOCALE\&.CONF" "5" "06/16/2011" "systemd" "locale.conf"
+.TH "LOCALE\&.CONF" "5" "09/23/2011" "systemd" "locale.conf"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -44,6 +44,7 @@ is a newline\-separated list of environment\-like shell\-compatible variable ass
 .PP
 Note that the kernel command line options
 \fIlocale\&.LANG=\fR,
+\fIlocale\&.LANGUAGE=\fR,
 \fIlocale\&.LC_CTYPE=\fR,
 \fIlocale\&.LC_NUMERIC=\fR,
 \fIlocale\&.LC_TIME=\fR,
@@ -68,6 +69,7 @@ Depending on the operating system other configuration files might be checked for
 The following locale settings may be set using
 /etc/locale\&.conf:
 \fILANG=\fR,
+\fILANGUAGE=\fR,
 \fILC_CTYPE=\fR,
 \fILC_NUMERIC=\fR,
 \fILC_TIME=\fR,

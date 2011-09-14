@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.mount</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.mount"><a id="systemd.mount"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.mount — systemd mount configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a id="id432323"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.mount</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.mount"><a id="systemd.mount"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.mount — systemd mount configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a id="id395892"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.mount</code> encodes information about
                 a file system mount point controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -29,7 +29,7 @@
                 units is created automatically.</p><p>Mount points created at runtime independent on
                 unit files or <code class="filename">/etc/fstab</code> will be
                 monitored by systemd and appear like any other mount
-                unit in systemd.</p></div><div class="refsect1" title="fstab"><a id="id432420"/><h2><code class="filename">fstab</code></h2><p>Mount units may either be configured via unit
+                unit in systemd.</p></div><div class="refsect1" title="fstab"><a id="id395990"/><h2><code class="filename">fstab</code></h2><p>Mount units may either be configured via unit
                 files, or via <code class="filename">/etc/fstab</code> (see
                 <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
                 for details).</p><p>When reading <code class="filename">/etc/fstab</code> a
@@ -47,7 +47,7 @@
                 <span class="citerefentry"><span class="refentrytitle">systemd.automount</span>(5)</span>
                 for details.</p><p>If a mount point is configured in both
                 <code class="filename">/etc/fstab</code> and a unit file, the
-                configuration in the latter takes precedence.</p></div><div class="refsect1" title="Options"><a id="id464668"/><h2>Options</h2><p>Mount files must include a [Mount] section,
+                configuration in the latter takes precedence.</p></div><div class="refsect1" title="Options"><a id="id363430"/><h2>Options</h2><p>Mount files must include a [Mount] section,
                 which carries information about the file system mount points it
                 supervises. A number of options that may be used in
                 this section are shared with other unit types. These
@@ -116,7 +116,7 @@
                                 shutdown procedure left processes of
                                 the mount around. Takes a boolean
                                 value. Defaults to "yes".
-                                </p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id432243"/><h2>See Also</h2><p>
+                                </p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id363717"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
