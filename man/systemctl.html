@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id576229"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id463568"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
                 introspect and control the state of the
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
-                system and service manager.</p></div><div class="refsect1" title="Options"><a id="id576252"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+                system and service manager.</p></div><div class="refsect1" title="Options"><a id="id463590"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">--type=</code>, </span><span class="term"><code class="option">-t</code></span></dt><dd><p>When listing units,
                                 limit display to certain unit
@@ -13,7 +13,7 @@
                                 <code class="option">service</code>,
                                 <code class="option">socket</code> and
                                 similar.</p></dd><dt><span class="term"><code class="option">--property=</code>, </span><span class="term"><code class="option">-p</code></span></dt><dd><p>When showing
-                                unit/job/manager information, limit
+                                unit/job/manager properties, limit
                                 display to certain properties as
                                 specified as argument. If not
                                 specified all set properties are
@@ -25,7 +25,7 @@
                                 are shown.</p></dd><dt><span class="term"><code class="option">--all</code>, </span><span class="term"><code class="option">-a</code></span></dt><dd><p>When listing units,
                                 show all units, regardless of their
                                 state, including inactive units. When
-                                showing unit/job/manager information,
+                                showing unit/job/manager properties,
                                 show all properties regardless whether
                                 they are set or not.</p></dd><dt><span class="term"><code class="option">--failed</code></span></dt><dd><p>When listing units,
                                 show only failed units. Do not confuse
@@ -113,20 +113,7 @@
                                 case the password must be supplied by
                                 some other means (for example
                                 graphical password agents) or the
-                                service might fail.</p></dd><dt><span class="term"><code class="option">--kill-mode=</code></span></dt><dd><p>When used with
-                                <span class="command"><strong>kill</strong></span>, choose the
-                                mode how to kill the selected
-                                processes. Must be one of
-                                <code class="option">control-group</code> or
-                                <code class="option">process</code> to select
-                                whether to kill the entire control
-                                group or only the selected process
-                                itself. If omitted defaults to
-                                <code class="option">control-group</code> if
-                                <code class="option">--kill-who=all</code> is
-                                set, or <code class="option">process</code>
-                                otherwise. You probably never need to
-                                use this switch.</p></dd><dt><span class="term"><code class="option">--kill-who=</code></span></dt><dd><p>When used with
+                                service might fail.</p></dd><dt><span class="term"><code class="option">--kill-who=</code></span></dt><dd><p>When used with
                                 <span class="command"><strong>kill</strong></span>, choose which
                                 processes to kill. Must be one of
                                 <code class="option">main</code>,
@@ -157,15 +144,24 @@
                                 systems are unmounted or remounted
                                 read-only. This is hence a drastic but
                                 relatively safe option to request an
-                                immediate reboot.</p></dd><dt><span class="term"><code class="option">--defaults</code></span></dt><dd><p>When used with
-                                <span class="command"><strong>disable</strong></span>, ensures
-                                that only the symlinks created by
-                                <span class="command"><strong>enable</strong></span> are removed,
-                                not all symlinks pointing to the unit
-                                file that shall be
-                                disabled.</p></dd><dt><span class="term"><code class="option">-H</code>, </span><span class="term"><code class="option">--host</code></span></dt><dd><p>Execute operation
-                                remotely. Specifiy a hostname, or
-                                username and hostname seperated by @,
+                                immediate reboot.</p></dd><dt><span class="term"><code class="option">--root=</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>enable</strong></span>/<span class="command"><strong>disable</strong></span>/<span class="command"><strong>is-enabled</strong></span> (and
+                                related commands), use alternative
+                                root path when looking for unit
+                                files.</p></dd><dt><span class="term"><code class="option">--runtime</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>enable</strong></span>/<span class="command"><strong>disable</strong></span>/<span class="command"><strong>is-enabled</strong></span> (and related commands), make
+                                changes only temporarily, so that they
+                                are dropped on the next reboot. This
+                                will have the effect that changes are
+                                not made in subdirectories of
+                                <code class="filename">/etc</code> but in
+                                <code class="filename">/run</code>, with
+                                identical immediate effects, however,
+                                since the latter is lost on reboot,
+                                the changes are lost
+                                too.</p></dd><dt><span class="term"><code class="option">-H</code>, </span><span class="term"><code class="option">--host</code></span></dt><dd><p>Execute operation
+                                remotely. Specify a hostname, or
+                                username and hostname separated by @,
                                 to connect to. This will use SSH to
                                 talk to the remote systemd
                                 instance.</p></dd><dt><span class="term"><code class="option">-P</code>, </span><span class="term"><code class="option">--privileged</code></span></dt><dd><p>Acquire privileges via
@@ -348,14 +344,11 @@
                                 configuration directory, and hence
                                 undoes the changes made by
                                 <span class="command"><strong>enable</strong></span>. Note
-                                however that this by default removes
+                                however that this removes
                                 all symlinks to the unit files
                                 (i.e. including manual additions), not
                                 just those actually created by
-                                <span class="command"><strong>enable</strong></span>. If only the
-                                symlinks that are suggested by default
-                                shall be removed, pass
-                                <code class="option">--defaults</code>. This
+                                <span class="command"><strong>enable</strong></span>. This call
                                 implicitly reloads the systemd daemon
                                 configuration after completing the
                                 disabling of the units. Note that this
@@ -371,8 +364,50 @@
                                 (as with
                                 <span class="command"><strong>enable</strong></span>). Returns an
                                 exit code of 0 if at least one is
-                                enabled, non-zero
-                                otherwise.</p></dd><dt><span class="term"><span class="command"><strong>load [NAME...]</strong></span></span></dt><dd><p>Load one or more units
+                                enabled, non-zero otherwise. Prints
+                                the current enable status. To suppress
+                                this output use
+                                <code class="option">--quiet</code>.</p></dd><dt><span class="term"><span class="command"><strong>reenable [NAME...]</strong></span></span></dt><dd><p>Reenable one or more
+                                unit files, as specified on the
+                                command line. This is a combination of
+                                <span class="command"><strong>disable</strong></span> and
+                                <span class="command"><strong>enable</strong></span> and is
+                                useful to reset the symlinks a unit is
+                                enabled with to the defaults
+                                configured in the
+                                <code class="literal">[Install]</code> section
+                                of the unit file.</p></dd><dt><span class="term"><span class="command"><strong>preset [NAME...]</strong></span></span></dt><dd><p>Reset one or more unit
+                                files, as specified on the command
+                                line, to the defaults configured in a
+                                preset file. This has the same effect
+                                as <span class="command"><strong>disable</strong></span> or
+                                <span class="command"><strong>enable</strong></span>, depending
+                                how the unit is listed in the preset
+                                files.</p></dd><dt><span class="term"><span class="command"><strong>mask [NAME...]</strong></span></span></dt><dd><p>Mask one or more unit
+                                files, as specified on the command
+                                line. This will link these units to
+                                <code class="filename">/dev/null</code>, making
+                                it impossible to start them. This is a stronger version
+                                of <span class="command"><strong>disable</strong></span>, since
+                                it prohibits all kinds of activation
+                                of the unit, including manual
+                                activation. Use this option with
+                                care.</p></dd><dt><span class="term"><span class="command"><strong>unmask [NAME...]</strong></span></span></dt><dd><p>Unmask one or more
+                                unit files, as specified on the
+                                command line. This will undo the
+                                effect of
+                                <span class="command"><strong>mask</strong></span>.</p></dd><dt><span class="term"><span class="command"><strong>link [NAME...]</strong></span></span></dt><dd><p>Link a unit file that
+                                is not in the unit file search paths
+                                into the unit file search path. This
+                                requires an absolute path to a unit
+                                file. The effect of this can be undone
+                                with <span class="command"><strong>disable</strong></span>. The
+                                effect of this command is that a unit
+                                file is available for
+                                <span class="command"><strong>start</strong></span> and other
+                                commands although it isn't installed
+                                directly in the unit search
+                                path.</p></dd><dt><span class="term"><span class="command"><strong>load [NAME...]</strong></span></span></dt><dd><p>Load one or more units
                                 specified on the command line. This
                                 will simply load their configuration
                                 from disk, but not start them. To
@@ -397,12 +432,7 @@
                                 commands.</p></dd><dt><span class="term"><span class="command"><strong>list-jobs</strong></span></span></dt><dd><p>List jobs that are in progress.</p></dd><dt><span class="term"><span class="command"><strong>cancel [JOB...]</strong></span></span></dt><dd><p>Cancel one or more
                                 jobs specified on the command line by
                                 their numeric job
-                                IDs. If no job id is specified, cancel all pending jobs.</p></dd><dt><span class="term"><span class="command"><strong>monitor</strong></span></span></dt><dd><p>Monitor unit/job
-                                changes. This is mostly useful for
-                                debugging purposes and prints a line
-                                each time systemd loads or unloads a
-                                unit configuration file, or a unit
-                                property changes.</p></dd><dt><span class="term"><span class="command"><strong>dump</strong></span></span></dt><dd><p>Dump server
+                                IDs. If no job id is specified, cancel all pending jobs.</p></dd><dt><span class="term"><span class="command"><strong>dump</strong></span></span></dt><dd><p>Dump server
                                 status. This will output a (usually
                                 very long) human readable manager
                                 status dump. Its format is subject to
@@ -543,10 +573,16 @@
                                 supported for user service managers
                                 (i.e. in conjunction with the
                                 <code class="option">--user</code> option) and
-                                will fail otherwise.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id586526"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id586536"/><h2>See Also</h2><p>
+                                will fail otherwise.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id474007"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="Environment"><a id="id474017"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
+                                <code class="option">--no-pager</code> is not given;
+                                overrides <code class="varname">$PAGER</code>.  Setting
+                                this to an empty string or the value
+                                <code class="literal">cat</code> is equivalent to passing
+                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id474055"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd-loginctl</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>,
                         <span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span>

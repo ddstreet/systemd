@@ -58,6 +58,8 @@
 #include "special.h"
 #include "bus-errors.h"
 #include "exit-status.h"
+#include "sd-daemon.h"
+#include "virt.h"
 
 /* As soon as 16 units are in our GC queue, make sure to run a gc sweep */
 #define GC_QUEUE_ENTRIES_MAX 16
@@ -75,7 +77,8 @@ static int manager_setup_notify(Manager *m) {
                 struct sockaddr_un un;
         } sa;
         struct epoll_event ev;
-        int one = 1;
+        int one = 1, r;
+        mode_t u;
 
         assert(m);
 
@@ -98,7 +101,11 @@ static int manager_setup_notify(Manager *m) {
         if (sa.un.sun_path[0] == '@')
                 sa.un.sun_path[0] = 0;
 
-        if (bind(m->notify_watch.fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + 1 + strlen(sa.un.sun_path+1)) < 0) {
+        u = umask(0111);
+        r = bind(m->notify_watch.fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + 1 + strlen(sa.un.sun_path+1));
+        umask(u);
+
+        if (r < 0) {
                 log_error("bind() failed: %m");
                 return -errno;
         }
@@ -135,7 +142,7 @@ static int enable_special_signals(Manager *m) {
         if (reboot(RB_DISABLE_CAD) < 0)
                 log_warning("Failed to enable ctrl-alt-del handling: %m");
 
-        if ((fd = open_terminal("/dev/tty0", O_RDWR|O_NOCTTY)) < 0)
+        if ((fd = open_terminal("/dev/tty0", O_RDWR|O_NOCTTY|O_CLOEXEC)) < 0)
                 log_warning("Failed to open /dev/tty0: %m");
         else {
                 /* Enable that we get SIGWINCH on kbrequest */
@@ -185,6 +192,11 @@ static int manager_setup_signals(Manager *m) {
                         SIGRTMIN+16, /* systemd: Immediate kexec */
                         SIGRTMIN+20, /* systemd: enable status messages */
                         SIGRTMIN+21, /* systemd: disable status messages */
+                        SIGRTMIN+22, /* systemd: set log level to LOG_DEBUG */
+                        SIGRTMIN+23, /* systemd: set log level to LOG_INFO */
+                        SIGRTMIN+27, /* systemd: set log target to console */
+                        SIGRTMIN+28, /* systemd: set log target to kmsg */
+                        SIGRTMIN+29, /* systemd: set log target to syslog-or-kmsg */
                         -1);
         assert_se(sigprocmask(SIG_SETMASK, &mask, NULL) == 0);
 
@@ -257,7 +269,7 @@ int manager_new(ManagerRunningAs running_as, Manager **_m) {
         if ((m->epoll_fd = epoll_create1(EPOLL_CLOEXEC)) < 0)
                 goto fail;
 
-        if ((r = lookup_paths_init(&m->lookup_paths, m->running_as)) < 0)
+        if ((r = lookup_paths_init(&m->lookup_paths, m->running_as, true)) < 0)
                 goto fail;
 
         if ((r = manager_setup_signals(m)) < 0)
@@ -554,7 +566,8 @@ static void manager_build_unit_path_cache(Manager *m) {
                         if (ignore_file(de->d_name))
                                 continue;
 
-                        if (asprintf(&p, "%s/%s", streq(*i, "/") ? "" : *i, de->d_name) < 0) {
+                        p = join(streq(*i, "/") ? "" : *i, "/", de->d_name, NULL);
+                        if (!p) {
                                 r = -ENOMEM;
                                 goto fail;
                         }
@@ -594,7 +607,7 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
          * this is already known, so we increase the counter here
          * already */
         if (serialization)
-                m->n_deserializing ++;
+                m->n_reloading ++;
 
         /* First, enumerate what we can from all config files */
         r = manager_enumerate(m);
@@ -609,8 +622,8 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
                 r = q;
 
         if (serialization) {
-                assert(m->n_deserializing > 0);
-                m->n_deserializing --;
+                assert(m->n_reloading > 0);
+                m->n_reloading --;
         }
 
         return r;
@@ -895,6 +908,9 @@ static int transaction_merge_jobs(Manager *m, DBusError *e) {
                         } else
                                 transaction_merge_and_delete_job(m, j, k, t);
                 }
+
+                if (j->unit->meta.job && !j->installed)
+                        transaction_merge_and_delete_job(m, j, j->unit->meta.job, t);
 
                 assert(!j->transaction_next);
                 assert(!j->transaction_prev);
@@ -1468,9 +1484,10 @@ static int transaction_add_job_and_dependencies(
         if (type != JOB_STOP && unit->meta.load_state == UNIT_ERROR) {
                 dbus_set_error(e, BUS_ERROR_LOAD_FAILED,
                                "Unit %s failed to load: %s. "
-                               "See system logs and 'systemctl status' for details.",
+                               "See system logs and 'systemctl status %s' for details.",
                                unit->meta.id,
-                               strerror(-unit->meta.load_error));
+                               strerror(-unit->meta.load_error),
+                               unit->meta.id);
                 return -EINVAL;
         }
 
@@ -2095,11 +2112,11 @@ static int manager_process_signal_fd(Manager *m) {
                         get_process_name(sfsi.ssi_pid, &p);
 
                         log_debug("Received SIG%s from PID %lu (%s).",
-                                  strna(signal_to_string(sfsi.ssi_signo)),
+                                  signal_to_string(sfsi.ssi_signo),
                                   (unsigned long) sfsi.ssi_pid, strna(p));
                         free(p);
                 } else
-                        log_debug("Received SIG%s.", strna(signal_to_string(sfsi.ssi_signo)));
+                        log_debug("Received SIG%s.", signal_to_string(sfsi.ssi_signo));
 
                 switch (sfsi.ssi_signo) {
 
@@ -2195,6 +2212,7 @@ static int manager_process_signal_fd(Manager *m) {
                         break;
 
                 default: {
+
                         /* Starting SIGRTMIN+0 */
                         static const char * const target_table[] = {
                                 [0] = SPECIAL_DEFAULT_TARGET,
@@ -2216,8 +2234,9 @@ static int manager_process_signal_fd(Manager *m) {
 
                         if ((int) sfsi.ssi_signo >= SIGRTMIN+0 &&
                             (int) sfsi.ssi_signo < SIGRTMIN+(int) ELEMENTSOF(target_table)) {
-                                manager_start_target(m, target_table[sfsi.ssi_signo - SIGRTMIN],
-                                                     (sfsi.ssi_signo == 1 || sfsi.ssi_signo == 2) ? JOB_ISOLATE : JOB_REPLACE);
+                                int idx = (int) sfsi.ssi_signo - SIGRTMIN;
+                                manager_start_target(m, target_table[idx],
+                                                     (idx == 1 || idx == 2) ? JOB_ISOLATE : JOB_REPLACE);
                                 break;
                         }
 
@@ -2231,16 +2250,41 @@ static int manager_process_signal_fd(Manager *m) {
 
                         case 20:
                                 log_debug("Enabling showing of status.");
-                                m->show_status = true;
+                                manager_set_show_status(m, true);
                                 break;
 
                         case 21:
                                 log_debug("Disabling showing of status.");
-                                m->show_status = false;
+                                manager_set_show_status(m, false);
+                                break;
+
+                        case 22:
+                                log_set_max_level(LOG_DEBUG);
+                                log_notice("Setting log level to debug.");
+                                break;
+
+                        case 23:
+                                log_set_max_level(LOG_INFO);
+                                log_notice("Setting log level to info.");
+                                break;
+
+                        case 27:
+                                log_set_target(LOG_TARGET_CONSOLE);
+                                log_notice("Setting log target to console.");
+                                break;
+
+                        case 28:
+                                log_set_target(LOG_TARGET_KMSG);
+                                log_notice("Setting log target to kmsg.");
+                                break;
+
+                        case 29:
+                                log_set_target(LOG_TARGET_SYSLOG_OR_KMSG);
+                                log_notice("Setting log target to syslog-or-kmsg.");
                                 break;
 
                         default:
-                                log_warning("Got unhandled signal <%s>.", strna(signal_to_string(sfsi.ssi_signo)));
+                                log_warning("Got unhandled signal <%s>.", signal_to_string(sfsi.ssi_signo));
                         }
                 }
                 }
@@ -2259,7 +2303,7 @@ static int process_event(Manager *m, struct epoll_event *ev) {
         assert(m);
         assert(ev);
 
-        assert(w = ev->data.ptr);
+        assert_se(w = ev->data.ptr);
 
         if (w->type == WATCH_INVALID)
                 return 0;
@@ -2471,7 +2515,7 @@ void manager_send_unit_audit(Manager *m, Unit *u, int type, bool success) {
 
         /* Don't generate audit events if the service was already
          * started and we're just deserializing */
-        if (m->n_deserializing > 0)
+        if (m->n_reloading > 0)
                 return;
 
         if (m->running_as != MANAGER_SYSTEM)
@@ -2512,7 +2556,7 @@ void manager_send_unit_plymouth(Manager *m, Unit *u) {
 
         /* Don't generate plymouth events if the service was already
          * started and we're just deserializing */
-        if (m->n_deserializing > 0)
+        if (m->n_reloading > 0)
                 return;
 
         if (m->running_as != MANAGER_SYSTEM)
@@ -2654,7 +2698,7 @@ int manager_serialize(Manager *m, FILE *f, FDSet *fds) {
         assert(f);
         assert(fds);
 
-        m->n_serializing ++;
+        m->n_reloading ++;
 
         fprintf(f, "current-job-id=%i\n", m->current_job_id);
         fprintf(f, "taint-usr=%s\n", yes_no(m->taint_usr));
@@ -2677,13 +2721,13 @@ int manager_serialize(Manager *m, FILE *f, FDSet *fds) {
                 fputc('\n', f);
 
                 if ((r = unit_serialize(u, f, fds)) < 0) {
-                        m->n_serializing --;
+                        m->n_reloading --;
                         return r;
                 }
         }
 
-        assert(m->n_serializing > 0);
-        m->n_serializing --;
+        assert(m->n_reloading > 0);
+        m->n_reloading --;
 
         if (ferror(f))
                 return -EIO;
@@ -2703,7 +2747,7 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
 
         log_debug("Deserializing state...");
 
-        m->n_deserializing ++;
+        m->n_reloading ++;
 
         for (;;) {
                 char line[LINE_MAX], *l;
@@ -2776,8 +2820,8 @@ finish:
                 goto finish;
         }
 
-        assert(m->n_deserializing > 0);
-        m->n_deserializing --;
+        assert(m->n_reloading > 0);
+        m->n_reloading --;
 
         return r;
 }
@@ -2792,21 +2836,21 @@ int manager_reload(Manager *m) {
         if ((r = manager_open_serialization(m, &f)) < 0)
                 return r;
 
-        m->n_serializing ++;
+        m->n_reloading ++;
 
         if (!(fds = fdset_new())) {
-                m->n_serializing --;
+                m->n_reloading --;
                 r = -ENOMEM;
                 goto finish;
         }
 
         if ((r = manager_serialize(m, f, fds)) < 0) {
-                m->n_serializing --;
+                m->n_reloading --;
                 goto finish;
         }
 
         if (fseeko(f, 0, SEEK_SET) < 0) {
-                m->n_serializing --;
+                m->n_reloading --;
                 r = -errno;
                 goto finish;
         }
@@ -2815,19 +2859,14 @@ int manager_reload(Manager *m) {
         manager_clear_jobs_and_units(m);
         manager_undo_generators(m);
 
-        assert(m->n_serializing > 0);
-        m->n_serializing --;
-
         /* Find new unit paths */
         lookup_paths_free(&m->lookup_paths);
-        if ((q = lookup_paths_init(&m->lookup_paths, m->running_as)) < 0)
+        if ((q = lookup_paths_init(&m->lookup_paths, m->running_as, true)) < 0)
                 r = q;
 
         manager_run_generators(m);
 
         manager_build_unit_path_cache(m);
-
-        m->n_deserializing ++;
 
         /* First, enumerate what we can from all config files */
         if ((q = manager_enumerate(m)) < 0)
@@ -2844,8 +2883,8 @@ int manager_reload(Manager *m) {
         if ((q = manager_coldplug(m)) < 0)
                 r = q;
 
-        assert(m->n_deserializing > 0);
-        m->n_deserializing--;
+        assert(m->n_reloading > 0);
+        m->n_reloading--;
 
 finish:
         if (f)
@@ -2867,7 +2906,8 @@ bool manager_is_booting_or_shutting_down(Manager *m) {
                 return true;
 
         /* Is there a job for the shutdown target? */
-        if (((u = manager_get_unit(m, SPECIAL_SHUTDOWN_TARGET))))
+        u = manager_get_unit(m, SPECIAL_SHUTDOWN_TARGET);
+        if (u)
                 return !!u->meta.job;
 
         return false;
@@ -2898,6 +2938,7 @@ bool manager_unit_pending_inactive(Manager *m, const char *name) {
 
 void manager_check_finished(Manager *m) {
         char userspace[FORMAT_TIMESPAN_MAX], initrd[FORMAT_TIMESPAN_MAX], kernel[FORMAT_TIMESPAN_MAX], sum[FORMAT_TIMESPAN_MAX];
+        usec_t kernel_usec = 0, initrd_usec = 0, userspace_usec = 0, total_usec = 0;
 
         assert(m);
 
@@ -2911,35 +2952,48 @@ void manager_check_finished(Manager *m) {
 
         if (m->running_as == MANAGER_SYSTEM && detect_container(NULL) <= 0) {
 
-                if (dual_timestamp_is_set(&m->initrd_timestamp)) {
-                        log_info("Startup finished in %s (kernel) + %s (initrd) + %s (userspace) = %s.",
-                                 format_timespan(kernel, sizeof(kernel),
-                                                 m->initrd_timestamp.monotonic),
-                                 format_timespan(initrd, sizeof(initrd),
-                                                 m->startup_timestamp.monotonic - m->initrd_timestamp.monotonic),
-                                 format_timespan(userspace, sizeof(userspace),
-                                                 m->finish_timestamp.monotonic - m->startup_timestamp.monotonic),
-                                 format_timespan(sum, sizeof(sum),
-                                                 m->finish_timestamp.monotonic));
-                } else
-                        log_info("Startup finished in %s (kernel) + %s (userspace) = %s.",
-                                 format_timespan(kernel, sizeof(kernel),
-                                                 m->startup_timestamp.monotonic),
-                                 format_timespan(userspace, sizeof(userspace),
-                                                 m->finish_timestamp.monotonic - m->startup_timestamp.monotonic),
-                                 format_timespan(sum, sizeof(sum),
-                                                 m->finish_timestamp.monotonic));
-        } else
-                log_debug("Startup finished in %s.",
-                          format_timespan(userspace, sizeof(userspace),
-                                          m->finish_timestamp.monotonic - m->startup_timestamp.monotonic));
+                userspace_usec = m->finish_timestamp.monotonic - m->startup_timestamp.monotonic;
+                total_usec = m->finish_timestamp.monotonic;
 
+                if (dual_timestamp_is_set(&m->initrd_timestamp)) {
+
+                        kernel_usec = m->initrd_timestamp.monotonic;
+                        initrd_usec = m->startup_timestamp.monotonic - m->initrd_timestamp.monotonic;
+
+                        log_info("Startup finished in %s (kernel) + %s (initrd) + %s (userspace) = %s.",
+                                 format_timespan(kernel, sizeof(kernel), kernel_usec),
+                                 format_timespan(initrd, sizeof(initrd), initrd_usec),
+                                 format_timespan(userspace, sizeof(userspace), userspace_usec),
+                                 format_timespan(sum, sizeof(sum), total_usec));
+                } else {
+                        kernel_usec = m->startup_timestamp.monotonic;
+                        initrd_usec = 0;
+
+                        log_info("Startup finished in %s (kernel) + %s (userspace) = %s.",
+                                 format_timespan(kernel, sizeof(kernel), kernel_usec),
+                                 format_timespan(userspace, sizeof(userspace), userspace_usec),
+                                 format_timespan(sum, sizeof(sum), total_usec));
+                }
+        } else {
+                userspace_usec = initrd_usec = kernel_usec = 0;
+                total_usec = m->finish_timestamp.monotonic - m->startup_timestamp.monotonic;
+
+                log_debug("Startup finished in %s.",
+                          format_timespan(sum, sizeof(sum), total_usec));
+        }
+
+        bus_broadcast_finished(m, kernel_usec, initrd_usec, userspace_usec, total_usec);
+
+        sd_notifyf(false,
+                   "READY=1\nSTATUS=Startup finished in %s.",
+                   format_timespan(sum, sizeof(sum), total_usec));
 }
 
 void manager_run_generators(Manager *m) {
         DIR *d = NULL;
         const char *generator_path;
         const char *argv[3];
+        mode_t u;
 
         assert(m);
 
@@ -2982,7 +3036,9 @@ void manager_run_generators(Manager *m) {
         argv[1] = m->generator_unit_path;
         argv[2] = NULL;
 
+        u = umask(0022);
         execute_directory(generator_path, d, (char**) argv);
+        umask(u);
 
         if (rmdir(m->generator_unit_path) >= 0) {
                 /* Uh? we were able to remove this dir? I guess that
@@ -3020,7 +3076,7 @@ void manager_undo_generators(Manager *m) {
                 return;
 
         strv_remove(m->lookup_paths.unit_path, m->generator_unit_path);
-        rm_rf(m->generator_unit_path, false, true);
+        rm_rf(m->generator_unit_path, false, true, false);
 
         free(m->generator_unit_path);
         m->generator_unit_path = NULL;
@@ -3079,6 +3135,35 @@ void manager_recheck_syslog(Manager *m) {
         /* Hmm, OK, so the socket is either fully up, or fully down,
          * and the target is up, then let's make use of the socket */
         log_open();
+}
+
+void manager_set_show_status(Manager *m, bool b) {
+        assert(m);
+
+        if (m->running_as != MANAGER_SYSTEM)
+                return;
+
+        m->show_status = b;
+
+        if (b)
+                touch("/run/systemd/show-status");
+        else
+                unlink("/run/systemd/show-status");
+}
+
+bool manager_get_show_status(Manager *m) {
+        assert(m);
+
+        if (m->running_as != MANAGER_SYSTEM)
+                return false;
+
+        if (m->show_status)
+                return true;
+
+        /* If Plymouth is running make sure we show the status, so
+         * that there's something nice to see when people press Esc */
+
+        return plymouth_running();
 }
 
 static const char* const manager_running_as_table[_MANAGER_RUNNING_AS_MAX] = {

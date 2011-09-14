@@ -2,12 +2,12 @@
 .\"     Title: systemd.special
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: systemd.special
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SPECIAL" "7" "06/16/2011" "systemd" "systemd.special"
+.TH "SYSTEMD\&.SPECIAL" "7" "09/23/2011" "systemd" "systemd.special"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -51,7 +51,6 @@ reboot\&.target,
 remote\-fs\&.target,
 rescue\&.target,
 rpcbind\&.target,
-time\-sync\&.target,
 runlevel2\&.target,
 runlevel3\&.target,
 runlevel4\&.target,
@@ -64,8 +63,9 @@ sysinit\&.target,
 syslog\&.target,
 systemd\-initctl\&.service,
 systemd\-initctl\&.socket,
-systemd\-logger\&.service,
-systemd\-logger\&.socket,
+systemd\-stdout\-syslog\-bridge\&.service,
+systemd\-stdout\-syslog\-bridge\&.socket,
+time\-sync\&.target,
 umount\&.target
 .SH "DESCRIPTION"
 .PP
@@ -237,13 +237,6 @@ $rpcbind
 facility\&.
 .RE
 .PP
-time\-sync\&.target
-.RS 4
-systemd automatically adds dependencies of type After for this target unit to all SysV init script service units with an LSB header referring to the
-$time
-facility\&.
-.RE
-.PP
 runlevel2\&.target
 .RS 4
 This is a target that is called whenever the SysV compatibility code asks for runlevel 2\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
@@ -331,18 +324,18 @@ Socket activation unit for
 system\-initctl\&.service\&.
 .RE
 .PP
-systemd\-logger\&.service
+systemd\-stdout\-syslog\-bridge\&.service
 .RS 4
 This is internally used by systemd to provide syslog logging to the processes it maintains\&.
 .sp
 This is a socket\-activated service, see
-system\-logger\&.socket\&.
+system\-stdout\-syslog\-bridge\&.socket\&.
 .RE
 .PP
-systemd\-logger\&.socket
+systemd\-stdout\-syslog\-bridge\&.socket
 .RS 4
 Socket activation unit for
-system\-logger\&.service\&. systemd will automatically add dependencies of types Requires and After to all units that have been configured for stdout or stderr to be connected to syslog or the kernel log buffer\&.
+system\-stdout\-syslog\-bridge\&.service\&. systemd will automatically add dependencies of types Requires and After to all units that have been configured for stdout or stderr to be connected to syslog or the kernel log buffer\&.
 .RE
 .PP
 systemd\-shutdownd\&.service
@@ -359,6 +352,13 @@ systemd\-shutdownd\&.socket
 .RS 4
 Socket activation unit for
 system\-shutdownd\&.service\&.
+.RE
+.PP
+time\-sync\&.target
+.RS 4
+systemd automatically adds dependencies of type After for this target unit to all SysV init script service units with an LSB header referring to the
+$time
+facility\&.
 .RE
 .PP
 umount\&.target
