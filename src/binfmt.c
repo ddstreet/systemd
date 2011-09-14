@@ -33,7 +33,7 @@
 #include "util.h"
 
 static int delete_rule(const char *rule) {
-        char *x, *fn, *e;
+        char *x, *fn = NULL, *e;
         int r;
 
         assert(rule[0]);
@@ -126,6 +126,8 @@ int main(int argc, char *argv[]) {
         log_set_target(LOG_TARGET_AUTO);
         log_parse_environment();
         log_open();
+
+        umask(0022);
 
         if (argc > 1) {
                 r = apply_file(argv[1], false);

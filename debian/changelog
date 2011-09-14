@@ -1,3 +1,28 @@
+systemd (36-1) unstable; urgency=low
+
+  [ Tollef Fog Heen ]
+  * New upstream release. Closes: #634618
+    - Various man page fixes. Closes: #623521
+  * Add debian-fixup service that symlinks mtab to /proc/mounts and
+    migrates /var/run and /var/lock to symlinks to /run
+
+  [ Michael Biebl ]
+  * Build for libnotify 0.7.
+  * Bump Build-Depends on libudev to (>= 172).
+  * Add Build-Depends on libacl1-dev. Required for building systemd-logind
+    with ACL support.
+  * Split libsystemd-login and libsystemd-daemon into separate binary
+    packages.
+  * As autoreconf doesn't like intltool, override dh_autoreconf and call
+    intltoolize and autoreconf ourselves.
+  * Add Build-Depends on intltool.
+  * Do a one-time migration of the hwclock configuration. If UTC is set to
+    "no" in /etc/default/rcS, create /etc/adjtime and add the "LOCAL" setting.
+  * Remove /cgroup cleanup code from postinst.
+  * Add Build-Depends on gperf.
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Wed, 14 Sep 2011 08:25:17 +0200
+
 systemd (29-1) unstable; urgency=low
 
   [ Tollef Fog Heen ]

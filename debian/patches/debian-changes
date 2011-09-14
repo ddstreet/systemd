@@ -1,0 +1,381 @@
+Description: <short summary of the patch>
+ TODO: Put a short summary on the line above and replace this paragraph
+ with a longer explanation of this change. Complete the meta-information
+ with other relevant fields (see below for details). To make it easier, the
+ information below has been extracted from the changelog. Adjust it or drop
+ it.
+ .
+ systemd (36-1) unstable; urgency=low
+ .
+   [ Tollef Fog Heen ]
+   * New upstream release. Closes: #634618
+     - Various man page fixes. Closes: #623521
+   * Add debian-fixup service that symlinks mtab to /proc/mounts and
+     migrates /var/run and /var/lock to symlinks to /run
+ .
+   [ Michael Biebl ]
+   * Build for libnotify 0.7.
+   * Bump Build-Depends on libudev to (>= 172).
+   * Add Build-Depends on libacl1-dev. Required for building systemd-logind
+     with ACL support.
+   * Split libsystemd-login and libsystemd-daemon into separate binary
+     packages.
+   * As autoreconf doesn't like intltool, override dh_autoreconf and call
+     intltoolize and autoreconf ourselves.
+   * Add Build-Depends on intltool.
+   * Do a one-time migration of the hwclock configuration. If UTC is set to
+     "no" in /etc/default/rcS, create /etc/adjtime and add the "LOCAL" setting.
+   * Remove /cgroup cleanup code from postinst.
+   * Add Build-Depends on gperf.
+Author: Tollef Fog Heen <tfheen@debian.org>
+Bug-Debian: http://bugs.debian.org/623521
+Bug-Debian: http://bugs.debian.org/634618
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- /dev/null
++++ systemd-36/CODING_STYLE
+@@ -0,0 +1,27 @@
++
++- 8ch indent, no tabs
++
++- structs in MixedCase, variables, functions in lower_case
++
++- the destructors always unregister the object from the next bigger
++  object, not the other way around
++
++- to minimize strict aliasing violations we prefer unions over casting
++
++- for robustness reasons destructors should be able to destruct
++  half-initialized objects, too
++
++- error codes are returned as negative Exxx. i.e. return -EINVAL. There
++  are some exceptions: for constructors its is OK to return NULL on
++  OOM. For lookup functions NULL is fine too for "not found".
++
++- Do not issue NSS requests (that includes user name and host name
++  lookups) from the main daemon as this might trigger deadlocks when
++  we those lookups involve synchronously talking to services that we
++  would need to start up.
++
++- Do not access any directories outside of /etc/, /dev, /lib from the
++  init daemon to avoid deadlocks with the automounter.
++
++- Don't synchronously talk to any other service, due to risk of
++  deadlocks.
+--- /dev/null
++++ systemd-36/.dir-locals.el
+@@ -0,0 +1,7 @@
++; Sets emacs variables based on mode.
++; A list of (major-mode . ((var1 . value1) (var2 . value2)))
++; Mode can be nil, which gives default values.
++
++((nil . ((indent-tabs-mode . nil)
++         (tab-width . 8)))
++)
+--- /dev/null
++++ systemd-36/.mailmap
+@@ -0,0 +1,4 @@
++Kay Sievers <kay.sievers@vrfy.org> <kay.sievers@suse.de>
++Robert Gerus <ar@bash.org.pl> Robert "arachnist" Gerus <ar@bash.org.pl>
++Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> Zbyszek Szmek <zbyszek@in.waw.pl>
++Fabiano Fidêncio <fabianofidencio@gmail.com> Fabiano Fidencio <fidencio@profusion.mobi>
+--- /dev/null
++++ systemd-36/autogen.sh
+@@ -0,0 +1,83 @@
++#!/bin/bash
++
++#  This file is part of systemd.
++#
++#  Copyright 2010 Lennart Poettering
++#
++#  systemd is free software; you can redistribute it and/or modify it
++#  under the terms of the GNU General Public License as published by
++#  the Free Software Foundation; either version 2 of the License, or
++#  (at your option) any later version.
++#
++#  systemd is distributed in the hope that it will be useful, but
++#  WITHOUT ANY WARRANTY; without even the implied warranty of
++#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++#  General Public License for more details.
++#
++#  You should have received a copy of the GNU General Public License
++#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
++
++AM_VERSION=1.11
++AC_VERSION=2.63
++
++run_versioned() {
++    local P
++    local V
++
++    V=$(echo "$2" | sed -e 's,\.,,g')
++
++    if [ -e "`which $1$V 2> /dev/null`" ] ; then
++        P="$1$V"
++    else
++        if [ -e "`which $1-$2 2> /dev/null`" ] ; then
++            P="$1-$2"
++        else
++            P="$1"
++        fi
++    fi
++
++    shift 2
++    "$P" "$@"
++}
++
++set -ex
++
++if [ -f .git/hooks/pre-commit.sample -a ! -f .git/hooks/pre-commit ] ; then
++    cp -p .git/hooks/pre-commit.sample .git/hooks/pre-commit && \
++    chmod +x .git/hooks/pre-commit && \
++    echo "Activated pre-commit hook."
++fi
++
++if type -p colorgcc > /dev/null ; then
++   export CC=colorgcc
++fi
++
++libdir() {
++    echo $(cd $1/$(gcc -print-multi-os-directory); pwd)
++}
++
++if [ "x$1" = "xam" ] ; then
++    run_versioned automake "$AM_VERSION" -a -c --foreign
++    ./config.status
++else
++    rm -rf autom4te.cache
++    rm -f config.cache
++
++    libtoolize -c --force
++    intltoolize -c -f
++    run_versioned aclocal "$AM_VERSION" -I m4
++    run_versioned autoconf "$AC_VERSION" -Wall
++    run_versioned autoheader "$AC_VERSION"
++    run_versioned automake "$AM_VERSION" --copy --foreign --add-missing
++
++    if [ "x$1" != "xac" ]; then
++        CFLAGS="$CFLAGS -g -O0" ./configure \
++          --sysconfdir=/etc \
++          --localstatedir=/var \
++          --libexecdir=/usr/lib \
++          --libdir=$(libdir /usr/local/lib) \
++          --with-rootdir= \
++          "$@"
++        make clean
++    fi
++fi
+--- /dev/null
++++ systemd-36/po/pl.po
+@@ -0,0 +1,166 @@
++# translation of pl.po to Polish
++# Piotr Drąg <piotrdrag@gmail.com>, 2011.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: systemd\n"
++"Report-Msgid-Bugs-To: \n"
++"POT-Creation-Date: 2011-08-22 15:43+0200\n"
++"PO-Revision-Date: 2011-08-22 15:45+0200\n"
++"Last-Translator: Piotr Drąg <piotrdrag@gmail.com>\n"
++"Language-Team: Polish <trans-pl@lists.fedoraproject.org>\n"
++"Language: pl\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=UTF-8\n"
++"Content-Transfer-Encoding: 8bit\n"
++
++#: ../src/org.freedesktop.hostname1.policy.in.h:1
++msgid "Authentication is required to set local machine information."
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby ustawić informacje o lokalnym komputerze."
++
++#: ../src/org.freedesktop.hostname1.policy.in.h:2
++msgid "Authentication is required to set the local host name."
++msgstr "Wymagane jest uwierzytelnienie, aby ustawić nazwę lokalnego komputera."
++
++#: ../src/org.freedesktop.hostname1.policy.in.h:3
++msgid ""
++"Authentication is required to set the statically configured local host name, "
++"as well as the pretty host name."
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby ustawić statycznie skonfigurowaną nazwę "
++"lokalnego komputera, a także jego ładną nazwę."
++
++#: ../src/org.freedesktop.hostname1.policy.in.h:4
++msgid "Set host name"
++msgstr "Ustawienie nazwy komputera"
++
++#: ../src/org.freedesktop.hostname1.policy.in.h:5
++msgid "Set machine information"
++msgstr "Ustawienie informacji o komputerze"
++
++#: ../src/org.freedesktop.hostname1.policy.in.h:6
++msgid "Set static host name"
++msgstr "Ustawienie statycznej nazwy komputera"
++
++#: ../src/org.freedesktop.locale1.policy.in.h:1
++msgid "Authentication is required to set the system locale."
++msgstr "Wymagane jest uwierzytelnienie, aby ustawić lokalizację systemu."
++
++#: ../src/org.freedesktop.locale1.policy.in.h:2
++msgid "Set system locale"
++msgstr "Ustawienie lokalizacji systemu"
++
++#: ../src/org.freedesktop.login1.policy.in.h:1
++msgid "Allow attaching devices to seats"
++msgstr "Zezwolenie na podłączanie urządzeń do siedzeń"
++
++#: ../src/org.freedesktop.login1.policy.in.h:2
++msgid "Allow non-logged-in users to run programs"
++msgstr "Zezwolenie niezalogowanym użytkownikom na uruchamianie programów"
++
++#: ../src/org.freedesktop.login1.policy.in.h:3
++msgid ""
++"Authentication is required to allow a non-logged-in user to run programs"
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby ustawić zezwolić niezalogowanym "
++"użytkownikom na uruchamianie programów"
++
++#: ../src/org.freedesktop.login1.policy.in.h:4
++msgid "Authentication is required to allow attaching a device to a seat"
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby zezwolić na podłączanie urządzeń do "
++"siedzeń"
++
++#: ../src/org.freedesktop.login1.policy.in.h:5
++msgid "Authentication is required to allow powering off the system"
++msgstr "Wymagane jest uwierzytelnienie, aby zezwolić na wyłączanie systemu"
++
++#: ../src/org.freedesktop.login1.policy.in.h:6
++msgid ""
++"Authentication is required to allow powering off the system while other "
++"users are logged in"
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby zezwolić na wyłączanie systemu, kiedy są "
++"zalogowani inni użytkownicy"
++
++#: ../src/org.freedesktop.login1.policy.in.h:7
++msgid "Authentication is required to allow rebooting the system"
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby zezwolić na ponowne uruchamianie systemu"
++
++#: ../src/org.freedesktop.login1.policy.in.h:8
++msgid ""
++"Authentication is required to allow rebooting the system while other users "
++"are logged in"
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby zezwolić na ponowne uruchamianie "
++"systemu, kiedy są zalogowani inni użytkownicy"
++
++#: ../src/org.freedesktop.login1.policy.in.h:9
++msgid ""
++"Authentication is required to allow resetting how devices are attached to "
++"seats"
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby zezwolić na ponowne ustawianie sposobu "
++"podłączenia urządzeń do siedzeń"
++
++#: ../src/org.freedesktop.login1.policy.in.h:10
++msgid "Flush device to seat attachments"
++msgstr "Czyszczenie podłączeń urządzeń do siedzeń"
++
++#: ../src/org.freedesktop.login1.policy.in.h:11
++msgid "Power off the system"
++msgstr "Wyłączenie systemu"
++
++#: ../src/org.freedesktop.login1.policy.in.h:12
++msgid "Power off the system when other users are logged in"
++msgstr "Wyłączenie systemu, kiedy są zalogowani inni użytkownicy"
++
++#: ../src/org.freedesktop.login1.policy.in.h:13
++msgid "Reboot the system"
++msgstr "Ponowne uruchomienie systemu"
++
++#: ../src/org.freedesktop.login1.policy.in.h:14
++msgid "Reboot the system when other users are logged in"
++msgstr "Ponowne uruchomienie systemu, kiedy są zalogowani inni użytkownicy"
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:1
++msgid ""
++"Authentication is required to control whether network time synchronization "
++"shall be enabled."
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby kontrolować, czy włączyć synchronizację "
++"czasu przez sieć."
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:2
++msgid ""
++"Authentication is required to control whether the RTC stores the local or "
++"UTC time."
++msgstr ""
++"Wymagane jest uwierzytelnienie, aby kontrolować, czy RTC przechowuje czas "
++"lokalny lub czas UTC."
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:3
++msgid "Authentication is required to set the system time."
++msgstr "Wymagane jest uwierzytelnienie, aby ustawić czas systemu."
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:4
++msgid "Authentication is required to set the system timezone."
++msgstr "Wymagane jest uwierzytelnienie, aby ustawić strefę czasową systemu."
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:5
++msgid "Set RTC to local timezone or UTC"
++msgstr "Ustawienie RTC na lokalną strefę czasową lub strefę UTC"
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:6
++msgid "Set system time"
++msgstr "Ustawienie czasu systemu"
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:7
++msgid "Set system timezone"
++msgstr "Ustawienie strefy czasowej systemu"
++
++#: ../src/org.freedesktop.timedate1.policy.in.h:8
++msgid "Turn network time synchronization on or off"
++msgstr "Włączenie lub wyłączenie synchronizacji czasu przez sieć"
+--- systemd-36.orig/units/remount-rootfs.service
++++ systemd-36/units/remount-rootfs.service
+@@ -10,7 +10,7 @@ Description=Remount Root FS
+ DefaultDependencies=no
+ Conflicts=shutdown.target
+ After=systemd-readahead-collect.service systemd-readahead-replay.service fsck-root.service
+-Before=local-fs.target shutdown.target
++Before=local-fs.target shutdown.target mountoverflowtmp.service
+ 
+ [Service]
+ Type=oneshot
+--- systemd-36.orig/units/getty@.service.m4
++++ systemd-36/units/getty@.service.m4
+@@ -8,7 +8,7 @@
+ [Unit]
+ Description=Getty on %I
+ BindTo=dev-%i.device
+-After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service
++After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service openvpn.service apache2.service
+ m4_ifdef(`TARGET_FEDORA',
+ After=rc-local.service
+ )m4_dnl
+--- systemd-36.orig/tmpfiles.d/legacy.conf
++++ systemd-36/tmpfiles.d/legacy.conf
+@@ -17,6 +17,6 @@
+ # On modern systems a BSD file lock is a better choice if
+ # serialization is needed on those devices.
+ 
+-d /run/lock 0755 root root -
++d /run/lock 1777 root root -
+ d /run/lock/subsys 0755 root root -
+-d /run/lock/lockdev 0775 root lock -
++d /run/lock/lockdev 0775 root root -
