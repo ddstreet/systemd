@@ -2,12 +2,12 @@
 .\"     Title: systemd-nspawn
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: systemd-nspawn
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\-NSPAWN" "1" "06/16/2011" "systemd" "systemd-nspawn"
+.TH "SYSTEMD\-NSPAWN" "1" "09/23/2011" "systemd" "systemd-nspawn"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -36,14 +36,14 @@ systemd-nspawn \- Spawn a namespace container for debugging, testing and buildin
 .PP
 \fBsystemd\-nspawn\fR
 may be used to run a command or OS in a light\-weight namespace container\&. In many ways it is similar to
-\fBchroot\fR(1), but more powerful since it fully virtualizes the file system hierachy, as well as the process tree, the various IPC subsystems and the host and domain name\&.
+\fBchroot\fR(1), but more powerful since it fully virtualizes the file system hierarchy, as well as the process tree, the various IPC subsystems and the host and domain name\&.
 .PP
 \fBsystemd\-nspawn\fR
 limits access to various kernel interfaces in the container to read\-only, such as
 /sys,
 /proc/sys
 or
-/selinux\&. Network interfaces and the system clock may not be changed from within the container\&. Device nodes may not be created\&. The host system cannot be rebooted and kernel modules may not be loaded from within the container\&.
+/sys/fs/selinux\&. Network interfaces and the system clock may not be changed from within the container\&. Device nodes may not be created\&. The host system cannot be rebooted and kernel modules may not be loaded from within the container\&.
 .PP
 Note that even though these security precautions are taken
 \fBsystemd\-nspawn\fR
@@ -71,19 +71,29 @@ and similar\&. These will not be visible outside of the container, and their con
 .PP
 Note that running two
 \fBsystemd\-nspawn\fR
-containers from the same directory tree will not make processes in them see each other\&. The PID namespace seperation of the two containers is complete and the containers will share very few runtime objects except for the underlying file system\&.
+containers from the same directory tree will not make processes in them see each other\&. The PID namespace separation of the two containers is complete and the containers will share very few runtime objects except for the underlying file system\&.
 .SH "OPTIONS"
 .PP
 If no arguments are passed the container is set up and a shell started in it, otherwise the passed command and arguments are executed in it\&. The following options are understood:
 .PP
-\fB\-\-help\fR
+\fB\-\-help\fR, \fB\-h\fR
 .RS 4
 Prints a short help text and exits\&.
 .RE
 .PP
-\fB\-\-directory=\fR, \fB\-\-D\fR
+\fB\-\-directory=\fR, \fB\-D\fR
 .RS 4
 Directory to use as file system root for the namespace container\&. If omitted the current directory will be used\&.
+.RE
+.PP
+\fB\-\-user=\fR, \fB\-u\fR
+.RS 4
+Run the command under specified user, create home directory and cd into it\&. As rest of systemd\-nspawn, this is not the security feature and limits against accidental changes only\&.
+.RE
+.PP
+\fB\-\-private\-network\fR
+.RS 4
+Turn off networking in the container\&. This makes all network interfaces unavailable in the container, with the exception of the loopback device\&.
 .RE
 .SH "EXAMPLE 1"
 .sp
@@ -125,7 +135,7 @@ The exit code of the program executed in the container is returned\&.
 
 \fBsystemd\fR(1),
 \fBchroot\fR(1),
-\fBdebootstrap\fR(8)
+\fBdebootstrap\fR(8),
 \fBmock\fR(1)
 .SH "AUTHOR"
 .PP

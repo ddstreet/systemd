@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "util.h"
+#include "virt.h"
 
 static bool arg_skip = false;
 static bool arg_force = false;
@@ -89,6 +90,8 @@ int main(int argc, char *argv[]) {
         log_set_target(LOG_TARGET_SYSLOG_OR_KMSG);
         log_parse_environment();
         log_open();
+
+        umask(0022);
 
         parse_proc_cmdline();
         test_files();

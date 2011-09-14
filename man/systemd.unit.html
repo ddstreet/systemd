@@ -9,7 +9,7 @@
                 <code class="filename">systemd.target</code>,
                 <code class="filename">systemd.path</code>,
                 <code class="filename">systemd.timer</code>,
-                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id379069"/><h2>Description</h2><p>A unit configuration file encodes information
+                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id487046"/><h2>Description</h2><p>A unit configuration file encodes information
                 about a service, a socket, a device, a mount point, an
                 automount point, a swap file or partition, a start-up
                 target, a file system path or a timer controlled and
@@ -103,22 +103,11 @@
                 and no file by that name is found, systemd will look
                 for <code class="filename">getty@.service</code> and
                 instantiate a service from that configuration file if
-                it is found. To refer to the instance string from
+                it is found.</p><p>To refer to the instance string from
                 within the configuration file you may use the special
                 <code class="literal">%i</code> specifier in many of the
-                configuration options. Other specifiers that may be
-                used are <code class="literal">%n</code>, <code class="literal">%N</code>,
-                <code class="literal">%p</code>, <code class="literal">%P</code>,
-                <code class="literal">%I</code> and <code class="literal">%f</code>, for
-                the full unit name, the unescaped unit name, the
-                prefix name, the unescaped prefix name, the unescaped
-                instance name and the unescaped filename,
-                respectively. The unescaped filename is either the
-                unescaped instance name (if set) with / prepended (if
-                necessary), or the prefix name similarly prepended
-                with /. The prefix name here refers to the string
-                before the @, i.e. "getty" in the example above, where
-                "tty3" is the instance name.</p><p>If a unit file is empty (i.e. has the file size
+                configuration options. Other specifiers exist, the
+                full list is:</p><div class="table"><a id="id454710"/><p class="title"><strong>Table 1. Specifiers available in unit files</strong></p><div class="table-contents"><table summary="Specifiers available in unit files" border="1"><colgroup><col style="text-align: left" class="spec"/><col style="text-align: left" class="mean"/><col style="text-align: left" class="detail"/></colgroup><thead><tr><th style="text-align: left">Specifier</th><th style="text-align: left">Meaning</th><th style="text-align: left">Details</th></tr></thead><tbody><tr><td style="text-align: left"><code class="literal">%n</code></td><td style="text-align: left">Full unit name</td><td style="text-align: left"> </td></tr><tr><td style="text-align: left"><code class="literal">%N</code></td><td style="text-align: left">Unescaped full unit name</td><td style="text-align: left"> </td></tr><tr><td style="text-align: left"><code class="literal">%p</code></td><td style="text-align: left">Prefix name</td><td style="text-align: left">This refers to the string before the @, i.e. "getty" in the example above, where "tty3" is the instance name.</td></tr><tr><td style="text-align: left"><code class="literal">%P</code></td><td style="text-align: left">Unescaped prefix name</td><td style="text-align: left"> </td></tr><tr><td style="text-align: left"><code class="literal">%i</code></td><td style="text-align: left">Instance name</td><td style="text-align: left">This is the string between the @ character and the suffix.</td></tr><tr><td style="text-align: left"><code class="literal">%I</code></td><td style="text-align: left">Unescaped instance name</td><td style="text-align: left"> </td></tr><tr><td style="text-align: left"><code class="literal">%f</code></td><td style="text-align: left">Unescaped file name</td><td style="text-align: left">This is either the unescaped instance name (if set) with / prepended (if necessary), or the prefix name similarly prepended with /.</td></tr><tr><td style="text-align: left"><code class="literal">%c</code></td><td style="text-align: left">Control group path of the unit</td><td style="text-align: left"> </td></tr><tr><td style="text-align: left"><code class="literal">%r</code></td><td style="text-align: left">Root control group path of systemd</td><td style="text-align: left"> </td></tr><tr><td style="text-align: left"><code class="literal">%R</code></td><td style="text-align: left">Parent directory of the root control group path of systemd</td><td style="text-align: left"> </td></tr><tr><td style="text-align: left"><code class="literal">%t</code></td><td style="text-align: left">Runtime socket dir</td><td style="text-align: left">This is either /run (for the system manager) or $XDG_RUNTIME_DIR (for user managers).</td></tr></tbody></table></div></div><br class="table-break"/><p>If a unit file is empty (i.e. has the file size
                 0) or is symlinked to <code class="filename">/dev/null</code>
                 its configuration will not be loaded and it appears
                 with a load state of <code class="literal">masked</code>, and
@@ -126,7 +115,7 @@
                 fully disable a unit, making it impossible to start it
                 even manually.</p><p>The unit file format is covered by the
                 <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise">Interface
-                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id346795"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
+                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id496021"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
                 carries generic information about the unit that is not
                 dependent on the type of unit:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">Description=</code></span></dt><dd><p>A free-form string
                                 describing the unit. This is intended
@@ -313,8 +302,8 @@
                                 argument. If <code class="option">true</code>
                                 this unit will not be included in
                                 snapshots. Defaults to
-                                <code class="option">false</code> for device and
-                                snapshot units, <code class="option">true</code>
+                                <code class="option">true</code> for device and
+                                snapshot units, <code class="option">false</code>
                                 for the others.</p></dd><dt><span class="term"><code class="varname">StopWhenUnneeded=</code></span></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit will be stopped when it is
@@ -399,14 +388,14 @@
                                 timeout set with this option however
                                 is useful to abort only the job
                                 waiting for the unit state to
-                                change.</p></dd><dt><span class="term"><code class="varname">ConditionPathExists=</code>, </span><span class="term"><code class="varname">ConditionPathIsDirectory=</code>, </span><span class="term"><code class="varname">ConditionDirectoryNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionKernelCommandLine=</code>, </span><span class="term"><code class="varname">ConditionVirtualization=</code>, </span><span class="term"><code class="varname">ConditionSecurity=</code>, </span><span class="term"><code class="varname">ConditionNull=</code></span></dt><dd><p>Before starting a unit
+                                change.</p></dd><dt><span class="term"><code class="varname">ConditionPathExists=</code>, </span><span class="term"><code class="varname">ConditionPathExistsGlob=</code>, </span><span class="term"><code class="varname">ConditionPathIsDirectory=</code>, </span><span class="term"><code class="varname">ConditionPathIsSymbolicLink=</code>, </span><span class="term"><code class="varname">ConditionPathIsMountPoint=</code>, </span><span class="term"><code class="varname">ConditionDirectoryNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionFileIsExecutable=</code>, </span><span class="term"><code class="varname">ConditionKernelCommandLine=</code>, </span><span class="term"><code class="varname">ConditionVirtualization=</code>, </span><span class="term"><code class="varname">ConditionSecurity=</code>, </span><span class="term"><code class="varname">ConditionNull=</code></span></dt><dd><p>Before starting a unit
                                 verify that the specified condition is
                                 true. With
                                 <code class="varname">ConditionPathExists=</code>
-                                a file existance condition can be
+                                a file existence condition can be
                                 checked before a unit is started. If
                                 the specified absolute path name does
-                                not exist startup of a unit will not
+                                not exist, startup of a unit will not
                                 actually happen, however the unit is
                                 still useful for ordering purposes in
                                 this case. The condition is checked at
@@ -416,12 +405,34 @@
                                 <code class="varname">ConditionPathExists=</code>
                                 is prefixed with an exclamation mark
                                 (!), the test is negated, and the unit
-                                only started if the path does not
-                                exist. <code class="varname">ConditionPathIsDirectory=</code>
+                                is only started if the path does not
+                                exist.
+                                <code class="varname">ConditionPathExistsGlob=</code>
+                                works in a similar way, but checks for
+                                the existence of at least one file or
+                                directory matching the specified
+                                globbing
+                                pattern. <code class="varname">ConditionPathIsDirectory=</code>
                                 is similar to
                                 <code class="varname">ConditionPathExists=</code>
                                 but verifies whether a certain path
-                                exists and is a directory.
+                                exists and is a
+                                directory. <code class="varname">ConditionPathIsSymbolicLink=</code>
+                                is similar to
+                                <code class="varname">ConditionPathExists=</code>
+                                but verifies whether a certain path
+                                exists and is a symbolic
+                                link. <code class="varname">ConditionPathIsMountPoint=</code>
+                                is similar to
+                                <code class="varname">ConditionPathExists=</code>
+                                but verifies whether a certain path
+                                exists and is a mount
+                                point. <code class="varname">ConditionFileIsExecutable=</code>
+                                is similar to
+                                <code class="varname">ConditionPathExists=</code>
+                                but verifies whether a certain path
+                                exists, is a regular file and marked
+                                executable.
                                 <code class="varname">ConditionDirectoryNotEmpty=</code>
                                 is similar to
                                 <code class="varname">ConditionPathExists=</code>
@@ -449,25 +460,35 @@
                                 whether it is a specific
                                 implementation. Takes either boolean
                                 value to check if being executed in
-                                any virtual environment or one of the
+                                any virtualized environment, or one of
+                                <code class="varname">vm</code> and
+                                <code class="varname">container</code> to test against
+                                a specific type of virtualization
+                                solution, or one of
                                 <code class="varname">qemu</code>,
                                 <code class="varname">kvm</code>,
                                 <code class="varname">vmware</code>,
                                 <code class="varname">microsoft</code>,
                                 <code class="varname">oracle</code>,
                                 <code class="varname">xen</code>,
-                                <code class="varname">pidns</code>,
-                                <code class="varname">openvz</code> to test
-                                against a specific implementation. The
-                                test may be negated by prepending an
-                                exclamation mark.
+                                <code class="varname">bochs</code>,
+                                <code class="varname">chroot</code>,
+                                <code class="varname">openvz</code>,
+                                <code class="varname">lxc</code>,
+                                <code class="varname">systemd-nspawn</code>,
+                                <code class="varname">pidns</code> to test
+                                against a specific implementation. If
+                                multiple virtualization technologies
+                                are nested only the innermost is
+                                considered. The test may be negated by
+                                prepending an exclamation mark.
                                 <code class="varname">ConditionSecurity=</code>
-                                may be used to check whether the given security
-                                module is enabled on the system.
-                                Currently the only recognized value is
-                                <code class="varname">selinux</code>.
-                                The test may be negated by prepending an
-                                exclamation mark. Finally,
+                                may be used to check whether the given
+                                security module is enabled on the
+                                system.  Currently the only recognized
+                                value is <code class="varname">selinux</code>.
+                                The test may be negated by prepending
+                                an exclamation mark. Finally,
                                 <code class="varname">ConditionNull=</code> may
                                 be used to add a constant condition
                                 check value to the unit. It takes a
@@ -489,7 +510,10 @@
                                 prefix an argument with the pipe
                                 symbol and an exclamation mark the
                                 pipe symbol must be passed first, the
-                                exclamation second.</p></dd><dt><span class="term"><code class="varname">Names=</code></span></dt><dd><p>Additional names for
+                                exclamation second. Except for
+                                <code class="varname">ConditionPathIsSymbolicLink=</code>,
+                                all path checks follow
+                                symlinks.</p></dd><dt><span class="term"><code class="varname">Names=</code></span></dt><dd><p>Additional names for
                                 this unit. The names listed here must
                                 have the same suffix (i.e. type) as
                                 the unit file name. This option may be
@@ -571,7 +595,7 @@
                                 <span class="command"><strong>systemctl enable</strong></span>
                                 will automatically install units
                                 listed in this option as
-                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id388756"/><h2>See Also</h2><p>
+                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id497067"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>,

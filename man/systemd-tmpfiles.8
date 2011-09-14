@@ -2,12 +2,12 @@
 .\"     Title: systemd-tmpfiles
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: systemd-tmpfiles
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\-TMPFILES" "8" "06/16/2011" "systemd" "systemd-tmpfiles"
+.TH "SYSTEMD\-TMPFILES" "8" "09/23/2011" "systemd" "systemd-tmpfiles"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -35,7 +35,7 @@ systemd-tmpfiles \- Creates, deletes and cleans up volatile and temporary files 
 .SH "DESCRIPTION"
 .PP
 \fBsystemd\-tmpfiles\fR
-creates, deletes and cleans up volatile ad temporary files and directories, based on the configuration from
+creates, deletes and cleans up volatile and temporary files and directories, based on the configuration from
 /etc/tmpfiles\&.d/\&. See
 \fBtmpfiles.d\fR(5)
 for more details on these files\&.
@@ -81,7 +81,7 @@ in one invocation\&. For example, during boot the following command line is exec
 .RS 4
 .\}
 .nf
-systemctl\-tmpfiles \-\-remove \-\-create
+systemd\-tmpfiles \-\-remove \-\-create
 .fi
 .if n \{\
 .RE

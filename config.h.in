@@ -9,6 +9,12 @@
 /* Target Distribution */
 #undef DISTRIBUTION
 
+/* ACL available */
+#undef HAVE_ACL
+
+/* Define to 1 if you have the <acl/libacl.h> header file. */
+#undef HAVE_ACL_LIBACL_H
+
 /* AUDIT available */
 #undef HAVE_AUDIT
 
@@ -62,6 +68,9 @@
 
 /* SysV init scripts and rcN.d links are supported. */
 #undef HAVE_SYSV_COMPAT
+
+/* Define to 1 if you have the <sys/acl.h> header file. */
+#undef HAVE_SYS_ACL_H
 
 /* Define to 1 if you have the <sys/capability.h> header file. */
 #undef HAVE_SYS_CAPABILITY_H

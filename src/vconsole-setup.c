@@ -39,6 +39,7 @@
 #include "util.h"
 #include "log.h"
 #include "macro.h"
+#include "virt.h"
 
 static bool is_vconsole(int fd) {
         unsigned char data[1];
@@ -170,6 +171,8 @@ int main(int argc, char **argv) {
         log_set_target(LOG_TARGET_AUTO);
         log_parse_environment();
         log_open();
+
+        umask(0022);
 
         if (argv[1])
                 vc = argv[1];

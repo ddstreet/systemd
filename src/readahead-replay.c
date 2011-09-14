@@ -41,6 +41,7 @@
 #include "sd-daemon.h"
 #include "ioprio.h"
 #include "readahead-common.h"
+#include "virt.h"
 
 static off_t arg_file_size_max = READAHEAD_FILE_SIZE_MAX;
 
@@ -339,6 +340,8 @@ int main(int argc, char*argv[]) {
         log_set_target(LOG_TARGET_SYSLOG_OR_KMSG);
         log_parse_environment();
         log_open();
+
+        umask(0022);
 
         if ((r = parse_argv(argc, argv)) <= 0)
                 return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;

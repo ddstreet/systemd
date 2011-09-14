@@ -2,12 +2,12 @@
 .\"     Title: systemctl
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: systemctl
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMCTL" "1" "06/16/2011" "systemd" "systemctl"
+.TH "SYSTEMCTL" "1" "09/23/2011" "systemd" "systemctl"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -62,13 +62,13 @@ and similar\&.
 .PP
 \fB\-\-property=\fR, \fB\-p\fR
 .RS 4
-When showing unit/job/manager information, limit display to certain properties as specified as argument\&. If not specified all set properties are shown\&. The argument should be a property name, such as
+When showing unit/job/manager properties, limit display to certain properties as specified as argument\&. If not specified all set properties are shown\&. The argument should be a property name, such as
 MainPID\&. If specified more than once all properties with the specified names are shown\&.
 .RE
 .PP
 \fB\-\-all\fR, \fB\-a\fR
 .RS 4
-When listing units, show all units, regardless of their state, including inactive units\&. When showing unit/job/manager information, show all properties regardless whether they are set or not\&.
+When listing units, show all units, regardless of their state, including inactive units\&. When showing unit/job/manager properties, show all properties regardless whether they are set or not\&.
 .RE
 .PP
 \fB\-\-failed\fR
@@ -181,22 +181,6 @@ and related commands, disables asking for passwords\&. Background services may r
 will query the user on the terminal for the necessary secrets\&. Use this option to switch this behavior off\&. In this case the password must be supplied by some other means (for example graphical password agents) or the service might fail\&.
 .RE
 .PP
-\fB\-\-kill\-mode=\fR
-.RS 4
-When used with
-\fBkill\fR, choose the mode how to kill the selected processes\&. Must be one of
-\fBcontrol\-group\fR
-or
-\fBprocess\fR
-to select whether to kill the entire control group or only the selected process itself\&. If omitted defaults to
-\fBcontrol\-group\fR
-if
-\fB\-\-kill\-who=all\fR
-is set, or
-\fBprocess\fR
-otherwise\&. You probably never need to use this switch\&.
-.RE
-.PP
 \fB\-\-kill\-who=\fR
 .RS 4
 When used with
@@ -229,17 +213,26 @@ or
 execute selected operation without shutting down all units\&. However, all processes will be killed forcibly and all file systems are unmounted or remounted read\-only\&. This is hence a drastic but relatively safe option to request an immediate reboot\&.
 .RE
 .PP
-\fB\-\-defaults\fR
+\fB\-\-root=\fR
 .RS 4
 When used with
-\fBdisable\fR, ensures that only the symlinks created by
-\fBenable\fR
-are removed, not all symlinks pointing to the unit file that shall be disabled\&.
+\fBenable\fR/\fBdisable\fR/\fBis\-enabled\fR
+(and related commands), use alternative root path when looking for unit files\&.
+.RE
+.PP
+\fB\-\-runtime\fR
+.RS 4
+When used with
+\fBenable\fR/\fBdisable\fR/\fBis\-enabled\fR
+(and related commands), make changes only temporarily, so that they are dropped on the next reboot\&. This will have the effect that changes are not made in subdirectories of
+/etc
+but in
+/run, with identical immediate effects, however, since the latter is lost on reboot, the changes are lost too\&.
 .RE
 .PP
 \fB\-H\fR, \fB\-\-host\fR
 .RS 4
-Execute operation remotely\&. Specifiy a hostname, or username and hostname seperated by @, to connect to\&. This will use SSH to talk to the remote systemd instance\&.
+Execute operation remotely\&. Specify a hostname, or username and hostname separated by @, to connect to\&. This will use SSH to talk to the remote systemd instance\&.
 .RE
 .PP
 \fB\-P\fR, \fB\-\-privileged\fR
@@ -391,9 +384,8 @@ is specified this enables the unit for the system, for the calling user only or 
 \fBdisable [NAME\&.\&.\&.]\fR
 .RS 4
 Disables one or more units\&. This removes all symlinks to the specified unit files from the unit configuration directory, and hence undoes the changes made by
-\fBenable\fR\&. Note however that this by default removes all symlinks to the unit files (i\&.e\&. including manual additions), not just those actually created by
-\fBenable\fR\&. If only the symlinks that are suggested by default shall be removed, pass
-\fB\-\-defaults\fR\&. This implicitly reloads the systemd daemon configuration after completing the disabling of the units\&. Note that this command does not implicitly stop the units that is being disabled\&. If this is desired an additional
+\fBenable\fR\&. Note however that this removes all symlinks to the unit files (i\&.e\&. including manual additions), not just those actually created by
+\fBenable\fR\&. This call implicitly reloads the systemd daemon configuration after completing the disabling of the units\&. Note that this command does not implicitly stop the units that is being disabled\&. If this is desired an additional
 \fBstop\fRcommand should be executed afterwards\&.
 .sp
 This command will print the actions executed\&. This output may be suppressed by passing
@@ -410,7 +402,48 @@ in a similar way as
 \fBis\-enabled [NAME\&.\&.\&.]\fR
 .RS 4
 Checks whether any of the specified unit files is enabled (as with
-\fBenable\fR)\&. Returns an exit code of 0 if at least one is enabled, non\-zero otherwise\&.
+\fBenable\fR)\&. Returns an exit code of 0 if at least one is enabled, non\-zero otherwise\&. Prints the current enable status\&. To suppress this output use
+\fB\-\-quiet\fR\&.
+.RE
+.PP
+\fBreenable [NAME\&.\&.\&.]\fR
+.RS 4
+Reenable one or more unit files, as specified on the command line\&. This is a combination of
+\fBdisable\fR
+and
+\fBenable\fR
+and is useful to reset the symlinks a unit is enabled with to the defaults configured in the
+[Install]
+section of the unit file\&.
+.RE
+.PP
+\fBpreset [NAME\&.\&.\&.]\fR
+.RS 4
+Reset one or more unit files, as specified on the command line, to the defaults configured in a preset file\&. This has the same effect as
+\fBdisable\fR
+or
+\fBenable\fR, depending how the unit is listed in the preset files\&.
+.RE
+.PP
+\fBmask [NAME\&.\&.\&.]\fR
+.RS 4
+Mask one or more unit files, as specified on the command line\&. This will link these units to
+/dev/null, making it impossible to start them\&. This is a stronger version of
+\fBdisable\fR, since it prohibits all kinds of activation of the unit, including manual activation\&. Use this option with care\&.
+.RE
+.PP
+\fBunmask [NAME\&.\&.\&.]\fR
+.RS 4
+Unmask one or more unit files, as specified on the command line\&. This will undo the effect of
+\fBmask\fR\&.
+.RE
+.PP
+\fBlink [NAME\&.\&.\&.]\fR
+.RS 4
+Link a unit file that is not in the unit file search paths into the unit file search path\&. This requires an absolute path to a unit file\&. The effect of this can be undone with
+\fBdisable\fR\&. The effect of this command is that a unit file is available for
+\fBstart\fR
+and other commands although it isn\*(Aqt installed directly in the unit search path\&.
 .RE
 .PP
 \fBload [NAME\&.\&.\&.]\fR
@@ -436,11 +469,6 @@ List jobs that are in progress\&.
 \fBcancel [JOB\&.\&.\&.]\fR
 .RS 4
 Cancel one or more jobs specified on the command line by their numeric job IDs\&. If no job id is specified, cancel all pending jobs\&.
-.RE
-.PP
-\fBmonitor\fR
-.RS 4
-Monitor unit/job changes\&. This is mostly useful for debugging purposes and prints a line each time systemd loads or unloads a unit configuration file, or a unit property changes\&.
 .RE
 .PP
 \fBdump\fR
@@ -577,11 +605,24 @@ option) and will fail otherwise\&.
 .SH "EXIT STATUS"
 .PP
 On success 0 is returned, a non\-zero failure code otherwise\&.
+.SH "ENVIRONMENT"
+.PP
+\fI$SYSTEMD_PAGER\fR
+.RS 4
+Pager to use when
+\fB\-\-no\-pager\fR
+is not given; overrides
+\fI$PAGER\fR\&. Setting this to an empty string or the value
+cat
+is equivalent to passing
+\fB\-\-no\-pager\fR\&.
+.RE
 .SH "SEE ALSO"
 .PP
 
 \fBsystemd\fR(1),
 \fBsystemadm\fR(1),
+\fBsystemd-loginctl\fR(1),
 \fBsystemd.unit\fR(5),
 \fBsystemd.special\fR(7),
 \fBwall\fR(1)
