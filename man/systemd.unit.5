@@ -2,12 +2,12 @@
 .\"     Title: systemd.unit
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 09/23/2011
+.\"      Date: 10/11/2011
 .\"    Manual: systemd.unit
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.UNIT" "5" "09/23/2011" "systemd" "systemd.unit"
+.TH "SYSTEMD\&.UNIT" "5" "10/11/2011" "systemd" "systemd.unit"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -79,9 +79,7 @@ Empty lines and lines starting with # or ; are ignored\&. This may be used for c
 .PP
 If a line starts with
 \fB\&.include\fR
-followed by a file name, the specified file will be read as if its contents were listed in place of the
-\fB\&.include\fR
-directive\&.
+followed by a file name, the specified file will be parsed at this point\&. Make sure that the file that is included has the appropiate section headers before any directives\&.
 .PP
 Along with a unit file
 foo\&.service
@@ -418,7 +416,7 @@ When clients are waiting for a job of this unit to complete, time out after the 
 in service units) as the job timeout has no effect on the unit itself, only on the job that might be pending for it\&. Or in other words: unit\-specific timeouts are useful to abort unit state changes, and revert them\&. The job timeout set with this option however is useful to abort only the job waiting for the unit state to change\&.
 .RE
 .PP
-\fIConditionPathExists=\fR, \fIConditionPathExistsGlob=\fR, \fIConditionPathIsDirectory=\fR, \fIConditionPathIsSymbolicLink=\fR, \fIConditionPathIsMountPoint=\fR, \fIConditionDirectoryNotEmpty=\fR, \fIConditionFileIsExecutable=\fR, \fIConditionKernelCommandLine=\fR, \fIConditionVirtualization=\fR, \fIConditionSecurity=\fR, \fIConditionNull=\fR
+\fIConditionPathExists=\fR, \fIConditionPathExistsGlob=\fR, \fIConditionPathIsDirectory=\fR, \fIConditionPathIsSymbolicLink=\fR, \fIConditionPathIsMountPoint=\fR, \fIConditionDirectoryNotEmpty=\fR, \fIConditionFileIsExecutable=\fR, \fIConditionKernelCommandLine=\fR, \fIConditionVirtualization=\fR, \fIConditionSecurity=\fR, \fIConditionCapability=\fR, \fIConditionNull=\fR
 .RS 4
 Before starting a unit verify that the specified condition is true\&. With
 \fIConditionPathExists=\fR
@@ -470,7 +468,12 @@ to test against a specific type of virtualization solution, or one of
 to test against a specific implementation\&. If multiple virtualization technologies are nested only the innermost is considered\&. The test may be negated by prepending an exclamation mark\&.
 \fIConditionSecurity=\fR
 may be used to check whether the given security module is enabled on the system\&. Currently the only recognized value is
-\fIselinux\fR\&. The test may be negated by prepending an exclamation mark\&. Finally,
+\fIselinux\fR\&. The test may be negated by prepending an exclamation mark\&.
+\fIConditionCapability=\fR
+may be used to check whether the given capability exists in the capability bounding set of the service manager (i\&.e\&. this does not check whether capability is actually available in the permitted or effective sets, see
+\fBcapabilities\fR(7)
+for details)\&. Pass a capability name such as
+CAP_MKNOD, possibly prefixed with an exclamation mark to negate the check\&. Finally,
 \fIConditionNull=\fR
 may be used to add a constant condition check value to the unit\&. It takes a boolean argument\&. If set to
 \fIfalse\fR
@@ -547,7 +550,8 @@ will automatically install units listed in this option as well\&.
 \fBsystemd.target\fR(5),
 \fBsystemd.path\fR(5),
 \fBsystemd.timer\fR(5),
-\fBsystemd.snapshot\fR(5)
+\fBsystemd.snapshot\fR(5),
+\fBcapabilities\fR(7)
 .SH "AUTHOR"
 .PP
 \fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
