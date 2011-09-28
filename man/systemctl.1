@@ -2,12 +2,12 @@
 .\"     Title: systemctl
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 09/23/2011
+.\"      Date: 10/11/2011
 .\"    Manual: systemctl
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMCTL" "1" "09/23/2011" "systemd" "systemctl"
+.TH "SYSTEMCTL" "1" "10/11/2011" "systemd" "systemctl"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -111,6 +111,11 @@ and
 Do not synchronously wait for the requested operation to finish\&. If this is not specified the job will be verified, enqueued and
 \fBsystemctl\fR
 will wait until it is completed\&. By passing this argument it is only verified and enqueued\&.
+.RE
+.PP
+\fB\-\-no\-legend\fR
+.RS 4
+Do not print a legend, i\&.e\&. the column headers and the footer with hints\&.
 .RE
 .PP
 \fB\-\-no\-pager\fR
@@ -351,6 +356,11 @@ if you are looking for formatted human\-readable output\&.
 \fBreset\-failed [NAME\&.\&.\&.]\fR
 .RS 4
 Reset the \*(Aqfailed\*(Aq state of the specified units, or if no unit name is passed of all units\&. When a unit fails in some way (i\&.e\&. process exiting with non\-zero error code, terminating abnormally or timing out) it will automatically enter the \*(Aqfailed\*(Aq state and its exit code and status is recorded for introspection by the administrator until the service is restarted or reset with this command\&.
+.RE
+.PP
+\fBlist\-unit\-files\fR
+.RS 4
+List installed unit files\&.
 .RE
 .PP
 \fBenable [NAME\&.\&.\&.]\fR

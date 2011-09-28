@@ -1,3 +1,27 @@
+systemd (37-1) unstable; urgency=low
+
+  [ Tollef Fog Heen ]
+  * New upstream version
+  * Change the type of the debian-fixup service to oneshot.
+    Closes: #642961
+  * Add ConditionPathIsDirectory to lib-init-rw.automount and
+    lib-init-rw.mount so we only activate the unit if the directory
+    exists.  Closes: #633059
+  * If a sysv service exists in both rcS and rcN.d runlevels, drop the
+    rcN.d ones to avoid loops.  Closes: #637037
+  * Blacklist fuse init script, we do the same work already internally.
+    Closes: #643700
+  * Update README.Debian slightly for /run rather than /lib/init/rw
+
+  [ Josh Triplett ]
+  * Do a one-time migration of the $TMPTIME setting from /etc/default/rcS to
+    /etc/tmpfiles.d/tmp.conf. If /etc/default/rcS has a TMPTIME setting of
+    "infinite" or equivalent, migrate it to an /etc/tmpfiles.d/tmp.conf that
+    overrides the default /usr/lib/tmpfiles.d/tmp.conf and avoids clearing
+    /tmp.  Closes: #643698
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Wed, 28 Sep 2011 20:04:13 +0200
+
 systemd (36-1) unstable; urgency=low
 
   [ Tollef Fog Heen ]

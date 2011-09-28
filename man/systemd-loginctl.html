@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd-loginctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd-loginctl"><a id="systemd-loginctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd-loginctl — Control the systemd login manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-loginctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id281937"/><h2>Description</h2><p><span class="command"><strong>systemd-loginctl</strong></span> may be used to
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd-loginctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd-loginctl"><a id="systemd-loginctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd-loginctl — Control the systemd login manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-loginctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id476326"/><h2>Description</h2><p><span class="command"><strong>systemd-loginctl</strong></span> may be used to
                 introspect and control the state of the
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
-                login manager.</p></div><div class="refsect1" title="Options"><a id="id281960"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+                login manager.</p></div><div class="refsect1" title="Options"><a id="id476349"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">--property=</code>, </span><span class="term"><code class="option">-p</code></span></dt><dd><p>When showing
                                 session/user/ properties, limit
@@ -173,13 +173,13 @@
                                 sessions on a seat. This kills all
                                 processes of all sessions on a seat and
                                 deallocates all runtime resources
-                                attached to them.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id323378"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="Environment"><a id="id323387"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
+                                attached to them.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id517767"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="Environment"><a id="id517777"/><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
                                 <code class="option">--no-pager</code> is not given;
                                 overrides <code class="varname">$PAGER</code>.  Setting
                                 this to an empty string or the value
                                 <code class="literal">cat</code> is equivalent to passing
-                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id323424"/><h2>See Also</h2><p>
+                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id517814"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd-logind.conf</span>(5)</span>
