@@ -5,13 +5,15 @@
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
-		--with-rootdir= \
+		--with-rootprefix= \
 		--with-rootlibdir=/lib \
 		--with-udevrulesdir=/lib/udev/rules.d \
 		--enable-gtk \
 		--enable-libcryptsetup \
 		--enable-tcpwrap \
-		--enable-selinux
+		--enable-selinux \
+                --disable-coredump \
+		--with-distro=debian
 
 override_dh_auto_clean:
 	dh_auto_clean
@@ -28,10 +30,9 @@ override_dh_install:
 	chmod +x debian/debian-fixup
 	dh_install -O--parallel --fail-missing
 	dh_install -plibpam-systemd debian/pam-configs /usr/share
-	dh_install debian/ifup@.service /lib/systemd/system
 
 autoreconf:
-	intltoolize -f
+	intltoolize -f -c
 	autoreconf -f -i
 
 override_dh_autoreconf:

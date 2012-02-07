@@ -2,11 +2,11 @@ Source: systemd
 Section: admin
 Priority: extra
 Maintainer: Tollef Fog Heen <tfheen@debian.org>
-Standards-Version: 3.9.1
+Standards-Version: 3.9.2
 Vcs-Git: git://git.err.no/systemd/
 Vcs-Browser: http://git.err.no/cgi-bin/gitweb.cgi?p=systemd;a=summary
 Homepage: http://www.freedesktop.org/wiki/Software/systemd
-Build-Depends: debhelper (>= 7.0.50),
+Build-Depends: debhelper (>= 8.1.0),
                libcap-dev,
                pkg-config,
                libudev-dev (>= 172),
@@ -22,12 +22,17 @@ Build-Depends: debhelper (>= 7.0.50),
                libnotify-dev (>= 0.7.0),
                libaudit-dev,
                dh-autoreconf,
+               automake (>= 1.11),
+               autoconf (>= 2.63),
                intltool,
                libcryptsetup-dev (>= 2:1.2.0),
                libwrap0-dev,
                libselinux1-dev,
                libacl1-dev,
-               gperf
+               liblzma-dev,
+               libgee-dev,
+               gperf,
+               libkmod-dev (>= 5)
 
 Package: systemd
 Architecture: linux-any
@@ -35,7 +40,8 @@ Section: admin
 Priority: extra
 Recommends: libpam-systemd
 Suggests: systemd-gui, python
-Depends: ${shlibs:Depends}, ${misc:Depends}, util-linux (>= 2.19.1-2), initscripts (>= 2.88dsf-13.3), udev
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, util-linux (>= 2.19.1-2), initscripts (>= 2.88dsf-17), udev
 Breaks: lvm2 (<< 2.02.84-1)
 Conflicts: klogd
 Description: system and service manager
@@ -134,3 +140,40 @@ Description: systemd utility library - development files
  APIs for new-style daemons, as implemented by the systemd init system.
  .
  This package contains the development files
+
+Package: libsystemd-journal0
+Architecture: linux-any
+Section: libs
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: systemd journal utility library
+ The libsystemd-journal library provides an interface for the
+ systemd journal service.
+
+Package: libsystemd-journal-dev
+Architecture: linux-any
+Section: libdevel
+Depends: libsystemd-journal0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}, libsystemd-id128-dev
+Description: systemd journal utility library - development files
+ The libsystemd-journal library provides an interface for the
+ systemd journal service.
+ .
+ This package contains the development files
+
+Package: libsystemd-id128-0
+Architecture: linux-any
+Section: libs
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: systemd 128 bit ID utility library
+ The libsystemd-id128 library provides utility functions for generating
+ 128 bit IDs.
+
+Package: libsystemd-id128-dev
+Architecture: linux-any
+Section: libdevel
+Depends: libsystemd-id128-0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: systemd 128 bit ID utility library - development files
+ The libsystemd-id128 library provides utility functions for generating
+ 128 bit IDs.
+ .
+ This package contains the development files
+

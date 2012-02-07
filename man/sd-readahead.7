@@ -2,12 +2,12 @@
 .\"     Title: sd-readahead
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: sd-readahead
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD\-READAHEAD" "7" "10/11/2011" "systemd" "sd-readahead"
+.TH "SD\-READAHEAD" "7" "02/15/2012" "systemd" "sd-readahead"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -53,9 +53,9 @@ for more information about the function implemented\&.
 This interface is provided by the reference implementation of APIs for controlling boot\-time read\-ahead and distributed with the systemd package\&. The algorithms it implements are simple, and can easily be reimplemented in daemons if it is important to support this interface without using the reference implementation\&. See the respective function man pages for details\&.
 .PP
 In addition, for details about the algorithms check the liberally licensed reference implementation sources:
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-readahead.c\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/readahead/sd-readahead.c\fR\m[]
 resp\&.
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-readahead.h\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h\fR\m[]
 .PP
 These APIs are implemented in the reference implementation\*(Aqs drop\-in
 sd\-readahead\&.c

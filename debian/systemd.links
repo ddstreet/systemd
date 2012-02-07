@@ -4,6 +4,7 @@
 /lib/systemd/system/systemd-sysctl.service /lib/systemd/system/procps.service
 
 /lib/systemd/system/systemd-modules-load.service /lib/systemd/system/module-init-tools.service
+/lib/systemd/system/systemd-modules-load.service /lib/systemd/system/kmod.service
 /etc/modules /etc/modules-load.d/modules.conf
 
 /dev/null /lib/systemd/system/x11-common.service
@@ -25,9 +26,8 @@
 /dev/null /lib/systemd/system/mtab.service
 /dev/null /lib/systemd/system/udev-mtab.service
 
-# TODO: make hwclock a symlink to hwclock-load.service?
-# Before this can happen we need to ensure that the 85-hwclock.rules
-# udev rule is not triggered when running systemd.
+# systemd sets the hwclock internally
+# http://cgit.freedesktop.org/systemd/systemd/commit/?id=7948c4dfbea73ac21250b588089039aa17a90386
 /dev/null /lib/systemd/system/hwclock.service
 /dev/null /lib/systemd/system/hwclockfirst.service
 
@@ -52,10 +52,7 @@
 /dev/null /lib/systemd/system/single.service
 /dev/null /lib/systemd/system/killprocs.service
 
-# Mount /lib/init/rw during early startup
-/lib/systemd/system/lib-init-rw.automount /lib/systemd/system/local-fs.target.wants/lib-init-rw.automount
-
 # Run fixups early
 /lib/systemd/system/debian-fixup.service /lib/systemd/system/sysinit.target.wants/debian-fixup.service
-
-# TODO: mtab/udev-mtab (symlink /etc/mtab to /proc/self/mounts in postinst)
+# Compat symlink
+/lib/systemd/systemd /bin/systemd

@@ -2,12 +2,12 @@
 .\"     Title: sd_listen_fds
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: sd_listen_fds
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_LISTEN_FDS" "3" "10/11/2011" "systemd" "sd_listen_fds"
+.TH "SD_LISTEN_FDS" "3" "02/15/2012" "systemd" "sd_listen_fds"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -33,7 +33,7 @@ sd_listen_fds \- Check for file descriptors passed by the init system\&.
 .sp
 .ft B
 .nf
-#include "sd\-daemon\&.h"
+#include <systemd/sd\-daemon\&.h>
 .fi
 .ft
 .sp
@@ -83,9 +83,9 @@ environment variable equals the daemon PID\&. If not, it returns immediately\&. 
 environment variable, then sets the FD_CLOEXEC flag for the parsed number of file descriptors starting from SD_LISTEN_FDS_START\&. Finally it returns the parsed number\&.
 .PP
 For details about the algorithm check the liberally licensed reference implementation sources:
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.c\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/sd-daemon.c\fR\m[]
 resp\&.
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.h\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h\fR\m[]
 .PP
 \fBsd_listen_fds()\fR
 is implemented in the reference implementation\*(Aqs
