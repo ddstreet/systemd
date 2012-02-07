@@ -2,12 +2,12 @@
 .\"     Title: systemd.mount
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd.mount
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.MOUNT" "5" "10/11/2011" "systemd" "systemd.mount"
+.TH "SYSTEMD\&.MOUNT" "5" "02/15/2012" "systemd" "systemd.mount"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -61,7 +61,7 @@ If an mount point is beneath another mount point in the file system hierarchy, a
 Mount points created at runtime independent on unit files or
 /etc/fstab
 will be monitored by systemd and appear like any other mount unit in systemd\&.
-.SH "FSTAB"
+.SH "/ETC/FSTAB"
 .PP
 Mount units may either be configured via unit files, or via
 /etc/fstab
@@ -73,17 +73,28 @@ When reading
 /etc/fstab
 a few special mount options are understood by systemd which influence how dependencies are created for mount points from
 /etc/fstab\&. If
-\fBcomment=systemd\&.mount\fR
+\fBMountAuto=yes\fR
+is set in
+system\&.conf
+(which is the default), or if
+\fBx\-systemd\&.mount\fR
 is specified as mount option, then systemd will create a dependency of type
 \fBWants\fR
 from either
 local\-fs\&.target
 or
 remote\-fs\&.target, depending whether the file system is local or remote\&. If
-\fBcomment=systemd\&.automount\fR
+\fBx\-systemd\&.automount\fR
 is set, an automount unit will be created for the file system\&. See
 \fBsystemd.automount\fR(5)
-for details\&.
+for details\&. If
+\fBx\-systemd\-device\-timeout=\fR
+is specified it may be used to configure how long systemd should wait for a device to show up before giving up on an entry from
+/etc/fstab\&. Specify a time in seconds or explicitly specifiy a unit as
+s,
+min,
+h,
+ms\&.
 .PP
 If a mount point is configured in both
 /etc/fstab

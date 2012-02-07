@@ -72,9 +72,8 @@ static int get_config_path(UnitFileScope scope, bool runtime, const char *root_d
         case UNIT_FILE_SYSTEM:
 
                 if (root_dir && runtime)
-                        return -EINVAL;
-
-                if (runtime)
+                        asprintf(&p, "%s/run/systemd/system", root_dir);
+                else if (runtime)
                         p = strdup("/run/systemd/system");
                 else if (root_dir)
                         asprintf(&p, "%s/%s", root_dir, SYSTEM_CONFIG_UNIT_PATH);
@@ -1572,10 +1571,10 @@ UnitFileState unit_file_get_state(
                 }
 
                 if (lstat(path, &st) < 0) {
+                        r = -errno;
                         if (errno == ENOENT)
                                 continue;
 
-                        r = -errno;
                         goto finish;
                 }
 

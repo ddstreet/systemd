@@ -2,12 +2,12 @@
 .\"     Title: systemd.exec
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd.exec
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.EXEC" "5" "10/11/2011" "systemd" "systemd.exec"
+.TH "SYSTEMD\&.EXEC" "5" "02/15/2012" "systemd" "systemd.exec"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -202,8 +202,10 @@ Controls where file descriptor 1 (STDOUT) of the executed processes is connected
 \fBtty\fR,
 \fBsyslog\fR,
 \fBkmsg\fR,
+\fBjournal\fR,
+\fBsyslog+console\fR,
 \fBkmsg+console\fR,
-\fBsyslog+console\fR
+\fBjournal+console\fR
 or
 \fBsocket\fR\&. If set to
 \fBinherit\fR
@@ -221,7 +223,12 @@ system syslog service\&.
 \fBkmsg\fR
 connects it with the kernel log buffer which is accessible via
 \fBdmesg\fR(1)\&.
-\fBsyslog+console\fR
+\fBjournal\fR
+connects it with the journal which is accessible via
+\fBsystemd-journalctl\fR(1)
+(Note that everything that is written to syslog or kmsg is implicitly stored in the journal as well, those options are hence supersets of this one)\&.
+\fBsyslog+console\fR,
+\fBjournal+console\fR
 and
 \fBkmsg+console\fR
 work similarly but copy the output to the system console as well\&.
@@ -231,7 +238,7 @@ connects standard output to a socket from socket activation, semantics are simil
 \fBDefaultStandardOutput=\fR
 in
 \fBsystemd.conf\fR(5), which defaults to
-\fBsyslog\fR\&.
+\fBjournal\fR\&.
 .RE
 .PP
 \fIStandardError=\fR
@@ -390,7 +397,9 @@ for details\&.
 .RS 4
 If this is a socket\-activated service this sets the tcpwrap service name to check the permission for the current connection with\&. This is only useful in conjunction with socket\-activated services, and stream sockets (TCP) in particular\&. It has no effect on other socket types (e\&.g\&. datagram/UDP) and on processes unrelated to socket\-based activation\&. If the tcpwrap verification fails daemon start\-up will fail and the connection is terminated\&. See
 \fBtcpd\fR(8)
-for details\&.
+for details\&. Note that this option may be used to do access control checks only\&. Shell commands and commands described in
+\fBhosts_options\fR(5)
+are not supported\&.
 .RE
 .PP
 \fICapabilityBoundingSet=\fR
@@ -443,6 +452,12 @@ Takes a boolean argument\&. If true, the control groups created for this unit wi
 (and the appropriate group), and he/she can create subgroups as well as add processes to the group\&.
 .RE
 .PP
+\fIControlGroupPersistent=\fR
+.RS 4
+Takes a boolean argument\&. If true, the control groups created for this unit will be marked to be persistent, i\&.e\&. systemd will not remove them when stopping the unit\&. The default is false, meaning that the control groups will be removed when the unit is stopped\&. For details about the semantics of this logic see
+\m[blue]\fBPaxControlGroups\fR\m[]\&\s-2\u[3]\d\s+2\&.
+.RE
+.PP
 \fIControlGroupAttribute=\fR
 .RS 4
 Set a specific control group attribute for executed processes, and (if needed) add the the executed processes to a cgroup in the hierarchy of the controller the attribute belongs to\&. Takes two space\-separated arguments: the attribute name (syntax is
@@ -467,7 +482,7 @@ are only necessary in case the implied default control group path for a service 
 Assign the specified overall CPU time shares to the processes executed\&. Takes an integer value\&. This controls the
 cpu\&.shares
 control group attribute, which defaults to 1024\&. For details about this control group attribute see
-\m[blue]\fBsched\-design\-CFS\&.txt\fR\m[]\&\s-2\u[3]\d\s+2\&.
+\m[blue]\fBsched\-design\-CFS\&.txt\fR\m[]\&\s-2\u[4]\d\s+2\&.
 .RE
 .PP
 \fIMemoryLimit=\fR, \fIMemorySoftLimit=\fR
@@ -477,7 +492,7 @@ memory\&.limit_in_bytes
 and
 memory\&.soft_limit_in_bytes
 control group attributes\&. For details about these control group attributes see
-\m[blue]\fBmemory\&.txt\fR\m[]\&\s-2\u[4]\d\s+2\&.
+\m[blue]\fBmemory\&.txt\fR\m[]\&\s-2\u[5]\d\s+2\&.
 .RE
 .PP
 \fIDeviceAllow=\fR, \fIDeviceDeny=\fR
@@ -488,7 +503,7 @@ devices\&.allow
 and
 devices\&.deny
 control group attributes\&. For details about these control group attributes see
-\m[blue]\fBdevices\&.txt\fR\m[]\&\s-2\u[5]\d\s+2\&.
+\m[blue]\fBdevices\&.txt\fR\m[]\&\s-2\u[6]\d\s+2\&.
 .RE
 .PP
 \fIBlockIOWeight=\fR
@@ -498,7 +513,7 @@ blkio\&.weight
 and
 blkio\&.weight_device
 control group attributes, which default to 1000\&. Use this option multiple times to set weights for multiple devices\&. For details about these control group attributes see
-\m[blue]\fBblkio\-controller\&.txt\fR\m[]\&\s-2\u[6]\d\s+2\&.
+\m[blue]\fBblkio\-controller\&.txt\fR\m[]\&\s-2\u[7]\d\s+2\&.
 .RE
 .PP
 \fIBlockIOReadBandwidth=\fR, \fIBlockIOWriteBandwidth=\fR
@@ -508,7 +523,7 @@ blkio\&.read_bps_device
 and
 blkio\&.write_bps_device
 control group attributes\&. Use this option multiple times to set bandwith limits for multiple devices\&. For details about these control group attributes see
-\m[blue]\fBblkio\-controller\&.txt\fR\m[]\&\s-2\u[6]\d\s+2\&.
+\m[blue]\fBblkio\-controller\&.txt\fR\m[]\&\s-2\u[7]\d\s+2\&.
 .RE
 .PP
 \fIReadWriteDirectories=\fR, \fIReadOnlyDirectories=\fR, \fIInaccessibleDirectories=\fR
@@ -561,6 +576,11 @@ Takes a a four character identifier string for an utmp/wtmp entry for this servi
 \fBgetty\fR
 implementations where utmp/wtmp entries must be created and cleared before and after execution\&. If the configured string is longer than four characters it is truncated and the terminal four characters are used\&. This setting interprets %I style string replacements\&. This setting is unset by default, i\&.e\&. no utmp/wtmp entries are created or cleaned up for this service\&.
 .RE
+.PP
+\fIIgnoreSIGPIPE=\fR
+.RS 4
+Takes a boolean argument\&. If true causes SIGPIPE to be ignored in the executed process\&. Defaults to true, since SIGPIPE generally is useful only in shell pipelines\&.
+.RE
 .SH "SEE ALSO"
 .PP
 
@@ -589,21 +609,26 @@ cgroups.txt
 \%http://www.kernel.org/doc/Documentation/cgroups/cgroups.txt
 .RE
 .IP " 3." 4
+PaxControlGroups
+.RS 4
+\%http://www.freedesktop.org/wiki/Software/systemd/PaxControlGroups
+.RE
+.IP " 4." 4
 sched-design-CFS.txt
 .RS 4
 \%http://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt
 .RE
-.IP " 4." 4
+.IP " 5." 4
 memory.txt
 .RS 4
 \%http://www.kernel.org/doc/Documentation/cgroups/memory.txt
 .RE
-.IP " 5." 4
+.IP " 6." 4
 devices.txt
 .RS 4
 \%http://www.kernel.org/doc/Documentation/cgroups/devices.txt
 .RE
-.IP " 6." 4
+.IP " 7." 4
 blkio-controller.txt
 .RS 4
 \%http://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt

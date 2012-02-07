@@ -2,8 +2,14 @@
 
 set -e
 
+_systemctl() {
+    if [ -e /sys/fs/cgroup/systemd ]; then
+        systemctl "$@"
+    fi
+}
+
 if [ -n "$2" ]; then
-    systemctl daemon-reexec || true
+    _systemctl daemon-reexec || true
 fi
 
 # Do a one-time migration of the local time setting
@@ -33,19 +39,26 @@ EOF
         esac
     fi
 fi
+
 if dpkg --compare-versions "$2" lt "37-1.1"; then
     # Create /run/initctl → /dev/initctl compat symlink on upgrades
     if [ -e /sys/fs/cgroup/systemd ]; then
-        systemctl restart systemd-initctl.socket || true
+        _systemctl restart systemd-initctl.socket || true
+    fi
+fi
+
+if dpkg --compare-versions "$2" lt "40-1"; then
+    # /lib/init/rw has been replaced by /run, so try to remove it on upgrades
+    # http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=643699
+    _systemctl stop lib-init-rw.automount lib-init-rw.mount || true
+    rmdir --ignore-fail-on-non-empty /lib/init/rw || true
+
+    # Create /run/initctl → /dev/initctl compat symlink on upgrades
+    if [ -e /sys/fs/cgroup/systemd ]; then
+        ln -sf /dev/initctl /run/initctl
     fi
 fi
 
 systemd-machine-id-setup
-
-dpkg-maintscript-helper rm_conffile /etc/lsb-base-logging.sh 20-1 systemd -- "$@"
-
-dpkg-maintscript-helper rm_conffile /etc/tmpfiles.d/legacy.conf 25-2 systemd -- "$@"
-dpkg-maintscript-helper rm_conffile /etc/tmpfiles.d/systemd.conf 25-2 systemd -- "$@"
-dpkg-maintscript-helper rm_conffile /etc/tmpfiles.d/x11.conf 25-2 systemd -- "$@"
 
 #DEBHELPER#

@@ -2,12 +2,12 @@
 .\"     Title: systemd-tmpfiles
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd-tmpfiles
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\-TMPFILES" "8" "10/11/2011" "systemd" "systemd-tmpfiles"
+.TH "SYSTEMD\-TMPFILES" "8" "02/15/2012" "systemd" "systemd-tmpfiles"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -48,7 +48,7 @@ The following options are understood:
 .PP
 \fB\-\-create\fR
 .RS 4
-If this option is passed all files and directories marked with f, F, d, D in the configuration files are created\&.
+If this option is passed all files and directories marked with f, F, d, D in the configuration files are created\&. Files and directories marked with z, Z have their ownership, access mode and security labels set\&.
 .RE
 .PP
 \fB\-\-clean\fR
