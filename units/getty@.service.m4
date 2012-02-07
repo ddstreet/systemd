@@ -8,7 +8,7 @@
 [Unit]
 Description=Getty on %I
 BindTo=dev-%i.device
-After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service openvpn.service apache2.service
+After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service
 m4_ifdef(`TARGET_FEDORA',
 After=rc-local.service
 )m4_dnl
@@ -22,6 +22,9 @@ m4_ifdef(`TARGET_ALTLINUX',
 After=rc-local.service
 )m4_dnl
 m4_ifdef(`TARGET_MANDRIVA',
+After=rc-local.service
+)m4_dnl
+m4_ifdef(`TARGET_MAGEIA',
 After=rc-local.service
 )m4_dnl
 
@@ -41,6 +44,7 @@ TTYReset=yes
 TTYVHangup=yes
 TTYVTDisallocate=yes
 KillMode=process
+IgnoreSIGPIPE=no
 
 # Unset locale for the console getty since the console has problems
 # displaying some internationalized messages.

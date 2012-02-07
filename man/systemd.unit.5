@@ -2,12 +2,12 @@
 .\"     Title: systemd.unit
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd.unit
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.UNIT" "5" "10/11/2011" "systemd" "systemd.unit"
+.TH "SYSTEMD\&.UNIT" "5" "02/15/2012" "systemd" "systemd.unit"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -343,6 +343,11 @@ or
 Lists one or more units that are activated when this unit enters the \*(Aqfailed\*(Aq state\&.
 .RE
 .PP
+\fIPropagateReloadTo=\fR, \fIPropagateReloadFrom=\fR
+.RS 4
+Lists one or more units where reload requests on the unit will be propagated to/on the other unit will be propagated from\&. Issuing a reload request on a unit will automatically also enqueue a reload request on all units that the reload request shall be propagated to via these two settings\&.
+.RE
+.PP
 \fIOnFailureIsolate=\fR
 .RS 4
 Takes a boolean argument\&. If
@@ -463,6 +468,7 @@ to test against a specific type of virtualization solution, or one of
 \fIchroot\fR,
 \fIopenvz\fR,
 \fIlxc\fR,
+\fIlxc\-libvirt\fR,
 \fIsystemd\-nspawn\fR,
 \fIpidns\fR
 to test against a specific implementation\&. If multiple virtualization technologies are nested only the innermost is considered\&. The test may be negated by prepending an exclamation mark\&.

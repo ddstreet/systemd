@@ -15,4 +15,3 @@ Before=sockets.target
 [Socket]
 ListenFIFO=/dev/initctl
 SocketMode=0600
-ExecStartPost=/bin/ln -sf /dev/initctl /run/initctl

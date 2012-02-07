@@ -5,16 +5,68 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (37-1.1) unstable; urgency=low
+ systemd (43-1) experimental; urgency=low
  .
-   * Non-maintainer upload with Tollef's consent.
-   * Remove --parallel to workaround a bug in automake 1.11.3 which doesn't
-     generate parallel-safe build rules. Closes: #661842
-   * Create a compat symlink /run/initctl → /dev/initctl to work with newer
-     versions of sysvinit. Closes: #657979
-Author: Michael Biebl <biebl@debian.org>
+   [ Tollef Fog Heen ]
+   * Target upload at experimental due to libkmod dependency
+   * New upstream release
+     - Update bash-completion for new verbs and arguments. Closes: #650739
+     - Fixes local DoS (CVE-2012-1101).  Closes: #662029
+     - No longer complains if the kernel lacks audit support.  Closes: #642503
+   * Fix up git-to-source package conversion script which makes gitpkg
+     happier.
+   * Add libkmod-dev to build-depends
+   * Add symlink from /bin/systemd to /lib/systemd/systemd.
+   * Add --with-distro=debian to configure flags, due to no /etc/os-release
+     yet.
+   * Add new symbols for libsystemd-login0 to symbols file.
+   * Install a tmpfiles.d file for the /dev/initctl → /run/initctl
+     migration.  Closes: #657979
+   * Disable coredump handling, it's not ready yet.
+   * If /run is a symlink, don't try to do the /var/run → /run migration.
+     Ditto for /var/lock → /run/lock.  Closes: #647495
+ .
+   [ Michael Biebl ]
+   * Add Build-Depends on liblzma-dev for journal log compression.
+   * Add Build-Depends on libgee-dev, required to build systemadm.
+   * Bump Standards-Version to 3.9.2. No further changes.
+   * Add versioned Build-Depends on automake and autoconf to ensure we have
+     recent enough versions. Closes: #657284
+   * Add packages for libsystemd-journal and libsystemd-id128.
+   * Update symbols file for libsystemd-login.
+   * Update configure flags, use rootprefix instead of rootdir.
+   * Copy intltool files instead of symlinking them.
+   * Re-indent init-functions script.
+   * Remove workarounds for services using X-Interactive. The LSB X-Interactive
+     support turned out to be broken and has been removed upstream so we no
+     longer need any special handling for those type of services.
+   * Install new systemd-journalctl, systemd-cat and systemd-cgtop binaries.
+   * Install /var/lib/systemd directory.
+   * Install /var/log/journal directory where the journal files are stored
+     persistently.
+   * Setup systemd-journald to not read from /proc/kmsg (ImportKernel=no).
+   * Avoid error messages from systemctl in postinst if systemd is not running
+     by checking for /sys/fs/cgroup/systemd before executing systemctl.
+     Closes: #642749
+   * Stop installing lib-init-rw (auto)mount units and try to cleanup
+     /lib/init/rw in postinst. Bump dependency on initscripts accordingly.
+     Closes: #643699
+   * Disable pam_systemd for non-interactive sessions to work around an issue
+     with sudo.
+   * Use new dh_installdeb maintscript facility to handle obsolete conffiles.
+     Bump Build-Depends on debhelper accordingly.
+   * Rename bash completion file systemctl-bash-completion.sh →
+     systemd-bash-completion.sh.
+   * Update /sbin/init symlink. The systemd binary was moved to $pkglibdir.
+Author: Tollef Fog Heen <tfheen@debian.org>
+Bug-Debian: http://bugs.debian.org/642503
+Bug-Debian: http://bugs.debian.org/642749
+Bug-Debian: http://bugs.debian.org/643699
+Bug-Debian: http://bugs.debian.org/647495
+Bug-Debian: http://bugs.debian.org/650739
+Bug-Debian: http://bugs.debian.org/657284
 Bug-Debian: http://bugs.debian.org/657979
-Bug-Debian: http://bugs.debian.org/661842
+Bug-Debian: http://bugs.debian.org/662029
 
 ---
 The information above should follow the Patch Tagging Guidelines, please
@@ -30,7 +82,7 @@ Reviewed-By: <name and email of someone who approved the patch>
 Last-Update: <YYYY-MM-DD>
 
 --- /dev/null
-+++ systemd-37/CODING_STYLE
++++ systemd-43/CODING_STYLE
 @@ -0,0 +1,27 @@
 +
 +- 8ch indent, no tabs
@@ -60,7 +112,7 @@ Last-Update: <YYYY-MM-DD>
 +- Don't synchronously talk to any other service, due to risk of
 +  deadlocks.
 --- /dev/null
-+++ systemd-37/.dir-locals.el
++++ systemd-43/.dir-locals.el
 @@ -0,0 +1,7 @@
 +; Sets emacs variables based on mode.
 +; A list of (major-mode . ((var1 . value1) (var2 . value2)))
@@ -70,20 +122,25 @@ Last-Update: <YYYY-MM-DD>
 +         (tab-width . 8)))
 +)
 --- /dev/null
-+++ systemd-37/.mailmap
++++ systemd-43/.vimrc
+@@ -0,0 +1,4 @@
++" 'set exrc' in ~/.vimrc will read .vimrc from the current directory
++set tabstop=8
++set shiftwidth=8
++set expandtab
+--- /dev/null
++++ systemd-43/.mailmap
 @@ -0,0 +1,4 @@
 +Kay Sievers <kay.sievers@vrfy.org> <kay.sievers@suse.de>
 +Robert Gerus <ar@bash.org.pl> Robert "arachnist" Gerus <ar@bash.org.pl>
 +Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> Zbyszek Szmek <zbyszek@in.waw.pl>
 +Fabiano Fidêncio <fabianofidencio@gmail.com> Fabiano Fidencio <fidencio@profusion.mobi>
 --- /dev/null
-+++ systemd-37/autogen.sh
-@@ -0,0 +1,83 @@
++++ systemd-43/autogen.sh
+@@ -0,0 +1,56 @@
 +#!/bin/bash
 +
 +#  This file is part of systemd.
-+#
-+#  Copyright 2010 Lennart Poettering
 +#
 +#  systemd is free software; you can redistribute it and/or modify it
 +#  under the terms of the GNU General Public License as published by
@@ -98,82 +155,58 @@ Last-Update: <YYYY-MM-DD>
 +#  You should have received a copy of the GNU General Public License
 +#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
 +
-+AM_VERSION=1.11
-+AC_VERSION=2.63
-+
-+run_versioned() {
-+    local P
-+    local V
-+
-+    V=$(echo "$2" | sed -e 's,\.,,g')
-+
-+    if [ -e "`which $1$V 2> /dev/null`" ] ; then
-+        P="$1$V"
-+    else
-+        if [ -e "`which $1-$2 2> /dev/null`" ] ; then
-+            P="$1-$2"
-+        else
-+            P="$1"
-+        fi
-+    fi
-+
-+    shift 2
-+    "$P" "$@"
-+}
-+
-+set -ex
-+
 +if [ -f .git/hooks/pre-commit.sample -a ! -f .git/hooks/pre-commit ] ; then
 +    cp -p .git/hooks/pre-commit.sample .git/hooks/pre-commit && \
 +    chmod +x .git/hooks/pre-commit && \
 +    echo "Activated pre-commit hook."
 +fi
 +
-+if type -p colorgcc > /dev/null ; then
-+   export CC=colorgcc
-+fi
++intltoolize --force --automake
++autoreconf --force --install --symlink
 +
 +libdir() {
 +    echo $(cd $1/$(gcc -print-multi-os-directory); pwd)
 +}
 +
-+if [ "x$1" = "xam" ] ; then
-+    run_versioned automake "$AM_VERSION" -a -c --foreign
-+    ./config.status
++args="\
++--sysconfdir=/etc \
++--localstatedir=/var \
++--libdir=$(libdir /usr/lib) \
++--libexecdir=/usr/lib"
++
++if [ ! -L /bin ]; then
++args="$args \
++--with-rootprefix= \
++--with-rootlibdir=$(libdir /lib) \
++"
++fi
++
++if [ "x$1" != "xc" ]; then
++    echo
++    echo "----------------------------------------------------------------"
++    echo "Initialized build system. For a common configuration please run:"
++    echo "----------------------------------------------------------------"
++    echo
++    echo "./configure CFLAGS='-g -O0' $args"
++    echo
 +else
-+    rm -rf autom4te.cache
-+    rm -f config.cache
-+
-+    libtoolize -c --force
-+    intltoolize -c -f
-+    run_versioned aclocal "$AM_VERSION" -I m4
-+    run_versioned autoconf "$AC_VERSION" -Wall
-+    run_versioned autoheader "$AC_VERSION"
-+    run_versioned automake "$AM_VERSION" --copy --foreign --add-missing
-+
-+    if [ "x$1" != "xac" ]; then
-+        CFLAGS="$CFLAGS -g -O0" ./configure \
-+          --sysconfdir=/etc \
-+          --localstatedir=/var \
-+          --libexecdir=/usr/lib \
-+          --libdir=$(libdir /usr/local/lib) \
-+          --with-rootdir= \
-+          "$@"
-+        make clean
-+    fi
++    echo ./configure CFLAGS='-g -O0' $args
++    ./configure CFLAGS='-g -O0' $args
++    make clean
 +fi
 --- /dev/null
-+++ systemd-37/po/pl.po
-@@ -0,0 +1,166 @@
++++ systemd-43/po/pl.po
+@@ -0,0 +1,175 @@
 +# translation of pl.po to Polish
 +# Piotr Drąg <piotrdrag@gmail.com>, 2011.
++# Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl>, 2011.
 +#
 +msgid ""
 +msgstr ""
 +"Project-Id-Version: systemd\n"
 +"Report-Msgid-Bugs-To: \n"
-+"POT-Creation-Date: 2011-08-22 15:43+0200\n"
-+"PO-Revision-Date: 2011-08-22 15:45+0200\n"
++"POT-Creation-Date: 2011-10-14 16:18+0200\n"
++"PO-Revision-Date: 2011-10-14 16:20+0200\n"
 +"Last-Translator: Piotr Drąg <piotrdrag@gmail.com>\n"
 +"Language-Team: Polish <trans-pl@lists.fedoraproject.org>\n"
 +"Language: pl\n"
@@ -211,10 +244,18 @@ Last-Update: <YYYY-MM-DD>
 +msgstr "Ustawienie statycznej nazwy komputera"
 +
 +#: ../src/org.freedesktop.locale1.policy.in.h:1
++msgid "Authentication is required to set the system keyboard settings."
++msgstr "Wymagane jest uwierzytelnienie, aby ustawić klawiaturę systemu."
++
++#: ../src/org.freedesktop.locale1.policy.in.h:2
 +msgid "Authentication is required to set the system locale."
 +msgstr "Wymagane jest uwierzytelnienie, aby ustawić lokalizację systemu."
 +
-+#: ../src/org.freedesktop.locale1.policy.in.h:2
++#: ../src/org.freedesktop.locale1.policy.in.h:3
++msgid "Set system keyboard settings"
++msgstr "Ustawienie klawiatury systemu"
++
++#: ../src/org.freedesktop.locale1.policy.in.h:4
 +msgid "Set system locale"
 +msgstr "Ustawienie lokalizacji systemu"
 +
@@ -331,41 +372,39 @@ Last-Update: <YYYY-MM-DD>
 +#: ../src/org.freedesktop.timedate1.policy.in.h:8
 +msgid "Turn network time synchronization on or off"
 +msgstr "Włączenie lub wyłączenie synchronizacji czasu przez sieć"
---- systemd-37.orig/units/remount-rootfs.service
-+++ systemd-37/units/remount-rootfs.service
-@@ -10,7 +10,7 @@ Description=Remount Root FS
- DefaultDependencies=no
- Conflicts=shutdown.target
- After=systemd-readahead-collect.service systemd-readahead-replay.service fsck-root.service
--Before=local-fs-pre.target local-fs.target shutdown.target
-+Before=local-fs-pre.target local-fs.target shutdown.target mountoverflowtmp.service
- Wants=local-fs-pre.target
- 
- [Service]
---- systemd-37.orig/units/getty@.service.m4
-+++ systemd-37/units/getty@.service.m4
-@@ -8,7 +8,7 @@
- [Unit]
- Description=Getty on %I
- BindTo=dev-%i.device
--After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service
-+After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service openvpn.service apache2.service
- m4_ifdef(`TARGET_FEDORA',
- After=rc-local.service
- )m4_dnl
---- systemd-37.orig/tmpfiles.d/legacy.conf
-+++ systemd-37/tmpfiles.d/legacy.conf
-@@ -17,6 +17,6 @@
- # On modern systems a BSD file lock is a better choice if
- # serialization is needed on those devices.
- 
--d /run/lock 0755 root root -
-+d /run/lock 1777 root root -
- d /run/lock/subsys 0755 root root -
--d /run/lock/lockdev 0775 root lock -
-+d /run/lock/lockdev 0775 root root -
 --- /dev/null
-+++ systemd-37/src/generate-kbd-model-map
++++ systemd-43/src/Makefile
+@@ -0,0 +1,28 @@
++#  This file is part of systemd.
++#
++#  Copyright 2010 Lennart Poettering
++#
++#  systemd is free software; you can redistribute it and/or modify it
++#  under the terms of the GNU General Public License as published by
++#  the Free Software Foundation; either version 2 of the License, or
++#  (at your option) any later version.
++#
++#  systemd is distributed in the hope that it will be useful, but
++#  WITHOUT ANY WARRANTY; without even the implied warranty of
++#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++#  General Public License for more details.
++#
++#  You should have received a copy of the GNU General Public License
++#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
++
++# This file is a dirty trick to simplify compilation from within
++# emacs. This file is not intended to be distributed. So, don't touch
++# it, even better ignore it!
++
++all:
++	$(MAKE) -C ..
++
++clean:
++	$(MAKE) -C .. clean
++
++.PHONY: all clean
+--- /dev/null
++++ systemd-43/src/locale/generate-kbd-model-map
 @@ -0,0 +1,33 @@
 +#!/usr/bin/python
 +
@@ -400,35 +439,89 @@ Last-Update: <YYYY-MM-DD>
 +        print ''.join((tab_extend(key, 3), tab_extend(value[1]),
 +                       tab_extend(value[2], 2), tab_extend(value[3], 2),
 +                       options))
---- systemd-37.orig/src/service.c
-+++ systemd-37/src/service.c
-@@ -83,7 +83,7 @@ static const struct {
- 
- #define RUNLEVELS_UP "12345"
- /* #define RUNLEVELS_DOWN "06" */
--/* #define RUNLEVELS_BOOT "bBsS" */
-+#define RUNLEVELS_BOOT "bBsS"
- #endif
- 
- static const UnitActiveState state_translation_table[_SERVICE_STATE_MAX] = {
-@@ -811,6 +811,13 @@ static int service_load_sysv_path(Servic
- 
-         if ((r = sysv_exec_commands(s)) < 0)
-                 goto finish;
-+        if (s->sysv_runlevels &&
-+            chars_intersect(RUNLEVELS_BOOT, s->sysv_runlevels) &&
-+            chars_intersect(RUNLEVELS_UP, s->sysv_runlevels)) {
-+                /* Service has both boot and "up" runlevels
-+                   configured.  Kill the "up" ones. */
-+                delete_chars(s->sysv_runlevels, RUNLEVELS_UP);
-+        }
- 
-         if (s->sysv_runlevels && !chars_intersect(RUNLEVELS_UP, s->sysv_runlevels)) {
-                 /* If there a runlevels configured for this service
---- systemd-37.orig/units/systemd-initctl.socket
-+++ systemd-37/units/systemd-initctl.socket
-@@ -15,3 +15,4 @@ Before=sockets.target
- [Socket]
- ListenFIFO=/dev/initctl
- SocketMode=0600
-+ExecStartPost=/bin/ln -sf /dev/initctl /run/initctl
+--- /dev/null
++++ systemd-43/test/b.service
+@@ -0,0 +1,6 @@
++[Unit]
++Description=B
++Wants=f.service
++
++[Service]
++ExecStart=/bin/true
+--- /dev/null
++++ systemd-43/test/f.service
+@@ -0,0 +1,5 @@
++[Unit]
++Description=F
++
++[Service]
++ExecStart=/bin/true
+--- /dev/null
++++ systemd-43/test/g.service
+@@ -0,0 +1,6 @@
++[Unit]
++Description=G
++Conflicts=e.service
++
++[Service]
++ExecStart=/bin/true
+--- /dev/null
++++ systemd-43/test/a.service
+@@ -0,0 +1,7 @@
++[Unit]
++Description=A
++Requires=b.service
++Before=b.service
++
++[Service]
++ExecStart=/bin/true
+--- /dev/null
++++ systemd-43/test/h.service
+@@ -0,0 +1,6 @@
++[Unit]
++Description=H
++Wants=g.service
++
++[Service]
++ExecStart=/bin/true
+--- /dev/null
++++ systemd-43/test/c.service
+@@ -0,0 +1,6 @@
++[Unit]
++Description=C
++Requires=a.service
++
++[Service]
++ExecStart=/bin/true
+--- /dev/null
++++ systemd-43/test/d.service
+@@ -0,0 +1,8 @@
++[Unit]
++Description=D:Cyclic
++After=b.service
++Before=a.service
++Requires=a.service
++
++[Service]
++ExecStart=/bin/true
+--- /dev/null
++++ systemd-43/test/Makefile
+@@ -0,0 +1,7 @@
++# Just a little hook script to easy building when in this directory
++
++all:
++	$(MAKE) -C ..
++
++clean:
++	$(MAKE) -C .. clean
+--- /dev/null
++++ systemd-43/test/e.service
+@@ -0,0 +1,8 @@
++[Unit]
++Description=E:Cyclic
++After=b.service
++Before=a.service
++Wants=a.service
++
++[Service]
++ExecStart=/bin/true
