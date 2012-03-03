@@ -1,3 +1,13 @@
+systemd (37-1.1) unstable; urgency=low
+
+  * Non-maintainer upload with Tollef's consent.
+  * Remove --parallel to workaround a bug in automake 1.11.3 which doesn't
+    generate parallel-safe build rules. Closes: #661842
+  * Create a compat symlink /run/initctl → /dev/initctl to work with newer
+    versions of sysvinit. Closes: #657979
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 03 Mar 2012 17:42:10 +0100
+
 systemd (37-1) unstable; urgency=low
 
   [ Tollef Fog Heen ]

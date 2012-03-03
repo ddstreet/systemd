@@ -5,33 +5,16 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (37-1) unstable; urgency=low
+ systemd (37-1.1) unstable; urgency=low
  .
-   [ Tollef Fog Heen ]
-   * New upstream version
-   * Change the type of the debian-fixup service to oneshot.
-     Closes: #642961
-   * Add ConditionPathIsDirectory to lib-init-rw.automount and
-     lib-init-rw.mount so we only activate the unit if the directory
-     exists.  Closes: #633059
-   * If a sysv service exists in both rcS and rcN.d runlevels, drop the
-     rcN.d ones to avoid loops.  Closes: #637037
-   * Blacklist fuse init script, we do the same work already internally.
-     Closes: #643700
-   * Update README.Debian slightly for /run rather than /lib/init/rw
- .
-   [ Josh Triplett ]
-   * Do a one-time migration of the $TMPTIME setting from /etc/default/rcS to
-     /etc/tmpfiles.d/tmp.conf. If /etc/default/rcS has a TMPTIME setting of
-     "infinite" or equivalent, migrate it to an /etc/tmpfiles.d/tmp.conf that
-     overrides the default /usr/lib/tmpfiles.d/tmp.conf and avoids clearing
-     /tmp.  Closes: #643698
-Author: Tollef Fog Heen <tfheen@debian.org>
-Bug-Debian: http://bugs.debian.org/633059
-Bug-Debian: http://bugs.debian.org/637037
-Bug-Debian: http://bugs.debian.org/642961
-Bug-Debian: http://bugs.debian.org/643698
-Bug-Debian: http://bugs.debian.org/643700
+   * Non-maintainer upload with Tollef's consent.
+   * Remove --parallel to workaround a bug in automake 1.11.3 which doesn't
+     generate parallel-safe build rules. Closes: #661842
+   * Create a compat symlink /run/initctl → /dev/initctl to work with newer
+     versions of sysvinit. Closes: #657979
+Author: Michael Biebl <biebl@debian.org>
+Bug-Debian: http://bugs.debian.org/657979
+Bug-Debian: http://bugs.debian.org/661842
 
 ---
 The information above should follow the Patch Tagging Guidelines, please
@@ -442,3 +425,10 @@ Last-Update: <YYYY-MM-DD>
  
          if (s->sysv_runlevels && !chars_intersect(RUNLEVELS_UP, s->sysv_runlevels)) {
                  /* If there a runlevels configured for this service
+--- systemd-37.orig/units/systemd-initctl.socket
++++ systemd-37/units/systemd-initctl.socket
+@@ -15,3 +15,4 @@ Before=sockets.target
+ [Socket]
+ ListenFIFO=/dev/initctl
+ SocketMode=0600
++ExecStartPost=/bin/ln -sf /dev/initctl /run/initctl
