@@ -184,281 +184,275 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @HAVE_PLYMOUTH_TRUE@am__append_23 = \
 @HAVE_PLYMOUTH_TRUE@	units/systemd-ask-password-plymouth.service.in
 
-@ENABLE_MANPAGES_TRUE@am__append_24 = \
-@ENABLE_MANPAGES_TRUE@	$(XML_FILES) \
-@ENABLE_MANPAGES_TRUE@	$(XML_IN_FILES) \
-@ENABLE_MANPAGES_TRUE@	${nodist_man_MANS:=.in} \
-@ENABLE_MANPAGES_TRUE@	${XML_IN_FILES:.xml.in=.html.in}
-
-@HAVE_ACL_TRUE@am__append_25 = \
+@HAVE_ACL_TRUE@am__append_24 = \
 @HAVE_ACL_TRUE@	src/acl-util.c
 
-@HAVE_XZ_TRUE@am__append_26 = \
+@HAVE_XZ_TRUE@am__append_25 = \
 @HAVE_XZ_TRUE@	src/journal/compress.c
+
+@HAVE_XZ_TRUE@am__append_26 = \
+@HAVE_XZ_TRUE@	$(XZ_CFLAGS)
 
 @HAVE_XZ_TRUE@am__append_27 = \
-@HAVE_XZ_TRUE@	$(XZ_CFLAGS)
+@HAVE_XZ_TRUE@	$(XZ_LIBS)
 
 @HAVE_XZ_TRUE@am__append_28 = \
-@HAVE_XZ_TRUE@	$(XZ_LIBS)
+@HAVE_XZ_TRUE@	src/journal/compress.c
 
 @HAVE_XZ_TRUE@am__append_29 = \
-@HAVE_XZ_TRUE@	src/journal/compress.c
+@HAVE_XZ_TRUE@	$(XZ_LIBS)
 
 @HAVE_XZ_TRUE@am__append_30 = \
-@HAVE_XZ_TRUE@	$(XZ_LIBS)
+@HAVE_XZ_TRUE@	src/journal/compress.c
 
 @HAVE_XZ_TRUE@am__append_31 = \
-@HAVE_XZ_TRUE@	src/journal/compress.c
+@HAVE_XZ_TRUE@	$(XZ_LIBS)
 
 @HAVE_XZ_TRUE@am__append_32 = \
-@HAVE_XZ_TRUE@	$(XZ_LIBS)
-
-@HAVE_XZ_TRUE@am__append_33 = \
 @HAVE_XZ_TRUE@	src/journal/compress.c
 
-@HAVE_XZ_TRUE@am__append_34 = \
+@HAVE_XZ_TRUE@am__append_33 = \
 @HAVE_XZ_TRUE@	$(XZ_CFLAGS)
 
-@HAVE_XZ_TRUE@am__append_35 = \
+@HAVE_XZ_TRUE@am__append_34 = \
 @HAVE_XZ_TRUE@	$(XZ_LIBS)
 
-@ENABLE_COREDUMP_TRUE@am__append_36 = \
+@ENABLE_COREDUMP_TRUE@am__append_35 = \
 @ENABLE_COREDUMP_TRUE@	systemd-coredump
 
-@ENABLE_COREDUMP_TRUE@am__append_37 = \
+@ENABLE_COREDUMP_TRUE@am__append_36 = \
 @ENABLE_COREDUMP_TRUE@	sysctl.d/coredump.conf.in
 
-@ENABLE_COREDUMP_TRUE@am__append_38 = \
+@ENABLE_COREDUMP_TRUE@am__append_37 = \
 @ENABLE_COREDUMP_TRUE@	sysctl.d/coredump.conf
 
-@ENABLE_BINFMT_TRUE@am__append_39 = \
+@ENABLE_BINFMT_TRUE@am__append_38 = \
 @ENABLE_BINFMT_TRUE@	systemd-binfmt
 
-@ENABLE_BINFMT_TRUE@am__append_40 = \
+@ENABLE_BINFMT_TRUE@am__append_39 = \
 @ENABLE_BINFMT_TRUE@	units/proc-sys-fs-binfmt_misc.automount \
 @ENABLE_BINFMT_TRUE@	units/proc-sys-fs-binfmt_misc.mount
 
-@ENABLE_BINFMT_TRUE@am__append_41 = \
+@ENABLE_BINFMT_TRUE@am__append_40 = \
 @ENABLE_BINFMT_TRUE@	units/systemd-binfmt.service
 
-@ENABLE_BINFMT_TRUE@am__append_42 = \
+@ENABLE_BINFMT_TRUE@am__append_41 = \
 @ENABLE_BINFMT_TRUE@	binfmt-install-data-hook
 
-@ENABLE_BINFMT_TRUE@am__append_43 = \
+@ENABLE_BINFMT_TRUE@am__append_42 = \
 @ENABLE_BINFMT_TRUE@	man/binfmt.d.5
 
-@ENABLE_BINFMT_TRUE@am__append_44 = \
+@ENABLE_BINFMT_TRUE@am__append_43 = \
 @ENABLE_BINFMT_TRUE@	units/systemd-binfmt.service.in
 
-@ENABLE_VCONSOLE_TRUE@am__append_45 = \
+@ENABLE_VCONSOLE_TRUE@am__append_44 = \
 @ENABLE_VCONSOLE_TRUE@	systemd-vconsole-setup
 
-@ENABLE_VCONSOLE_TRUE@am__append_46 = \
+@ENABLE_VCONSOLE_TRUE@am__append_45 = \
 @ENABLE_VCONSOLE_TRUE@	units/systemd-vconsole-setup.service
 
-@ENABLE_VCONSOLE_TRUE@am__append_47 = \
+@ENABLE_VCONSOLE_TRUE@am__append_46 = \
 @ENABLE_VCONSOLE_TRUE@	vconsole-install-data-hook
 
-@ENABLE_VCONSOLE_TRUE@am__append_48 = \
+@ENABLE_VCONSOLE_TRUE@am__append_47 = \
 @ENABLE_VCONSOLE_TRUE@	man/vconsole.conf.5
 
-@ENABLE_VCONSOLE_TRUE@am__append_49 = \
+@ENABLE_VCONSOLE_TRUE@am__append_48 = \
 @ENABLE_VCONSOLE_TRUE@	units/systemd-vconsole-setup.service.in
 
-@ENABLE_READAHEAD_TRUE@am__append_50 = \
+@ENABLE_READAHEAD_TRUE@am__append_49 = \
 @ENABLE_READAHEAD_TRUE@	systemd-readahead-collect \
 @ENABLE_READAHEAD_TRUE@	systemd-readahead-replay
 
-@ENABLE_READAHEAD_TRUE@am__append_51 = \
+@ENABLE_READAHEAD_TRUE@am__append_50 = \
 @ENABLE_READAHEAD_TRUE@	units/systemd-readahead-done.timer
 
-@ENABLE_READAHEAD_TRUE@am__append_52 = \
+@ENABLE_READAHEAD_TRUE@am__append_51 = \
 @ENABLE_READAHEAD_TRUE@	units/systemd-readahead-collect.service \
 @ENABLE_READAHEAD_TRUE@	units/systemd-readahead-replay.service \
 @ENABLE_READAHEAD_TRUE@	units/systemd-readahead-done.service
 
-@ENABLE_READAHEAD_TRUE@am__append_53 = \
+@ENABLE_READAHEAD_TRUE@am__append_52 = \
 @ENABLE_READAHEAD_TRUE@	src/systemd/sd-readahead.h \
 @ENABLE_READAHEAD_TRUE@	src/readahead/readahead-common.h \
 @ENABLE_READAHEAD_TRUE@	units/systemd-readahead-collect.service.in \
 @ENABLE_READAHEAD_TRUE@	units/systemd-readahead-replay.service.in \
 @ENABLE_READAHEAD_TRUE@	units/systemd-readahead-done.service.in
 
-@ENABLE_READAHEAD_TRUE@am__append_54 = \
+@ENABLE_READAHEAD_TRUE@am__append_53 = \
 @ENABLE_READAHEAD_TRUE@	man/sd_readahead.3 \
 @ENABLE_READAHEAD_TRUE@	man/sd-readahead.7
 
 
 # ------------------------------------------------------------------------------
-@ENABLE_QUOTACHECK_TRUE@am__append_55 = \
+@ENABLE_QUOTACHECK_TRUE@am__append_54 = \
 @ENABLE_QUOTACHECK_TRUE@	systemd-quotacheck
 
-@ENABLE_QUOTACHECK_TRUE@am__append_56 = \
+@ENABLE_QUOTACHECK_TRUE@am__append_55 = \
 @ENABLE_QUOTACHECK_TRUE@	units/quotacheck.service
 
-@ENABLE_QUOTACHECK_TRUE@am__append_57 = \
+@ENABLE_QUOTACHECK_TRUE@am__append_56 = \
 @ENABLE_QUOTACHECK_TRUE@	units/quotacheck.service.in
 
 
 # ------------------------------------------------------------------------------
-@ENABLE_RANDOMSEED_TRUE@am__append_58 = \
+@ENABLE_RANDOMSEED_TRUE@am__append_57 = \
 @ENABLE_RANDOMSEED_TRUE@	systemd-random-seed
 
-@ENABLE_RANDOMSEED_TRUE@am__append_59 = \
+@ENABLE_RANDOMSEED_TRUE@am__append_58 = \
 @ENABLE_RANDOMSEED_TRUE@	units/systemd-random-seed-save.service \
 @ENABLE_RANDOMSEED_TRUE@	units/systemd-random-seed-load.service
 
-@ENABLE_RANDOMSEED_TRUE@am__append_60 = \
+@ENABLE_RANDOMSEED_TRUE@am__append_59 = \
 @ENABLE_RANDOMSEED_TRUE@	units/systemd-random-seed-save.service.in \
 @ENABLE_RANDOMSEED_TRUE@	units/systemd-random-seed-load.service.in
 
-@ENABLE_RANDOMSEED_TRUE@am__append_61 = \
+@ENABLE_RANDOMSEED_TRUE@am__append_60 = \
 @ENABLE_RANDOMSEED_TRUE@	randomseed-install-data-hook
 
 
 # ------------------------------------------------------------------------------
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_62 = \
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_61 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	systemd-cryptsetup
 
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_63 = \
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_62 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	systemd-cryptsetup-generator
 
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_64 = \
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_63 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	units/cryptsetup.target
 
-@HAVE_LIBCRYPTSETUP_TRUE@am__append_65 = \
+@HAVE_LIBCRYPTSETUP_TRUE@am__append_64 = \
 @HAVE_LIBCRYPTSETUP_TRUE@	cryptsetup-install-data-hook
 
-@ENABLE_HOSTNAMED_TRUE@am__append_66 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_65 = \
 @ENABLE_HOSTNAMED_TRUE@	systemd-hostnamed
 
-@ENABLE_HOSTNAMED_TRUE@am__append_67 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_66 = \
 @ENABLE_HOSTNAMED_TRUE@	units/systemd-hostnamed.service
 
-@ENABLE_HOSTNAMED_TRUE@am__append_68 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_67 = \
 @ENABLE_HOSTNAMED_TRUE@	src/hostname/org.freedesktop.hostname1.conf
 
-@ENABLE_HOSTNAMED_TRUE@am__append_69 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_68 = \
 @ENABLE_HOSTNAMED_TRUE@	src/hostname/org.freedesktop.hostname1.service
 
-@ENABLE_HOSTNAMED_TRUE@am__append_70 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_69 = \
 @ENABLE_HOSTNAMED_TRUE@	src/hostname/org.freedesktop.hostname1.policy.in
 
-@ENABLE_HOSTNAMED_TRUE@am__append_71 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_70 = \
 @ENABLE_HOSTNAMED_TRUE@	org.freedesktop.hostname1.xml
 
-@ENABLE_HOSTNAMED_TRUE@am__append_72 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_71 = \
 @ENABLE_HOSTNAMED_TRUE@	hostnamed-install-data-hook
 
-@ENABLE_HOSTNAMED_TRUE@am__append_73 = \
+@ENABLE_HOSTNAMED_TRUE@am__append_72 = \
 @ENABLE_HOSTNAMED_TRUE@	units/systemd-hostnamed.service.in
 
-@ENABLE_LOCALED_TRUE@am__append_74 = \
+@ENABLE_LOCALED_TRUE@am__append_73 = \
 @ENABLE_LOCALED_TRUE@	units/systemd-localed.service
 
-@ENABLE_LOCALED_TRUE@am__append_75 = \
+@ENABLE_LOCALED_TRUE@am__append_74 = \
 @ENABLE_LOCALED_TRUE@	systemd-localed
 
-@ENABLE_LOCALED_TRUE@am__append_76 = \
+@ENABLE_LOCALED_TRUE@am__append_75 = \
 @ENABLE_LOCALED_TRUE@	src/locale/org.freedesktop.locale1.conf
 
-@ENABLE_LOCALED_TRUE@am__append_77 = \
+@ENABLE_LOCALED_TRUE@am__append_76 = \
 @ENABLE_LOCALED_TRUE@	src/locale/org.freedesktop.locale1.service
 
-@ENABLE_LOCALED_TRUE@am__append_78 = \
+@ENABLE_LOCALED_TRUE@am__append_77 = \
 @ENABLE_LOCALED_TRUE@	src/locale/org.freedesktop.locale1.policy.in
 
-@ENABLE_LOCALED_TRUE@am__append_79 = \
+@ENABLE_LOCALED_TRUE@am__append_78 = \
 @ENABLE_LOCALED_TRUE@	org.freedesktop.locale1.xml
 
-@ENABLE_LOCALED_TRUE@am__append_80 = \
+@ENABLE_LOCALED_TRUE@am__append_79 = \
 @ENABLE_LOCALED_TRUE@	localed-install-data-hook
 
-@ENABLE_LOCALED_TRUE@am__append_81 = \
+@ENABLE_LOCALED_TRUE@am__append_80 = \
 @ENABLE_LOCALED_TRUE@	units/systemd-localed.service.in
 
-@ENABLE_TIMEDATED_TRUE@am__append_82 = \
+@ENABLE_TIMEDATED_TRUE@am__append_81 = \
 @ENABLE_TIMEDATED_TRUE@	systemd-timedated
 
-@ENABLE_TIMEDATED_TRUE@am__append_83 = \
+@ENABLE_TIMEDATED_TRUE@am__append_82 = \
 @ENABLE_TIMEDATED_TRUE@	src/timedate/org.freedesktop.timedate1.service
 
-@ENABLE_TIMEDATED_TRUE@am__append_84 = \
+@ENABLE_TIMEDATED_TRUE@am__append_83 = \
 @ENABLE_TIMEDATED_TRUE@	src/timedate/org.freedesktop.timedate1.conf
 
-@ENABLE_TIMEDATED_TRUE@am__append_85 = \
+@ENABLE_TIMEDATED_TRUE@am__append_84 = \
 @ENABLE_TIMEDATED_TRUE@	units/systemd-timedated.service
 
-@ENABLE_TIMEDATED_TRUE@am__append_86 = \
+@ENABLE_TIMEDATED_TRUE@am__append_85 = \
 @ENABLE_TIMEDATED_TRUE@	src/timedate/org.freedesktop.timedate1.policy.in
 
-@ENABLE_TIMEDATED_TRUE@am__append_87 = \
+@ENABLE_TIMEDATED_TRUE@am__append_86 = \
 @ENABLE_TIMEDATED_TRUE@	org.freedesktop.timedate1.xml
 
-@ENABLE_TIMEDATED_TRUE@am__append_88 = \
+@ENABLE_TIMEDATED_TRUE@am__append_87 = \
 @ENABLE_TIMEDATED_TRUE@	timedated-install-data-hook
 
-@ENABLE_TIMEDATED_TRUE@am__append_89 = \
+@ENABLE_TIMEDATED_TRUE@am__append_88 = \
 @ENABLE_TIMEDATED_TRUE@	units/systemd-timedated.service.in
 
-@ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@am__append_90 = \
+@ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@am__append_89 = \
 @ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@	src/login/logind-acl.c \
 @ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@	src/acl-util.c
 
-@ENABLE_LOGIND_TRUE@am__append_91 = systemd-logind \
+@ENABLE_LOGIND_TRUE@am__append_90 = systemd-logind \
 @ENABLE_LOGIND_TRUE@	systemd-user-sessions systemd-multi-seat-x \
 @ENABLE_LOGIND_TRUE@	systemd-uaccess
-@ENABLE_LOGIND_TRUE@am__append_92 = \
+@ENABLE_LOGIND_TRUE@am__append_91 = \
 @ENABLE_LOGIND_TRUE@	systemd-loginctl
 
-@ENABLE_LOGIND_TRUE@am__append_93 = \
+@ENABLE_LOGIND_TRUE@am__append_92 = \
 @ENABLE_LOGIND_TRUE@	test-login
 
-@ENABLE_LOGIND_TRUE@am__append_94 = \
+@ENABLE_LOGIND_TRUE@am__append_93 = \
 @ENABLE_LOGIND_TRUE@	libsystemd-login-install-hook
 
-@ENABLE_LOGIND_TRUE@am__append_95 = \
+@ENABLE_LOGIND_TRUE@am__append_94 = \
 @ENABLE_LOGIND_TRUE@	libsystemd-login-uninstall-hook
 
-@ENABLE_LOGIND_TRUE@am__append_96 = \
+@ENABLE_LOGIND_TRUE@am__append_95 = \
 @ENABLE_LOGIND_TRUE@	units/systemd-logind.service \
 @ENABLE_LOGIND_TRUE@	units/systemd-user-sessions.service
 
-@ENABLE_LOGIND_TRUE@am__append_97 = \
+@ENABLE_LOGIND_TRUE@am__append_96 = \
 @ENABLE_LOGIND_TRUE@	src/login/org.freedesktop.login1.service
 
-@ENABLE_LOGIND_TRUE@am__append_98 = \
+@ENABLE_LOGIND_TRUE@am__append_97 = \
 @ENABLE_LOGIND_TRUE@	src/login/org.freedesktop.login1.conf
 
-@ENABLE_LOGIND_TRUE@am__append_99 = \
+@ENABLE_LOGIND_TRUE@am__append_98 = \
 @ENABLE_LOGIND_TRUE@	src/login/systemd-logind.conf
 
-@ENABLE_LOGIND_TRUE@am__append_100 = \
+@ENABLE_LOGIND_TRUE@am__append_99 = \
 @ENABLE_LOGIND_TRUE@	src/systemd/sd-login.h
 
-@ENABLE_LOGIND_TRUE@am__append_101 = \
+@ENABLE_LOGIND_TRUE@am__append_100 = \
 @ENABLE_LOGIND_TRUE@	libsystemd-login.la
 
-@ENABLE_LOGIND_TRUE@am__append_102 = \
+@ENABLE_LOGIND_TRUE@am__append_101 = \
 @ENABLE_LOGIND_TRUE@	src/login/libsystemd-login.pc
 
-@ENABLE_LOGIND_TRUE@am__append_103 = \
+@ENABLE_LOGIND_TRUE@am__append_102 = \
 @ENABLE_LOGIND_TRUE@	src/login/org.freedesktop.login1.policy.in
 
-@ENABLE_LOGIND_TRUE@am__append_104 = \
+@ENABLE_LOGIND_TRUE@am__append_103 = \
 @ENABLE_LOGIND_TRUE@	logind-install-data-hook
 
-@ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@am__append_105 = \
+@ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@am__append_104 = \
 @ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@	src/login/logind-acl.c \
 @ENABLE_LOGIND_TRUE@@HAVE_ACL_TRUE@	src/acl-util.c
 
-@ENABLE_LOGIND_TRUE@am__append_106 = src/login/70-uaccess.rules \
+@ENABLE_LOGIND_TRUE@am__append_105 = src/login/70-uaccess.rules \
 @ENABLE_LOGIND_TRUE@	src/login/71-seat.rules
-@ENABLE_LOGIND_TRUE@am__append_107 = \
+@ENABLE_LOGIND_TRUE@am__append_106 = \
 @ENABLE_LOGIND_TRUE@	src/login/73-seat-late.rules
 
-@ENABLE_LOGIND_TRUE@am__append_108 = \
+@ENABLE_LOGIND_TRUE@am__append_107 = \
 @ENABLE_LOGIND_TRUE@	man/systemd-logind.conf.5 \
 @ENABLE_LOGIND_TRUE@	man/sd-login.7 \
 @ENABLE_LOGIND_TRUE@	man/systemd-loginctl.1 \
@@ -469,12 +463,16 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @ENABLE_LOGIND_TRUE@	man/sd_seat_get_active.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_get_seats.3
 
-@ENABLE_LOGIND_TRUE@am__append_109 = \
+@ENABLE_LOGIND_TRUE@am__append_108 = \
 @ENABLE_LOGIND_TRUE@	man/sd_login_monitor_unref.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_login_monitor_flush.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_login_monitor_get_fd.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_session_get_uid.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_session_get_seat.3 \
+@ENABLE_LOGIND_TRUE@	man/sd_session_get_service.3 \
+@ENABLE_LOGIND_TRUE@	man/sd_session_get_type.3 \
+@ENABLE_LOGIND_TRUE@	man/sd_session_get_class.3 \
+@ENABLE_LOGIND_TRUE@	man/sd_session_get_display.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_pid_get_owner_uid.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_pid_get_unit.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_uid_is_on_seat.3 \
@@ -485,7 +483,7 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @ENABLE_LOGIND_TRUE@	man/sd_get_sessions.3 \
 @ENABLE_LOGIND_TRUE@	man/sd_get_uids.3
 
-@ENABLE_LOGIND_TRUE@am__append_110 = \
+@ENABLE_LOGIND_TRUE@am__append_109 = \
 @ENABLE_LOGIND_TRUE@	src/login/logind-gperf.gperf \
 @ENABLE_LOGIND_TRUE@	src/login/libsystemd-login.pc.in \
 @ENABLE_LOGIND_TRUE@	src/login/libsystemd-login.sym \
@@ -499,35 +497,31 @@ noinst_PROGRAMS = test-engine$(EXEEXT) test-job-type$(EXEEXT) \
 @ENABLE_LOGIND_TRUE@	units/systemd-logind.service.in \
 @ENABLE_LOGIND_TRUE@	units/systemd-user-sessions.service.in
 
-@ENABLE_LOGIND_TRUE@am__append_111 = \
+@ENABLE_LOGIND_TRUE@am__append_110 = \
 @ENABLE_LOGIND_TRUE@	src/login/logind-gperf.c \
 @ENABLE_LOGIND_TRUE@	src/login/73-seat-late.rules
 
-@HAVE_VALAC_TRUE@am__append_112 = \
+@HAVE_VALAC_TRUE@am__append_111 = \
 @HAVE_VALAC_TRUE@	${systemadm_SOURCES:.vala=.c}
 
-@HAVE_XSLTPROC_TRUE@am__append_113 = \
+@HAVE_XSLTPROC_TRUE@am__append_112 = \
 @HAVE_XSLTPROC_TRUE@	$(dist_man_MANS) \
-@HAVE_XSLTPROC_TRUE@	${nodist_man_MANS:=.in} \
-@HAVE_XSLTPROC_TRUE@	${XML_FILES:.xml=.html} \
-@HAVE_XSLTPROC_TRUE@	${XML_IN_FILES:.xml.in=.html.in}
+@HAVE_XSLTPROC_TRUE@	${XML_FILES:.xml=.html}
 
 subdir = .
 DIST_COMMON = README $(am__configure_deps) \
 	$(am__dist_dbuspolicy_DATA_DIST) \
 	$(am__dist_dbussystemservice_DATA_DIST) \
-	$(am__dist_noinst_DATA_DIST) $(am__dist_pkgdata_DATA_DIST) \
-	$(am__dist_pkgsysconf_DATA_DIST) \
+	$(am__dist_pkgdata_DATA_DIST) $(am__dist_pkgsysconf_DATA_DIST) \
 	$(am__dist_systemunit_DATA_DIST) \
 	$(am__dist_tmpfiles_DATA_DIST) $(am__dist_udevrules_DATA_DIST) \
 	$(am__pkginclude_HEADERS_DIST) $(dist_bashcompletion_DATA) \
-	$(dist_bin_SCRIPTS) $(dist_doc_DATA) $(dist_man_MANS) \
-	$(dist_userunit_DATA) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
-	$(top_srcdir)/configure NEWS TODO compile config.guess \
-	config.sub depcomp install-sh libsystemd_basic_la_vala.stamp \
-	libsystemd_core_la_vala.stamp libsystemd_daemon_la_vala.stamp \
-	libsystemd_id128_la_vala.stamp \
+	$(dist_bin_SCRIPTS) $(dist_doc_DATA) $(dist_userunit_DATA) \
+	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(srcdir)/config.h.in $(top_srcdir)/configure NEWS TODO \
+	compile config.guess config.sub depcomp install-sh \
+	libsystemd_basic_la_vala.stamp libsystemd_core_la_vala.stamp \
+	libsystemd_daemon_la_vala.stamp libsystemd_id128_la_vala.stamp \
 	libsystemd_journal_la_vala.stamp \
 	libsystemd_login_la_vala.stamp ltmain.sh missing \
 	pam_systemd_la_vala.stamp src/gnome-ask-password-agent.c \
@@ -639,7 +633,8 @@ am_libsystemd_basic_la_OBJECTS = src/libsystemd_basic_la-util.lo \
 	src/libsystemd_basic_la-socket-util.lo \
 	src/libsystemd_basic_la-log.lo \
 	src/libsystemd_basic_la-ratelimit.lo \
-	src/libsystemd_basic_la-exit-status.lo
+	src/libsystemd_basic_la-exit-status.lo \
+	src/libsystemd_basic_la-utf8.lo
 libsystemd_basic_la_OBJECTS = $(am_libsystemd_basic_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -1458,7 +1453,7 @@ man5dir = $(mandir)/man5
 man7dir = $(mandir)/man7
 man8dir = $(mandir)/man8
 NROFF = nroff
-MANS = $(dist_man_MANS) $(nodist_man_MANS)
+MANS = $(man_MANS)
 am__dist_dbuspolicy_DATA_DIST = src/org.freedesktop.systemd1.conf \
 	src/hostname/org.freedesktop.hostname1.conf \
 	src/locale/org.freedesktop.locale1.conf \
@@ -1470,9 +1465,6 @@ am__dist_dbussystemservice_DATA_DIST =  \
 	src/locale/org.freedesktop.locale1.service \
 	src/timedate/org.freedesktop.timedate1.service \
 	src/login/org.freedesktop.login1.service
-am__dist_noinst_DATA_DIST = ${patsubst %.1,%.xml,${patsubst \
-	%.3,%.xml,${patsubst %.5,%.xml,${patsubst %.7,%.xml,${patsubst \
-	%.8,%.xml,$(MANPAGES)}}}}}
 am__dist_pkgdata_DATA_DIST = src/locale/kbd-model-map
 am__dist_pkgsysconf_DATA_DIST = src/system.conf src/user.conf \
 	src/journal/systemd-journald.conf \
@@ -1520,13 +1512,13 @@ am__dist_udevrules_DATA_DIST = src/login/70-uaccess.rules \
 	src/login/71-seat.rules
 DATA = $(dbusinterface_DATA) $(dist_bashcompletion_DATA) \
 	$(dist_dbuspolicy_DATA) $(dist_dbussystemservice_DATA) \
-	$(dist_doc_DATA) $(dist_noinst_DATA) $(dist_pkgdata_DATA) \
-	$(dist_pkgsysconf_DATA) $(dist_systemunit_DATA) \
-	$(dist_tmpfiles_DATA) $(dist_udevrules_DATA) \
-	$(dist_userunit_DATA) $(nodist_noinst_DATA) \
+	$(dist_doc_DATA) $(dist_pkgdata_DATA) $(dist_pkgsysconf_DATA) \
+	$(dist_systemunit_DATA) $(dist_tmpfiles_DATA) \
+	$(dist_udevrules_DATA) $(dist_userunit_DATA) \
 	$(nodist_polkitpolicy_DATA) $(nodist_systemunit_DATA) \
 	$(nodist_udevrules_DATA) $(nodist_userunit_DATA) \
-	$(pkgconfigdata_DATA) $(pkgconfiglib_DATA) $(sysctl_DATA)
+	$(noinst_DATA) $(pkgconfigdata_DATA) $(pkgconfiglib_DATA) \
+	$(sysctl_DATA)
 am__pkginclude_HEADERS_DIST = src/systemd/sd-daemon.h \
 	src/systemd/sd-id128.h src/systemd/sd-journal.h \
 	src/systemd/sd-messages.h src/systemd/sd-login.h
@@ -1627,6 +1619,10 @@ INTLTOOL_EXTRACT = @INTLTOOL_EXTRACT@
 INTLTOOL_MERGE = @INTLTOOL_MERGE@
 INTLTOOL_PERL = @INTLTOOL_PERL@
 INTLTOOL_UPDATE = @INTLTOOL_UPDATE@
+INTLTOOL_V_MERGE = @INTLTOOL_V_MERGE@
+INTLTOOL_V_MERGE_OPTIONS = @INTLTOOL_V_MERGE_OPTIONS@
+INTLTOOL__v_MERGE_ = @INTLTOOL__v_MERGE_@
+INTLTOOL__v_MERGE_0 = @INTLTOOL__v_MERGE_0@
 KMOD_CFLAGS = @KMOD_CFLAGS@
 KMOD_LIBS = @KMOD_LIBS@
 LD = @LD@
@@ -1727,6 +1723,8 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
+intltool__v_merge_options_ = @intltool__v_merge_options_@
+intltool__v_merge_options_0 = @intltool__v_merge_options_0@
 libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
@@ -1755,16 +1753,16 @@ udevrulesdir = @udevrulesdir@
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = po
 LIBSYSTEMD_LOGIN_CURRENT = 2
-LIBSYSTEMD_LOGIN_REVISION = 0
+LIBSYSTEMD_LOGIN_REVISION = 1
 LIBSYSTEMD_LOGIN_AGE = 2
 LIBSYSTEMD_DAEMON_CURRENT = 0
 LIBSYSTEMD_DAEMON_REVISION = 1
 LIBSYSTEMD_DAEMON_AGE = 0
 LIBSYSTEMD_ID128_CURRENT = 0
-LIBSYSTEMD_ID128_REVISION = 2
+LIBSYSTEMD_ID128_REVISION = 3
 LIBSYSTEMD_ID128_AGE = 0
 LIBSYSTEMD_JOURNAL_CURRENT = 0
-LIBSYSTEMD_JOURNAL_REVISION = 2
+LIBSYSTEMD_JOURNAL_REVISION = 3
 LIBSYSTEMD_JOURNAL_AGE = 0
 pkgconfigdatadir = $(datadir)/pkgconfig
 pkgconfiglibdir = $(libdir)/pkgconfig
@@ -1782,14 +1780,14 @@ rootlibexecdir = $(rootprefix)/lib/systemd
 systemgeneratordir = $(rootlibexecdir)/system-generators
 systemshutdowndir = $(rootlibexecdir)/system-shutdown
 systemunitdir = $(rootprefix)/lib/systemd/system
-CLEANFILES = src/journal/journald-gperf.c $(am__append_38) \
-	$(am__append_111) $(nodist_systemunit_DATA) \
+CLEANFILES = src/journal/journald-gperf.c $(am__append_37) \
+	$(am__append_110) $(nodist_systemunit_DATA) \
 	$(nodist_userunit_DATA) $(nodist_man_MANS) \
-	${XML_IN_FILES:.xml.in=.html} $(pkgconfigdata_DATA) \
-	$(pkgconfiglib_DATA) $(nodist_polkitpolicy_DATA) \
-	src/load-fragment-gperf.gperf src/load-fragment-gperf.c \
-	src/load-fragment-gperf-nulstr.c src/99-systemd.rules \
-	$(am__append_112) $(am__append_113) $(dbusinterface_DATA)
+	$(pkgconfigdata_DATA) $(pkgconfiglib_DATA) \
+	$(nodist_polkitpolicy_DATA) src/load-fragment-gperf.gperf \
+	src/load-fragment-gperf.c src/load-fragment-gperf-nulstr.c \
+	src/99-systemd.rules $(am__append_111) $(am__append_112) \
+	$(dbusinterface_DATA)
 
 # This is needed because automake is buggy in how it generates the
 # rules for C programs, but not Vala programs.	We therefore can't
@@ -1838,39 +1836,41 @@ EXTRA_DIST = units/getty@.service.m4 units/serial-getty@.service.m4 \
 	src/cgroup-show.h src/build.h src/shutdownd.h src/umount.h \
 	src/ask-password-api.h src/pager.h src/sysfs-show.h \
 	src/polkit.h src/dbus-loop.h src/spawn-agent.h src/acl-util.h \
-	src/logs-show.h $(am__append_24) src/libsystemd-daemon.pc.in \
-	src/libsystemd-daemon.sym src/libsystemd-id128.pc.in \
-	src/libsystemd-id128.sym src/journal/journald.h \
-	src/journal/journal-def.h src/journal/journal-internal.h \
-	src/journal/journal-file.h src/journal/lookup3.h \
-	src/journal/compress.h src/journal/journal-rate-limit.h \
+	src/logs-show.h src/utf8.h $(XML_FILES) \
+	${XML_FILES:.xml=.html} $(MANPAGES) $(MANPAGES_ALIAS) \
+	src/libsystemd-daemon.pc.in src/libsystemd-daemon.sym \
+	src/libsystemd-id128.pc.in src/libsystemd-id128.sym \
+	src/journal/journald.h src/journal/journal-def.h \
+	src/journal/journal-internal.h src/journal/journal-file.h \
+	src/journal/lookup3.h src/journal/compress.h \
+	src/journal/journal-rate-limit.h \
 	src/journal/libsystemd-journal.pc.in \
 	src/journal/libsystemd-journal.sym \
 	units/systemd-journald.service.in \
-	src/journal/journald-gperf.gperf $(am__append_37) \
-	$(am__append_44) $(am__append_49) $(am__append_53) \
-	$(am__append_57) $(am__append_60) $(am__append_73) \
-	$(am__append_81) $(am__append_89) $(am__append_110)
+	src/journal/journald-gperf.gperf $(am__append_36) \
+	$(am__append_43) $(am__append_48) $(am__append_52) \
+	$(am__append_56) $(am__append_59) $(am__append_72) \
+	$(am__append_80) $(am__append_88) $(am__append_109)
 INSTALL_EXEC_HOOKS = libsystemd-daemon-install-hook \
 	libsystemd-id128-install-hook libsystemd-journal-install-hook \
-	$(am__append_94)
+	$(am__append_93)
 UNINSTALL_EXEC_HOOKS = libsystemd-daemon-uninstall-hook \
 	libsystemd-id128-uninstall-hook \
-	libsystemd-journal-uninstall-hook $(am__append_95)
-INSTALL_DATA_HOOKS = journal-install-data-hook $(am__append_42) \
-	$(am__append_47) $(am__append_61) $(am__append_65) \
-	$(am__append_72) $(am__append_80) $(am__append_88) \
-	$(am__append_104)
+	libsystemd-journal-uninstall-hook $(am__append_94)
+INSTALL_DATA_HOOKS = journal-install-data-hook $(am__append_41) \
+	$(am__append_46) $(am__append_60) $(am__append_64) \
+	$(am__append_71) $(am__append_79) $(am__append_87) \
+	$(am__append_103)
 pkginclude_HEADERS = src/systemd/sd-daemon.h src/systemd/sd-id128.h \
 	src/systemd/sd-journal.h src/systemd/sd-messages.h \
-	$(am__append_100)
+	$(am__append_99)
 lib_LTLIBRARIES = libsystemd-daemon.la libsystemd-id128.la \
-	libsystemd-journal.la $(am__append_101)
+	libsystemd-journal.la $(am__append_100)
 pkgconfiglib_DATA = src/libsystemd-daemon.pc src/libsystemd-id128.pc \
-	src/journal/libsystemd-journal.pc $(am__append_102)
-polkitpolicy_in_files = $(am__append_70) $(am__append_78) \
-	$(am__append_86) $(am__append_103)
-dist_udevrules_DATA = $(am__append_106)
+	src/journal/libsystemd-journal.pc $(am__append_101)
+polkitpolicy_in_files = $(am__append_69) $(am__append_77) \
+	$(am__append_85) $(am__append_102)
+dist_udevrules_DATA = $(am__append_105)
 AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-DSYSTEM_CONFIG_FILE=\"$(pkgsysconfdir)/system.conf\" \
 	-DSYSTEM_CONFIG_UNIT_PATH=\"$(pkgsysconfdir)/system\" \
@@ -1903,14 +1903,14 @@ dist_bin_SCRIPTS = \
 	src/systemd-analyze
 
 dist_pkgsysconf_DATA = src/system.conf src/user.conf \
-	src/journal/systemd-journald.conf $(am__append_99)
+	src/journal/systemd-journald.conf $(am__append_98)
 dist_dbuspolicy_DATA = src/org.freedesktop.systemd1.conf \
-	$(am__append_68) $(am__append_76) $(am__append_84) \
-	$(am__append_98)
-dist_dbussystemservice_DATA = src/org.freedesktop.systemd1.service \
-	$(am__append_69) $(am__append_77) $(am__append_83) \
+	$(am__append_67) $(am__append_75) $(am__append_83) \
 	$(am__append_97)
-nodist_udevrules_DATA = src/99-systemd.rules $(am__append_107)
+dist_dbussystemservice_DATA = src/org.freedesktop.systemd1.service \
+	$(am__append_68) $(am__append_76) $(am__append_82) \
+	$(am__append_96)
+nodist_udevrules_DATA = src/99-systemd.rules $(am__append_106)
 dbusinterface_DATA = org.freedesktop.systemd1.Manager.xml \
 	org.freedesktop.systemd1.Job.xml \
 	org.freedesktop.systemd1.Unit.xml \
@@ -1923,8 +1923,8 @@ dbusinterface_DATA = org.freedesktop.systemd1.Manager.xml \
 	org.freedesktop.systemd1.Automount.xml \
 	org.freedesktop.systemd1.Snapshot.xml \
 	org.freedesktop.systemd1.Swap.xml \
-	org.freedesktop.systemd1.Path.xml $(am__append_71) \
-	$(am__append_79) $(am__append_87)
+	org.freedesktop.systemd1.Path.xml $(am__append_70) \
+	$(am__append_78) $(am__append_86)
 dist_bashcompletion_DATA = \
 	src/systemd-bash-completion.sh
 
@@ -1955,7 +1955,7 @@ dist_systemunit_DATA = units/graphical.target units/multi-user.target \
 	$(am__append_11) $(am__append_12) $(am__append_14) \
 	$(am__append_16) $(am__append_17) $(am__append_19) \
 	$(am__append_21) units/systemd-journald.socket \
-	$(am__append_40) $(am__append_51) $(am__append_64)
+	$(am__append_39) $(am__append_50) $(am__append_63)
 nodist_systemunit_DATA = units/getty@.service \
 	units/serial-getty@.service units/console-shell.service \
 	units/systemd-initctl.service units/systemd-shutdownd.service \
@@ -1972,10 +1972,10 @@ nodist_systemunit_DATA = units/getty@.service \
 	units/kexec.service units/fsck@.service \
 	units/fsck-root.service units/rescue.service \
 	units/user@.service $(am__append_22) \
-	units/systemd-journald.service $(am__append_41) \
-	$(am__append_46) $(am__append_52) $(am__append_56) \
-	$(am__append_59) $(am__append_67) $(am__append_74) \
-	$(am__append_85) $(am__append_96)
+	units/systemd-journald.service $(am__append_40) \
+	$(am__append_45) $(am__append_51) $(am__append_55) \
+	$(am__append_58) $(am__append_66) $(am__append_73) \
+	$(am__append_84) $(am__append_95)
 dist_userunit_DATA = \
 	units/user/default.target \
 	units/user/exit.target
@@ -2016,7 +2016,8 @@ libsystemd_basic_la_SOURCES = \
 	src/socket-util.c \
 	src/log.c \
 	src/ratelimit.c \
-	src/exit-status.c
+	src/exit-status.c \
+        src/utf8.c
 
 libsystemd_basic_la_CFLAGS = \
 	$(AM_CFLAGS) \
@@ -2110,37 +2111,31 @@ MANPAGES = man/systemd.1 man/systemctl.1 man/systemadm.1 \
 	man/systemd.service.5 man/systemd.socket.5 man/systemd.mount.5 \
 	man/systemd.automount.5 man/systemd.swap.5 man/systemd.timer.5 \
 	man/systemd.path.5 man/systemd.target.5 man/systemd.device.5 \
-	man/systemd.snapshot.5 man/systemd.exec.5 man/daemon.7 \
-	man/runlevel.8 man/telinit.8 man/halt.8 man/shutdown.8 \
-	man/pam_systemd.8 man/systemd.conf.5 man/tmpfiles.d.5 \
-	man/hostname.5 man/timezone.5 man/machine-id.5 \
-	man/locale.conf.5 man/os-release.5 man/machine-info.5 \
-	man/modules-load.d.5 man/sysctl.d.5 man/systemd-ask-password.1 \
-	man/sd-daemon.7 man/sd_notify.3 man/sd_listen_fds.3 \
-	man/sd_is_fifo.3 man/sd_booted.3 $(am__append_43) \
-	$(am__append_48) $(am__append_54) $(am__append_108)
+	man/systemd.snapshot.5 man/systemd.exec.5 \
+	man/systemd.special.7 man/daemon.7 man/runlevel.8 \
+	man/telinit.8 man/halt.8 man/shutdown.8 man/pam_systemd.8 \
+	man/systemd.conf.5 man/tmpfiles.d.5 man/hostname.5 \
+	man/timezone.5 man/machine-id.5 man/locale.conf.5 \
+	man/os-release.5 man/machine-info.5 man/modules-load.d.5 \
+	man/sysctl.d.5 man/systemd-ask-password.1 man/systemd-cat.1 \
+	man/systemd-machine-id-setup.1 man/systemd-journald.conf.5 \
+	man/systemd-journalctl.1 man/sd-daemon.7 man/sd_notify.3 \
+	man/sd_listen_fds.3 man/sd_is_fifo.3 man/sd_booted.3 \
+	$(am__append_42) $(am__append_47) $(am__append_53) \
+	$(am__append_107)
 MANPAGES_ALIAS = man/reboot.8 man/poweroff.8 man/init.1 \
 	man/sd_is_socket.3 man/sd_is_socket_unix.3 \
 	man/sd_is_socket_inet.3 man/sd_is_mq.3 man/sd_notifyf.3 \
-	$(am__append_109)
-@ENABLE_MANPAGES_TRUE@dist_man_MANS = \
+	$(am__append_108)
+XML_FILES = \
+	${patsubst %.1,%.xml,${patsubst %.3,%.xml,${patsubst %.5,%.xml,${patsubst %.7,%.xml,${patsubst %.8,%.xml,$(MANPAGES)}}}}}
+
+@ENABLE_MANPAGES_TRUE@man_MANS = \
 @ENABLE_MANPAGES_TRUE@	$(MANPAGES) \
 @ENABLE_MANPAGES_TRUE@	$(MANPAGES_ALIAS)
 
-@ENABLE_MANPAGES_TRUE@nodist_man_MANS = \
-@ENABLE_MANPAGES_TRUE@	man/systemd.special.7
-
-@ENABLE_MANPAGES_TRUE@XML_FILES = \
-@ENABLE_MANPAGES_TRUE@	${patsubst %.1,%.xml,${patsubst %.3,%.xml,${patsubst %.5,%.xml,${patsubst %.7,%.xml,${patsubst %.8,%.xml,$(MANPAGES)}}}}}
-
-@ENABLE_MANPAGES_TRUE@XML_IN_FILES = \
-@ENABLE_MANPAGES_TRUE@	${patsubst %.1,%.xml.in,${patsubst %.3,%.xml.in,${patsubst %.5,%.xml.in,${patsubst %.7,%.xml.in,${patsubst %.8,%.xml.in,$(nodist_man_MANS)}}}}}
-
-@ENABLE_MANPAGES_TRUE@dist_noinst_DATA = \
+@ENABLE_MANPAGES_TRUE@noinst_DATA = \
 @ENABLE_MANPAGES_TRUE@	${XML_FILES:.xml=.html}
-
-@ENABLE_MANPAGES_TRUE@nodist_noinst_DATA = \
-@ENABLE_MANPAGES_TRUE@	${XML_IN_FILES:.xml.in=.html}
 
 systemd_SOURCES = \
 	src/main.c
@@ -2549,14 +2544,14 @@ test_id128_LDADD = \
 systemd_journald_SOURCES = src/journal/journald.c \
 	src/journal/sd-journal.c src/journal/journal-file.c \
 	src/journal/lookup3.c src/journal/journal-rate-limit.c \
-	src/sd-id128.c src/cgroup-util.c $(am__append_25) \
-	$(am__append_26)
+	src/sd-id128.c src/cgroup-util.c $(am__append_24) \
+	$(am__append_25)
 nodist_systemd_journald_SOURCES = \
 	src/journal/journald-gperf.c
 
-systemd_journald_CFLAGS = $(AM_CFLAGS) $(ACL_CFLAGS) $(am__append_27)
+systemd_journald_CFLAGS = $(AM_CFLAGS) $(ACL_CFLAGS) $(am__append_26)
 systemd_journald_LDADD = libsystemd-basic.la libsystemd-daemon.la \
-	libsystemd-login.la $(ACL_LIBS) $(am__append_28)
+	libsystemd-login.la $(ACL_LIBS) $(am__append_27)
 systemd_cat_SOURCES = \
 	src/journal/cat.c
 
@@ -2565,9 +2560,9 @@ systemd_cat_LDADD = \
 	libsystemd-journal.la
 
 systemd_journalctl_SOURCES = src/journal/journalctl.c src/pager.c \
-	src/logs-show.c $(am__append_29)
+	src/logs-show.c $(am__append_28)
 systemd_journalctl_LDADD = libsystemd-basic.la libsystemd-journal.la \
-	libsystemd-id128.la $(am__append_30)
+	libsystemd-id128.la $(am__append_29)
 @HAVE_XZ_TRUE@systemd_journalctl_CFLAGS = \
 @HAVE_XZ_TRUE@	$(AM_CFLAGS) \
 @HAVE_XZ_TRUE@	$(XZ_CFLAGS)
@@ -2575,24 +2570,24 @@ systemd_journalctl_LDADD = libsystemd-basic.la libsystemd-journal.la \
 test_journal_SOURCES = src/journal/test-journal.c \
 	src/journal/sd-journal.c src/journal/journal-file.c \
 	src/journal/lookup3.c src/journal/journal-send.c \
-	src/sd-id128.c $(am__append_31)
-test_journal_LDADD = libsystemd-basic.la $(am__append_32)
+	src/sd-id128.c $(am__append_30)
+test_journal_LDADD = libsystemd-basic.la $(am__append_31)
 @HAVE_XZ_TRUE@test_journal_CFLAGS = \
 @HAVE_XZ_TRUE@	$(AM_CFLAGS) \
 @HAVE_XZ_TRUE@	$(XZ_CFLAGS)
 
 libsystemd_journal_la_SOURCES = src/journal/sd-journal.c \
 	src/journal/journal-file.c src/journal/lookup3.c \
-	src/journal/journal-send.c $(am__append_33)
+	src/journal/journal-send.c $(am__append_32)
 libsystemd_journal_la_CFLAGS = $(AM_CFLAGS) -fvisibility=hidden \
-	$(am__append_34)
+	$(am__append_33)
 libsystemd_journal_la_LDFLAGS = \
 	-shared \
 	-version-info $(LIBSYSTEMD_JOURNAL_CURRENT):$(LIBSYSTEMD_JOURNAL_REVISION):$(LIBSYSTEMD_JOURNAL_AGE) \
 	-Wl,--version-script=$(top_srcdir)/src/journal/libsystemd-journal.sym
 
 libsystemd_journal_la_LIBADD = libsystemd-basic.la libsystemd-id128.la \
-	$(am__append_35)
+	$(am__append_34)
 
 # ------------------------------------------------------------------------------
 @ENABLE_COREDUMP_TRUE@systemd_coredump_SOURCES = \
@@ -2750,7 +2745,7 @@ libsystemd_journal_la_LIBADD = libsystemd-basic.la libsystemd-id128.la \
 @ENABLE_LOGIND_TRUE@	src/login/logind-user-dbus.c \
 @ENABLE_LOGIND_TRUE@	src/dbus-common.c src/dbus-loop.c \
 @ENABLE_LOGIND_TRUE@	src/cgroup-util.c src/polkit.c \
-@ENABLE_LOGIND_TRUE@	$(am__append_90)
+@ENABLE_LOGIND_TRUE@	$(am__append_89)
 @ENABLE_LOGIND_TRUE@nodist_systemd_logind_SOURCES = \
 @ENABLE_LOGIND_TRUE@	src/login/logind-gperf.c
 
@@ -2853,7 +2848,7 @@ libsystemd_journal_la_LIBADD = libsystemd-basic.la libsystemd-id128.la \
 @ENABLE_LOGIND_TRUE@	$(UDEV_LIBS)
 
 @ENABLE_LOGIND_TRUE@systemd_uaccess_SOURCES = src/login/uaccess.c \
-@ENABLE_LOGIND_TRUE@	$(am__append_105)
+@ENABLE_LOGIND_TRUE@	$(am__append_104)
 @ENABLE_LOGIND_TRUE@systemd_uaccess_CFLAGS = \
 @ENABLE_LOGIND_TRUE@	$(AM_CFLAGS) \
 @ENABLE_LOGIND_TRUE@	$(UDEV_CFLAGS) \
@@ -2904,19 +2899,9 @@ M4_PROCESS_USER = \
 @HAVE_XSLTPROC_TRUE@	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
 
-@HAVE_XSLTPROC_TRUE@XSLTPROC_PROCESS_MAN_IN = \
-@HAVE_XSLTPROC_TRUE@	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC) -o ${@:.in=} $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $< && \
-@HAVE_XSLTPROC_TRUE@	mv ${@:.in=} $@
-
 @HAVE_XSLTPROC_TRUE@XSLTPROC_PROCESS_HTML = \
 @HAVE_XSLTPROC_TRUE@	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) $(srcdir)/man/custom-html.xsl $<
-
-@HAVE_XSLTPROC_TRUE@XSLTPROC_PROCESS_HTML_IN = \
-@HAVE_XSLTPROC_TRUE@	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC) -o ${@:.in=} $(XSLTPROC_FLAGS) $(srcdir)/man/custom-html.xsl $< && \
-@HAVE_XSLTPROC_TRUE@	mv ${@:.in=} $@
 
 DBUS_PREPROCESS = $(CPP) -P $(DBUS_CFLAGS) -imacros dbus/dbus-protocol.h
 DISTCHECK_CONFIGURE_FLAGS = \
@@ -2926,7 +2911,8 @@ DISTCHECK_CONFIGURE_FLAGS = \
 	--with-dbusinterfacedir=$$dc_install_base/$(dbusinterfacedir) \
 	--with-udevrulesdir=$$dc_install_base/$(udevrulesdir) \
 	--with-pamlibdir=$$dc_install_base/$(pamlibdir) \
-	--with-rootprefix=$$dc_install_base/$(prefix)
+        --with-rootprefix=$$dc_install_base \
+        --disable-split-usr
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
@@ -3080,6 +3066,8 @@ src/libsystemd_basic_la-log.lo: src/$(am__dirstamp) \
 src/libsystemd_basic_la-ratelimit.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libsystemd_basic_la-exit-status.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/libsystemd_basic_la-utf8.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 libsystemd-basic.la: $(libsystemd_basic_la_OBJECTS) $(libsystemd_basic_la_DEPENDENCIES) $(EXTRA_libsystemd_basic_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libsystemd_basic_la_LINK)  $(libsystemd_basic_la_OBJECTS) $(libsystemd_basic_la_LIBADD) $(LIBS)
@@ -4062,6 +4050,8 @@ mostlyclean-compile:
 	-rm -f src/libsystemd_basic_la-socket-util.lo
 	-rm -f src/libsystemd_basic_la-strv.$(OBJEXT)
 	-rm -f src/libsystemd_basic_la-strv.lo
+	-rm -f src/libsystemd_basic_la-utf8.$(OBJEXT)
+	-rm -f src/libsystemd_basic_la-utf8.lo
 	-rm -f src/libsystemd_basic_la-util.$(OBJEXT)
 	-rm -f src/libsystemd_basic_la-util.lo
 	-rm -f src/libsystemd_basic_la-virt.$(OBJEXT)
@@ -4328,6 +4318,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-set.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-socket-util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-strv.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-utf8.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_basic_la-virt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libsystemd_core_la-automount.Plo@am__quote@
@@ -4634,6 +4625,13 @@ src/libsystemd_basic_la-exit-status.lo: src/exit-status.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/exit-status.c' object='src/libsystemd_basic_la-exit-status.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_basic_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_basic_la-exit-status.lo `test -f 'src/exit-status.c' || echo '$(srcdir)/'`src/exit-status.c
+
+src/libsystemd_basic_la-utf8.lo: src/utf8.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_basic_la_CFLAGS) $(CFLAGS) -MT src/libsystemd_basic_la-utf8.lo -MD -MP -MF src/$(DEPDIR)/libsystemd_basic_la-utf8.Tpo -c -o src/libsystemd_basic_la-utf8.lo `test -f 'src/utf8.c' || echo '$(srcdir)/'`src/utf8.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libsystemd_basic_la-utf8.Tpo src/$(DEPDIR)/libsystemd_basic_la-utf8.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/utf8.c' object='src/libsystemd_basic_la-utf8.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_basic_la_CFLAGS) $(CFLAGS) -c -o src/libsystemd_basic_la-utf8.lo `test -f 'src/utf8.c' || echo '$(srcdir)/'`src/utf8.c
 
 src/libsystemd_core_la-unit.lo: src/unit.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystemd_core_la_CFLAGS) $(CFLAGS) -MT src/libsystemd_core_la-unit.lo -MD -MP -MF src/$(DEPDIR)/libsystemd_core_la-unit.Tpo -c -o src/libsystemd_core_la-unit.lo `test -f 'src/unit.c' || echo '$(srcdir)/'`src/unit.c
@@ -6828,12 +6826,12 @@ clean-libtool:
 
 distclean-libtool:
 	-rm -f libtool config.lt
-install-man1: $(dist_man_MANS) $(nodist_man_MANS)
+install-man1: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man1dir)" || $(MKDIR_P) "$(DESTDIR)$(man1dir)"
 	@list=''; test -n "$(man1dir)" || exit 0; \
 	{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.1[a-z]*$$/p'; \
 	} | while read p; do \
 	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
@@ -6859,17 +6857,17 @@ uninstall-man1:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man1dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.1[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man1dir)'; $(am__uninstall_files_from_dir)
-install-man3: $(dist_man_MANS) $(nodist_man_MANS)
+install-man3: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man3dir)" || $(MKDIR_P) "$(DESTDIR)$(man3dir)"
 	@list=''; test -n "$(man3dir)" || exit 0; \
 	{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.3[a-z]*$$/p'; \
 	} | while read p; do \
 	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
@@ -6895,17 +6893,17 @@ uninstall-man3:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man3dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.3[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^3][0-9a-z]*$$,3,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man3dir)'; $(am__uninstall_files_from_dir)
-install-man5: $(dist_man_MANS) $(nodist_man_MANS)
+install-man5: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man5dir)" || $(MKDIR_P) "$(DESTDIR)$(man5dir)"
 	@list=''; test -n "$(man5dir)" || exit 0; \
 	{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.5[a-z]*$$/p'; \
 	} | while read p; do \
 	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
@@ -6931,17 +6929,17 @@ uninstall-man5:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man5dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.5[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^5][0-9a-z]*$$,5,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man5dir)'; $(am__uninstall_files_from_dir)
-install-man7: $(dist_man_MANS) $(nodist_man_MANS)
+install-man7: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man7dir)" || $(MKDIR_P) "$(DESTDIR)$(man7dir)"
 	@list=''; test -n "$(man7dir)" || exit 0; \
 	{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.7[a-z]*$$/p'; \
 	} | while read p; do \
 	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
@@ -6967,17 +6965,17 @@ uninstall-man7:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man7dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.7[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^7][0-9a-z]*$$,7,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man7dir)'; $(am__uninstall_files_from_dir)
-install-man8: $(dist_man_MANS) $(nodist_man_MANS)
+install-man8: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man8dir)" || $(MKDIR_P) "$(DESTDIR)$(man8dir)"
 	@list=''; test -n "$(man8dir)" || exit 0; \
 	{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.8[a-z]*$$/p'; \
 	} | while read p; do \
 	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
@@ -7003,7 +7001,7 @@ uninstall-man8:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man8dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS) $(nodist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.8[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^8][0-9a-z]*$$,8,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
@@ -8156,6 +8154,10 @@ journal-install-data-hook:
 @ENABLE_LOGIND_TRUE@man/sd_login_monitor_get_fd.3: man/sd_login_monitor_new.3
 @ENABLE_LOGIND_TRUE@man/sd_session_get_uid.3: man/sd_session_is_active.3
 @ENABLE_LOGIND_TRUE@man/sd_session_get_seat.3: man/sd_session_is_active.3
+@ENABLE_LOGIND_TRUE@man/sd_session_get_service.3: man/sd_session_is_active.3
+@ENABLE_LOGIND_TRUE@man/sd_session_get_type.3: man/sd_session_is_active.3
+@ENABLE_LOGIND_TRUE@man/sd_session_get_class.3: man/sd_session_is_active.3
+@ENABLE_LOGIND_TRUE@man/sd_session_get_display.3: man/sd_session_is_active.3
 @ENABLE_LOGIND_TRUE@man/sd_pid_get_owner_uid.3: man/sd_pid_get_session.3
 @ENABLE_LOGIND_TRUE@man/sd_pid_get_unit.3: man/sd_pid_get_session.3
 @ENABLE_LOGIND_TRUE@man/sd_uid_is_on_seat.3: man/sd_uid_get_state.3
@@ -8205,38 +8207,20 @@ units/user/%: units/%.m4 Makefile
 @HAVE_XSLTPROC_TRUE@man/%.1: man/%.xml
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
 
-@HAVE_XSLTPROC_TRUE@man/%.1.in: man/%.xml.in
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
-
 @HAVE_XSLTPROC_TRUE@man/%.3: man/%.xml
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
-
-@HAVE_XSLTPROC_TRUE@man/%.3.in: man/%.xml.in
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
 
 @HAVE_XSLTPROC_TRUE@man/%.5: man/%.xml
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
 
-@HAVE_XSLTPROC_TRUE@man/%.5.in: man/%.xml.in
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
-
 @HAVE_XSLTPROC_TRUE@man/%.7: man/%.xml
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
-
-@HAVE_XSLTPROC_TRUE@man/%.7.in: man/%.xml.in
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN_IN)
 
 @HAVE_XSLTPROC_TRUE@man/%.8: man/%.xml
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN)
 
-@HAVE_XSLTPROC_TRUE@man/%.8.in: man/%.xml.in
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_MAN_IN)
-
 @HAVE_XSLTPROC_TRUE@man/%.html: man/%.xml
 @HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_HTML)
-
-@HAVE_XSLTPROC_TRUE@man/%.html.in: man/%.xml.in
-@HAVE_XSLTPROC_TRUE@	$(XSLTPROC_PROCESS_HTML_IN)
 
 org.freedesktop.systemd1.%.xml: systemd
 	$(AM_V_GEN)$(LIBTOOL) --mode=execute $(OBJCOPY) -O binary -j introspect.$* $< $@.tmp && \

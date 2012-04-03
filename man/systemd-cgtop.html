@@ -1,0 +1,64 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-cgtop</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-cgtop"><a name="systemd-cgtop"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-cgtop — Show top control groups by their resource usage</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-cgtop [OPTIONS...]</code> </p></div></div><div class="refsect1" title="Description"><a name="id307675"></a><h2>Description</h2><p><span class="command"><strong>systemd-cgtop</strong></span> shows the top
+                control groups of the local Linux control group
+                hierarchy, ordered by their CPU, memory and disk I/O load. The
+                display is refreshed in regular intervals (by default
+                every 1s), similar in style to
+                <span class="citerefentry"><span class="refentrytitle">top</span>(1)</span>.</p><p>Resource usage is only accounted for control
+                groups in the relevant hierarchy, i.e. CPU usage is
+                only accounted for control groups in the
+                <code class="literal">cpuacct</code> hierarchy, memory usage
+                only for those in <code class="literal">memory</code> and disk
+                I/O usage for those in
+                <code class="literal">blkio</code>. <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
+                by default places all services in their own control
+                group in the <code class="literal">cpuacct</code> hierarchy, but
+                not in <code class="literal">memory</code> nor
+                <code class="literal">blkio</code>. If resource monitoring for
+                these resources is required it is recommended to add
+                <code class="literal">blkio</code> and <code class="literal">memory</code>
+                to the <code class="varname">DefaultControllers=</code> setting
+                in <code class="filename">/etc/systemd/system.conf</code> (see
+                <span class="citerefentry"><span class="refentrytitle">systemd.conf</span>(5)</span>
+                for details). Alternatively, it is possible to enable
+                resource accounting individually for services, by
+                making use of the <code class="varname">ControlGroup=</code>
+                option in the unit files (See
+                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>
+                for details).</p><p>To emphasize this: unless
+                <code class="literal">blkio</code> and <code class="literal">memory</code>
+                are enabled for the services in question with either
+                of the options suggested above no resource accounting
+                will be available for system services and the data shown
+                by <span class="command"><strong>systemd-cgtop</strong></span> will be
+                incomplete.</p></div><div class="refsect1" title="Options"><a name="id339939"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">-p</code></span></dt><dd><p>Order by control group
+                                path name.</p></dd><dt><span class="term"><code class="option">-t</code></span></dt><dd><p>Order by number of
+                                tasks in control
+                                group (i.e. threads and processes).</p></dd><dt><span class="term"><code class="option">-c</code></span></dt><dd><p>Order by CPU load.</p></dd><dt><span class="term"><code class="option">-m</code></span></dt><dd><p>Order by memory usage.</p></dd><dt><span class="term"><code class="option">-i</code></span></dt><dd><p>Order by disk I/O load.</p></dd><dt><span class="term"><code class="option">-d</code>, </span><span class="term"><code class="option">--delay=</code></span></dt><dd><p>Specify refresh delay
+                                in seconds (or if one of
+                                <code class="literal">ms</code>,
+                                <code class="literal">us</code>,
+                                <code class="literal">min</code> is specified as
+                                unit in this time
+                                unit).</p></dd><dt><span class="term"><code class="option">--depth=</code></span></dt><dd><p>Maximum control group
+                                tree traversal depth. Specifies how
+                                deep <span class="command"><strong>systemd-cgtop</strong></span>
+                                shall traverse the control group
+                                hierarchies. If 0 is specified only
+                                the root group is monitored, for 1
+                                only the first level of control groups
+                                is monitored, and so on. Defaults to
+                                2.</p></dd></dl></div></div><div class="refsect1" title="Keys"><a name="id307488"></a><h2>Keys</h2><p><span class="command"><strong>systemd-cgtop</strong></span> is an
+                interactive tool and may be controlled via user input
+                using the following keys:</p><div class="variablelist"><dl><dt><span class="term">h</span></dt><dd><p>Shows a short help text.</p></dd><dt><span class="term">SPACE</span></dt><dd><p>Immediately refresh output.</p></dd><dt><span class="term">q</span></dt><dd><p>Terminate the program.</p></dd><dt><span class="term">p, </span><span class="term">t, </span><span class="term">c, </span><span class="term">m, </span><span class="term">i</span></dt><dd><p>Change ordering of control groups
+                                by path, number of tasks, CPU load,
+                                memory usage resp. IO
+                                load.</p></dd><dt><span class="term">+, </span><span class="term">-</span></dt><dd><p>Increase,
+                                resp. decrease refresh
+                                delay.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a name="id307583"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a name="id307592"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd-cgls</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">top</span>(1)</span>
+                </p></div></div></body></html>

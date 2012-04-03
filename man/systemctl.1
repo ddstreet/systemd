@@ -2,12 +2,12 @@
 .\"     Title: systemctl
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/15/2012
+.\"      Date: 03/16/2012
 .\"    Manual: systemctl
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMCTL" "1" "02/15/2012" "systemd" "systemctl"
+.TH "SYSTEMCTL" "1" "03/16/2012" "systemd" "systemctl"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -215,7 +215,11 @@ When used with
 \fBreboot\fR
 or
 \fBkexec\fR
-execute selected operation without shutting down all units\&. However, all processes will be killed forcibly and all file systems are unmounted or remounted read\-only\&. This is hence a drastic but relatively safe option to request an immediate reboot\&.
+execute the selected operation without shutting down all units\&. However, all processes will be killed forcibly and all file systems are unmounted or remounted read\-only\&. This is hence a drastic but relatively safe option to request an immediate reboot\&. If
+\fB\-\-force\fR
+is specified twice for these operations, they will be executed immediately without terminating any processes or umounting any file systems\&. Warning: specifying
+\fB\-\-force\fR
+twice with any of these operations might result in data loss\&.
 .RE
 .PP
 \fB\-\-root=\fR
@@ -243,6 +247,29 @@ Execute operation remotely\&. Specify a hostname, or username and hostname separ
 \fB\-P\fR, \fB\-\-privileged\fR
 .RS 4
 Acquire privileges via PolicyKit before executing the operation\&.
+.RE
+.PP
+\fB\-\-lines=\fR, \fB\-n\fR
+.RS 4
+When used with
+\fBstatus\fR
+controls the number of journal lines to show, counting from the most recent ones\&. Takes a positive integer argument\&. Defaults to 10\&.
+.RE
+.PP
+\fB\-\-follow\fR, \fB\-f\fR
+.RS 4
+When used with
+\fBstatus\fR
+continously prints new journal entries as they are appended to the journal\&.
+.RE
+.PP
+\fB\-\-output=\fR, \fB\-o\fR
+.RS 4
+When used with
+\fBstatus\fR
+controls the formatting of the journal entries that are shown\&. For the available choices see
+\fBsystemd-journalctl\fR(1)\&. Defaults to
+short\&.
 .RE
 .PP
 The following commands are understood:
@@ -338,7 +365,7 @@ is specified this will also print the current unit state to STDOUT\&.
 .PP
 \fBstatus [NAME\&.\&.\&.|PID\&.\&.\&.]\fR
 .RS 4
-Show terse runtime status information about one or more units\&. This function is intended to generate human\-readable output\&. If you are looking for computer\-parsable output, use
+Show terse runtime status information about one or more units, followed by its most recent log data from the journal\&. This function is intended to generate human\-readable output\&. If you are looking for computer\-parsable output, use
 \fBshow\fR
 instead\&. If a PID is passed information about the unit the process of the PID belongs to is shown\&.
 .RE
@@ -576,7 +603,9 @@ Shut down and halt the system\&. This is mostly equivalent to
 \fBstart halt\&.target\fR
 but also prints a wall message to all users\&. If combined with
 \fB\-\-force\fR
-shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the system halt\&.
+shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the system halt\&. If
+\fB\-\-force\fR
+is specified twice the the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
 .RE
 .PP
 \fBpoweroff\fR
@@ -585,7 +614,9 @@ Shut down and power\-off the system\&. This is mostly equivalent to
 \fBstart poweroff\&.target\fR
 but also prints a wall message to all users\&. If combined with
 \fB\-\-force\fR
-shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the powering off\&.
+shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the powering off\&. If
+\fB\-\-force\fR
+is specified twice the the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
 .RE
 .PP
 \fBreboot\fR
@@ -594,7 +625,9 @@ Shut down and reboot the system\&. This is mostly equivalent to
 \fBstart reboot\&.target\fR
 but also prints a wall message to all users\&. If combined with
 \fB\-\-force\fR
-shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the reboot\&.
+shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the reboot\&. If
+\fB\-\-force\fR
+is specified twice the the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
 .RE
 .PP
 \fBkexec\fR
@@ -632,6 +665,7 @@ is equivalent to passing
 
 \fBsystemd\fR(1),
 \fBsystemadm\fR(1),
+\fBsystemd-journalctl\fR(1),
 \fBsystemd-loginctl\fR(1),
 \fBsystemd.unit\fR(5),
 \fBsystemd.special\fR(7),

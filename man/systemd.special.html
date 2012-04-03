@@ -1,0 +1,361 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.special</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd.special"><a name="systemd.special"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.special — special systemd units</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">basic.target</code>,
+                <code class="filename">ctrl-alt-del.target</code>,
+                <code class="filename">dbus.service</code>,
+                <code class="filename">default.target</code>,
+                <code class="filename">display-manager.service</code>,
+                <code class="filename">emergency.target</code>,
+                <code class="filename">exit.service</code>,
+                <code class="filename">graphical.target</code>,
+                <code class="filename">halt.target</code>,
+                <code class="filename">kbrequest.target</code>,
+                <code class="filename">local-fs.target</code>,
+                <code class="filename">local-fs-pre.target</code>,
+                <code class="filename">mail-transfer-agent.target</code>,
+                <code class="filename">multi-user.target</code>,
+                <code class="filename">network.target</code>,
+                <code class="filename">nss-lookup.target</code>,
+                <code class="filename">poweroff.target</code>,
+                <code class="filename">reboot.target</code>,
+                <code class="filename">remote-fs.target</code>,
+                <code class="filename">remote-fs-pre.target</code>,
+                <code class="filename">rescue.target</code>,
+                <code class="filename">rpcbind.target</code>,
+                <code class="filename">runlevel2.target</code>,
+                <code class="filename">runlevel3.target</code>,
+                <code class="filename">runlevel4.target</code>,
+                <code class="filename">runlevel5.target</code>,
+                <code class="filename">shutdown.target</code>,
+                <code class="filename">sigpwr.target</code>,
+                <code class="filename">sockets.target</code>,
+                <code class="filename">swap.target</code>,
+                <code class="filename">sysinit.target</code>,
+                <code class="filename">syslog.target</code>,
+                <code class="filename">systemd-initctl.service</code>,
+                <code class="filename">systemd-initctl.socket</code>,
+                <code class="filename">systemd-stdout-syslog-bridge.service</code>,
+                <code class="filename">systemd-stdout-syslog-bridge.socket</code>,
+                <code class="filename">time-sync.target</code>,
+                <code class="filename">umount.target</code></p></div><div class="refsect1" title="Description"><a name="id548796"></a><h2>Description</h2><p>A few units are treated specially by
+                systemd. They have special internal semantics and
+                cannot be renamed.</p></div><div class="refsect1" title="Special System Units"><a name="id548807"></a><h2>Special System Units</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">basic.target</code></span></dt><dd><p>A special target unit
+                                        covering early boot-up.</p><p>systemd automatically
+                                        adds dependencies of the types
+                                        Requires and After for this
+                                        target unit to all SysV
+                                        service units configured for
+                                        runlevel 1 to 5.</p><p>Usually this should pull-in
+                                        all sockets, mount points,
+                                        swap devices and other basic
+                                        initialization necessary for
+                                        the general purpose
+                                        daemons. Most normal daemons
+                                        should have dependencies of
+                                        type After and Requires on
+                                        this unit.</p></dd><dt><span class="term"><code class="filename">ctrl-alt-del.target</code></span></dt><dd><p>systemd starts this
+                                        target whenever
+                                        Control+Alt+Del is pressed on
+                                        the console. Usually this
+                                        should be aliased (symlinked)
+                                        to
+                                        <code class="filename">reboot.target</code>.</p></dd><dt><span class="term"><code class="filename">dbus.service</code></span></dt><dd><p>A special unit for the
+                                        D-Bus system bus. As soon as
+                                        this service is fully started
+                                        up systemd will connect to it
+                                        and register its
+                                        service.</p></dd><dt><span class="term"><code class="filename">default.target</code></span></dt><dd><p>The default unit systemd
+                                        starts at bootup. Usually this
+                                        should be aliased (symlinked)
+                                        to
+                                        <code class="filename">multi-user.target</code>
+                                        or
+                                        <code class="filename">graphical.target</code>.</p><p>The default unit systemd
+                                        starts at bootup can be
+                                        overridden with the
+                                        <code class="varname">systemd.unit=</code>
+                                        kernel command line option.</p></dd><dt><span class="term"><code class="filename">display-manager.service</code></span></dt><dd><p>The display manager
+                                        service. Usually this should
+                                        be aliased (symlinked) to
+                                        <code class="filename">xdm.service</code>
+                                        or a similar display manager
+                                        service.</p><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with a LSB header
+                                        referring to the
+                                        <code class="literal">$x-display-manager</code>
+                                        facility, for compatibility
+                                        with Debian.</p></dd><dt><span class="term"><code class="filename">emergency.target</code></span></dt><dd><p>A special target unit
+                                        that starts an emergency
+                                        shell on the main
+                                        console. This unit is supposed
+                                        to be used with the kernel
+                                        command line option
+                                        <code class="varname">systemd.unit=</code>
+                                        and has otherwise little use.
+                                        </p></dd><dt><span class="term"><code class="filename">graphical.target</code></span></dt><dd><p>A special target unit
+                                        for setting up a graphical
+                                        login screen. This pulls in
+                                        <code class="filename">multi-user.target</code>.</p><p>Units that are needed
+                                        for graphical login shall add
+                                        Wants dependencies for their
+                                        unit to this unit (or
+                                        <code class="filename">multi-user.target</code>)
+                                        during installation.</p></dd><dt><span class="term"><code class="filename">halt.target</code></span></dt><dd><p>A special target unit
+                                        for shutting down and halting the system.</p><p>Applications wanting to
+                                        halt the system should start
+                                        this unit.</p></dd><dt><span class="term"><code class="filename">kbrequest.target</code></span></dt><dd><p>systemd starts this
+                                        target whenever Alt+ArrowUp is
+                                        pressed on the console. This
+                                        is a good candidate to be
+                                        aliased (symlinked) to
+                                        <code class="filename">rescue.target</code>.</p></dd><dt><span class="term"><code class="filename">local-fs.target</code></span></dt><dd><p>systemd automatically
+                                        adds dependencies of type
+                                        After to all mount units that
+                                        refer to local mount points
+                                        for this target unit. In
+                                        addition, systemd adds
+                                        dependencies of type Wants to
+                                        this target unit for those
+                                        mounts listed in
+                                        <code class="filename">/etc/fstab</code>
+                                        that have the
+                                        <code class="option">auto</code> and
+                                        <code class="option">comment=systemd.mount</code>
+                                        mount options set.</p><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$local_fs</code>
+                                        facility.</p></dd><dt><span class="term"><code class="filename">local-fs-pre.target</code></span></dt><dd><p>This target unit is
+                                        automatically ordered before
+                                        all local mount points marked
+                                        with <code class="option">auto</code>
+                                        (see above). It can be used to
+                                        execute certain units before
+                                        all local mounts.</p></dd><dt><span class="term"><code class="filename">mail-transfer-agent.target</code></span></dt><dd><p>The mail transfer agent
+                                        (MTA) service. Usually this
+                                        should pull-in all units
+                                        necessary for
+                                        sending/receiving mails on the
+                                        local host.</p><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$mail-transfer-agent</code>
+                                        or
+                                        <code class="literal">$mail-transport-agent</code>
+                                        facilities, for compatibility
+                                        with Debian.</p></dd><dt><span class="term"><code class="filename">multi-user.target</code></span></dt><dd><p>A special target unit
+                                        for setting up a multi-user
+                                        system (non-graphical). This
+                                        is pulled in by
+                                        <code class="filename">graphical.target</code>.</p><p>Units that are needed
+                                        for a multi-user system shall
+                                        add Wants dependencies to
+                                        this unit for their unit during
+                                        installation.</p></dd><dt><span class="term"><code class="filename">network.target</code></span></dt><dd><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$network</code>
+                                        facility.</p></dd><dt><span class="term"><code class="filename">nss-lookup.target</code></span></dt><dd><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$named</code>
+                                        facility.</p></dd><dt><span class="term"><code class="filename">poweroff.target</code></span></dt><dd><p>A special target unit
+                                        for shutting down and powering off the system.</p><p>Applications wanting to
+                                        power off the system should start
+                                        this unit.</p><p><code class="filename">runlevel0.target</code>
+                                        is an alias for this target
+                                        unit, for compatibility with SysV.</p></dd><dt><span class="term"><code class="filename">reboot.target</code></span></dt><dd><p>A special target unit
+                                        for shutting down and rebooting the system.</p><p>Applications wanting to
+                                        reboot the system should start
+                                        this unit.</p><p><code class="filename">runlevel6.target</code>
+                                        is an alias for this target
+                                        unit, for compatibility with SysV.</p></dd><dt><span class="term"><code class="filename">remote-fs.target</code></span></dt><dd><p>Similar to
+                                        <code class="filename">local-fs.target</code>,
+                                        but for remote mount
+                                        points.</p><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$remote_fs</code>
+                                        facility.</p></dd><dt><span class="term"><code class="filename">remote-fs-pre.target</code></span></dt><dd><p>This target unit is
+                                        automatically ordered before
+                                        all remote mount points marked
+                                        with <code class="option">auto</code>
+                                        (see above). It can be used to
+                                        execute certain units before
+                                        all remote mounts.</p></dd><dt><span class="term"><code class="filename">rescue.target</code></span></dt><dd><p>A special target unit
+                                        for setting up the base system
+                                        and a rescue shell.</p><p><code class="filename">runlevel1.target</code>
+                                        is an alias for this target
+                                        unit, for compatibility with SysV.</p></dd><dt><span class="term"><code class="filename">rpcbind.target</code></span></dt><dd><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$rpcbind</code>
+                                        facility.</p></dd><dt><span class="term"><code class="filename">runlevel2.target</code></span></dt><dd><p>This is a target that is
+                                        called whenever the SysV
+                                        compatibility code asks for
+                                        runlevel 2. It is a good idea
+                                        to make this an alias for
+                                        (i.e. symlink to)
+                                        <code class="filename">multi-user.target</code>.</p></dd><dt><span class="term"><code class="filename">runlevel3.target</code></span></dt><dd><p>This is a target that is
+                                        called whenever the SysV
+                                        compatibility code asks for
+                                        runlevel 3. It is a good idea
+                                        to make this an alias for
+                                        (i.e. symlink to)
+                                        <code class="filename">multi-user.target</code>
+                                        or
+                                        <code class="filename">graphical.target</code>.</p></dd><dt><span class="term"><code class="filename">runlevel4.target</code></span></dt><dd><p>This is a target that is
+                                        called whenever the SysV
+                                        compatibility code asks for
+                                        runlevel 4. It is a good idea
+                                        to make this an alias for
+                                        (i.e. symlink to)
+                                        <code class="filename">multi-user.target</code>
+                                        or
+                                        <code class="filename">graphical.target</code>.</p></dd><dt><span class="term"><code class="filename">runlevel5.target</code></span></dt><dd><p>This is a target that is
+                                        called whenever the SysV
+                                        compatibility code asks for
+                                        runlevel 5. It is a good idea
+                                        to make this an alias for
+                                        (i.e. symlink to)
+                                        <code class="filename">multi-user.target</code>
+                                        or
+                                        <code class="filename">graphical.target</code>.</p></dd><dt><span class="term"><code class="filename">shutdown.target</code></span></dt><dd><p>A special target unit
+                                        that terminates the services
+                                        on system shutdown.</p><p>Services that shall be
+                                        terminated on system shutdown
+                                        shall add Conflicts
+                                        dependencies to this unit for
+                                        their service unit, which is
+                                        implicitly done when
+                                        <code class="varname">DefaultDependencies=yes</code>
+                                        is set (the default).</p><p>systemd automatically
+                                        adds dependencies of type
+                                        Conflicts to this target unit
+                                        for all SysV init script
+                                        service units that shall be
+                                        terminated in SysV runlevels 0
+                                        or 6.</p></dd><dt><span class="term"><code class="filename">sigpwr.target</code></span></dt><dd><p>A special target that is
+                                        started when systemd receives
+                                        the SIGPWR process signal,
+                                        which is normally sent by the
+                                        kernel or UPS daemons when
+                                        power fails.</p></dd><dt><span class="term"><code class="filename">sockets.target</code></span></dt><dd><p>A special target unit
+                                        that sets up all service
+                                        sockets.</p><p>Services that can be
+                                        socket-activated shall add
+                                        Wants dependencies to this
+                                        unit for their socket unit
+                                        during installation.</p></dd><dt><span class="term"><code class="filename">swap.target</code></span></dt><dd><p>Similar to
+                                        <code class="filename">local-fs.target</code>, but for swap
+                                        partitions and swap
+                                        files.</p></dd><dt><span class="term"><code class="filename">sysinit.target</code></span></dt><dd><p>A special target unit
+                                        covering early boot-up scripts.</p><p>systemd automatically
+                                        adds dependencies of the types
+                                        Wants and After for all
+                                        SysV service units configured
+                                        for runlevels that are not 0
+                                        to 6 to this target unit.
+                                        This covers the special
+                                        boot-up runlevels some
+                                        distributions have, such as S
+                                        or b.</p></dd><dt><span class="term"><code class="filename">syslog.target</code></span></dt><dd><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$syslog</code>
+                                        facility.</p></dd><dt><span class="term"><code class="filename">systemd-initctl.service</code></span></dt><dd><p>This provides
+                                        compatibility with the SysV
+                                        /dev/initctl file system FIFO
+                                        for communication with the
+                                        init system.</p><p>This is a
+                                        socket-activated service, see
+                                        <code class="filename">system-initctl.socket</code>.</p></dd><dt><span class="term"><code class="filename">systemd-initctl.socket</code></span></dt><dd><p>Socket activation unit
+                                        for
+                                        <code class="filename">system-initctl.service</code>.</p></dd><dt><span class="term"><code class="filename">systemd-stdout-syslog-bridge.service</code></span></dt><dd><p>This is internally used
+                                        by systemd to provide syslog
+                                        logging to the processes it
+                                        maintains.</p><p>This is a
+                                        socket-activated service, see
+                                        <code class="filename">system-stdout-syslog-bridge.socket</code>.</p></dd><dt><span class="term"><code class="filename">systemd-stdout-syslog-bridge.socket</code></span></dt><dd><p>Socket activation unit
+                                        for
+                                        <code class="filename">system-stdout-syslog-bridge.service</code>. systemd
+                                        will automatically add
+                                        dependencies of types Requires
+                                        and After to all units that
+                                        have been configured for
+                                        stdout or stderr to be
+                                        connected to syslog or the
+                                        kernel log buffer.</p></dd><dt><span class="term"><code class="filename">systemd-shutdownd.service</code></span></dt><dd><p>This is internally used
+                                        by
+                                        <span class="citerefentry"><span class="refentrytitle">shutdown</span>(8)</span>
+                                        to implement delayed shutdowns.</p><p>This is a
+                                        socket-activated service, see
+                                        <code class="filename">system-shutdownd.socket</code>.</p></dd><dt><span class="term"><code class="filename">systemd-shutdownd.socket</code></span></dt><dd><p>Socket activation unit
+                                        for
+                                        <code class="filename">system-shutdownd.service</code>.</p></dd><dt><span class="term"><code class="filename">time-sync.target</code></span></dt><dd><p>systemd automatically
+                                        adds dependencies of type
+                                        After for this target unit to
+                                        all SysV init script service
+                                        units with an LSB header
+                                        referring to the
+                                        <code class="literal">$time</code>
+                                        facility.</p></dd><dt><span class="term"><code class="filename">umount.target</code></span></dt><dd><p>A special target unit
+                                        that umounts all mount and
+                                        automount points on system
+                                        shutdown.</p><p>Mounts that shall be
+                                        unmounted on system shutdown
+                                        shall add Conflicts
+                                        dependencies to this unit for
+                                        their mount unit, which is
+                                        implicitly done when
+                                        <code class="varname">DefaultDependencies=yes</code>
+                                        is set (the default).</p></dd></dl></div></div><div class="refsect1" title="Special User Units"><a name="id591060"></a><h2>Special User Units</h2><p>When systemd runs as a user instance, the
+                following special units are available, which have
+                similar definitions as their system counterparts:
+                <code class="filename">default.target</code>,
+                <code class="filename">local-fs.target</code>,
+                <code class="filename">remote-fs.target</code>,
+                <code class="filename">shutdown.target</code>,
+                <code class="filename">sockets.target</code>,
+                <code class="filename">swap.target</code>.</p><p>In addition the following special unit is
+                understood only when systemd runs as service instance:</p><div class="variablelist"><dl><dt><span class="term"><code class="filename">exit.service</code></span></dt><dd><p>A special service unit
+                                        for shutting down the
+                                        user service manager.</p><p>Applications wanting to
+                                        terminate the user service
+                                        manager should start this
+                                        unit. If systemd receives
+                                        SIGTERM or SIGINT when running
+                                        as user service daemon it will
+                                        start this unit.</p><p>Normally, this pulls in
+                                        <code class="filename">shutdown.target</code>
+                                        which in turn should be
+                                        conflicted by all units that
+                                        want to be shut down on
+                                        user service manager exit.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id591144"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.target</span>(5)</span>
+                  </p></div></div></body></html>

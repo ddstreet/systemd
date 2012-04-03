@@ -1,0 +1,47 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>machine-info</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="machine-info"><a name="machine-info"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>machine-info — Local machine information file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-info</code></p></div><div class="refsect1" title="Description"><a name="id274043"></a><h2>Description</h2><p>The <code class="filename">/etc/machine-info</code> file
+                contains machine meta data.</p><p>The basic file format of
+                <code class="filename">machine-info</code> is a
+                newline-separated list of environment-like
+                shell-compatible variable assignments. It is possible
+                to source the configuration from shell scripts,
+                however, beyond mere variable assignments no shell
+                features are supported, allowing applications to read
+                the file without implementing a shell compatible
+                execution engine.</p><p><code class="filename">/etc/machine-info</code> contains
+                meta data about the machine that is set by the user or
+                administrator.</p><p>Depending on the operating system other
+                configuration files might be checked for machine
+                information as well, however only as fallback.</p></div><div class="refsect1" title="Options"><a name="id274084"></a><h2>Options</h2><p>The following machine meta data parameters may
+                be set using
+                <code class="filename">/etc/machine-info</code>:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PRETTY_HOSTNAME=</code></span></dt><dd><p>A pretty
+                                human-readable UTF8 machine identifier
+                                string. This should contain a name
+                                like <code class="literal">Lennart's
+                                Laptop</code> which is useful to
+                                present to the user and does not
+                                suffer by the syntax limitations of
+                                internet domain names. If possible the
+                                internet host name as configured in
+                                <code class="filename">/etc/hostname</code>
+                                should be kept similar to this
+                                one. Example: if this value is
+                                <code class="literal">Lennart's Computer</code>
+                                an Internet host name of
+                                <code class="literal">lennarts-computer</code>
+                                might be a good choice. If this
+                                parameter is not set an application
+                                should fall back to the Internet host
+                                name for presentation
+                                purposes.</p></dd><dt><span class="term"><code class="varname">ICON_NAME=</code></span></dt><dd><p>An icon identifying
+                                this machine according to the <a class="ulink" href="http://standards.freedesktop.org/icon-naming-spec/icon-naming-spec-latest.html" target="_top">XDG
+                                Icon Naming Specification</a>. If
+                                this parameter is not set an
+                                application should fall back to
+                                <code class="literal">computer</code> or a
+                                similar icon name.</p></dd></dl></div></div><div class="refsect1" title="Example"><a name="id306306"></a><h2>Example</h2><pre class="programlisting">PRETTY_HOSTNAME="Lennart's Computer"
+ICON_NAME=computer-laptop</pre></div><div class="refsect1" title="See Also"><a name="id306318"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span>
+                  </p></div></div></body></html>

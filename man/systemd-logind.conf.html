@@ -1,0 +1,71 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-logind.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-logind.conf"><a name="systemd-logind.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-logind.conf — Login manager configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd-logind.conf</code></p></div><div class="refsect1" title="Description"><a name="id314124"></a><h2>Description</h2><p>This files configures various parameters of the systemd login manager.</p></div><div class="refsect1" title="Options"><a name="id314134"></a><h2>Options</h2><p>All options are configured in the
+                <code class="literal">[Login]</code> section:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">NAutoVTs=</code></span></dt><dd><p>Takes a positive
+                                integer. How many virtual terminals to
+                                allocate by default and when switched
+                                to autospawn <code class="literal">autovt</code>
+                                services on (if they are otherwise
+                                unused). These services are
+                                instantiated from a template of
+                                <code class="filename">autovt@.service</code>
+                                with the virtual terminal TTY name,
+                                e.g. <code class="filename">autovt@tty4.service</code>. By
+                                default
+                                <code class="filename">autovt@.service</code>
+                                is linked to
+                                <code class="filename">getty@.service</code>,
+                                i.e. login prompts are started
+                                dynamically as the user switches to
+                                unused virtual terminals, and this
+                                parameter hence controls how many
+                                gettys are available on the virtual
+                                terminals. Defaults to 6. When set to
+                                0, automatic spawning of
+                                <code class="literal">autovt</code> services is
+                                disabled.</p></dd><dt><span class="term"><code class="varname">KillUserProcesses=</code></span></dt><dd><p>Takes a boolean
+                                argument. Configures whether the
+                                processes of a user should be killed
+                                when she or he completely logs out (i.e. after
+                                her/his last session ended). Defaults to
+                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">KillOnlyUsers=</code>, </span><span class="term"><code class="varname">KillExcludeUsers=</code></span></dt><dd><p>These settings take
+                                space separated lists of user names
+                                that influence the effect of
+                                <code class="varname">KillUserProcesses=</code>. If
+                                not empty only processes of users
+                                listed in
+                                <code class="varname">KillOnlyUsers</code> will
+                                be killed when they log out
+                                entirely. Processes of users listed in
+                                <code class="varname">KillExcludeUsers=</code>
+                                are excluded from being
+                                killed. <code class="varname">KillExcludeUsers=</code>
+                                defaults to <code class="literal">root</code>
+                                and takes precedence over
+                                <code class="varname">KillOnlyUsers=</code>
+                                which defaults to the empty list.</p></dd><dt><span class="term"><code class="varname">Controllers=</code>, </span><span class="term"><code class="varname">ResetControllers=</code></span></dt><dd><p>These settings control
+                                the default control group hierarchies
+                                users logging are added to. When
+                                logging in users will get private
+                                control groups in all hierarchies
+                                listed in
+                                <code class="varname">Controllers=</code> and be
+                                reset to the root control group in all
+                                hierarchies listed in
+                                <code class="varname">ResetControllers=</code>. <code class="varname">Controllers=</code>
+                                defaults to the empty list,
+                                <code class="varname">ResetControllers=</code>
+                                defaults to
+                                <code class="literal">cpu</code>.</p></dd></dl></div><p>Note that setting
+                <code class="varname">KillUserProcesses=1</code> will break tools
+                like
+                <span class="citerefentry"><span class="refentrytitle">screen</span>(1)</span>.</p><p>Note that <code class="varname">KillUserProcesses=1</code>
+                is a weaker version of
+                <code class="varname">kill-session-processes=1</code> which may
+                be configured per-service for
+                <span class="citerefentry"><span class="refentrytitle">pam_systemd</span>(8)</span>. The
+                latter kills processes of a session as soon as it
+                ends, the former kills processes as soon as the last
+                session of the user ends.</p></div><div class="refsect1" title="See Also"><a name="id281745"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd-loginctl</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.conf</span>(5)</span>
+                  </p></div></div></body></html>

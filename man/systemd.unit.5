@@ -2,12 +2,12 @@
 .\"     Title: systemd.unit
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/15/2012
+.\"      Date: 03/16/2012
 .\"    Manual: systemd.unit
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.UNIT" "5" "02/15/2012" "systemd" "systemd.unit"
+.TH "SYSTEMD\&.UNIT" "5" "03/16/2012" "systemd" "systemd.unit"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -469,8 +469,7 @@ to test against a specific type of virtualization solution, or one of
 \fIopenvz\fR,
 \fIlxc\fR,
 \fIlxc\-libvirt\fR,
-\fIsystemd\-nspawn\fR,
-\fIpidns\fR
+\fIsystemd\-nspawn\fR
 to test against a specific implementation\&. If multiple virtualization technologies are nested only the innermost is considered\&. The test may be negated by prepending an exclamation mark\&.
 \fIConditionSecurity=\fR
 may be used to check whether the given security module is enabled on the system\&. Currently the only recognized value is
