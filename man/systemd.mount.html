@@ -1,0 +1,135 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.mount</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd.mount"><a name="systemd.mount"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.mount — systemd mount configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.mount</code></p></div><div class="refsect1" title="Description"><a name="id470890"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+                <code class="filename">.mount</code> encodes information about
+                a file system mount point controlled and supervised by
+                systemd.</p><p>This man page lists the configuration options
+                specific to this unit type. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                for the common options of all unit configuration
+                files. The common configuration items are configured
+                in the generic [Unit] and [Install] sections. The
+                mount specific configuration options are configured
+                in the [Mount] section.</p><p>Additional options are listed in
+                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>,
+                which define the execution environment the
+                <span class="citerefentry"><span class="refentrytitle">mount</span>(8)</span>
+                binary is executed in.</p><p>Mount units must be named after the mount point
+                directories they control. Example: the mount point
+                <code class="filename">/home/lennart</code> must be configured
+                in a unit file
+                <code class="filename">home-lennart.mount</code>. For details
+                about the escaping logic used to convert a file system
+                path to a unit name see
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p><p>Optionally, a mount unit may be accompanied by
+                an automount unit, to allow on-demand or parallelized
+                mounting. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.automount</span>(5)</span>.</p><p>If an mount point is beneath another mount point
+                in the file system hierarchy, a dependency between both
+                units is created automatically.</p><p>Mount points created at runtime independent on
+                unit files or <code class="filename">/etc/fstab</code> will be
+                monitored by systemd and appear like any other mount
+                unit in systemd.</p></div><div class="refsect1" title="/etc/fstab"><a name="id470986"></a><h2><code class="filename">/etc/fstab</code></h2><p>Mount units may either be configured via unit
+                files, or via <code class="filename">/etc/fstab</code> (see
+                <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
+                for details).</p><p>When reading <code class="filename">/etc/fstab</code> a
+                few special mount options are understood by systemd
+                which influence how dependencies are created for mount
+                points from <code class="filename">/etc/fstab</code>. If
+                <code class="option">MountAuto=yes</code> is set in
+                <code class="filename">system.conf</code> (which is the
+                default), or if <code class="option">x-systemd.mount</code> is
+                specified as mount option, then systemd will create a
+                dependency of type <code class="option">Wants</code> from either
+                <code class="filename">local-fs.target</code> or
+                <code class="filename">remote-fs.target</code>, depending
+                whether the file system is local or remote. If
+                <code class="option">x-systemd.automount</code> is set, an
+                automount unit will be created for the file
+                system. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.automount</span>(5)</span>
+                for details. If
+                <code class="option">x-systemd-device-timeout=</code> is
+                specified it may be used to configure how long systemd
+                should wait for a device to show up before giving up
+                on an entry from
+                <code class="filename">/etc/fstab</code>. Specify a time in
+                seconds or explicitly specifiy a unit as
+                <code class="literal">s</code>, <code class="literal">min</code>,
+                <code class="literal">h</code>, <code class="literal">ms</code>.</p><p>If a mount point is configured in both
+                <code class="filename">/etc/fstab</code> and a unit file, the
+                configuration in the latter takes precedence.</p></div><div class="refsect1" title="Options"><a name="id503248"></a><h2>Options</h2><p>Mount files must include a [Mount] section,
+                which carries information about the file system mount points it
+                supervises. A number of options that may be used in
+                this section are shared with other unit types. These
+                options are documented in
+                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>. The
+                options specific to the [Mount] section of mount
+                units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">What=</code></span></dt><dd><p>Takes an absolute path
+                                of a device node, file or other
+                                resource to mount. See
+                                <span class="citerefentry"><span class="refentrytitle">mount</span>(8)</span>
+                                for details. If this refers to a
+                                device node, a dependency on the
+                                respective device unit is
+                                automatically created. (See
+                                <span class="citerefentry"><span class="refentrytitle">systemd.device</span>(5)</span> for more information.)
+                                This option is
+                                mandatory.</p></dd><dt><span class="term"><code class="varname">Where=</code></span></dt><dd><p>Takes an absolute path
+                                of a directory of the mount point. If
+                                the mount point is not existing at
+                                time of mounting, it is created. This
+                                string must be reflected in the unit
+                                file name. (See above.) This option is
+                                mandatory.</p></dd><dt><span class="term"><code class="varname">Type=</code></span></dt><dd><p>Takes a string for the
+                                filesystem type. See
+                                <span class="citerefentry"><span class="refentrytitle">mount</span>(8)</span>
+                                for details. This setting is
+                                optional.</p></dd><dt><span class="term"><code class="varname">Options=</code></span></dt><dd><p>Mount options to use
+                                when mounting. This takes a comma
+                                separated list of options. This
+                                setting is optional.</p></dd><dt><span class="term"><code class="varname">DirectoryMode=</code></span></dt><dd><p>Directories of mount
+                                points (and any parent directories)
+                                are automatically created if
+                                needed. This option specifies the file
+                                system access mode used when creating
+                                these directories. Takes an access
+                                mode in octal notation. Defaults to
+                                0755.</p></dd><dt><span class="term"><code class="varname">TimeoutSec=</code></span></dt><dd><p>Configures the time to
+                                wait for the mount command to
+                                finish. If a command does not exit
+                                within the configured time the mount
+                                will be considered failed and be shut
+                                down again. All commands still running
+                                will be terminated forcibly via
+                                SIGTERM, and after another delay of
+                                this time with SIGKILL. (See
+                                <code class="option">KillMode=</code> below.)
+                                Takes a unit-less value in seconds, or
+                                a time span value such as "5min
+                                20s". Pass 0 to disable the timeout
+                                logic. Defaults to
+                                90s.</p></dd><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
+                                processes of this mount shall be
+                                killed. One of
+                                <code class="option">control-group</code>,
+                                <code class="option">process</code>,
+                                <code class="option">none</code>.</p><p>This option is mostly equivalent
+                                to the <code class="option">KillMode=</code>
+                                option of service files. See
+                                <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>
+                                for details.</p></dd><dt><span class="term"><code class="varname">KillSignal=</code></span></dt><dd><p>Specifies which signal
+                                to use when killing a process of this
+                                mount. Defaults to SIGTERM.
+                                </p></dd><dt><span class="term"><code class="varname">SendSIGKILL=</code></span></dt><dd><p>Specifies whether to
+                                send SIGKILL to remaining processes
+                                after a timeout, if the normal
+                                shutdown procedure left processes of
+                                the mount around. Takes a boolean
+                                value. Defaults to "yes".
+                                </p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id470854"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.device</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">mount</span>(8)</span>
+                  </p></div></div></body></html>

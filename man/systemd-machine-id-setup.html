@@ -1,0 +1,26 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-machine-id-setup</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-machine-id-setup"><a name="systemd-machine-id-setup"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-machine-id-setup — Initialize the machine ID in <code class="filename">/etc/machine-id</code></p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-machine-id-setup</code> </p></div></div><div class="refsect1" title="Description"><a name="id543465"></a><h2>Description</h2><p><span class="command"><strong>systemd-machine-id-setup</strong></span> may
+                be used by system installer tools to initialize the
+                machine ID stored in
+                <code class="filename">/etc/machine-id</code> at install time
+                with a randomly generated ID. See
+                <span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span>
+                for more information about this file.</p><p>This tool will execute no operation if
+                <code class="filename">/etc/machine-id</code> is already
+                initialized.</p><p>If a valid D-Bus machine ID is already
+                configured for the system the D-Bus machine ID is
+                copied and used to initialize the machine ID in
+                <code class="filename">/etc/machine-id</code>.</p><p>If run inside a KVM virtual machine and a UUID
+                is passed via the <code class="option">-uuid</code> option this
+                UUID is used to initialize the machine ID instead of a
+                randomly generated one. The caller must ensure that the
+                UUID passed is sufficiently unique and is different
+                for every booted instanced of the VM.</p><p>Similar, if run inside a Linux container
+                environment and a UUID is set for the container this
+                is used to initialize the machine ID. For details see
+                the documentation of the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/ContainerInterface" target="_top">Container
+                Interface</a>.</p></div><div class="refsect1" title="Options"><a name="id543533"></a><h2>Options</h2><p>This tool does not take any options or arguments.</p></div><div class="refsect1" title="Exit status"><a name="id543543"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a name="id543554"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">dbus-uuidgen</span>(1)</span>
+                </p></div></div></body></html>

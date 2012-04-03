@@ -1,0 +1,60 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_login_monitor_new</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="sd_login_monitor_new"><a name="sd_login_monitor_new"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_login_monitor_new, sd_login_monitor_unref, sd_login_monitor_flush, sd_login_monitor_get_fd — Monitor login sessions, seats and users</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-login.h&gt;</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_login_monitor_new</b>(</code></td><td>const char* <var class="pdparam">category</var>, </td></tr><tr><td> </td><td>sd_login_monitor** <var class="pdparam">ret</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">sd_login_monitor* <b class="fsfunc">sd_login_monitor_unref</b>(</code></td><td>sd_login_monitor* <var class="pdparam">m</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_login_monitor_flush</b>(</code></td><td>sd_login_monitor* <var class="pdparam">m</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_login_monitor_get_fd</b>(</code></td><td>sd_login_monitor* <var class="pdparam">m</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a name="id508740"></a><h2>Description</h2><p><code class="function">sd_login_monitor_new()</code> may
+                be used to monitor login session, users and seats. Via
+                a monitor object a file descriptor can be integrated
+                into an application defined event loop which is woken
+                up each time a user logs in, logs out or a seat is
+                added or removed, or a session, user, or seat changes
+                state otherwise. The first parameter takes a string
+                which can be either <code class="literal">seat</code> (to get
+                only notifications about seats being added, removed or
+                changed), <code class="literal">session</code> (to get only
+                notifications about sessions being created or removed
+                or changed) or <code class="literal">uid</code> (to get only
+                notifications when a user changes state in respect to
+                logins). If notifications shall be generated in all
+                these conditions, NULL may be passed. Note that in
+                future additional categories may be defined. The
+                second parameter returns a monitor object and needs to
+                be freed with the
+                <code class="function">sd_login_monitor_unref()</code> call
+                after use.</p><p><code class="function">sd_login_monitor_unref()</code>
+                may be used to destroy a monitor object. Note that
+                this will invalidate any file descriptor returned by
+                <code class="function">sd_login_monitor_get_fd()</code>.</p><p><code class="function">sd_login_monitor_flush()</code>
+                may be used to reset the wakeup state of the monitor
+                object. Whenever an event causes the monitor to wake
+                up the event loop via the file descriptor this
+                function needs to be called to reset the wake-up
+                state. If this call is not invoked the file descriptor
+                will immediately wake up the event loop again.</p><p><code class="function">sd_login_monitor_get_fd()</code>
+                may be used to retrieve the file descriptor of the
+                monitor object that may be integrated in an
+                application defined event loop, based around
+                <span class="citerefentry"><span class="refentrytitle">poll</span>(2)</span>
+                or a similar interface. The application should include
+                the returned file descriptor as wake up source for
+                POLLIN events. Whenever a wake-up is triggered the
+                file descriptor needs to be reset via
+                <code class="function">sd_login_monitor_flush()</code>. An
+                application needs to reread the login state with a
+                function like
+                <span class="citerefentry"><span class="refentrytitle">sd_get_seats</span>(3)</span>
+                or similar to determine what changed.</p></div><div class="refsect1" title="Return Value"><a name="id476246"></a><h2>Return Value</h2><p>On success
+                <code class="function">sd_login_monitor_new()</code> and
+                <code class="function">sd_login_monitor_flush()</code> return 0
+                or a positive integer. On success
+                <code class="function">sd_login_monitor_get_fd()</code> returns
+                a Unix file descriptor. On failure, these calls return
+                a negative errno-style error code.</p><p><code class="function">sd_login_monitor_unref()</code>
+                always returns NULL.</p></div><div class="refsect1" title="Notes"><a name="id476284"></a><h2>Notes</h2><p>The <code class="function">sd_login_monitor_new()</code>,
+                <code class="function">sd_login_monitor_unref()</code>, <code class="function">sd_login_monitor_flush()</code> and
+                <code class="function">sd_login_monitor_get_fd()</code> interfaces
+                are available as shared library, which can be compiled
+                and linked to with the
+                <code class="literal">libsystemd-login</code>
+                <span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span>
+                file.</p></div><div class="refsect1" title="See Also"><a name="id476393"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd-login</span>(7)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_get_seats</span>(3)</span>
+                </p></div></div></body></html>
