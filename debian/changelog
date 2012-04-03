@@ -1,3 +1,31 @@
+systemd (44-1) unstable; urgency=low
+
+  [ Tollef Fog Heen ]
+  * New upstream version.
+    - Backport 3492207: journal: PAGE_SIZE is not known on ppc and other
+      archs
+    - Backport 5a2a2a1: journal: react with immediate rotation to a couple
+      of more errors
+    - Backport 693ce21: util: never follow symlinks in rm_rf_children()
+      Fixes CVE-2012-1174, closes: #664364
+  * Drop output message from init-functions hook, it's pointless.
+  * Only rmdir /lib/init/rw if it exists.
+  * Explicitly order debian-fixup before sysinit.target to prevent a
+    possible race condition with the creation of sockets.  Thanks to
+    Michael Biebl for debugging this.
+  * Always restart the initctl socket on upgrades, to mask sysvinit
+    removing it.
+
+  [ Michael Biebl ]
+  * Remove workaround for non-interactive sessions from pam config again.
+  * Create compat /dev/initctl symlink in case we are upgrading from a system
+    running a newer version of sysvinit (using /run/initctl) and sysvinit is
+    replaced with systemd-sysv during the upgrade. Closes: #663219
+  * Install new man pages.
+  * Build-Depend on valac (>= 0.12) instead of valac-0.12. Closes: #663323
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Tue, 03 Apr 2012 19:59:17 +0200
+
 systemd (43-1) experimental; urgency=low
 
   [ Tollef Fog Heen ]

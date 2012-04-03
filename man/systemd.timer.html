@@ -1,0 +1,87 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.timer</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd.timer"><a name="systemd.timer"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.timer — systemd timer configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.timer</code></p></div><div class="refsect1" title="Description"><a name="id388560"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+                <code class="filename">.timer</code> encodes information about
+                a timer controlled and supervised by systemd, for
+                timer-based activation.</p><p>This man page lists the configuration options
+                specific to this unit type. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                for the common options of all unit configuration
+                files. The common configuration items are configured
+                in the generic [Unit] and [Install] sections. The
+                timer specific configuration options are configured in
+                the [Timer] section.</p><p>For each timer file, a matching unit file must
+                exist, describing the unit to activate when the timer
+                elapses. By default, a service by the same name as the
+                timer (except for the suffix) is activated. Example: a
+                timer file <code class="filename">foo.timer</code> activates a
+                matching service <code class="filename">foo.service</code>. The
+                unit to activate may be controlled by
+                <code class="varname">Unit=</code> (see below).</p><p>Unless <code class="varname">DefaultDependencies=</code>
+                is set to <code class="option">false</code>, timer units will
+                implicitly have dependencies of type
+                <code class="varname">Conflicts=</code> and
+                <code class="varname">Before=</code> on
+                <code class="filename">shutdown.target</code>. These ensure
+                that timer units are stopped cleanly prior to system
+                shutdown. Only timer units involved with early boot or
+                late system shutdown should disable this
+                option.</p></div><div class="refsect1" title="Options"><a name="id388637"></a><h2>Options</h2><p>Timer files must include a [Timer] section,
+                which carries information about the timer it
+                defines. The options specific to the [Timer] section
+                of timer units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">OnActiveSec=</code>, </span><span class="term"><code class="varname">OnBootSec=</code>, </span><span class="term"><code class="varname">OnStartupSec=</code>, </span><span class="term"><code class="varname">OnUnitActiveSec=</code>, </span><span class="term"><code class="varname">OnUnitInactiveSec=</code></span></dt><dd><p>Defines timers
+                                relative to different starting points:
+                                <code class="varname">OnActiveSec=</code> defines a
+                                timer relative to the moment the timer
+                                itself is
+                                activated. <code class="varname">OnBootSec=</code>
+                                defines a timer relative to when the
+                                machine was booted
+                                up. <code class="varname">OnStartupSec=</code>
+                                defines a timer relative to when
+                                systemd was
+                                started. <code class="varname">OnUnitActiveSec=</code>
+                                defines a timer relative to when the
+                                unit the timer is activating was last
+                                activated. <code class="varname">OnUnitInactiveSec=</code>
+                                defines a timer relative to when the
+                                unit the timer is activating was last
+                                deactivated.</p><p>Multiple directives may be
+                                combined of the same and of different
+                                types. For example, by combining
+                                <code class="varname">OnBootSec=</code> and
+                                <code class="varname">OnUnitActiveSec=</code> it is
+                                possible to define a timer that
+                                elapses in regular intervals and
+                                activates a specific service each
+                                time.</p><p>The arguments to the directives
+                                are time spans configured in
+                                seconds. Example: "OnBootSec=50" means
+                                50s after boot-up. The argument may
+                                also include time units. Example:
+                                "OnBootSec=5h 30min" means 5 hours and 30
+                                minutes after boot-up. For details
+                                about the syntax of time spans see
+                                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p><p>If a timer configured with
+                                <code class="varname">OnBootSec=</code> or
+                                <code class="varname">OnStartupSec=</code> is
+                                already in the past when the timer
+                                unit is activated, it will immediately
+                                elapse and the configured unit is
+                                started. This is not the case for
+                                timers defined in the other
+                                directives.</p></dd><dt><span class="term"><code class="varname">Unit=</code></span></dt><dd><p>The unit to activate
+                                when this timer elapses. The argument is a
+                                unit name, whose suffix is not
+                                <code class="filename">.timer</code>. If not
+                                specified, this value defaults to a
+                                service that has the same name as the
+                                timer unit, except for the
+                                suffix. (See above.) It is recommended
+                                that the unit name that is activated
+                                and the unit name of the timer unit
+                                are named identically, except for the
+                                suffix.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id420912"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>
+                  </p></div></div></body></html>
