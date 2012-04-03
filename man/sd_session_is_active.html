@@ -1,0 +1,66 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_session_is_active</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="sd_session_is_active"><a name="sd_session_is_active"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_session_is_active, sd_session_get_uid, sd_session_get_seat, sd_session_get_service, sd_session_get_type, sd_session_get_class, sd_session_get_display — Determine state of a specific session</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-login.h&gt;</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_session_is_active</b>(</code></td><td>const char* <var class="pdparam">session</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_session_get_uid</b>(</code></td><td>const char* <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>uid_t* <var class="pdparam">uid</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_session_get_seat</b>(</code></td><td>const char* <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">seat</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_session_get_service</b>(</code></td><td>const char* <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">service</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_session_get_type</b>(</code></td><td>const char* <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">type</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_session_get_class</b>(</code></td><td>const char* <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">class</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_session_get_display</b>(</code></td><td>const char* <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">display</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a name="id384022"></a><h2>Description</h2><p><code class="function">sd_session_is_active()</code> may
+                be used to determine whether the session identified by
+                the specified session identifier is currently active
+                (i.e. currently in the foreground and available for
+                user input) or not.</p><p><code class="function">sd_session_get_uid()</code> may be
+                used to determine the user identifier of the Unix user the session
+                identified by the specified session identifier belongs
+                to.</p><p><code class="function">sd_session_get_seat()</code> may
+                be used to determine the seat identifier of the seat
+                the session identified by the specified session
+                identifier belongs to. Note that not all sessions are
+                attached to a seat, this call will fail for them. The
+                returned string needs to be freed with the libc
+                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                call after use.</p><p><code class="function">sd_session_get_service()</code>
+                may be used to determine the name of the service (as
+                passed during PAM session setup) that registered the
+                session identified by the specified session
+                identifier. The returned string needs to be freed with
+                the libc
+                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                call after use.</p><p><code class="function">sd_session_get_type()</code> may
+                be used to determine the type of the session
+                identified by the specified session identifier. The
+                returned string is one of <code class="literal">x11</code>,
+                <code class="literal">tty</code> or
+                <code class="literal">unspecified</code> and needs to be freed
+                with the libc
+                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                call after use.</p><p><code class="function">sd_session_get_class()</code> may
+                be used to determine the class of the session
+                identified by the specified session identifier. The
+                returned string is one of <code class="literal">user</code>,
+                <code class="literal">greeter</code> or
+                <code class="literal">lock-screen</code> and needs to be freed
+                with the libc
+                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                call after use.</p><p><code class="function">sd_session_get_display()</code>
+                may be used to determine the X11 display of the
+                session identified by the specified session
+                identifier. The returned string is one of needs to be
+                freed with the libc
+                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                call after use.</p><p>If the <code class="literal">session</code> parameter of
+                any of these functions is passed as NULL the operation
+                is executed for the session the calling process is a
+                member of, if there is any.</p></div><div class="refsect1" title="Return Value"><a name="id384239"></a><h2>Return Value</h2><p>If the test succeeds
+                <code class="function">sd_session_is_active()</code> returns a
+                positive integer, if it fails 0.  On success
+                <code class="function">sd_session_get_uid()</code>,
+                <code class="function">sd_session_get_service()</code> and
+                <code class="function">sd_session_get_seat()</code> return 0 or
+                a positive integer. On failure, these calls return a
+                negative errno-style error code.</p></div><div class="refsect1" title="Notes"><a name="id384275"></a><h2>Notes</h2><p>The <code class="function">sd_session_is_active()</code>,
+                <code class="function">sd_session_get_uid()</code>,
+                <code class="function">sd_session_get_service()</code> and
+                <code class="function">sd_session_get_seat()</code> interfaces
+                are available as shared library, which can be compiled
+                and linked to with the
+                <code class="literal">libsystemd-login</code>
+                <span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span>
+                file.</p></div><div class="refsect1" title="See Also"><a name="id384324"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd-login</span>(7)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_pid_get_session</span>(3)</span>
+                </p></div></div></body></html>

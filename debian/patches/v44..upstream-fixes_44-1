@@ -1,0 +1,82 @@
+diff --git a/src/journal/journal-file.c b/src/journal/journal-file.c
+index 474dd5c..5d540a7 100644
+--- a/src/journal/journal-file.c
++++ b/src/journal/journal-file.c
+@@ -1887,7 +1887,10 @@ int journal_file_open_reliably(
+         char *p;
+ 
+         r = journal_file_open(fname, flags, mode, template, ret);
+-        if (r != -EBADMSG)
++        if (r != -EBADMSG && /* corrupted */
++            r != -ENODATA && /* truncated */
++            r != -EHOSTDOWN && /* other machine */
++            r != -EPROTONOSUPPORT) /* incompatible feature */
+                 return r;
+ 
+         if ((flags & O_ACCMODE) == O_RDONLY)
+diff --git a/src/journal/journald.c b/src/journal/journald.c
+index baad3ab..87390bd 100644
+--- a/src/journal/journald.c
++++ b/src/journal/journald.c
+@@ -29,7 +29,6 @@
+ #include <sys/ioctl.h>
+ #include <linux/sockios.h>
+ #include <sys/statvfs.h>
+-#include <sys/user.h>
+ 
+ #include <systemd/sd-journal.h>
+ #include <systemd/sd-login.h>
+@@ -609,7 +608,15 @@ retry:
+         else {
+                 r = journal_file_append_entry(f, NULL, iovec, n, &s->seqnum, NULL, NULL);
+ 
+-                if ((r == -EBADMSG || r == -E2BIG) && !vacuumed) {
++                if ((r == -E2BIG || /* hit limit */
++                     r == -EFBIG || /* hit fs limit */
++                     r == -EDQUOT || /* quota hit */
++                     r == -ENOSPC || /* disk full */
++                     r == -EBADMSG || /* corrupted */
++                     r == -ENODATA || /* truncated */
++                     r == -EHOSTDOWN || /* other machine */
++                     r == -EPROTONOSUPPORT) && /* unsupported feature */
++                    !vacuumed) {
+ 
+                         if (r == -E2BIG)
+                                 log_info("Allocation limit reached, rotating.");
+@@ -2141,10 +2148,20 @@ static int process_event(Server *s, struct epoll_event *ev) {
+                         size_t label_len = 0;
+                         union {
+                                 struct cmsghdr cmsghdr;
++
++                                /* We use NAME_MAX space for the
++                                 * SELinux label here. The kernel
++                                 * currently enforces no limit, but
++                                 * according to suggestions from the
++                                 * SELinux people this will change and
++                                 * it will probably be identical to
++                                 * NAME_MAX. For now we use that, but
++                                 * this should be updated one day when
++                                 * the final limit is known.*/
+                                 uint8_t buf[CMSG_SPACE(sizeof(struct ucred)) +
+                                             CMSG_SPACE(sizeof(struct timeval)) +
+-                                            CMSG_SPACE(sizeof(int)) +
+-                                            CMSG_SPACE(PAGE_SIZE)]; /* selinux label */
++                                            CMSG_SPACE(sizeof(int)) + /* fd */
++                                            CMSG_SPACE(NAME_MAX)]; /* selinux label */
+                         } control;
+                         ssize_t n;
+                         int v;
+diff --git a/src/util.c b/src/util.c
+index 20cbc2b..dfc1dc6 100644
+--- a/src/util.c
++++ b/src/util.c
+@@ -3593,7 +3593,8 @@ static int rm_rf_children(int fd, bool only_dirs, bool honour_sticky) {
+                 if (is_dir) {
+                         int subdir_fd;
+ 
+-                        if ((subdir_fd = openat(fd, de->d_name, O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC)) < 0) {
++                        subdir_fd = openat(fd, de->d_name, O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW);
++                        if (subdir_fd < 0) {
+                                 if (ret == 0 && errno != ENOENT)
+                                         ret = -errno;
+                                 continue;

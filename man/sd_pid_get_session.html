@@ -1,0 +1,53 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_pid_get_session</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="sd_pid_get_session"><a name="sd_pid_get_session"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_pid_get_session, sd_pid_get_unit, sd_pid_get_owner_uid — Determine session, service or owner of a session of a specific PID</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-login.h&gt;</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_pid_get_session</b>(</code></td><td>pid_t <var class="pdparam">pid</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">session</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_pid_get_unit</b>(</code></td><td>pid_t <var class="pdparam">pid</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">unit</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_pid_get_owner_uid</b>(</code></td><td>pid_t <var class="pdparam">pid</var>, </td></tr><tr><td> </td><td>uid_t* <var class="pdparam">uid</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a name="id485215"></a><h2>Description</h2><p><code class="function">sd_pid_get_session()</code> may be
+                used to determine the login session identifier of a
+                process identified by the specified process
+                identifier. The session identifier is a short string,
+                suitable for usage in file system paths. Note that not
+                all processes are part of a login session (e.g. system
+                service processes, user processes that are shared
+                between multiple sessions of the same user, or kernel
+                threads). For processes not being part of a login
+                session this function will fail. The returned string
+                needs to be freed with the libc
+                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                call after use.</p><p><code class="function">sd_pid_get_unit()</code> may be
+                used to determine the systemd unit (i.e. system
+                service) identifier of a process identified by the
+                specified process identifier. The unit name is a short
+                string, suitable for usage in file system paths. Note
+                that not all processes are part of a unit/service
+                (e.g. user processes, or kernel threads). For
+                processes not being part of a systemd unit/system
+                service this function will fail. The returned string
+                needs to be freed with the libc
+                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                call after use.</p><p><code class="function">sd_pid_get_owner_uid()</code> may
+                be used to determine the Unix user identifier of the
+                owner of the session of a process identified the
+                specified PID. Note that this function will succeed
+                for user processes which are shared between multiple
+                login sessions of the same user, where
+                <code class="function">sd_pid_get_session()</code> will
+                fail. For processes not being part of a login session
+                and not being a shared process of a user this function
+                will fail.</p><p>If the <code class="literal">pid</code> paramater of any
+                of these functions is passed as 0 the operation is
+                executed for the calling process.</p></div><div class="refsect1" title="Return Value"><a name="id452693"></a><h2>Return Value</h2><p>On success these calls return 0 or a positive
+                integer. On failure, these calls return a negative
+                errno-style error code.</p></div><div class="refsect1" title="Notes"><a name="id452704"></a><h2>Notes</h2><p>The <code class="function">sd_pid_get_session()</code>,
+                <code class="function">sd_pid_get_pid()</code>, and
+                <code class="function">sd_pid_get_owner_uid()</code> interfaces
+                are available as shared library, which can be compiled
+                and linked to with the
+                <code class="literal">libsystemd-login</code>
+                <span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span>
+                file.</p><p>Note that the login session identifier as
+                returned by <code class="function">sd_pid_get_session()</code>
+                is completely unrelated to the process session
+                identifier as returned by
+                <span class="citerefentry"><span class="refentrytitle">getsid</span>(2)</span>.</p></div><div class="refsect1" title="See Also"><a name="id452764"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd-login</span>(7)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_session_is_active</span>(3)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">getsid</span>(2)</span>
+                </p></div></div></body></html>
