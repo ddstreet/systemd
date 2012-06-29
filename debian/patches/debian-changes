@@ -5,24 +5,21 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (44-2) unstable; urgency=low
+ systemd (44-3) unstable; urgency=low
  .
    [ Michael Biebl ]
-   * Tighten the versions in the maintscript file
-   * Ship the /sys directory in the package
-   * Re-add workaround for non-interactive PAM sessions
-   * Mask checkroot-bootclean (Closes: #670591)
-   * Don't ignore errores in systemd-sysv postinst
+   * Bump to debhelper 9.
+   * Convert to Multi-Arch: same where possible.  Closes: #676615
  .
    [ Tollef Fog Heen ]
-   * Bring tmpfiles.d/tmp.conf in line with Debian defaults.  Closes: #675422
-   * Make sure /run/sensigs.omit.d exists.
-   * Add python-dbus and python-cairo to Suggests, for systemd-analyze.
-     Closes: #672965
+   * Cherry-pick d384c7 from upstream to stop journald from leaking
+     memory.  Thanks to Andreas Henriksson for testing.  Closes: #677701
+   * Ship lsb init script override/integration in /lib/lsb/init-functions.d
+     rather than diverting /lib/lsb/init-functions itself.  Add appropriate
+     Breaks to ensure upgrades happen.
 Author: Tollef Fog Heen <tfheen@debian.org>
-Bug-Debian: http://bugs.debian.org/670591
-Bug-Debian: http://bugs.debian.org/672965
-Bug-Debian: http://bugs.debian.org/675422
+Bug-Debian: http://bugs.debian.org/676615
+Bug-Debian: http://bugs.debian.org/677701
 
 ---
 The information above should follow the Patch Tagging Guidelines, please
@@ -246,6 +243,17 @@ Last-Update: <YYYY-MM-DD>
  #ForwardToConsole=no
 -#ImportKernel=yes
 +ImportKernel=no
+--- systemd-44.orig/src/login/logind-session.c
++++ systemd-44/src/login/logind-session.c
+@@ -627,7 +627,7 @@ static int session_terminate_cgroup(Sess
+ 
+                         r = manager_get_session_by_pid(s->manager, s->leader, &t);
+                         if (r > 0 && t == s) {
+-                                kill(s->leader, SIGTERM); /* for normal processes */
++                                /*kill(s->leader, SIGTERM); */ /* for normal processes */
+                                 kill(s->leader, SIGHUP);  /* for shells */
+                                 kill(s->leader, SIGCONT); /* in case they are stopped */
+                         }
 --- /dev/null
 +++ systemd-44/po/pl.po
 @@ -0,0 +1,175 @@
