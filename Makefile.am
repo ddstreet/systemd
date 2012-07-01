@@ -294,7 +294,6 @@ dist_systemunit_DATA = \
 	units/sys-kernel-security.mount \
 	units/sys-fs-fuse-connections.mount \
 	units/var-run.mount \
-	units/media.mount \
 	units/remount-rootfs.service \
 	units/printer.target \
 	units/sound.target \
@@ -2202,13 +2201,15 @@ XSLTPROC_FLAGS = \
 	--nonet \
 	--stringparam funcsynopsis.style ansi
 
+T=$(shell dpkg-parsechangelog | awk -F": " '$$1 == "Date" { print $$2 }')
+
 XSLTPROC_PROCESS_MAN = \
 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
-	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
+	TZ=UTC faketime "$(T)" $(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
 
 XSLTPROC_PROCESS_HTML = \
 	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
-	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) $(srcdir)/man/custom-html.xsl $<
+	TZ=UTC faketime "$(T)" $(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) $(srcdir)/man/custom-html.xsl $<
 
 man/%.1: man/%.xml
 	$(XSLTPROC_PROCESS_MAN)
@@ -2306,13 +2307,11 @@ systemd-install-data-hook:
 		rm -f systemd-remount-api-vfs.service \
 			fsck-root.service \
 			remount-rootfs.service \
-			var-run.mount \
-			media.mount && \
+			var-run.mount && \
 		$(LN_S) ../systemd-remount-api-vfs.service systemd-remount-api-vfs.service && \
 		$(LN_S) ../fsck-root.service fsck-root.service && \
 		$(LN_S) ../remount-rootfs.service remount-rootfs.service && \
-		$(LN_S) ../var-run.mount var-run.mount && \
-		$(LN_S) ../media.mount media.mount )
+		$(LN_S) ../var-run.mount var-run.mount )
 	( cd $(DESTDIR)$(userunitdir) && \
 		rm -f shutdown.target sockets.target bluetooth.target printer.target sound.target && \
 		$(LN_S) $(systemunitdir)/shutdown.target shutdown.target && \
