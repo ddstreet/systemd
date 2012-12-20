@@ -5,25 +5,12 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (44-6) unstable; urgency=low
+ systemd (44-7) unstable; urgency=low
  .
-   [ Michael Biebl ]
-   * No longer ship the /sys directory in the systemd package since it is
-     provided by base-files nowadays.
-   * Don't run udev rules if systemd is not active.
-   * Converting /var/run, /var/lock and /etc/mtab to symlinks is a one-time
-     migration so don't run the debian-fixup script on every boot.
- .
-   [ Tollef Fog Heen ]
-   * Prevent the systemd package from being removed if it's the active init
-     system, since that doesn't work.
- .
-   [ Michael Biebl ]
-   * Use a separate tmpfs for /run/lock (size 5M) and /run/user (size 100M).
-     Those directories are user-writable which could lead to DoS by filling up
-     /run.  Closes: #635131
+   * Fix a regression in the init-functions hook wrt reload handling that was
+     introduced when dropping the X-Interactive hack.  Closes: #696355
 Author: Michael Biebl <biebl@debian.org>
-Bug-Debian: http://bugs.debian.org/635131
+Bug-Debian: http://bugs.debian.org/696355
 
 ---
 The information above should follow the Patch Tagging Guidelines, please
