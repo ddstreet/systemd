@@ -5,12 +5,16 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (44-7) unstable; urgency=low
+ systemd (44-8) unstable; urgency=low
  .
-   * Fix a regression in the init-functions hook wrt reload handling that was
-     introduced when dropping the X-Interactive hack.  Closes: #696355
+   * Team upload.
+   * Use comment=systemd.* syntax in systemd.mount man page. The
+     mount/util-linux version in wheezy is not recent enough to support the new
+     x-systemd* syntax. Closes: #697141
+   * Don't enable persistent storage of journal log files. The journal in v44
+     is not yet mature enough.
 Author: Michael Biebl <biebl@debian.org>
-Bug-Debian: http://bugs.debian.org/696355
+Bug-Debian: http://bugs.debian.org/697141
 
 ---
 The information above should follow the Patch Tagging Guidelines, please
@@ -158,6 +162,24 @@ Last-Update: <YYYY-MM-DD>
 +Robert Gerus <ar@bash.org.pl> Robert "arachnist" Gerus <ar@bash.org.pl>
 +Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> Zbyszek Szmek <zbyszek@in.waw.pl>
 +Fabiano Fidêncio <fabianofidencio@gmail.com> Fabiano Fidencio <fidencio@profusion.mobi>
+--- systemd-44.orig/man/systemd.mount.xml
++++ systemd-44/man/systemd.mount.xml
+@@ -112,13 +112,13 @@
+                 points from <filename>/etc/fstab</filename>. If
+                 <option>MountAuto=yes</option> is set in
+                 <filename>system.conf</filename> (which is the
+-                default), or if <option>x-systemd.mount</option> is
++                default), or if <option>comment=systemd.mount</option> is
+                 specified as mount option, then systemd will create a
+                 dependency of type <option>Wants</option> from either
+                 <filename>local-fs.target</filename> or
+                 <filename>remote-fs.target</filename>, depending
+                 whether the file system is local or remote. If
+-                <option>x-systemd.automount</option> is set, an
++                <option>comment=systemd.automount</option> is set, an
+                 automount unit will be created for the file
+                 system. See
+                 <citerefentry><refentrytitle>systemd.automount</refentrytitle><manvolnum>5</manvolnum></citerefentry>
 --- /dev/null
 +++ systemd-44/po/pl.po
 @@ -0,0 +1,175 @@
