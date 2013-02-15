@@ -5,16 +5,22 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (44-8) unstable; urgency=low
+ systemd (44-9) unstable; urgency=low
  .
    * Team upload.
-   * Use comment=systemd.* syntax in systemd.mount man page. The
-     mount/util-linux version in wheezy is not recent enough to support the new
-     x-systemd* syntax. Closes: #697141
-   * Don't enable persistent storage of journal log files. The journal in v44
-     is not yet mature enough.
+   * Fix typo in systemd.socket man page.  Closes: #700038
+   * Use color specification in "systemctl dot" which is actually
+     understood by dot.  Closes: #643689
+   * Fix mounting of remote filesystems like NFS.  Closes: #673309
+   * Use a file trigger to automatically enable service and socket units. A lot
+     of packages simply install systemd units but do not enable them. As a
+     result they will be inactive after the next boot. This is a workaround for
+     wheezy which will be removed again in jessie.  Closes: #692150
 Author: Michael Biebl <biebl@debian.org>
-Bug-Debian: http://bugs.debian.org/697141
+Bug-Debian: http://bugs.debian.org/643689
+Bug-Debian: http://bugs.debian.org/673309
+Bug-Debian: http://bugs.debian.org/692150
+Bug-Debian: http://bugs.debian.org/700038
 
 ---
 The information above should follow the Patch Tagging Guidelines, please
@@ -368,6 +374,39 @@ Last-Update: <YYYY-MM-DD>
  
  SUBSYSTEM=="tty", KERNEL=="tty[0-9]|tty1[0-2]", TAG+="systemd"
  SUBSYSTEM=="tty", KERNEL=="tty[a-zA-Z]*|hvc*|xvc*|hvsi*", TAG+="systemd"
+--- systemd-44.orig/src/special.h
++++ systemd-44/src/special.h
+@@ -54,7 +54,7 @@
+ /* LSB compatibility */
+ #define SPECIAL_NETWORK_TARGET "network.target"           /* LSB's $network */
+ #define SPECIAL_NSS_LOOKUP_TARGET "nss-lookup.target"     /* LSB's $named */
+-#define SPECIAL_RPCBIND_TARGET "rpcbind.target"           /* LSB's $portmap */
++#define SPECIAL_RPCBIND_SERVICE "rpcbind.service"         /* LSB's $portmap */
+ #define SPECIAL_SYSLOG_TARGET "syslog.target"             /* LSB's $syslog; Should pull in syslog.socket or syslog.service */
+ #define SPECIAL_TIME_SYNC_TARGET "time-sync.target"       /* LSB's $time */
+ #define SPECIAL_DISPLAY_MANAGER_SERVICE "display-manager.service"       /* Debian's $x-display-manager */
+--- systemd-44.orig/src/service.c
++++ systemd-44/src/service.c
+@@ -344,7 +344,7 @@ static int sysv_translate_facility(const
+                 "network",              SPECIAL_NETWORK_TARGET,
+ #endif
+                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
+-                "portmap",              SPECIAL_RPCBIND_TARGET,
++                "portmap",              SPECIAL_RPCBIND_SERVICE,
+                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
+                 "syslog",               SPECIAL_SYSLOG_TARGET,
+                 "time",                 SPECIAL_TIME_SYNC_TARGET,
+--- systemd-44.orig/src/mount.c
++++ systemd-44/src/mount.c
+@@ -390,7 +390,7 @@ static int mount_add_fstab_links(Mount *
+                 else /* automount + nofail */
+                         return unit_add_two_dependencies(tu, UNIT_AFTER, UNIT_WANTS, am, true);
+ 
+-        } else if (handle && !noauto) {
++        } else if (handle && !noauto && !mount_is_network(p)) {
+ 
+                 /* Automatically add mount points that aren't natively
+                  * configured to local-fs.target */
 --- systemd-44.orig/src/manager.c
 +++ systemd-44/src/manager.c
 @@ -1700,6 +1700,8 @@ static int transaction_add_isolate_jobs(
