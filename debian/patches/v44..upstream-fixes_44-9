@@ -52,6 +52,19 @@ index 5b1ff75..306d8d2 100644
                                  matching the globbing pattern
                                  specified. <varname>PathChanged=</varname>
                                  may be used to watch a file or
+diff --git a/man/systemd.socket.xml b/man/systemd.socket.xml
+index d9921e4..160ab62 100644
+--- a/man/systemd.socket.xml
++++ b/man/systemd.socket.xml
+@@ -75,7 +75,7 @@
+                 <option>ExecStartPre=</option>,
+                 <option>ExecStartPost=</option>,
+                 <option>ExecStopPre=</option> and
+-                <option>ExecStoptPost=</option> commands are executed
++                <option>ExecStopPost=</option> commands are executed
+                 in.</para>
+ 
+                 <para>For each socket file a matching service file
 diff --git a/man/systemd.unit.xml b/man/systemd.unit.xml
 index 3cc126b..ce05f2f 100644
 --- a/man/systemd.unit.xml
@@ -327,6 +340,19 @@ index 8b5c0b0..808a1b8 100644
  
                  s->control_command_id = SERVICE_EXEC_START_PRE;
  
+diff --git a/src/systemctl.c b/src/systemctl.c
+index f51085f..13a797a 100644
+--- a/src/systemctl.c
++++ b/src/systemctl.c
+@@ -761,7 +761,7 @@ static int dot_one_property(const char *name, const char *prop, DBusMessageIter
+                 "RequiresOverridable",   "[color=\"black\"]",
+                 "Requisite",             "[color=\"darkblue\"]",
+                 "RequisiteOverridable",  "[color=\"darkblue\"]",
+-                "Wants",                 "[color=\"darkgrey\"]",
++                "Wants",                 "[color=\"grey66\"]",
+                 "Conflicts",             "[color=\"red\"]",
+                 "ConflictedBy",          "[color=\"red\"]",
+                 "After",                 "[color=\"green\"]"
 diff --git a/src/util.c b/src/util.c
 index 20cbc2b..dfc1dc6 100644
 --- a/src/util.c
