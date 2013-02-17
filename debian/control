@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: extra
-Maintainer: Tollef Fog Heen <tfheen@debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Tollef Fog Heen <tfheen@debian.org>
 Standards-Version: 3.9.2
 Vcs-Git: git://anonscm.debian.org/pkg-systemd/systemd.git -b debian
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-systemd/systemd.git;a=summary
@@ -32,46 +33,7 @@ Build-Depends: debhelper (>= 9),
                liblzma-dev,
                libgee-dev,
                gperf,
-               libkmod-dev (>= 5),
-               faketime
-
-Package: systemd
-Architecture: linux-any
-Section: admin
-Priority: extra
-Recommends: libpam-systemd
-Suggests: systemd-gui, python, python-dbus, python-cairo
-Pre-Depends: ${misc:Pre-Depends}
-Depends: ${shlibs:Depends}, ${misc:Depends}, util-linux (>= 2.19.1-2), initscripts (>= 2.88dsf-17), udev
-Breaks: lvm2 (<< 2.02.84-1), lsb-base (<< 4.1+Debian4)
-Conflicts: klogd
-Description: system and service manager
- systemd is a replacement for sysvinit.  It is dependency-based and
- able to read the LSB init script headers in addition to parsing rcN.d
- links as hints.
- .
- It also provides process supervision using cgroups and the ability to
- not only depend on other init script being started, but also
- availability of a given mount point or dbus service.
-
-Package: systemd-sysv
-Architecture: linux-any
-Section: admin
-Priority: extra
-Conflicts: sysvinit, upstart, runit-run
-Replaces: sysvinit
-Depends: systemd (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: system and service manager - SysV links
- systemd is a replacement for sysvinit.  It is dependency-based and
- able to read the LSB init script headers in addition to parsing rcN.d
- links as hints.
- .
- It also provides process supervision using cgroups and the ability to
- not only depend on other init script being started, but also
- availability of a given mount point or dbus service.
- .
- This package provides the manual pages and links needed for systemd
- to replace sysvinit.
+               libkmod-dev (>= 5)
 
 Package: libpam-systemd
 Architecture: linux-any
@@ -79,7 +41,7 @@ Multi-Arch: same
 Section: admin
 Priority: extra
 Pre-Depends: ${misc:Pre-Depends}
-Depends: systemd (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: logind (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: system and service manager - PAM module
  systemd is a replacement for sysvinit.  It is dependency-based and
  able to read the LSB init script headers in addition to parsing rcN.d
@@ -92,21 +54,15 @@ Description: system and service manager - PAM module
  This package contains the PAM module which registers user sessions in
  the systemd control group hierarchy
 
-Package: systemd-gui
+Package: logind
 Architecture: linux-any
 Section: admin
-Priority: extra
-Depends: systemd (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
-Description: system and service manager - GUI
- systemd is a replacement for sysvinit.  It is dependency-based and
- able to read the LSB init script headers in addition to parsing rcN.d
- links as hints.
- .
- It also provides process supervision using cgroups and the ability to
- not only depend on other init script being started, but also
- availability of a given mount point or dbus service.
- .
- This package contains the graphical frontend for systemd.
+Priority: optional
+Depends: ${shlibs:Depends}, ${misc:Depends}, dbus
+Replaces: systemd
+Description: systemd login manager
+ This package contains a login manager for managing mapping of devices and
+ seats for logged in users.
 
 Package: libsystemd-login0
 Architecture: linux-any
@@ -188,3 +144,13 @@ Description: systemd 128 bit ID utility library - development files
  .
  This package contains the development files
 
+Package: systemd-services
+Architecture: linux-any
+Section: admin
+Priority: extra
+Replaces: systemd, ubuntu-system-service
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: systemd runtime services
+ This package contains the locale and hostname runtime services from
+ systemd, providing dbus interfaces for updating system locale settings
+ and the hostname.

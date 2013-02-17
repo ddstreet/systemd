@@ -1,0 +1,8 @@
+lib/systemd/systemd-logind /sbin
+bin/systemd-loginctl
+usr/share/man/man5/systemd-logind.conf.5
+usr/share/man/man1/systemd-loginctl.1
+etc/dbus-1/system.d/org.freedesktop.login1.conf
+etc/systemd/systemd-logind.conf
+usr/share/dbus-1/system-services/org.freedesktop.login1.service
+usr/share/polkit-1/actions/org.freedesktop.login1.policy

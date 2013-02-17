@@ -1,0 +1,14 @@
+description "SystemD login management service"
+
+start on started dbus
+stop on stopping dbus
+
+limit nofile 16384 16384
+
+respawn
+
+env SYSTEMD_LOG_TARGET=syslog
+
+pre-start exec mkdir -p /run/systemd
+
+exec systemd-logind

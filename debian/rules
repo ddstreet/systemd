@@ -2,6 +2,7 @@
 
 #export DH_VERBOSE=1
 #export DEB_BUILD_OPTIONS="nostrip"
+export V=1
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
@@ -29,7 +30,7 @@ override_dh_install:
 	rm debian/tmp/lib/systemd/system/sysinit.target.wants/systemd-vconsole-setup.service
 	find debian/tmp/ -name '*.la' -delete
 	chmod +x debian/debian-fixup
-	dh_install -O--parallel --fail-missing
+	dh_install -O--parallel
 	dh_install -plibpam-systemd debian/pam-configs /usr/share
 
 autoreconf:
