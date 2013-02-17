@@ -344,7 +344,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 "network",              SPECIAL_NETWORK_TARGET,
 #endif
                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
-                "portmap",              SPECIAL_RPCBIND_TARGET,
+                "portmap",              SPECIAL_RPCBIND_SERVICE,
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
                 "syslog",               SPECIAL_SYSLOG_TARGET,
                 "time",                 SPECIAL_TIME_SYNC_TARGET,
@@ -494,7 +494,7 @@ static ExecCommand *exec_command_new(const char *path, const char *arg1) {
         return c;
 }
 
-static int sysv_exec_commands(Service *s) {
+static int sysv_exec_commands(Service *s, const bool supports_reload) {
         ExecCommand *c;
 
         assert(s);
@@ -508,11 +508,22 @@ static int sysv_exec_commands(Service *s) {
                 return -ENOMEM;
         exec_command_append_list(s->exec_command+SERVICE_EXEC_STOP, c);
 
-        if (!(c = exec_command_new(s->sysv_path, "reload")))
-                return -ENOMEM;
-        exec_command_append_list(s->exec_command+SERVICE_EXEC_RELOAD, c);
+        if (supports_reload) {
+                if (!(c = exec_command_new(s->sysv_path, "reload")))
+                        return -ENOMEM;
+                exec_command_append_list(s->exec_command+SERVICE_EXEC_RELOAD, c);
+        }
 
         return 0;
+}
+
+static bool usage_contains_reload(const char *line) {
+        return (strcasestr(line, "{reload|") ||
+                strcasestr(line, "{reload}") ||
+                strcasestr(line, "{reload\"") ||
+                strcasestr(line, "|reload|") ||
+                strcasestr(line, "|reload}") ||
+                strcasestr(line, "|reload\""));
 }
 
 static int service_load_sysv_path(Service *s, const char *path) {
@@ -524,10 +535,12 @@ static int service_load_sysv_path(Service *s, const char *path) {
                 NORMAL,
                 DESCRIPTION,
                 LSB,
-                LSB_DESCRIPTION
+                LSB_DESCRIPTION,
+                USAGE_CONTINUATION
         } state = NORMAL;
         char *short_description = NULL, *long_description = NULL, *chkconfig_description = NULL, *description;
         struct stat st;
+        bool supports_reload = false;
 
         assert(s);
         assert(path);
@@ -574,8 +587,23 @@ static int service_load_sysv_path(Service *s, const char *path) {
                 line++;
 
                 t = strstrip(l);
-                if (*t != '#')
+                if (*t != '#') {
+                        /* Try to figure out whether this init script supports
+                         * the reload operation. This heuristic looks for
+                         * "Usage" lines which include the reload option. */
+                        if ( state == USAGE_CONTINUATION ||
+                            (state == NORMAL && strcasestr(t, "usage"))) {
+                                if (usage_contains_reload(t)) {
+                                        supports_reload = true;
+                                        state = NORMAL;
+                                } else if (t[strlen(t)-1] == '\\')
+                                        state = USAGE_CONTINUATION;
+                                else
+                                        state = NORMAL;
+                        }
+
                         continue;
+                }
 
                 if (state == NORMAL && streq(t, "### BEGIN INIT INFO")) {
                         state = LSB;
@@ -868,7 +896,7 @@ static int service_load_sysv_path(Service *s, const char *path) {
                 }
         }
 
-        if ((r = sysv_exec_commands(s)) < 0)
+        if ((r = sysv_exec_commands(s, supports_reload)) < 0)
                 goto finish;
         if (s->sysv_runlevels &&
             chars_intersect(RUNLEVELS_BOOT, s->sysv_runlevels) &&
@@ -2094,7 +2122,8 @@ static void service_enter_start(Service *s) {
         /* We want to ensure that nobody leaks processes from
          * START_PRE here, so let's go on a killing spree, People
          * should not spawn long running processes from START_PRE. */
-        cgroup_bonding_kill_list(UNIT(s)->cgroup_bondings, SIGKILL, true, NULL);
+        // F17, bz816842, bz805942
+        //cgroup_bonding_kill_list(UNIT(s)->cgroup_bondings, SIGKILL, true, NULL);
 
         if (s->type == SERVICE_FORKING) {
                 s->control_command_id = SERVICE_EXEC_START;
@@ -2168,7 +2197,8 @@ static void service_enter_start_pre(Service *s) {
 
                 /* Before we start anything, let's clear up what might
                  * be left from previous runs. */
-                cgroup_bonding_kill_list(UNIT(s)->cgroup_bondings, SIGKILL, true, NULL);
+                // F17, bz816842, bz805942
+                //cgroup_bonding_kill_list(UNIT(s)->cgroup_bondings, SIGKILL, true, NULL);
 
                 s->control_command_id = SERVICE_EXEC_START_PRE;
 
