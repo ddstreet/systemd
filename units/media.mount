@@ -5,8 +5,12 @@
 #  the Free Software Foundation; either version 2 of the License, or
 #  (at your option) any later version.
 
-[D-BUS Service]
-Name=org.freedesktop.hostname1
-Exec=/usr/lib/systemd/systemd-hostnamed
-User=root
-SystemdService=dbus-org.freedesktop.hostname1.service
+[Unit]
+Description=Media Directory
+Before=local-fs.target
+
+[Mount]
+What=tmpfs
+Where=/media
+Type=tmpfs
+Options=mode=755,nosuid,nodev,noexec

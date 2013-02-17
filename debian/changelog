@@ -1,3 +1,29 @@
+systemd (44-10ubuntu1) raring; urgency=low
+  
+  * Split logind into its own binary package, for use on non-systemd systems.
+  * Drop the systemd binary package from the build.
+  * Drop the systemd-gui package, not usable without systemd.
+  * Have logind declare a Replaces: on systemd for the moved files, even
+    though we're not shipping the systemd binary package in Ubuntu.
+  * libpam-systemd should depend on logind, not on systemd.
+  * Enable pam_systemd use on non-systemd systems.
+  * cherry-pick from upstream to fix build with eglibc 2.17.
+  * export V=1 so we get meaningful build logs.
+  * Don't build systemd-sysv package on Ubuntu.
+  * Split hostname, locale, and timedate services into a new binary package,
+    systemd-services.
+  * Fix up dbus service definitions to work when not started by systemd.
+  * Adjust localed to use the Debian locations of /etc/default/locale and
+    /etc/default/keyboard for locale data, not /etc/locale.conf and
+    /etc/X11/xorg.conf.d/00-keyboard.conf.
+  * Ditch the use of faketime; it's in universe, and all it does in Ubuntu
+    is segfault.  This may reduce the multiarch-friendliness of the library
+    packages, but that's not actually needed here since nothing except logind
+    is using those libraries anyway.
+  * Move dbus services from /lib/systemd to /usr/lib/systemd.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sun, 17 Feb 2013 09:07:46 +0000
+
 systemd (44-10) unstable; urgency=low
 
   * Team upload.

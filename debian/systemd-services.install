@@ -1,0 +1,15 @@
+etc/dbus-1/system.d/org.freedesktop.hostname1.conf
+etc/dbus-1/system.d/org.freedesktop.locale1.conf
+etc/dbus-1/system.d/org.freedesktop.timedate1.conf
+usr/share/dbus-1/system-services/org.freedesktop.hostname1.service
+usr/share/dbus-1/system-services/org.freedesktop.locale1.service
+usr/share/dbus-1/system-services/org.freedesktop.timedate1.service
+usr/share/dbus-1/interfaces/org.freedesktop.hostname1.xml
+usr/share/dbus-1/interfaces/org.freedesktop.locale1.xml
+usr/share/dbus-1/interfaces/org.freedesktop.timedate1.xml
+usr/share/polkit-1/actions/org.freedesktop.hostname1.policy
+usr/share/polkit-1/actions/org.freedesktop.locale1.policy
+usr/share/polkit-1/actions/org.freedesktop.timedate1.policy
+lib/systemd/systemd-localed /usr/lib/systemd
+lib/systemd/systemd-hostnamed /usr/lib/systemd
+lib/systemd/systemd-timedated /usr/lib/systemd

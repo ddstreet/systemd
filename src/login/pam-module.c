@@ -340,10 +340,6 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         /* pam_syslog(handle, LOG_INFO, "pam-systemd initializing"); */
 
-        /* Make this a NOP on non-systemd systems */
-        if (sd_booted() <= 0)
-                return PAM_SUCCESS;
-
         if (parse_argv(handle,
                        argc, argv,
                        &controllers, &reset_controllers,

@@ -1,4 +1,11 @@
-etc
+etc/bash_completion.d
+etc/dbus-1/system.d/org.freedesktop.systemd1.conf
+etc/systemd/user.conf
+etc/systemd/system.conf
+etc/systemd/systemd-journald.conf
+etc/systemd/system
+etc/xdg
+etc/modules-load.d
 bin/systemctl
 bin/systemd-journalctl
 bin/systemd-notify
@@ -6,7 +13,6 @@ bin/systemd-tty-ask-password-agent
 bin/systemd-ask-password
 bin/systemd-machine-id-setup
 bin/systemd-tmpfiles
-bin/systemd-loginctl
 lib/systemd/
 lib/udev/rules.d/
 usr/bin/systemd-cgls
@@ -22,7 +28,6 @@ usr/share/man/man1/systemd.1
 usr/share/man/man1/systemctl.1
 usr/share/man/man1/systemd-nspawn.1
 usr/share/man/man1/systemd-ask-password.1
-usr/share/man/man1/systemd-loginctl.1
 usr/share/man/man1/systemd-machine-id-setup.1
 usr/share/man/man1/systemd-cat.1
 usr/share/man/man1/systemd-journalctl.1
@@ -30,10 +35,12 @@ usr/share/man/man3
 usr/share/man/man5
 usr/share/man/man7
 usr/share/man/man8/systemd-tmpfiles.8
-usr/share/dbus-1
+usr/share/dbus-1/interfaces/org.freedesktop.systemd1.*
+usr/share/dbus-1/services/
+usr/share/dbus-1/system-services/org.freedesktop.systemd1.service
 usr/share/doc
 usr/share/pkgconfig
-usr/share/polkit-1
+usr/share/polkit-1/actions/org.freedesktop.systemd1.policy
 usr/share/systemd/kbd-model-map
 usr/lib/binfmt.d
 usr/lib/modules-load.d
