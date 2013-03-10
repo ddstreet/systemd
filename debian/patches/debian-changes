@@ -578,16 +578,6 @@ Last-Update: <YYYY-MM-DD>
                                  kill(s->leader, SIGHUP);  /* for shells */
                                  kill(s->leader, SIGCONT); /* in case they are stopped */
                          }
---- systemd-44.orig/src/login/70-uaccess.rules
-+++ systemd-44/src/login/70-uaccess.rules
-@@ -7,6 +7,7 @@
- 
- ACTION=="remove", GOTO="uaccess_end"
- ENV{MAJOR}=="", GOTO="uaccess_end"
-+TEST!="/sys/fs/cgroup/systemd", GOTO="uaccess_end"
- 
- # PTP/MTP protocol devices, cameras, portable media players
- SUBSYSTEM=="usb", ENV{ID_USB_INTERFACES}=="", ENV{DEVTYPE}=="usb_device", IMPORT{program}="usb_id --export %p"
 --- systemd-44.orig/src/locale/localed.c
 +++ systemd-44/src/locale/localed.c
 @@ -73,6 +73,12 @@
