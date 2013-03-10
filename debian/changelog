@@ -1,3 +1,14 @@
+systemd (44-10ubuntu2) raring; urgency=low
+
+  * debian/logind.install: Install logind related udev rules to get automatic
+    ACLs. Only install 99-systemd.rules in debian/systemd.install.
+  * debian/logind.upstart: Mount /sys/fs/cgroup tmpfs and
+    /sys/fs/cgroup/systemd cgroup file systems, unless they are already.
+  * 70-uaccess.rules: Don't test for /sys/fs/cgroup/systemd, this does not yet
+    exist during coldplug.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sun, 10 Mar 2013 10:28:07 +0100
+
 systemd (44-10ubuntu1) raring; urgency=low
   
   * Split logind into its own binary package, for use on non-systemd systems.

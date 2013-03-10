@@ -9,6 +9,15 @@ respawn
 
 env SYSTEMD_LOG_TARGET=syslog
 
-pre-start exec mkdir -p /run/systemd
-
+pre-start script
+    mkdir -p /run/systemd
+    if ! mountpoint -q /sys/fs/cgroup/; then
+        mount -t tmpfs -o noexec,nosuid,nodev,size=1000000,mode=755 cgroup_root /sys/fs/cgroup
+    fi
+    if ! mountpoint -q /sys/fs/cgroup/systemd; then
+	mkdir -p /sys/fs/cgroup/systemd
+        mount -t cgroup -o nosuid,noexec,nodev,none,name=systemd systemd /sys/fs/cgroup/systemd
+    fi
+end script
+ 
 exec systemd-logind

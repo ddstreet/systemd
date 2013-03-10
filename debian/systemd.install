@@ -14,7 +14,7 @@ bin/systemd-ask-password
 bin/systemd-machine-id-setup
 bin/systemd-tmpfiles
 lib/systemd/
-lib/udev/rules.d/
+lib/udev/rules.d/9*.rules
 usr/bin/systemd-cgls
 usr/bin/systemd-cgtop
 usr/bin/systemd-nspawn

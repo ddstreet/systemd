@@ -6,3 +6,4 @@ etc/dbus-1/system.d/org.freedesktop.login1.conf
 etc/systemd/systemd-logind.conf
 usr/share/dbus-1/system-services/org.freedesktop.login1.service
 usr/share/polkit-1/actions/org.freedesktop.login1.policy
+lib/udev/rules.d/7*.rules
