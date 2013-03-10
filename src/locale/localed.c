@@ -73,6 +73,12 @@
         BUS_GENERIC_INTERFACES_LIST             \
         "org.freedesktop.locale1\0"
 
+#ifdef TARGET_DEBIAN
+#define LOCALEFILE "/etc/default/locale"
+#else
+#define LOCALEFILE "/etc/locale.conf"
+#endif
+
 const char locale_interface[] _introspect_("locale1") = INTERFACE;
 
 enum {
@@ -194,7 +200,7 @@ static int read_data_locale(void) {
 
         free_data_locale();
 
-        r = parse_env_file("/etc/locale.conf", NEWLINE,
+        r = parse_env_file(LOCALEFILE, NEWLINE,
                            "LANG",              &data[PROP_LANG],
                            "LANGUAGE",          &data[PROP_LANGUAGE],
                            "LC_CTYPE",          &data[PROP_LC_CTYPE],
@@ -266,8 +272,22 @@ static int read_data_x11(void) {
         FILE *f;
         char line[LINE_MAX];
         bool in_section = false;
+#ifdef TARGET_DEBIAN
+        int r;
+#endif
 
         free_data_x11();
+
+#ifdef TARGET_DEBIAN
+        r = parse_env_file("/etc/default/keyboard", NEWLINE,
+                           "XKBMODEL",          &state.x11_model,
+                           "XKBLAYOUT",         &state.x11_layout,
+                           "XKBVARIANT",        &state.x11_variant,
+                           "XKBOPTIONS",        &state.x11_options,
+                           NULL);
+
+        return r;
+#else
 
         f = fopen("/etc/X11/xorg.conf.d/00-keyboard.conf", "re");
         if (!f) {
@@ -350,6 +370,7 @@ static int read_data_x11(void) {
         fclose(f);
 
         return 0;
+#endif
 }
 
 static int read_data(void) {
@@ -366,7 +387,7 @@ static int write_data_locale(void) {
         int r, p;
         char **l = NULL;
 
-        r = load_env_file("/etc/locale.conf", &l);
+        r = load_env_file(LOCALEFILE, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -398,13 +419,13 @@ static int write_data_locale(void) {
         if (strv_isempty(l)) {
                 strv_free(l);
 
-                if (unlink("/etc/locale.conf") < 0)
+                if (unlink(LOCALEFILE) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
 
-        r = write_env_file("/etc/locale.conf", l);
+        r = write_env_file(LOCALEFILE, l);
         strv_free(l);
 
         return r;
@@ -571,6 +592,101 @@ static int write_data_x11(void) {
         char *temp_path;
         int r;
 
+#ifdef TARGET_DEBIAN
+        int p;
+        char *t, **u, **l = NULL;
+
+        r = load_env_file("/etc/default/keyboard", &l);
+        if (r < 0 && r != -ENOENT)
+                return r;
+
+        /* This could perhaps be done more elegantly using an array
+         * like we do for the locale, instead of struct
+         */
+        if (isempty(state.x11_layout)) {
+                l = strv_env_unset(l, "XKBLAYOUT");
+        } else {
+                if (asprintf(&t, "XKBLAYOUT=%s", state.x11_layout) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
+
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (isempty(state.x11_model)) {
+                l = strv_env_unset(l, "XKBMODEL");
+        } else {
+                if (asprintf(&t, "XKBMODEL=%s", state.x11_model) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
+
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (isempty(state.x11_variant)) {
+                l = strv_env_unset(l, "XKBVARIANT");
+        } else {
+                if (asprintf(&t, "XKBVARIANT=%s", state.x11_variant) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
+
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (isempty(state.x11_options)) {
+                l = strv_env_unset(l, "XKBOPTIONS");
+        } else {
+                if (asprintf(&t, "XKBOPTIONS=%s", state.x11_options) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
+
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (strv_isempty(l)) {
+                strv_free(l);
+
+                if (unlink("/etc/default/keyboard") < 0)
+                        return errno == ENOENT ? 0 : -errno;
+
+                return 0;
+        }
+
+        r = write_env_file("/etc/default/keyboard", l);
+        strv_free(l);
+#else
         if (isempty(state.x11_layout) &&
             isempty(state.x11_model) &&
             isempty(state.x11_variant) &&
@@ -638,6 +754,7 @@ static int write_data_x11(void) {
 
         fclose(f);
         free(temp_path);
+#endif
 
         return r;
 }

@@ -67,9 +67,12 @@ void journal_file_close(JournalFile *f) {
 
         assert(f);
 
-        if (f->header && f->writable)
-                f->header->state = STATE_OFFLINE;
+        if (f->header) {
+                if (f->writable)
+                        f->header->state = STATE_OFFLINE;
 
+                munmap(f->header, PAGE_ALIGN(sizeof(Header)));
+        }
 
         for (t = 0; t < _WINDOW_MAX; t++)
                 if (f->windows[t].ptr)
@@ -1887,7 +1890,10 @@ int journal_file_open_reliably(
         char *p;
 
         r = journal_file_open(fname, flags, mode, template, ret);
-        if (r != -EBADMSG)
+        if (r != -EBADMSG && /* corrupted */
+            r != -ENODATA && /* truncated */
+            r != -EHOSTDOWN && /* other machine */
+            r != -EPROTONOSUPPORT) /* incompatible feature */
                 return r;
 
         if ((flags & O_ACCMODE) == O_RDONLY)
