@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd.timer
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd.timer
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.TIMER" "5" "03/16/2012" "systemd" "systemd.timer"
+.TH "SYSTEMD\&.TIMER" "5" "" "systemd" "systemd.timer"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,10 +28,10 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-systemd.timer \- systemd timer configuration files
+systemd.timer \- Timer unit configuration
 .SH "SYNOPSIS"
 .PP
-systemd\&.timer
+\fItimer\fR\&.timer
 .SH "DESCRIPTION"
 .PP
 A unit configuration file whose name ends in
@@ -64,13 +64,13 @@ Timer files must include a [Timer] section, which carries information about the 
 .PP
 \fIOnActiveSec=\fR, \fIOnBootSec=\fR, \fIOnStartupSec=\fR, \fIOnUnitActiveSec=\fR, \fIOnUnitInactiveSec=\fR
 .RS 4
-Defines timers relative to different starting points:
+Defines monotonic timers relative to different starting points:
 \fIOnActiveSec=\fR
 defines a timer relative to the moment the timer itself is activated\&.
 \fIOnBootSec=\fR
 defines a timer relative to when the machine was booted up\&.
 \fIOnStartupSec=\fR
-defines a timer relative to when systemd was started\&.
+defines a timer relative to when systemd was first started\&.
 \fIOnUnitActiveSec=\fR
 defines a timer relative to when the unit the timer is activating was last activated\&.
 \fIOnUnitInactiveSec=\fR
@@ -90,8 +90,19 @@ If a timer configured with
 or
 \fIOnStartupSec=\fR
 is already in the past when the timer unit is activated, it will immediately elapse and the configured unit is started\&. This is not the case for timers defined in the other directives\&.
-.PP
+.sp
 These are monotonic timers, independent of wall\-clock time and timezones\&. If the computer is temporarily suspended, the monotonic clock stops too\&.
+.sp
+If the empty string is assigned to any of these options the list of timers is reset, and all prior assignments will have no effect\&.
+.RE
+.PP
+\fIOnCalendar=\fR
+.RS 4
+Defines realtime (i\&.e\&. wallclock) timers via calendar event expressions\&. See
+\fBsystemd.time\fR(7)
+for more information on the syntax of calendar event expressions\&. Otherwise the semantics are similar to
+\fIOnActiveSec=\fR
+and related settings\&.
 .RE
 .PP
 \fIUnit=\fR
@@ -105,10 +116,6 @@ The unit to activate when this timer elapses\&. The argument is a unit name, who
 \fBsystemd\fR(1),
 \fBsystemctl\fR(8),
 \fBsystemd.unit\fR(5),
-\fBsystemd.service\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBsystemd.service\fR(5),
+\fBsystemd.time\fR(7),
+\fBsystemd.directives\fR(7)

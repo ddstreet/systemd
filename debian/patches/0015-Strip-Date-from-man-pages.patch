@@ -1,0 +1,36 @@
+From 07c4c39683761f8e9d687af6319f4a5af0fcea85 Mon Sep 17 00:00:00 2001
+From: Michael Biebl <biebl@debian.org>
+Date: Tue, 12 Mar 2013 15:25:05 +0100
+Subject: [PATCH 15/15] Strip Date: from man pages
+
+doocbook-xsl embeds a timestamp of the build time. This breaks our
+multi-arch builds. As we hide the last-revised date via
+"man.th.extra1.suppress 1" anyway, adding it to the comment header is
+not particularly useful.
+Instead of using faketime to get "stable" timestamps, just strip it.
+
+Eventually we want to use [1] and pass the ctime as date parameter to
+xsltproc.
+
+[1] http://docbook.sourceforge.net/release/xsl/1.77.0/doc/manpages/refentry.date.profile.html
+---
+ Makefile.am |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 15093e0..ee6f8e7 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -3642,7 +3642,8 @@ XSLTPROC_FLAGS = \
+ 
+ XSLTPROC_PROCESS_MAN = \
+ 	$(AM_V_XSLT)$(MKDIR_P) $(dir $@) && \
+-	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
++	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $< && \
++	$(SED) -e '/.*Date: .*/d' -i $@
+ 
+ XSLTPROC_PROCESS_HTML = \
+ 	$(AM_V_XSLT)$(MKDIR_P) $(dir $@) && \
+-- 
+1.7.10.4
+

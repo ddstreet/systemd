@@ -1,0 +1,82 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-journald.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-journald.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-journald.service, systemd-journald.socket, systemd-journald — Journal service</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">systemd-journald.service</code></p><p><code class="filename">systemd-journald.socket</code></p><p><code class="filename">/usr/lib/systemd/systemd-journald</code></p></div><div class="refsect1"><a name="idp3964144"></a><h2>Description</h2><p><code class="filename">systemd-journald</code> is a
+                system service that collects and stores logging
+                data. It creates and maintains structured, indexed
+                journals based on logging information that is received
+                from the kernel, from user processes via the libc
+                <a href="syslog.html"><span class="citerefentry"><span class="refentrytitle">syslog</span>(3)</span></a>
+                call, from STDOUT/STDERR of system services or via its
+                native API. It will implicitly collect numerous meta
+                data fields for each log messages in a secure and
+                unfakeable way. See
+                <a href="systemd.journal-fields.html"><span class="citerefentry"><span class="refentrytitle">systemd.journal-fields</span>(7)</span></a>
+                for more information about the collected meta data.
+                </p><p>Log data collected by the journal is primarily
+                text based but can also include binary data where
+                necessary. All objects stored in the journal can be up
+                to 2^64-1 bytes in size.</p><p>By default the journal stores log data in
+                <code class="filename">/run/log/journal/</code>. Since
+                <code class="filename">/run/</code> is volatile log data is
+                lost at reboot. To make the data persistent it
+                is sufficient to create
+                <code class="filename">/var/log/journal/</code> where
+                <code class="filename">systemd-journald</code> will then store
+                the data.</p><p><code class="filename">systemd-journald</code> will
+                forward all received log messages to the AF_UNIX
+                SOCK_DGRAM socket
+                <code class="filename">/run/systemd/journal/syslog</code> (if it exists) which
+                may be used by UNIX syslog daemons to process the data
+                further.</p><p>See
+                <a href="journald.conf.html"><span class="citerefentry"><span class="refentrytitle">journald.conf</span>(5)</span></a>
+                for information about the configuration of this
+                service.</p></div><div class="refsect1"><a name="idp3975408"></a><h2>Signals</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term">SIGUSR1</span></dt><dd><p>Request that journal
+                                data from <code class="filename">/run/</code>
+                                is flushed to
+                                <code class="filename">/var/</code> in order to
+                                make it persistent (if this is
+                                enabled). This may be used after
+                                <code class="filename">/var/</code> is mounted,
+                                but is generally not required since
+                                the first journal write when
+                                <code class="filename">/var/</code> becomes
+                                writable triggers the flushing
+                                anyway.</p></dd><dt><span class="term">SIGUSR2</span></dt><dd><p>Request immediate
+                                rotation of the journal
+                                files.</p></dd></dl></div></div><div class="refsect1"><a name="idp28016"></a><h2>Kernel Command Line</h2><p>A few configuration parameters from
+                <code class="filename">journald.conf</code> may be overridden on
+                the kernel command line:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">systemd.journald.forward_to_syslog=</code>, </span><span class="term"><code class="varname">systemd.journald.forward_to_kmsg=</code>, </span><span class="term"><code class="varname">systemd.journald.forward_to_console=</code></span></dt><dd><p>Enables/disables
+                                forwarding of collected log messages
+                                to syslog, the kernel log buffer or
+                                the system console.
+                                </p><p>See
+                                <a href="journald.conf.html"><span class="citerefentry"><span class="refentrytitle">journald.conf</span>(5)</span></a>
+                                for information about these settings.</p></dd></dl></div></div><div class="refsect1"><a name="idp34704"></a><h2>Access Control</h2><p>Journal files are by default owned and readable
+                by the <code class="literal">systemd-journal</code> system group
+                (but not writable). Adding a user to this group thus
+                enables her/him to read the journal files.</p><p>By default, each logged in user will get her/his
+                own set of journal files in
+                <code class="filename">/var/log/journal/</code>. These files
+                will not be owned by the user however, in order to
+                avoid that the user can write to them
+                directly. Instead, file system ACLs are used to ensure
+                the user gets read access only.</p><p>Additional users and groups may be granted
+                access to journal files via file system access control
+                lists (ACL). Distributions and administrators may
+                choose to grant read access to all members of the
+                <code class="literal">wheel</code> and <code class="literal">adm</code>
+                system groups with a command such as the
+                following:</p><pre class="programlisting"># setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/</pre><p>Note that this command will update the ACLs both
+                for existing journal files and for future journal
+                files created in the
+                <code class="filename">/var/log/journal/</code>
+                directory.</p></div><div class="refsect1"><a name="idp49408"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>,
+                        <a href="journald.conf.html"><span class="citerefentry"><span class="refentrytitle">journald.conf</span>(5)</span></a>,
+                        <a href="systemd.journal-fields.html"><span class="citerefentry"><span class="refentrytitle">systemd.journal-fields</span>(7)</span></a>,
+                        <a href="sd-journal.html"><span class="citerefentry"><span class="refentrytitle">sd-journal</span>(3)</span></a>,
+                        <a href="setfacl.html"><span class="citerefentry"><span class="refentrytitle">setfacl</span>(1)</span></a>
+                </p></div></div></body></html>

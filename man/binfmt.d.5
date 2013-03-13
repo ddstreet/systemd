@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: binfmt.d
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: binfmt.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "BINFMT\&.D" "5" "03/16/2012" "systemd" "binfmt.d"
+.TH "BINFMT\&.D" "5" "" "systemd" "binfmt.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-binfmt.d \- Configure additional binary formats at boot
+binfmt.d \- Configure additional binary formats for executables at boot
 .SH "SYNOPSIS"
 .PP
 /etc/binfmt\&.d/*\&.conf
@@ -38,8 +38,9 @@ binfmt.d \- Configure additional binary formats at boot
 /usr/lib/binfmt\&.d/*\&.conf
 .SH "DESCRIPTION"
 .PP
-\fBsystemd\fR
-uses files from the above directories to configure additional binary formats to register during boot in the kernel\&.
+At boot,
+\fBsystemd-binfmt.service\fR(8)
+reads configuration files from the above directories to register in the kernel additional binary formats for executables\&.
 .SH "CONFIGURATION FORMAT"
 .PP
 Each file contains a list of binfmt_misc kernel binary format rules\&. Consult
@@ -48,19 +49,25 @@ for more information on registration of additional binary formats and how to wri
 .PP
 Empty lines and lines beginning with ; and # are ignored\&. Note that this means you may not use ; and # as delimiter in binary format rules\&.
 .PP
-Each configuration file is named in the style of
-<program>\&.conf\&. Files in
+Each configuration file shall be named in the style of
+\fIprogram\fR\&.conf\&. Files in
 /etc/
-overwrite files with the same name in
-/usr/lib/\&. Files in
-/run
-overwrite files with the same name in
-/etc/
+override files with the same name in
+/usr/lib/
 and
+/run/\&. Files in
+/run/
+override files with the same name in
 /usr/lib/\&. Packages should install their configuration files in
 /usr/lib/, files in
 /etc/
-are reserved for the local administration, which possibly decides to overwrite the configurations installed from packages\&. All files are sorted by filename in alphabetical order, regardless in which of the directories they reside, to ensure that a specific configuration file takes precedence over another file with an alphabetically later name\&.
+are reserved for the local administrator, who may use this logic to override the configuration files installed from vendor packages\&. All files are sorted by their filename in alphabetical order, regardless in which of the directories they reside, to guarantee that a specific configuration file takes precedence over another file with an alphabetically later name\&.
+.PP
+If the administrator wants to disable a configuration file supplied by the vendor the recommended way is to place a symlink to
+/dev/null
+in
+/etc/binfmt\&.d/
+bearing the same file name\&.
 .SH "EXAMPLE"
 .PP
 \fBExample\ \&1.\ \&/etc/binfmt.d/wine.conf example:\fR
@@ -79,13 +86,9 @@ are reserved for the local administration, which possibly decides to overwrite t
 .PP
 
 \fBsystemd\fR(1),
+\fBsystemd-binfmt.service\fR(8),
+\fBsystemd-delta\fR(1),
 \fBwine\fR(8)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
 .SH "NOTES"
 .IP " 1." 4
 binfmt_misc.txt

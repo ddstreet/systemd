@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd.target
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd.target
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.TARGET" "5" "03/16/2012" "systemd" "systemd.target"
+.TH "SYSTEMD\&.TARGET" "5" "" "systemd" "systemd.target"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,10 +28,10 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-systemd.target \- systemd target configuration files
+systemd.target \- Target unit configuration
 .SH "SYNOPSIS"
 .PP
-systemd\&.target
+\fItarget\fR\&.target
 .SH "DESCRIPTION"
 .PP
 A unit configuration file whose name ends in
@@ -65,10 +65,5 @@ if the units in question also have
 \fBsystemd\fR(1),
 \fBsystemctl\fR(8),
 \fBsystemd.unit\fR(5),
-\fBsystemd.special\fR(7)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBsystemd.special\fR(7),
+\fBsystemd.directives\fR(7)

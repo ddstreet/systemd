@@ -6,16 +6,16 @@
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -71,6 +71,11 @@ int main(int argc, char* argv[]) {
         assert_se(r >= 0);
         printf("active = %s\n", yes_no(r));
 
+        r = sd_session_get_state(session, &state);
+        assert_se(r >= 0);
+        printf("state = %s\n", state);
+        free(state);
+
         assert_se(sd_session_get_uid(session, &u) >= 0);
         printf("uid = %lu\n", (unsigned long) u);
         assert_se(u == u2);
@@ -93,6 +98,14 @@ int main(int argc, char* argv[]) {
         r = sd_seat_can_multi_session(seat);
         assert_se(r >= 0);
         printf("can do multi session = %s\n", yes_no(r));
+
+        r = sd_seat_can_tty(seat);
+        assert_se(r >= 0);
+        printf("can do tty = %s\n", yes_no(r));
+
+        r = sd_seat_can_graphical(seat);
+        assert_se(r >= 0);
+        printf("can do graphical = %s\n", yes_no(r));
 
         assert_se(sd_uid_get_state(u, &state) >= 0);
         printf("state = %s\n", state);

@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: sd_get_seats
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: sd_get_seats
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_GET_SEATS" "3" "03/16/2012" "systemd" "sd_get_seats"
+.TH "SD_GET_SEATS" "3" "" "systemd" "sd_get_seats"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -41,7 +41,7 @@ sd_get_seats, sd_get_sessions, sd_get_uids \- Determine available seats, session
 .HP \w'int\ sd_get_sessions('u
 .BI "int sd_get_sessions(char***\ " "sessions" ");"
 .HP \w'int\ sd_get_uids('u
-.BI "int sd_get_uids(char***\ " "sessions" ");"
+.BI "int sd_get_uids(uid_t**\ " "users" ");"
 .SH "DESCRIPTION"
 .PP
 \fBsd_get_seats()\fR
@@ -56,6 +56,8 @@ may be used to determine all current login sessions\&.
 Similar,
 \fBsd_get_uids()\fR
 may be used to determine all Unix users who currently have login sessions\&.
+.PP
+Note that the returned lists are not sorted and in an undefined order\&.
 .SH "RETURN VALUE"
 .PP
 On success
@@ -79,11 +81,5 @@ file\&.
 .PP
 
 \fBsystemd\fR(1),
-\fBsd-login\fR(7),
+\fBsd-login\fR(3),
 \fBsd_session_get_seat\fR(3)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

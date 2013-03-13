@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd.exec
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd.exec
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.EXEC" "5" "03/16/2012" "systemd" "systemd.exec"
+.TH "SYSTEMD\&.EXEC" "5" "" "systemd" "systemd.exec"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,13 +28,13 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-systemd.exec \- systemd execution environment configuration
+systemd.exec \- Execution environment configuration
 .SH "SYNOPSIS"
 .PP
-systemd\&.service,
-systemd\&.socket,
-systemd\&.mount,
-systemd\&.swap
+\fIservice\fR\&.service,
+\fIsocket\fR\&.socket,
+\fImount\fR\&.mount,
+\fIswap\fR\&.swap
 .SH "DESCRIPTION"
 .PP
 Unit configuration files for services, sockets, mount points and swap devices share a subset of configuration options which define the execution environment of spawned processes\&.
@@ -47,12 +47,12 @@ for the common options of all unit configuration files, and
 \fBsystemd.swap\fR(5)
 and
 \fBsystemd.mount\fR(5)
-for more information on the specific unit configuration files\&. The execution specific configuration options are configured in the [Service], [Socket], [Mount] resp\&. [Swap] section, depending on the unit type\&.
+for more information on the specific unit configuration files\&. The execution specific configuration options are configured in the [Service], [Socket], [Mount], or [Swap] sections, depending on the unit type\&.
 .SH "OPTIONS"
 .PP
 \fIWorkingDirectory=\fR
 .RS 4
-Takes an absolute directory path\&. Sets the working directory for executed processes\&.
+Takes an absolute directory path\&. Sets the working directory for executed processes\&. If not set defaults to the root directory when systemd is running as a system instance and the respective user\*(Aqs home directory if run as user\&.
 .RE
 .PP
 \fIRootDirectory=\fR
@@ -66,12 +66,12 @@ jail\&.
 .PP
 \fIUser=\fR, \fIGroup=\fR
 .RS 4
-Sets the Unix user resp\&. group the processes are executed as\&. Takes a single user resp\&. group name or ID as argument\&. If no group is set the default group of the user is chosen\&.
+Sets the Unix user or group that the processes are executed as, respectively\&. Takes a single user or group name or ID as argument\&. If no group is set, the default group of the user is chosen\&.
 .RE
 .PP
 \fISupplementaryGroups=\fR
 .RS 4
-Sets the supplementary Unix groups the processes are executed as\&. This takes a space separated list of group names or IDs\&. This option may be specified more than once in which case all listed groups are set as supplementary groups\&. This option does not override but extends the list of supplementary groups configured in the system group database for the user\&.
+Sets the supplementary Unix groups the processes are executed as\&. This takes a space separated list of group names or IDs\&. This option may be specified more than once in which case all listed groups are set as supplementary groups\&. When the empty string is assigned the list of supplementary groups is reset, and all assignments prior to this one will have no effect\&. In any way, this option does not override, but extends the list of supplementary groups configured in the system group database for the user\&.
 .RE
 .PP
 \fINice=\fR
@@ -122,7 +122,7 @@ for details\&.
 .PP
 \fICPUSchedulingPriority=\fR
 .RS 4
-Sets the CPU scheduling priority for executed processes\&. Takes an integer between 1 (lowest priority) and 99 (highest priority)\&. The available priority range depends on the selected CPU scheduling policy (see above)\&. See
+Sets the CPU scheduling priority for executed processes\&. The available priority range depends on the selected CPU scheduling policy (see above)\&. For real\-time scheduling policies an integer between 1 (lowest priority) and 99 (highest priority) can be used\&. See
 \fBsched_setscheduler\fR(2)
 for details\&.
 .RE
@@ -136,7 +136,7 @@ for details\&. Defaults to false\&.
 .PP
 \fICPUAffinity=\fR
 .RS 4
-Controls the CPU affinity of the executed processes\&. Takes a space\-separated list of CPU indexes\&. See
+Controls the CPU affinity of the executed processes\&. Takes a space\-separated list of CPU indexes\&. This option may be specified more than once in which case the specificed CPU affinity masks are merged\&. If the empty string is assigned the mask is reset, all assignments prior to this will have no effect\&. See
 \fBsched_setaffinity\fR(2)
 for details\&.
 .RE
@@ -150,16 +150,39 @@ for details\&. Defaults to 0022\&.
 .PP
 \fIEnvironment=\fR
 .RS 4
-Sets environment variables for executed processes\&. Takes a space\-separated list of variable assignments\&. This option may be specified more than once in which case all listed variables will be set\&. If the same variable is set twice the later setting will override the earlier setting\&. See
+Sets environment variables for executed processes\&. Takes a space\-separated list of variable assignments\&. This option may be specified more than once in which case all listed variables will be set\&. If the same variable is set twice the later setting will override the earlier setting\&. If the empty string is assigned to this option the list of environment variables is reset, all prior assignments have no effect\&. Variable expansion is not performed inside the strings, and $ has no special meaning\&. If you need to assign a value containing spaces to a variable, use double quotes (") for the assignment\&.
+.sp
+Example:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+Environment="VAR1=word1 word2" VAR2=word3 "VAR3=word 5 6"
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+gives three variables
+VAR1,
+VAR2,
+VAR3\&.
+.sp
+See
 \fBenviron\fR(7)
-for details\&.
+for details about environment variables\&.
 .RE
 .PP
 \fIEnvironmentFile=\fR
 .RS 4
 Similar to
 \fIEnvironment=\fR
-but reads the environment variables from a text file\&. The text file should contain new\-line separated variable assignments\&. Empty lines and lines starting with ; or # will be ignored, which may be used for commenting\&. The parser strips leading and trailing whitespace from the values of assignments, unless you use double quotes (")\&. The argument passed should be an absolute file name, optionally prefixed with "\-", which indicates that if the file does not exist it won\*(Aqt be read and no error or warning message is logged\&. The files listed with this directive will be read shortly before the process is executed\&. Settings from these files override settings made with
+but reads the environment variables from a text file\&. The text file should contain new\-line separated variable assignments\&. Empty lines and lines starting with ; or # will be ignored, which may be used for commenting\&. A line ending with a backslash will be concatenated with the following one, allowing multiline variable definitions\&. The parser strips leading and trailing whitespace from the values of assignments, unless you use double quotes (")\&.
+.sp
+The argument passed should be an absolute file name or wildcard expression, optionally prefixed with "\-", which indicates that if the file does not exist it won\*(Aqt be read and no error or warning message is logged\&. This option may be specified more than once in which case all specified files are read\&. If the empty string is assigned to this option the list of file to read is reset, all prior assignments have no effect\&.
+.sp
+The files listed with this directive will be read shortly before the process is executed\&. Settings from these files override settings made with
 \fIEnvironment=\fR\&. If the same variable is set twice from these files the files will be read in the order they are specified and the later setting will override the earlier setting\&.
 .RE
 .PP
@@ -225,7 +248,7 @@ connects it with the kernel log buffer which is accessible via
 \fBdmesg\fR(1)\&.
 \fBjournal\fR
 connects it with the journal which is accessible via
-\fBsystemd-journalctl\fR(1)
+\fBjournalctl\fR(1)
 (Note that everything that is written to syslog or kmsg is implicitly stored in the journal as well, those options are hence supersets of this one)\&.
 \fBsyslog+console\fR,
 \fBjournal+console\fR
@@ -237,7 +260,7 @@ connects standard output to a socket from socket activation, semantics are simil
 \fIStandardInput=\fR\&. This setting defaults to the value set with
 \fBDefaultStandardOutput=\fR
 in
-\fBsystemd.conf\fR(5), which defaults to
+\fBsystemd-system.conf\fR(5), which defaults to
 \fBjournal\fR\&.
 .RE
 .PP
@@ -249,7 +272,7 @@ Controls where file descriptor 2 (STDERR) of the executed processes is connected
 the file descriptor used for standard output is duplicated for standard error\&. This setting defaults to the value set with
 \fBDefaultStandardError=\fR
 in
-\fBsystemd.conf\fR(5), which defaults to
+\fBsystemd-system.conf\fR(5), which defaults to
 \fBinherit\fR\&.
 .RE
 .PP
@@ -277,7 +300,7 @@ no\&.
 .PP
 \fITTYVTDisallocate=\fR
 .RS 4
-If the the terminal device specified with
+If the terminal device specified with
 \fITTYPath=\fR
 is a virtual console terminal try to deallocate the TTY before and after execution\&. This ensures that the screen and scrollback buffer is cleared\&. Defaults to
 no\&.
@@ -350,7 +373,7 @@ are set to
 or
 \fBkmsg\fR\&. Note that individual lines output by the daemon might be prefixed with a different log level which can be used to override the default log level specified here\&. The interpretation of these prefixes may be disabled with
 \fISyslogLevelPrefix=\fR, see below\&. For details see
-\fBsd-daemon\fR(7)\&. Defaults to
+\fBsd-daemon\fR(3)\&. Defaults to
 \fBinfo\fR\&.
 .RE
 .PP
@@ -361,18 +384,18 @@ Takes a boolean argument\&. If true and
 or
 \fIStandardError=\fR
 are set to
-\fBsyslog\fR
-or
+\fBsyslog\fR,
 \fBkmsg\fR
-log lines written by the executed process that are prefixed with a log level will be passed on to syslog with this log level set but the prefix removed\&. If set to false, the interpretation of these prefixes is disabled and the logged lines are passed on as\-is\&. For details about this prefixing see
-\fBsd-daemon\fR(7)\&. Defaults to true\&.
+or
+\fBjournal\fR, log lines written by the executed process that are prefixed with a log level will be passed on to syslog with this log level set but the prefix removed\&. If set to false, the interpretation of these prefixes is disabled and the logged lines are passed on as\-is\&. For details about this prefixing see
+\fBsd-daemon\fR(3)\&. Defaults to true\&.
 .RE
 .PP
 \fITimerSlackNSec=\fR
 .RS 4
 Sets the timer slack in nanoseconds for the executed processes\&. The timer slack controls the accuracy of wake\-ups triggered by timers\&. See
 \fBprctl\fR(2)
-for more information\&. Note that in contrast to most other time span definitions this parameter takes an integer value in nano\-seconds and does not understand any other units\&.
+for more information\&. Note that in contrast to most other time span definitions this parameter takes an integer value in nano\-seconds if no unit is specified\&. The usual time units are understood too\&.
 .RE
 .PP
 \fILimitCPU=\fR, \fILimitFSIZE=\fR, \fILimitDATA=\fR, \fILimitSTACK=\fR, \fILimitCORE=\fR, \fILimitRSS=\fR, \fILimitNOFILE=\fR, \fILimitAS=\fR, \fILimitNPROC=\fR, \fILimitMEMLOCK=\fR, \fILimitLOCKS=\fR, \fILimitSIGPENDING=\fR, \fILimitMSGQUEUE=\fR, \fILimitNICE=\fR, \fILimitRTPRIO=\fR, \fILimitRTTIME=\fR
@@ -407,9 +430,9 @@ are not supported\&.
 Controls which capabilities to include in the capability bounding set for the executed process\&. See
 \fBcapabilities\fR(7)
 for details\&. Takes a whitespace separated list of capability names as read by
-\fBcap_from_name\fR(3)\&. Capabilities listed will be included in the bounding set, all others are removed\&. If the list of capabilities is prefixed with ~ all but the listed capabilities will be included, the effect of the assignment inverted\&. Note that this option does not actually set or unset any capabilities in the effective, permitted or inherited capability sets\&. That\*(Aqs what
+\fBcap_from_name\fR(3)\&. Capabilities listed will be included in the bounding set, all others are removed\&. If the list of capabilities is prefixed with ~ all but the listed capabilities will be included, the effect of the assignment inverted\&. Note that this option also effects the respective capabilities in the effective, permitted and inheritable capability sets, on top of what
 \fICapabilities=\fR
-is for\&. If this option is not used the capability bounding set is not modified on process execution, hence no limits on the capabilities of the process are enforced\&.
+does\&. If this option is not used the capability bounding set is not modified on process execution, hence no limits on the capabilities of the process are enforced\&. This option may appear more than once in which case the bounding sets are merged\&. If the empty string is assigned to this option the bounding set is reset, and all prior settings have no effect\&.
 .RE
 .PP
 \fISecureBits=\fR
@@ -423,7 +446,7 @@ for details\&. Takes a list of strings:
 \fBno\-setuid\-fixup\-locked\fR,
 \fBnoroot\fR
 and/or
-\fBnoroot\-locked\fR\&.
+\fBnoroot\-locked\fR\&. This option may appear more than once in which case the secure bits are ORed\&. If the empty string is assigned to this option the bits are reset to 0\&.
 .RE
 .PP
 \fICapabilities=\fR
@@ -438,11 +461,22 @@ is probably the much more useful setting\&.
 .PP
 \fIControlGroup=\fR
 .RS 4
-Controls the control groups the executed processes shall be made members of\&. Takes a space\-separated list of cgroup identifiers\&. A cgroup identifier has a format like
-cpu:/foo/bar, where "cpu" identifies the kernel control group controller used, and
+Controls the control groups the executed processes shall be made members of\&. Takes a space\-separated list of cgroup identifiers\&. A cgroup identifier is formatted like
+cpu:/foo/bar, where "cpu" indicates the kernel control group controller used, and
 /foo/bar
-is the control group path\&. The controller name and ":" may be omitted in which case the named systemd control group hierarchy is implied\&. Alternatively, the path and ":" may be omitted, in which case the default control group path for this unit is implied\&. This option may be used to place executed processes in arbitrary groups in arbitrary hierarchies \-\- which can be configured externally with additional execution limits\&. By default systemd will place all executed processes in separate per\-unit control groups (named after the unit) in the systemd named hierarchy\&. Since every process can be in one group per hierarchy only overriding the control group path in the named systemd hierarchy will disable automatic placement in the default group\&. This option is primarily intended to place executed processes in specific paths in specific kernel controller hierarchies\&. It is however not recommended to manipulate the service control group path in the systemd named hierarchy\&. For details about control groups see
+is the control group path\&. The controller name and ":" may be omitted in which case the named systemd control group hierarchy is implied\&. Alternatively, the path and ":" may be omitted, in which case the default control group path for this unit is implied\&.
+.sp
+This option may be used to place executed processes in arbitrary groups in arbitrary hierarchies \-\- which may then be externally configured with additional execution limits\&. By default systemd will place all executed processes in separate per\-unit control groups (named after the unit) in the systemd named hierarchy\&. This option is primarily intended to place executed processes in specific paths in specific kernel controller hierarchies\&. It is not recommended to manipulate the service control group path in the systemd named hierarchy\&. For details about control groups see
 \m[blue]\fBcgroups\&.txt\fR\m[]\&\s-2\u[2]\d\s+2\&.
+.sp
+This option may appear more than once, in which case the list of control group assignments is merged\&. If the same hierarchy gets two different paths assigned only the later setting will take effect\&. If the empty string is assigned to this option the list of control group assignments is reset, all previous assignments will have no effect\&.
+.sp
+Note that the list of control group assignments of a unit is extended implicitly based on the settings of
+\fIDefaultControllers=\fR
+of
+\fBsystemd-system.conf\fR(5), but a unit\*(Aqs
+\fIControlGroup=\fR
+setting for a specific controller takes precedence\&.
 .RE
 .PP
 \fIControlGroupModify=\fR
@@ -460,7 +494,7 @@ Takes a boolean argument\&. If true, the control groups created for this unit wi
 .PP
 \fIControlGroupAttribute=\fR
 .RS 4
-Set a specific control group attribute for executed processes, and (if needed) add the the executed processes to a cgroup in the hierarchy of the controller the attribute belongs to\&. Takes two space\-separated arguments: the attribute name (syntax is
+Set a specific control group attribute for executed processes, and (if needed) add the executed processes to a cgroup in the hierarchy of the controller the attribute belongs to\&. Takes two space\-separated arguments: the attribute name (syntax is
 cpu\&.shares
 where
 cpu
@@ -471,10 +505,18 @@ ControlGroupAttribute=cpu\&.shares 512\&. If this option is used for an attribut
 ControlGroup=
 option) then the unit will be added to the controller and the default unit cgroup path is implied\&. Thus, using
 \fIControlGroupAttribute=\fR
-is in most case sufficient to make use of control group enforcements, explicit
+is in most cases sufficient to make use of control group enforcements, explicit
 \fIControlGroup=\fR
 are only necessary in case the implied default control group path for a service is not desirable\&. For details about control group attributes see
-\m[blue]\fBcgroups\&.txt\fR\m[]\&\s-2\u[2]\d\s+2\&. This option may appear more than once, in order to set multiple control group attributes\&.
+\m[blue]\fBcgroups\&.txt\fR\m[]\&\s-2\u[2]\d\s+2\&. This option may appear more than once, in order to set multiple control group attributes\&. If this option is used multiple times for the same cgroup attribute only the later setting takes effect\&. If the empty string is assigned to this option the list of attributes is reset, all previous cgroup attribute settings have no effect, including those done with
+\fICPUShares=\fR,
+\fIMemoryLimit=\fR,
+\fIMemorySoftLimit\fR,
+\fIDeviceAllow=\fR,
+\fIDeviceDeny=\fR,
+\fIBlockIOWeight=\fR,
+\fIBlockIOReadBandwidth=\fR,
+\fIBlockIOWriteBandwidth=\fR\&.
 .RE
 .PP
 \fICPUShares=\fR
@@ -487,7 +529,7 @@ control group attribute, which defaults to 1024\&. For details about this contro
 .PP
 \fIMemoryLimit=\fR, \fIMemorySoftLimit=\fR
 .RS 4
-Limit the overall memory usage of the executed processes to a certain size\&. Takes a memory size in bytes\&. If the value is suffixed with K, M, G or T the specified memory size is parsed as Kilobytes, Megabytes, Gigabytes, resp\&. Terabytes (to the base 1024)\&. This controls the
+Limit the overall memory usage of the executed processes to a certain size\&. Takes a memory size in bytes\&. If the value is suffixed with K, M, G or T the specified memory size is parsed as Kilobytes, Megabytes, Gigabytes, or Terabytes (to the base 1024), respectively\&. This controls the
 memory\&.limit_in_bytes
 and
 memory\&.soft_limit_in_bytes
@@ -498,7 +540,7 @@ control group attributes\&. For details about these control group attributes see
 \fIDeviceAllow=\fR, \fIDeviceDeny=\fR
 .RS 4
 Control access to specific device nodes by the executed processes\&. Takes two space separated strings: a device node path (such as
-/dev/null) followed by a combination of r, w, m to control reading, writing resp\&. creating of the specific device node by the unit\&. This controls the
+/dev/null) followed by a combination of r, w, m to control reading, writing, or creating of the specific device node by the unit, respectively\&. This controls the
 devices\&.allow
 and
 devices\&.deny
@@ -518,11 +560,11 @@ control group attributes, which default to 1000\&. Use this option multiple time
 .PP
 \fIBlockIOReadBandwidth=\fR, \fIBlockIOWriteBandwidth=\fR
 .RS 4
-Set the per\-device overall block IO bandwith limit for the executed processes\&. Takes a space separated pair of a file path and a bandwith value (in bytes per second) to specify the device specific bandwidth\&. The file path may be specified as path to a block device node or as any other file in which case the backing block device of the file system of the file is determined\&. If the bandwith is suffixed with K, M, G, or T the specified bandwith is parsed as Kilobytes, Megabytes, Gigabytes, resp\&. Terabytes (Example: "/dev/disk/by\-path/pci\-0000:00:1f\&.2\-scsi\-0:0:0:0 5M")\&. This controls the
+Set the per\-device overall block IO bandwidth limit for the executed processes\&. Takes a space separated pair of a file path and a bandwidth value (in bytes per second) to specify the device specific bandwidth\&. The file path may be specified as path to a block device node or as any other file in which case the backing block device of the file system of the file is determined\&. If the bandwidth is suffixed with K, M, G, or T the specified bandwidth is parsed as Kilobytes, Megabytes, Gigabytes, or Terabytes, respectively (Example: "/dev/disk/by\-path/pci\-0000:00:1f\&.2\-scsi\-0:0:0:0 5M")\&. This controls the
 blkio\&.read_bps_device
 and
 blkio\&.write_bps_device
-control group attributes\&. Use this option multiple times to set bandwith limits for multiple devices\&. For details about these control group attributes see
+control group attributes\&. Use this option multiple times to set bandwidth limits for multiple devices\&. For details about these control group attributes see
 \m[blue]\fBblkio\-controller\&.txt\fR\m[]\&\s-2\u[7]\d\s+2\&.
 .RE
 .PP
@@ -534,15 +576,19 @@ are accessible from within the namespace with the same access rights as from out
 \fIReadOnlyDirectories=\fR
 are accessible for reading only, writing will be refused even if the usual file access controls would permit this\&. Directories listed in
 \fIInaccessibleDirectories=\fR
-will be made inaccessible for processes inside the namespace\&. Note that restricting access with these options does not extend to submounts of a directory\&. You must list submounts separately in these settings to ensure the same limited access\&. These options may be specified more than once in which case all directories listed will have limited access from within the namespace\&.
+will be made inaccessible for processes inside the namespace\&. Note that restricting access with these options does not extend to submounts of a directory\&. You must list submounts separately in these settings to ensure the same limited access\&. These options may be specified more than once in which case all directories listed will have limited access from within the namespace\&. If the empty string is assigned to this option the specific list is reset, and all prior assignments have no effect\&.
 .RE
 .PP
 \fIPrivateTmp=\fR
 .RS 4
-Takes a boolean argument\&. If true sets up a new file system namespace for the executed processes and mounts a private
+Takes a boolean argument\&. If true sets up a new file system namespace for the executed processes and mounts private
 /tmp
-directory inside it, that is not shared by processes outside of the namespace\&. This is useful to secure access to temporary files of the process, but makes sharing between processes via
+and
+/var/tmp
+directories inside it, that are not shared by processes outside of the namespace\&. This is useful to secure access to temporary files of the process, but makes sharing between processes via
 /tmp
+or
+/var/tmp
 impossible\&. Defaults to false\&.
 .RE
 .PP
@@ -559,20 +605,15 @@ Takes a mount propagation flag:
 \fBshared\fR,
 \fBslave\fR
 or
-\fBprivate\fR, which control whether namespaces set up with
-\fIReadWriteDirectories=\fR,
-\fIReadOnlyDirectories=\fR
-and
-\fIInaccessibleDirectories=\fR
-receive or propagate new mounts from/to the main namespace\&. See
-\fBmount\fR(1)
-for details\&. Defaults to
-\fBshared\fR, i\&.e\&. the new namespace will both receive new mount points from the main namespace as well as propagate new mounts to it\&.
+\fBprivate\fR, which control whether the file system namespace set up for this unit\*(Aqs processes will receive or propagate new mounts\&. See
+\fBmount\fR(2)
+for details\&. Default to
+\fBshared\fR\&.
 .RE
 .PP
 \fIUtmpIdentifier=\fR
 .RS 4
-Takes a a four character identifier string for an utmp/wtmp entry for this service\&. This should only be set for services such as
+Takes a four character identifier string for an utmp/wtmp entry for this service\&. This should only be set for services such as
 \fBgetty\fR
 implementations where utmp/wtmp entries must be created and cleared before and after execution\&. If the configured string is longer than four characters it is truncated and the terminal four characters are used\&. This setting interprets %I style string replacements\&. This setting is unset by default, i\&.e\&. no utmp/wtmp entries are created or cleaned up for this service\&.
 .RE
@@ -581,22 +622,39 @@ implementations where utmp/wtmp entries must be created and cleared before and a
 .RS 4
 Takes a boolean argument\&. If true causes SIGPIPE to be ignored in the executed process\&. Defaults to true, since SIGPIPE generally is useful only in shell pipelines\&.
 .RE
+.PP
+\fINoNewPrivileges=\fR
+.RS 4
+Takes a boolean argument\&. If true ensures that the service process and all its children can never gain new privileges\&. This option is more powerful than the respective secure bits flags (see above), as it also prohibits UID changes of any kind\&. This is the simplest, most effective way to ensure that a process and its children can never elevate privileges again\&.
+.RE
+.PP
+\fISystemCallFilter=\fR
+.RS 4
+Takes a space separated list of system call names\&. If this setting is used all system calls executed by the unit process except for the listed ones will result in immediate process termination with the SIGSYS signal (whitelisting)\&. If the first character of the list is
+~
+the effect is inverted: only the listed system calls will result in immediate process termination (blacklisting)\&. If this option is used
+\fINoNewPrivileges=yes\fR
+is implied\&. This feature makes use of the Secure Computing Mode 2 interfaces of the kernel (\*(Aqseccomp filtering\*(Aq) and is useful for enforcing a minimal sandboxing environment\&. Note that the
+\fBexecve\fR,
+\fBrt_sigreturn\fR,
+\fBsigreturn\fR,
+\fBexit_group\fR,
+\fBexit\fR
+system calls are implicitly whitelisted and don\*(Aqt need to be listed explicitly\&. This option may be specified more than once in which case the filter masks are merged\&. If the empty string is assigned the filter is reset, all prior assignments will have no effect\&.
+.RE
 .SH "SEE ALSO"
 .PP
 
 \fBsystemd\fR(1),
 \fBsystemctl\fR(8),
+\fBjournalctl\fR(8),
 \fBsystemd.unit\fR(5),
 \fBsystemd.service\fR(5),
 \fBsystemd.socket\fR(5),
 \fBsystemd.swap\fR(5),
-\fBsystemd.mount\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBsystemd.mount\fR(5),
+\fBsystemd.kill\fR(5),
+\fBsystemd.directives\fR(7)
 .SH "NOTES"
 .IP " 1." 4
 proc.txt

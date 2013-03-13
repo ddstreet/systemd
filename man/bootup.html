@@ -1,0 +1,140 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>bootup</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="bootup"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>bootup — System bootup process</p></div><div class="refsect1"><a name="idp124656"></a><h2>Description</h2><p>A number of different components are involved in the
+                system boot. Immediately after power-up, the system
+                BIOS will do minimal hardware initialization, and hand
+                control over to a boot loader stored on a persistent
+                storage device. This boot loader will then invoke an
+                OS kernel from disk (or the network). In the Linux
+                case this kernel now (optionally) extracts and
+                executes an initial RAM disk image (initrd) such as
+                <a href="dracut.html"><span class="citerefentry"><span class="refentrytitle">dracut</span>(8)</span></a>
+                which looks for the root file system. After the root
+                file system is found and mounted the initrd hands over
+                control to the system manager (such as
+                <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>)
+                stored on the OS image which is then responsible for
+                probing all remaining hardware, mounting all necessary
+                file systems and spawning all configured
+                services.</p><p>On shutdown the system manager stops all
+                services, unmounts all file systems (detaching the
+                storage technologies backing them), and then
+                (optionally) jumps back into the initrd code which
+                unmounts/detaches the root file system and the storage
+                it resides on. As last step the system is powered down.</p><p>Additional information about the system boot
+                process may be found in
+                <a href="boot.html"><span class="citerefentry"><span class="refentrytitle">boot</span>(7)</span></a>.</p></div><div class="refsect1"><a name="idp3911744"></a><h2>System Manager Bootup</h2><p>At boot, the system manager on the OS image is
+                responsible for initializing the required file
+                systems, services and drivers that are necessary for
+                operation of the system. On
+                <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>
+                systems this process is split up in various discrete
+                steps which are exposed as target units. (See
+                <a href="systemd.target.html"><span class="citerefentry"><span class="refentrytitle">systemd.target</span>(5)</span></a>
+                for detailed information about target units.) The
+                boot-up process is highly parallelized so that the
+                order in which specific target units are reached is not
+                deterministic, but still adheres to a limited amount
+                of ordering structure.</p><p>When systemd starts up the system it will
+                activate all units that are dependencies of
+                <code class="filename">default.target</code> (as well as
+                recursively all dependencies of these
+                dependencies). Usually
+                <code class="filename">default.target</code> is simply an alias
+                of <code class="filename">graphical.target</code> or
+                <code class="filename">multi-user.target</code> depending on
+                whether the system is configured for a graphical UI or
+                only for a text console. To enforce minimal ordering
+                between the units pulled in a number of well-known
+                target units are available, as listed on
+                <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>.</p><p>The following chart is a structural overview of
+                these well-known units and their position in the
+                boot-up logic. The arrows describe which units are
+                pulled in and ordered before which other units. Units
+                near the top are started before units nearer to the
+                bottom of the chart.</p><pre class="programlisting">local-fs-pre.target
+         |
+         v
+(various mounts and   (various swap   (various cryptsetup
+ fsck services...)     devices...)        devices...)       (various low-level   (various low-level
+         |                  |                  |             services: udevd,     API VFS mounts:
+         v                  v                  v             tmpfiles, random     mqueue, configfs,
+  local-fs.target      swap.target     cryptsetup.target    seed, sysctl, ...)      debugfs, ...)
+         |                  |                  |                    |                    |
+         \__________________|_________________ | ___________________|____________________/
+                                              \|/
+                                               v
+                                        sysinit.target
+                                               |
+                             _________________/|\___________________
+                            /                  |                    \
+                            |                  |                    |
+                            v                  |                    v
+                        (various               |              rescue.service
+                       sockets...)             |                    |
+                            |                  |                    v
+                            v                  |              <span class="emphasis"><em>rescue.target</em></span>
+                     sockets.target            |
+                            |                  |
+                            \_________________ |
+                                              \|
+                                               v
+                                         basic.target
+                                               |
+            __________________________________/|                                 emergency.service
+           /                |                  |                                         |
+           |                |                  |                                         v
+           v                v                  v                                 <span class="emphasis"><em>emergency.target</em></span>
+       display-      (various system    (various system
+   manager.service       services           services)
+           |           required for            |
+           |          graphical UIs)           v
+           |                |           <span class="emphasis"><em>multi-user.target</em></span>
+           |                |                  |
+           \_______________ | _________________/
+                           \|/
+                            v
+                    <span class="emphasis"><em>graphical.target</em></span></pre><p>Target units that are commonly used as boot
+                targets are <span class="emphasis"><em>emphasized</em></span>. These
+                units are good choices as goal targets, for
+                example by passing them to the
+                <code class="varname">systemd.unit=</code> kernel command line
+                option (see
+                <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>)
+                or by symlinking <code class="filename">default.target</code>
+                to them.</p></div><div class="refsect1"><a name="idp29680"></a><h2>System Manager Shutdown</h2><p>System shutdown also consists of various target
+                units with some minimal ordering structure
+                applied:</p><pre class="programlisting">                                  (conflicts with  (conflicts with
+                                    all system     all file system
+                                     services)     mounts, swaps,
+                                         |           cryptsetup
+                                         |          devices, ...)
+                                         |                |
+                                         v                v
+                                  shutdown.target    umount.target
+                                         |                |
+                                         \_______   ______/
+                                                 \ /
+                                                  v
+                                         (various low-level
+                                              services)
+                                                  |
+                                                  v
+                                            final.target
+                                                  |
+            _____________________________________/ \_________________________________
+           /                         |                        |                      \
+           |                         |                        |                      |
+           v                         v                        v                      v
+systemd-reboot.service   systemd-poweroff.service   systemd-halt.service   systemd-kexec.service
+           |                         |                        |                      |
+           v                         v                        v                      v
+    <span class="emphasis"><em>reboot.target</em></span>             <span class="emphasis"><em>poweroff.target</em></span>            <span class="emphasis"><em>halt.target</em></span>           <span class="emphasis"><em>kexec.target</em></span></pre><p>Commonly used system shutdown targets are <span class="emphasis"><em>emphasized</em></span>.</p></div><div class="refsect1"><a name="idp35904"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="boot.html"><span class="citerefentry"><span class="refentrytitle">boot</span>(7)</span></a>,
+                        <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>,
+                        <a href="systemd.target.html"><span class="citerefentry"><span class="refentrytitle">systemd.target</span>(5)</span></a>,
+                        <a href="dracut.html"><span class="citerefentry"><span class="refentrytitle">dracut</span>(8)</span></a>
+                </p></div></div></body></html>
