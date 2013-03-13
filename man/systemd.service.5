@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd.service
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd.service
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SERVICE" "5" "03/16/2012" "systemd" "systemd.service"
+.TH "SYSTEMD\&.SERVICE" "5" "" "systemd" "systemd.service"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,10 +28,10 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-systemd.service \- systemd service configuration files
+systemd.service \- Service unit configuration
 .SH "SYNOPSIS"
 .PP
-systemd\&.service
+\fIservice\fR\&.service
 .SH "DESCRIPTION"
 .PP
 A unit configuration file whose name ends in
@@ -49,7 +49,9 @@ sections\&. The service specific configuration options are configured in the
 section\&.
 .PP
 Additional options are listed in
-\fBsystemd.exec\fR(5), which define the execution environment the commands are executed in\&.
+\fBsystemd.exec\fR(5), which define the execution environment the commands are executed in, and in
+\fBsystemd.kill\fR(5)
+which define the way the processes of the service are terminated\&.
 .PP
 Unless
 \fIDefaultDependencies=\fR
@@ -69,13 +71,17 @@ shutdown\&.target\&. These ensure that normal service units pull in basic system
 .PP
 If a service is requested under a certain name but no unit configuration file is found, systemd looks for a SysV init script by the same name (with the
 \&.service
-suffix removed) and dynamically creates a service unit from that script\&. This is useful for compatibility with SysV\&.
+suffix removed) and dynamically creates a service unit from that script\&. This is useful for compatibility with SysV\&. Note that this compatibility is quite comprehensive but not 100%\&. For details about the incompatibilities see the
+\m[blue]\fBIncompatibilities with SysV\fR\m[]\&\s-2\u[1]\d\s+2
+document\&.
 .SH "OPTIONS"
 .PP
 Service files must include a
 [Service]
 section, which carries information about the service and the process it supervises\&. A number of options that may be used in this section are shared with other unit types\&. These options are documented in
-\fBsystemd.exec\fR(5)\&. The options specific to the
+\fBsystemd.exec\fR(5)
+and
+\fBsystemd.kill\fR(5)\&. The options specific to the
 [Service]
 section of service units are the following:
 .PP
@@ -86,11 +92,15 @@ Configures the process start\-up type for this service unit\&. One of
 \fBforking\fR,
 \fBoneshot\fR,
 \fBdbus\fR,
-\fBnotify\fR\&.
+\fBnotify\fR
+or
+\fBidle\fR\&.
 .sp
 If set to
 \fBsimple\fR
-(the default value) it is expected that the process configured with
+(the default value if
+\fIBusName=\fR
+is not specified) it is expected that the process configured with
 \fIExecStart=\fR
 is the main process of the service\&. In this mode, if the process offers functionality to other processes on the system its communication channels should be installed before the daemon is started up (e\&.g\&. sockets set up by systemd, via socket activation), as systemd will immediately proceed starting follow\-up units\&.
 .sp
@@ -100,26 +110,28 @@ it is expected that the process configured with
 \fIExecStart=\fR
 will call
 \fBfork()\fR
-as part of its start\-up\&. The parent process is expected to exit when start\-up is complete and all communication channels set up\&. The child continues to run as the main daemon process\&. This is the behaviour of traditional UNIX daemons\&. If this setting is used, it is recommended to also use the
+as part of its start\-up\&. The parent process is expected to exit when start\-up is complete and all communication channels set up\&. The child continues to run as the main daemon process\&. This is the behavior of traditional UNIX daemons\&. If this setting is used, it is recommended to also use the
 \fIPIDFile=\fR
 option, so that systemd can identify the main process of the daemon\&. systemd will proceed starting follow\-up units as soon as the parent process exits\&.
 .sp
-Behaviour of
+Behavior of
 \fBoneshot\fR
 is similar to
 \fBsimple\fR, however it is expected that the process has to exit before systemd starts follow\-up units\&.
 \fIRemainAfterExit=\fR
 is particularly useful for this type of service\&.
 .sp
-Behaviour of
+Behavior of
 \fBdbus\fR
 is similar to
 \fBsimple\fR, however it is expected that the daemon acquires a name on the D\-Bus bus, as configured by
 \fIBusName=\fR\&. systemd will proceed starting follow\-up units after the D\-Bus bus name has been acquired\&. Service units with this option configured implicitly gain dependencies on the
 dbus\&.socket
-unit\&.
+unit\&. This type is the default if
+\fIBusName=\fR
+is specified\&.
 .sp
-Behaviour of
+Behavior of
 \fBnotify\fR
 is similar to
 \fBsimple\fR, however it is expected that the daemon sends a notification message via
@@ -130,6 +142,11 @@ or an equivalent call when it finished starting up\&. systemd will proceed start
 \fINotifyAccess=\fR
 is not set, it will be implicitly set to
 \fBmain\fR\&.
+.sp
+Behavior of
+\fBidle\fR
+is very similar to
+\fBsimple\fR, however actual execution of the service binary is delayed until all jobs are dispatched\&. This may be used to avoid interleaving of output of shell services with the status output on the console\&.
 .RE
 .PP
 \fIRemainAfterExit=\fR
@@ -140,7 +157,7 @@ Takes a boolean value that specifies whether the service shall be considered act
 .PP
 \fIGuessMainPID=\fR
 .RS 4
-Takes a boolean value that specifies whether systemd should try to guess the main PID of a service should if it cannot be determined reliably\&. This option is ignored unless
+Takes a boolean value that specifies whether systemd should try to guess the main PID of a service if it cannot be determined reliably\&. This option is ignored unless
 \fBType=forking\fR
 is set and
 \fBPIDFile=\fR
@@ -158,7 +175,7 @@ is set to
 .PP
 \fIBusName=\fR
 .RS 4
-Takes a D\-Bus bus name, where this service is reachable as\&. This option is mandatory for services where
+Takes a D\-Bus bus name, that this service is reachable as\&. This option is mandatory for services where
 \fIType=\fR
 is set to
 \fBdbus\fR, but its use is otherwise recommended as well if the process takes a name on the D\-Bus bus\&.
@@ -166,47 +183,55 @@ is set to
 .PP
 \fIExecStart=\fR
 .RS 4
-Takes a command line that is executed when this service shall be started up\&. The first token of the command line must be an absolute file name, then followed by arguments for the process\&. It is mandatory to set this option for all services\&. This option may not be specified more than once, except when
-\fIType=oneshot\fR
-is used in which case more than one
-\fIExecStart=\fR
-line is accepted which are then invoked one by one, sequentially in the order they appear in the unit file\&.
+Commands with their arguments that are executed when this service is started\&. The first argument must be an absolute path name\&.
 .sp
-Optionally, if the absolute file name is prefixed with
-@, the second token will be passed as
-argv[0]
-to the executed process, followed by the further arguments specified\&. If the first token is prefixed with
-\-
-an exit code of the command normally considered a failure (i\&.e\&. non\-zero exit status or abnormal exit due to signal) is ignored and considered success\&. If both
-\-
-and
-@
-are used for the same command the former must precede the latter\&. Unless
+When
+\fIType=oneshot\fR
+is used, more than one command may be specified\&. Multiple command lines may be concatenated in a single directive, by separating them with semicolons (these semicolons must be passed as separate words)\&. Alternatively, this directive may be specified more than once with the same effect\&. However, the latter syntax is not recommended for compatibility with parsers suitable for XDG
+\&.desktop
+files\&. The commands are invoked one by one sequentially in the order they appear in the unit file\&. When
+\fIType\fR
+is not
+\fBoneshot\fR, only one command may be given\&. Lone semicolons may be escaped as \*(Aq\e;\*(Aq\&. If the empty string is assigned to this option the list of commands to start is reset, prior assignments of this option will have no effect\&.
+.sp
+Unless
 \fIType=forking\fR
-is set, the process started via this command line will be considered the main process of the daemon\&. The command line accepts % specifiers as described in
-\fBsystemd.unit\fR(5)\&.
+is set, the process started via this command line will be considered the main process of the daemon\&.
+.sp
+The command line accepts \*(Aq%\*(Aq specifiers as described in
+\fBsystemd.unit\fR(5)\&. Note that the first argument of the command line (i\&.e\&. the program to execute) may not include specifiers\&.
 .sp
 On top of that basic environment variable substitution is supported\&. Use
 ${FOO}
-as part of a word, or as word of its own on the command line, in which case it will be replaced by the value of the environment variable including all whitespace it contains, resulting in a single argument\&. Use
+as part of a word, or as a word of its own on the command line, in which case it will be replaced by the value of the environment variable including all whitespace it contains, resulting in a single argument\&. Use
 $FOO
-as a separate word on the command line, in which case it will be replaced by the value of the environment variable split up at whitespace, resulting in no or more arguments\&. Note that the first argument (i\&.e\&. the program to execute) may not be a variable, and must be a literal and absolute path name\&.
+as a separate word on the command line, in which case it will be replaced by the value of the environment variable split up at whitespace, resulting in no or more arguments\&. Note that the first argument (i\&.e\&. the program to execute) may not be a variable, since it must be a literal and absolute path name\&.
+.sp
+Optionally, if the absolute file name is prefixed with \*(Aq@\*(Aq, the second token will be passed as
+argv[0]
+to the executed process, followed by the further arguments specified\&. If the absolute file name is prefixed with \*(Aq\-\*(Aq an exit code of the command normally considered a failure (i\&.e\&. non\-zero exit status or abnormal exit due to signal) is ignored and considered success\&. If both \*(Aq\-\*(Aq and \*(Aq@\*(Aq are used they can appear in either order\&.
+.sp
+Note that this setting does not directly support shell command lines\&. If shell command lines are to be used they need to be passed explicitly to a shell implementation of some kind\&. Example:
+ExecStart=/bin/sh \-c \*(Aqdmesg | tac\*(Aq
+.sp
+For services run by a user instance of systemd the special environment variable
+MANAGERPID
+is set to the PID of the systemd instance\&.
 .RE
 .PP
 \fIExecStartPre=\fR, \fIExecStartPost=\fR
 .RS 4
-Additional commands that are executed before (resp\&. after) the command in
-\fIExecStart=\fR\&. Multiple command lines may be concatenated in a single directive, by separating them by semicolons (these semicolons must be passed as separate words)\&. In that case, the commands are executed one after the other, serially\&. Alternatively, these directives may be specified more than once with the same effect\&. However, the latter syntax is not recommended for compatibility with parsers suitable for XDG
-\&.desktop
-files\&. Use of these settings is optional\&. Specifier and environment variable substitution is supported\&.
+Additional commands that are executed before or after the command in
+\fIExecStart=\fR, respectively\&. Syntax is the same as for
+\fIExecStart=\fR, except that multiple command lines are allowed and the commands are executed one after the other, serially\&.
 .RE
 .PP
 \fIExecReload=\fR
 .RS 4
-Commands to execute to trigger a configuration reload in the service\&. This argument takes multiple command lines, following the same scheme as pointed out for
-\fIExecStartPre=\fR
+Commands to execute to trigger a configuration reload in the service\&. This argument takes multiple command lines, following the same scheme as described for
+\fIExecStart=\fR
 above\&. Use of this setting is optional\&. Specifier and environment variable substitution is supported here following the same scheme as for
-\fIExecStart=\fR\&. One special environment variable is set: if known
+\fIExecStart=\fR\&. One additional special environment variables is set: if known
 $MAINPID
 is set to the main process of the daemon, and may be used for command lines like the following:
 \fB/bin/kill \-HUP $MAINPID\fR\&.
@@ -215,19 +240,20 @@ is set to the main process of the daemon, and may be used for command lines like
 \fIExecStop=\fR
 .RS 4
 Commands to execute to stop the service started via
-\fIExecStart=\fR\&. This argument takes multiple command lines, following the same scheme as pointed out for
-\fIExecStartPre=\fR
+\fIExecStart=\fR\&. This argument takes multiple command lines, following the same scheme as described for
+\fIExecStart=\fR
 above\&. Use of this setting is optional\&. All processes remaining for a service after the commands configured in this option are run are terminated according to the
 \fIKillMode=\fR
-setting (see below)\&. If this option is not specified the process is terminated right\-away when service stop is requested\&. Specifier and environment variable substitution is supported (including
+setting (see
+\fBsystemd.kill\fR(5))\&. If this option is not specified the process is terminated right\-away when service stop is requested\&. Specifier and environment variable substitution is supported (including
 $MAINPID, see above)\&.
 .RE
 .PP
 \fIExecStopPost=\fR
 .RS 4
 Additional commands that are executed after the service was stopped using the commands configured in
-\fIExecStop=\fR\&. This argument takes multiple command lines, following the same scheme as pointed out for
-\fIExecStartPre\fR\&. Use of these settings is optional\&. Specifier and environment variable substitution is supported\&.
+\fIExecStop=\fR\&. This argument takes multiple command lines, following the same scheme as described for
+\fIExecStart\fR\&. Use of these settings is optional\&. Specifier and environment variable substitution is supported\&.
 .RE
 .PP
 \fIRestartSec=\fR
@@ -236,18 +262,35 @@ Configures the time to sleep before restarting a service (as configured with
 \fIRestart=\fR)\&. Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Defaults to 100ms\&.
 .RE
 .PP
+\fITimeoutStartSec=\fR
+.RS 4
+Configures the time to wait for start\-up\&. If a daemon service does not signal start\-up completion within the configured time, the service will be considered failed and be shut down again\&. Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s, except when
+\fIType=oneshot\fR
+is used in which case the timeout is disabled by default\&.
+.RE
+.PP
+\fITimeoutStopSec=\fR
+.RS 4
+Configures the time to wait for stop\&. If a service is asked to stop but does not terminate in the specified time, it will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL (See
+\fIKillMode=\fR
+in
+\fBsystemd.kill\fR(5))\&. Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
+.RE
+.PP
 \fITimeoutSec=\fR
 .RS 4
-Configures the time to wait for start\-up and stop\&. If a daemon service does not signal start\-up completion within the configured time the service will be considered failed and be shut down again\&. If a service is asked to stop but does not terminate in the specified time it will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL\&. (See
-\fIKillMode=\fR
-below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
+A shorthand for configuring both
+\fITimeoutStartSec=\fR
+and
+\fITimeoutStopSec=\fR
+to the specified value\&.
 .RE
 .PP
 \fIWatchdogSec=\fR
 .RS 4
 Configures the watchdog timeout for a service\&. This is activated when the start\-up is completed\&. The service must call
 \fBsd_notify\fR(3)
-regularly with "WATCHDOG=1"\&. If the time between two such calls is larger than the configured time then the service is placed in a failure state\&. By setting
+regularly with "WATCHDOG=1" (i\&.e\&. the "keep\-alive ping")\&. If the time between two such calls is larger than the configured time then the service is placed in a failure state\&. By setting
 \fIRestart=\fR
 to
 \fBon\-failure\fR
@@ -255,7 +298,7 @@ or
 \fBalways\fR
 the service will be automatically restarted\&. The time configured here will be passed to the executed service process in the
 \fIWATCHDOG_USEC=\fR
-environment variable\&. If this option is used
+environment variable\&. This allows daemons to automatically enable the keep\-alive pinging logic if watchdog support is enabled for the service\&. If this option is used
 \fINotifyAccess=\fR
 (see below) should be set to open access to the notification socket provided by systemd\&. If
 \fINotifyAccess=\fR
@@ -277,11 +320,22 @@ or
 \fBon\-success\fR
 it will be restarted only when it exited cleanly, i\&.e\&. terminated with an exit code of 0\&. If set to
 \fBon\-failure\fR
-it will be restarted only when it exited with an exit code not equalling 0, when terminated by a signal, when an operation times out or when the configured watchdog timeout is triggered\&. If set to
+it will be restarted only when it exited with an exit code not equaling 0, when terminated by a signal (including on core dump), when an operation (such as service reload) times out or when the configured watchdog timeout is triggered\&. If set to
 \fBon\-abort\fR
-it will be restarted only if it exits due to reception of an uncaught signal\&. If set to
+it will be restarted only if it exits due to reception of an uncaught signal (including on core dump)\&. If set to
 \fBalways\fR
 the service will be restarted regardless whether it exited cleanly or not, got terminated abnormally by a signal or hit a timeout\&.
+.RE
+.PP
+\fISuccessExitStatus=\fR
+.RS 4
+Takes a list of exit status definitions that when returned by the main service process will be considered successful termination, in addition to the normal successful exit code 0 and the signals SIGHUP, SIGINT, SIGTERM and SIGPIPE\&. Exit status definitions can either be numeric exit codes or termination signal names, and are separated by spaces\&. Example: "SuccessExitStatus=1 2 8 SIGKILL", ensures that exit codes 1, 2, 8 and the termination signal SIGKILL are considered clean service terminations\&. This option may appear more than once in which case the list of successful exit statuses is merged\&. If the empty string is assigned to this option the list is reset, all prior assignments of this option will have no effect\&.
+.RE
+.PP
+\fIRestartPreventExitStatus=\fR
+.RS 4
+Takes a list of exit status definitions that when returned by the main service process will prevent automatic service restarts regardless of the restart setting configured with
+\fIRestart=\fR\&. Exit status definitions can either be numeric exit codes or termination signal names, and are separated by spaces\&. Defaults to the empty list, so that by default no exit status is excluded from the configured restart logic\&. Example: "RestartPreventExitStatus=1 6 SIGABRT", ensures that exit codes 1 and 6 and the termination signal SIGABRT will not result in automatic service restarting\&. This option may appear more than once in which case the list of restart preventing statuses is merged\&. If the empty string is assigned to this option the list is reset, all prior assignments of this option will have no effect\&.
 .RE
 .PP
 \fIPermissionsStartOnly=\fR
@@ -316,52 +370,6 @@ for more information) is only applied to the process started with
 commands\&. If false, the setting is applied to all configured commands the same way\&. Defaults to false\&.
 .RE
 .PP
-\fISysVStartPriority=\fR
-.RS 4
-Set the SysV start priority to use to order this service in relation to SysV services lacking LSB headers\&. This option is only necessary to fix ordering in relation to legacy SysV services, that have no ordering information encoded in the script headers\&. As such it should only be used as temporary compatibility option, and not be used in new unit files\&. Almost always it is a better choice to add explicit ordering directives via
-\fIAfter=\fR
-or
-\fIBefore=\fR, instead\&. For more details see
-\fBsystemd.unit\fR(5)\&. If used, pass an integer value in the range 0\-99\&.
-.RE
-.PP
-\fIKillMode=\fR
-.RS 4
-Specifies how processes of this service shall be killed\&. One of
-\fBcontrol\-group\fR,
-\fBprocess\fR,
-\fBnone\fR\&.
-.sp
-If set to
-\fBcontrol\-group\fR
-all remaining processes in the control group of this service will be terminated on service stop, after the stop command (as configured with
-\fIExecStop=\fR) is executed\&. If set to
-\fBprocess\fR
-only the main process itself is killed\&. If set to
-\fBnone\fR
-no process is killed\&. In this case only the stop command will be executed on service stop, but no process be killed otherwise\&. Processes remaining alive after stop are left in their control group and the control group continues to exist after stop unless it is empty\&. Defaults to
-\fBcontrol\-group\fR\&.
-.sp
-Processes will first be terminated via SIGTERM (unless the signal to send is changed via
-\fIKillSignal=\fR)\&. If then after a delay (configured via the
-\fITimeoutSec=\fR
-option) processes still remain, the termination request is repeated with the SIGKILL signal (unless this is disabled via the
-\fISendSIGKILL=\fR
-option)\&. See
-\fBkill\fR(2)
-for more information\&.
-.RE
-.PP
-\fIKillSignal=\fR
-.RS 4
-Specifies which signal to use when killing a service\&. Defaults to SIGTERM\&.
-.RE
-.PP
-\fISendSIGKILL=\fR
-.RS 4
-Specifies whether to send SIGKILL to remaining processes after a timeout, if the normal shutdown procedure left processes of the service around\&. Takes a boolean value\&. Defaults to "yes"\&.
-.RE
-.PP
 \fINonBlocking=\fR
 .RS 4
 Set O_NONBLOCK flag for all file descriptors passed via socket\-based activation\&. If true, all file descriptors >= 3 (i\&.e\&. all except STDIN/STDOUT/STDERR) will have the O_NONBLOCK flag set and hence are in non\-blocking mode\&. This option is only useful in conjunction with a socket unit, as described in
@@ -386,7 +394,7 @@ only service updates sent from the main process of the service are accepted\&. I
 all services updates from all members of the service\*(Aqs control group are accepted\&. This option should be set to open access to the notification socket when using
 \fIType=notify\fR
 or
-\fIWatchdogUsec=\fR
+\fIWatchdogSec=\fR
 (see above)\&. If those options are used but
 \fINotifyAccess=\fR
 not configured it will be implicitly set to
@@ -397,7 +405,7 @@ not configured it will be implicitly set to
 .RS 4
 Specifies the name of the socket units this service shall inherit the sockets from when the service is started\&. Normally it should not be necessary to use this setting as all sockets whose unit shares the same name as the service (ignoring the different suffix of course) are passed to the spawned process\&.
 .sp
-Note that the same socket may be passed to multiple processes at the same time\&. Also note that a different service may be activated on incoming traffic than inherits the sockets\&. Or in other words: The
+Note that the same socket may be passed to multiple processes at the same time\&. Also note that a different service may be activated on incoming traffic than inherits the sockets\&. Or in other words: the
 \fIService=\fR
 setting of
 \&.socket
@@ -406,20 +414,8 @@ units doesn\*(Aqt have to match the inverse of the
 setting of the
 \&.service
 it refers to\&.
-.RE
-.PP
-\fIFsckPassNo=\fR
-.RS 4
-Set the fsck passno priority to use to order this service in relation to other file system checking services\&. This option is only necessary to fix ordering in relation to fsck jobs automatically created for all
-/etc/fstab
-entries with a value in the fs_passno column > 0\&. As such it should only be used as option for fsck services\&. Almost always it is a better choice to add explicit ordering directives via
-\fIAfter=\fR
-or
-\fIBefore=\fR, instead\&. For more details see
-\fBsystemd.unit\fR(5)\&. If used, pass an integer value in the same range as
-/etc/fstab\*(Aqs fs_passno column\&. See
-\fBfstab\fR(5)
-for details\&.
+.sp
+This option may appear more than once, in which case the list of socket units is merged\&. If the empty string is assigned to this option the list of sockets is reset, all prior uses of this setting will have no effect\&.
 .RE
 .PP
 \fIStartLimitInterval=\fR, \fIStartLimitBurst=\fR
@@ -429,7 +425,13 @@ Configure service start rate limiting\&. By default services which are started m
 to configure the checking interval (defaults to 10s, set to 0 to disable any kind of rate limiting)\&. Use
 \fIStartLimitBurst=\fR
 to configure how many starts per interval are allowed (defaults to 5)\&. These configuration options are particularly useful in conjunction with
-\fIRestart=\fR\&.
+\fIRestart=\fR, however apply to all kinds of starts (including manual), not just those triggered by the
+\fIRestart=\fR
+logic\&. Note that units which are configured for
+\fIRestart=\fR
+and which reach the start limit are not attempted to be restarted anymore, however they may still be restarted manually at a later point from which point on the restart logic is again activated\&. Note that
+\fBsystemctl reset\-failed\fR
+will cause the restart rate counter for a service to be flushed, which is useful if the administrator wants to manually start a service and the start limit interferes with that\&.
 .RE
 .PP
 \fIStartLimitAction=\fR
@@ -458,16 +460,52 @@ causes immediate execution of the
 system call, which might result in data loss\&. Defaults to
 \fBnone\fR\&.
 .RE
+.PP
+Check
+\fBsystemd.exec\fR(5)
+and
+\fBsystemd.kill\fR(5)
+for more settings\&.
+.SH "COMPATIBILITY OPTIONS"
+.PP
+The following options are also available in the
+[Service]
+section, but exist purely for compatibility reasons and should not be used in newly written service files\&.
+.PP
+\fISysVStartPriority=\fR
+.RS 4
+Set the SysV start priority to use to order this service in relation to SysV services lacking LSB headers\&. This option is only necessary to fix ordering in relation to legacy SysV services, that have no ordering information encoded in the script headers\&. As such it should only be used as temporary compatibility option, and not be used in new unit files\&. Almost always it is a better choice to add explicit ordering directives via
+\fIAfter=\fR
+or
+\fIBefore=\fR, instead\&. For more details see
+\fBsystemd.unit\fR(5)\&. If used, pass an integer value in the range 0\-99\&.
+.RE
+.PP
+\fIFsckPassNo=\fR
+.RS 4
+Set the fsck passno priority to use to order this service in relation to other file system checking services\&. This option is only necessary to fix ordering in relation to fsck jobs automatically created for all
+/etc/fstab
+entries with a value in the fs_passno column > 0\&. As such it should only be used as option for fsck services\&. Almost always it is a better choice to add explicit ordering directives via
+\fIAfter=\fR
+or
+\fIBefore=\fR, instead\&. For more details see
+\fBsystemd.unit\fR(5)\&. If used, pass an integer value in the same range as
+/etc/fstab\*(Aqs fs_passno column\&. See
+\fBfstab\fR(5)
+for details\&.
+.RE
 .SH "SEE ALSO"
 .PP
 
 \fBsystemd\fR(1),
 \fBsystemctl\fR(8),
 \fBsystemd.unit\fR(5),
-\fBsystemd.exec\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+\fBsystemd.exec\fR(5),
+\fBsystemd.kill\fR(5),
+\fBsystemd.directives\fR(7)
+.SH "NOTES"
+.IP " 1." 4
+Incompatibilities with SysV
 .RS 4
-Developer
+\%http://www.freedesktop.org/wiki/Software/systemd/Incompatibilities
 .RE

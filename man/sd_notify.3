@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: sd_notify
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: sd_notify
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_NOTIFY" "3" "03/16/2012" "systemd" "sd_notify"
+.TH "SD_NOTIFY" "3" "" "systemd" "sd_notify"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-sd_notify, sd_notifyf \- Notify init system about start\-up completion and other daemon status changes
+sd_notify, sd_notifyf \- Notify service manager about start\-up completion and other daemon status changes
 .SH "SYNOPSIS"
 .sp
 .ft B
@@ -57,11 +57,11 @@ will then fail, but the variable is no longer inherited by child processes\&.
 .PP
 The
 \fIstate\fR
-parameter should contain an newline\-separated list of variable assignments, similar in style to an environment block\&. A trailing newline is implied if none is specified\&. The string may contain any kind of variable assignments, but the following shall be considered well\-known:
+parameter should contain a newline\-separated list of variable assignments, similar in style to an environment block\&. A trailing newline is implied if none is specified\&. The string may contain any kind of variable assignments, but the following shall be considered well\-known:
 .PP
 READY=1
 .RS 4
-Tells the init system that daemon startup is finished\&. This is only used by systemd if the service definition file has Type=notify set\&. The passed argument is a boolean "1" or "0"\&. Since there is little value in signalling non\-readiness, the only value daemons should send is "READY=1"\&.
+Tells the init system that daemon startup is finished\&. This is only used by systemd if the service definition file has Type=notify set\&. The passed argument is a boolean "1" or "0"\&. Since there is little value in signaling non\-readiness, the only value daemons should send is "READY=1"\&.
 .RE
 .PP
 STATUS=\&.\&.\&.
@@ -86,7 +86,13 @@ The main pid of the daemon, in case the init system did not fork off the process
 .PP
 WATCHDOG=1
 .RS 4
-Tells systemd to update the watchdog timestamp\&. Services using this feature should do this in regular intervals\&. A watchdog framework can use the timestamps to detect failed services\&.
+Tells systemd to update the watchdog timestamp\&. This is the keep\-alive ping that services need to issue in regular intervals if
+\fIWatchdogSec=\fR
+is enabled for it\&. See
+\fBsystemd.service\fR(5)
+for details\&. It is recommended to send this message if the
+\fIWATCHDOG_USEC=\fR
+environment variable has been set for the service process, in every half the time interval that is specified in the variable\&.
 .RE
 .PP
 It is recommended to prefix variable names that are not shown in the list above with
@@ -120,8 +126,8 @@ environment variable\&. If the first character of
 is @ the string is understood as Linux abstract namespace socket\&. The datagram is accompanied by the process credentials of the sending daemon, using SCM_CREDENTIALS\&.
 .PP
 For details about the algorithms check the liberally licensed reference implementation sources:
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/sd-daemon.c\fR\m[]
-resp\&.
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c\fR\m[]
+and
 \m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h\fR\m[]
 .PP
 \fBsd_notify()\fR
@@ -135,7 +141,7 @@ files\&. These interfaces are available as shared library, which can be compiled
 libsystemd\-daemon
 \fBpkg-config\fR(1)
 file\&. Alternatively, applications consuming these APIs may copy the implementation into their source tree\&. For more details about the reference implementation see
-\fBsd_daemon\fR(7)\&.
+\fBsd-daemon\fR(3)\&.
 .PP
 If the reference implementation is used as drop\-in files and \-DDISABLE_SYSTEMD is set during compilation these functions will always return 0 and otherwise become a NOP\&.
 .SH "ENVIRONMENT"
@@ -199,12 +205,6 @@ sd_notifyf(0, "STATUS=Failed to start up: %s\en"
 .PP
 
 \fBsystemd\fR(1),
-\fBsd_daemon\fR(7),
+\fBsd-daemon\fR(3),
 \fBdaemon\fR(7),
 \fBsystemd.service\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

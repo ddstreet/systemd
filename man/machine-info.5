@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: machine-info
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: machine-info
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "MACHINE\-INFO" "5" "03/16/2012" "systemd" "machine-info"
+.TH "MACHINE\-INFO" "5" "" "systemd" "machine-info"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -46,6 +46,10 @@ is a newline\-separated list of environment\-like shell\-compatible variable ass
 contains meta data about the machine that is set by the user or administrator\&.
 .PP
 Depending on the operating system other configuration files might be checked for machine information as well, however only as fallback\&.
+.PP
+You may use
+\fBhostnamectl\fR(1)
+to change the settings of this file from the command line\&.
 .SH "OPTIONS"
 .PP
 The following machine meta data parameters may be set using
@@ -71,14 +75,29 @@ An icon identifying this machine according to the
 computer
 or a similar icon name\&.
 .RE
+.PP
+\fICHASSIS=\fR
+.RS 4
+The chassis type\&. Currently, the following chassis types are defined:
+desktop,
+laptop,
+server,
+tablet,
+handset, as well as the special chassis types
+vm
+and
+container
+for virtualized systems that lack an immediate physical chassis\&. Note that many systems allow detection of the chassis type automatically (based on firmware information or suchlike)\&. This setting (if set) shall take precedence over automatically detected information and is useful to override misdetected configuration or to manually configure the chassis type where automatic detection is not available\&.
+.RE
 .SH "EXAMPLE"
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-PRETTY_HOSTNAME="Lennart\*(Aqs Computer"
-ICON_NAME=computer\-laptop
+PRETTY_HOSTNAME="Lennart\*(Aqs Tablet"
+ICON_NAME=computer\-tablet
+CHASSIS=tablet
 .fi
 .if n \{\
 .RE
@@ -89,13 +108,9 @@ ICON_NAME=computer\-laptop
 \fBsystemd\fR(1),
 \fBos-release\fR(5),
 \fBhostname\fR(5),
-\fBmachine-id\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBmachine-id\fR(5),
+\fBhostnamectl\fR(1),
+\fBsystemd-hostnamed.service\fR(8)
 .SH "NOTES"
 .IP " 1." 4
 XDG Icon Naming Specification

@@ -1,0 +1,39 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-readahead-replay.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-readahead-replay.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-readahead-replay.service, systemd-readahead-collect.service, systemd-readahead-done.service, systemd-readahead-done.timer, systemd-readahead — Disk read ahead logic</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">systemd-readahead-replay.service</code></p><p><code class="filename">systemd-readahead-collect.service</code></p><p><code class="filename">systemd-readahead-done.service</code></p><p><code class="filename">systemd-readahead-done.timer</code></p><p><code class="filename">/usr/lib/systemd/systemd-readahead</code></p></div><div class="refsect1"><a name="idp126208"></a><h2>Description</h2><p><code class="filename">systemd-readahead-collect.service</code>
+                is a service that collects disk usage patterns at boot
+                time. <code class="filename">systemd-readahead-replay.service</code>
+                is a service that replays this access data collected
+                at the subsequent boot. Since disks tend to be
+                magnitudes slower than RAM this is intended to improve
+                boot speeds by pre-loading early at boot all data on
+                disk that is known to be read for the complete boot
+                process.</p><p><code class="filename">systemd-readahead-done.service</code>
+                is executed a short while after boot completed and signals
+                <code class="filename">systemd-readahead-collect.service</code>
+                to end data collection. On this signal this service
+                will then sort the collected disk accesses and store
+                information about them disk in
+                <code class="filename">/.readahead</code>.</p><p>Normally, both
+                <code class="filename">systemd-readahead-collect.service</code>
+                and
+                <code class="filename">systemd-readahead-replay.service</code>
+                are activated at boot so that access patterns from the
+                preceding boot are replayed and new data collected
+                for the subsequent boot. However, on read-only media
+                where the collected data cannot be stored it might
+                be a good idea to disable
+                <code class="filename">systemd-readahead-collect.service</code>.</p><p>On rotating media, when replaying disk accesses
+                at early boot
+                <code class="filename">systemd-readahead-replay.service</code>
+                will order read requests by their location on disk. On
+                non-rotating media, they will be ordered by their
+                original access timestamp. If the file system supports
+                it
+                <code class="filename">systemd-readahead-collect.service</code>
+                will also defragment and rearrange files on disk to
+                optimize subsequent boot times.</p></div><div class="refsect1"><a name="idp3917568"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>
+                </p></div></div></body></html>

@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: pam_systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: pam_systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "PAM_SYSTEMD" "8" "03/16/2012" "systemd" "pam_systemd"
+.TH "PAM_SYSTEMD" "8" "" "systemd" "pam_systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,14 +28,15 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-pam_systemd \- Register user sessions in the systemd control group hierarchy
+pam_systemd \- Register user sessions in the systemd login manager
 .SH "SYNOPSIS"
-.HP \w'\fBpam_systemd\&.so\fR\ 'u
-\fBpam_systemd\&.so\fR
+.PP
+pam_systemd\&.so
 .SH "DESCRIPTION"
 .PP
 \fBpam_systemd\fR
-registers user sessions in the systemd control group hierarchy\&.
+registers user sessions in the systemd login manager
+\fBsystemd-logind.service\fR(8), and hence the systemd control group hierarchy\&.
 .PP
 On login, this module ensures the following:
 .sp
@@ -107,7 +108,7 @@ control group are killed and the control group is removed\&.
 .sp -1
 .IP "  2." 4.2
 .\}
-If last subgroup of the
+If the last subgroup of the
 /user/$USER
 control group was removed the
 \fI$XDG_RUNTIME_DIR\fR
@@ -136,7 +137,7 @@ takes precedence over this list and is hence subtracted from the list specified 
 \fBkill\-exclude\-users=\fR
 .RS 4
 Takes a comma separated list of user names or numeric user ids as argument\&. Users listed in this argument will not be subject to the effect of
-\fBkill\-session\-processes=\fR\&. Note that that this option takes precedence over
+\fBkill\-session\-processes=\fR\&. Note that this option takes precedence over
 \fBkill\-only\-users=\fR, and hence whatever is listed for
 \fBkill\-exclude\-users=\fR
 is guaranteed to never be killed by this PAM module, independent of any other configuration setting\&.
@@ -150,6 +151,11 @@ Takes a comma separated list of control group controllers in which hierarchies a
 \fBreset\-controllers=\fR
 .RS 4
 Takes a comma separated list of control group controllers in which hierarchies the logged in processes will be reset to the root control group\&.
+.RE
+.PP
+\fBclass=\fR
+.RS 4
+Takes a string argument which sets the session class\&. The XDG_SESSION_CLASS environmental variable takes precedence\&.
 .RE
 .PP
 \fBdebug=\fR
@@ -167,7 +173,7 @@ Note that
 is a stricter version of
 \fIKillUserProcesses=1\fR
 which may be configured system\-wide in
-\fBsystemd-logind.conf\fR(5)\&. The former kills processes of a session as soon as it ends, the latter kills processes as soon as the last session of the user ends\&.
+\fBlogind.conf\fR(5)\&. The former kills processes of a session as soon as it ends, the latter kills processes as soon as the last session of the user ends\&.
 .PP
 If the options are omitted they default to
 \fBkill\-session\-processes=0\fR,
@@ -195,7 +201,7 @@ A session identifier, suitable to be used in file names\&. The string itself sho
 .RS 4
 Path to a user\-private user\-writable directory that is bound to the user login time on the machine\&. It is automatically created the first time a user logs in and removed on his final logout\&. If a user logs in twice at the same time, both sessions will see the same
 \fI$XDG_RUNTIME_DIR\fR
-and the same contents\&. If a user logs in once, then logs out again, and logs in again, the directory contents will have been lost in between, but applications should not rely on this behaviour and must be able to deal with stale files\&. To store session\-private data in this directory the user should include the value of
+and the same contents\&. If a user logs in once, then logs out again, and logs in again, the directory contents will have been lost in between, but applications should not rely on this behavior and must be able to deal with stale files\&. To store session\-private data in this directory the user should include the value of
 \fI$XDG_SESSION_ID\fR
 in the filename\&. This directory shall be used for runtime file system objects such as AF_UNIX sockets, FIFOs, PID files and similar\&. It is guaranteed that this directory is local and offers the greatest possible file system feature set the operating system provides\&.
 .RE
@@ -220,15 +226,11 @@ session    required     pam_systemd\&.so kill\-session\-processes=1
 .SH "SEE ALSO"
 .PP
 
+\fBsystemd\fR(1),
+\fBsystemd-logind.service\fR(8),
+\fBlogind.conf\fR(5),
+\fBloginctl\fR(1),
 \fBpam.conf\fR(5),
 \fBpam.d\fR(5),
 \fBpam\fR(8),
-\fBpam_loginuid\fR(8),
-\fBsystemd-logind.conf\fR(5),
-\fBsystemd\fR(1)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBpam_loginuid\fR(8)

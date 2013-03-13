@@ -1,0 +1,42 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-coredumpctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-coredumpctl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-coredumpctl — Retrieve coredumps from the journal</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-coredumpctl</code>  [OPTIONS...] {COMMAND} [PID|COMM|EXE|MATCH...]</p></div></div><div class="refsect1"><a name="idp122416"></a><h2>Description</h2><p><span class="command"><strong>systemd-coredumpctl</strong></span> may be used to
+                retrieve coredumps from
+                <a href="systemd-journald.html"><span class="citerefentry"><span class="refentrytitle">systemd-journald</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp125008"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Print a short help
+                                text and exit.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Print a short version
+                                string and exit.</p></dd><dt><span class="term"><code class="option">-F</code>, </span><span class="term"><code class="option">--field=</code></span></dt><dd><p>Print all possible
+                                data values the specified field
+                                takes in matching coredump entries of the
+                                journal.</p></dd><dt><span class="term"><code class="option">-o</code>, </span><span class="term"><code class="option">--output=FILE</code></span></dt><dd><p>Write the core to
+                                <code class="option">FILE</code>.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output of
+                                <span class="command"><strong>list</strong></span> into a
+                                pager.</p></dd><dt><span class="term"><code class="option">--no-legend</code></span></dt><dd><p>Do not print the column headers.
+                                </p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="command"><strong>list</strong></span></span></dt><dd><p>List coredumps captured in the journal
+                                matching specified characteristics.</p></dd><dt><span class="term"><span class="command"><strong>dump</strong></span></span></dt><dd><p>Extract the last coredump
+                                matching specified characteristics.
+                                Coredump will be written on stdout, unless
+                                an output file is specified with
+                                <code class="option">-o/--output</code>.
+                                </p></dd><dt><span class="term"><span class="command"><strong>gdb</strong></span></span></dt><dd><p>Invoke the GNU
+                                debugger on the last coredump matching
+                                specified characteristics.
+                                </p></dd></dl></div></div><div class="refsect1"><a name="idp3918688"></a><h2>Matching</h2><p>Match can be:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><em class="replaceable"><code>PID</code></em></span></dt><dd><p>Process ID of the
+                                process that dumped
+                                core. An integer.</p></dd><dt><span class="term"><em class="replaceable"><code>COMM</code></em></span></dt><dd><p>Name of the executable
+                                (matches <code class="option">COREDUMP_COMM=</code>).
+                                Must not contain slashes.
+                                </p></dd><dt><span class="term"><em class="replaceable"><code>EXE</code></em></span></dt><dd><p>Path to the executable
+                                (matches <code class="option">COREDUMP_EXE=</code>).
+                                Must contain at least one slash.
+                                </p></dd><dt><span class="term"><em class="replaceable"><code>MATCH</code></em></span></dt><dd><p>General journalctl predicates
+                                (see <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>).
+                                Must contain an equals sign.
+                                </p></dd></dl></div></div><div class="refsect1"><a name="idp24576"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise. Not finding any matching coredumps is treated
+		as failure.
+		</p></div><div class="refsect1"><a name="idp25920"></a><h2>See Also</h2><p>
+                        <a href="systemd-journald.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-journald.service</span>(8)</span></a>,
+                        <a href="gdb.html"><span class="citerefentry"><span class="refentrytitle">gdb</span>(1)</span></a>
+                </p></div></div></body></html>

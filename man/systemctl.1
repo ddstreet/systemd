@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemctl
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemctl
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMCTL" "1" "03/16/2012" "systemd" "systemctl"
+.TH "SYSTEMCTL" "1" "" "systemd" "systemctl"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -30,8 +30,8 @@
 .SH "NAME"
 systemctl \- Control the systemd system and service manager
 .SH "SYNOPSIS"
-.HP \w'\fBsystemctl\ \fR\fB[OPTIONS...]\fR\fB\ \fR\fB{COMMAND}\fR\fB\ \fR\fB[NAME...]\fR\ 'u
-\fBsystemctl \fR\fB[OPTIONS...]\fR\fB \fR\fB{COMMAND}\fR\fB \fR\fB[NAME...]\fR
+.HP \w'\fBsystemctl\fR\ 'u
+\fBsystemctl\fR [OPTIONS...] COMMAND [NAME...]
 .SH "DESCRIPTION"
 .PP
 \fBsystemctl\fR
@@ -42,7 +42,7 @@ system and service manager\&.
 .PP
 The following options are understood:
 .PP
-\fB\-\-help\fR, \fB\-h\fR
+\fB\-h\fR, \fB\-\-help\fR
 .RS 4
 Prints a short help text and exits\&.
 .RE
@@ -52,21 +52,33 @@ Prints a short help text and exits\&.
 Prints a short version string and exits\&.
 .RE
 .PP
-\fB\-\-type=\fR, \fB\-t\fR
+\fB\-t\fR, \fB\-\-type=\fR
 .RS 4
-When listing units, limit display to certain unit types\&. If not specified units of all types will be shown\&. The argument should be a unit type name such as
-\fBservice\fR,
-\fBsocket\fR
-and similar\&.
+The argument should be a unit type name such as
+\fBservice\fR
+and
+\fBsocket\fR, or a unit load state such as
+\fBloaded\fR
+and
+\fBmasked\fR\&.
+.sp
+If the argument is a unit type, when listing units, limit display to certain unit types\&. If not specified units of all types will be shown\&.
+.sp
+If the argument is a unit load state, when listing units, limit display to certain unit types\&. If not specified units of in all load states will be shown\&.
+.sp
+As a special case, if the argument is
+\fBhelp\fR, a list of allowed values will be printed and the program will exit\&.
 .RE
 .PP
-\fB\-\-property=\fR, \fB\-p\fR
+\fB\-p\fR, \fB\-\-property=\fR
 .RS 4
-When showing unit/job/manager properties, limit display to certain properties as specified as argument\&. If not specified all set properties are shown\&. The argument should be a property name, such as
+When showing unit/job/manager properties with the
+\fBshow\fR
+command, limit display to certain properties as specified as argument\&. If not specified all set properties are shown\&. The argument should be a comma\-seperated list of property names, such as
 MainPID\&. If specified more than once all properties with the specified names are shown\&.
 .RE
 .PP
-\fB\-\-all\fR, \fB\-a\fR
+\fB\-a\fR, \fB\-\-all\fR
 .RS 4
 When listing units, show all units, regardless of their state, including inactive units\&. When showing unit/job/manager properties, show all properties regardless whether they are set or not\&.
 .RE
@@ -79,7 +91,7 @@ When listing units, show only failed units\&. Do not confuse with
 .PP
 \fB\-\-full\fR
 .RS 4
-Do not ellipsize unit names and truncate unit descriptions in the output of
+Do not ellipsize unit names, cgroup members, and truncate unit descriptions in the output of
 \fBlist\-units\fR
 and
 \fBlist\-jobs\fR\&.
@@ -91,16 +103,31 @@ If the requested operation conflicts with a pending unfinished job, fail the com
 \fB\-\-failed\fR\&.
 .RE
 .PP
-\fB\-\-ignore\-dependencies\fR
+\fB\-\-irreversible\fR
 .RS 4
-When enqueuing a new job ignore all its dependencies and execute it immediately\&. If passed no required units of the unit passed will be pulled in, and no ordering dependencies will be honoured\&. This is mostly a debugging and rescue tool for the administrator and should not be used by applications\&.
+Mark this transaction\*(Aqs jobs as irreversible\&. This prevents future conflicting transactions from replacing these jobs\&. The jobs can still be cancelled using the
+\fBcancel\fR
+command\&.
 .RE
 .PP
-\fB\-\-quiet\fR, \fB\-q\fR
+\fB\-\-ignore\-dependencies\fR
 .RS 4
-Suppress output to STDOUT in
+When enqueuing a new job ignore all its dependencies and execute it immediately\&. If passed no required units of the unit passed will be pulled in, and no ordering dependencies will be honored\&. This is mostly a debugging and rescue tool for the administrator and should not be used by applications\&.
+.RE
+.PP
+\fB\-i\fR, \fB\-\-ignore\-inhibitors\fR
+.RS 4
+When system shutdown or a sleep state is requested, ignore inhibitor locks\&. Applications can establish inhibitor locks to avoid that certain important operations (such as CD burning or suchlike) are interrupted by system shutdown or a sleep state\&. Any user may take these locks and privileged users may override these locks\&. If any locks are taken, shutdown and sleep state requests will normally fail (regardless if privileged or not) and a list of active locks is printed\&. However if
+\fB\-\-ignore\-inhibitors\fR
+is specified the locks are ignored and not printed, and the operation attempted anyway, possibly requiring additional privileges\&.
+.RE
+.PP
+\fB\-q\fR, \fB\-\-quiet\fR
+.RS 4
+Suppress output to standard output in
 \fBsnapshot\fR,
 \fBis\-active\fR,
+\fBis\-failed\fR,
 \fBenable\fR
 and
 \fBdisable\fR\&.
@@ -133,29 +160,6 @@ Talk to the systemd system manager\&. (Default)
 Talk to the systemd manager of the calling user\&.
 .RE
 .PP
-\fB\-\-order\fR, \fB\-\-require\fR
-.RS 4
-When used in conjunction with the
-\fBdot\fR
-command (see below), selects which dependencies are shown in the dependency graph\&. If
-\fB\-\-order\fR
-is passed only dependencies of type
-\fIAfter=\fR
-or
-\fIBefore=\fR
-are shown\&. If
-\fB\-\-require\fR
-is passed only dependencies of type
-\fIRequires=\fR,
-\fIRequiresOverridable=\fR,
-\fIRequisite=\fR,
-\fIRequisiteOverridable=\fR,
-\fIWants=\fR
-and
-\fIConflicts=\fR
-are shown\&. If neither is passed, shows dependencies of all these types\&.
-.RE
-.PP
 \fB\-\-no\-wall\fR
 .RS 4
 Don\*(Aqt send wall message before halt, power\-off, reboot\&.
@@ -183,7 +187,7 @@ When used with
 \fBstart\fR
 and related commands, disables asking for passwords\&. Background services may require input of a password or passphrase string, for example to unlock system hard disks or cryptographic certificates\&. Unless this option is specified and the command is invoked from a terminal
 \fBsystemctl\fR
-will query the user on the terminal for the necessary secrets\&. Use this option to switch this behavior off\&. In this case the password must be supplied by some other means (for example graphical password agents) or the service might fail\&.
+will query the user on the terminal for the necessary secrets\&. Use this option to switch this behavior off\&. In this case the password must be supplied by some other means (for example graphical password agents) or the service might fail\&. This also disables querying the user for authentication for privileged operations\&.
 .RE
 .PP
 \fB\-\-kill\-who=\fR
@@ -198,17 +202,18 @@ to select whether to kill only the main process of the unit, the control process
 \fBall\fR\&.
 .RE
 .PP
-\fB\-\-signal=\fR, \fB\-s\fR
+\fB\-s\fR, \fB\-\-signal=\fR
 .RS 4
 When used with
 \fBkill\fR, choose which signal to send to selected processes\&. Must be one of the well known signal specifiers such as SIGTERM, SIGINT or SIGSTOP\&. If omitted defaults to
 \fBSIGTERM\fR\&.
 .RE
 .PP
-\fB\-\-force\fR, \fB\-f\fR
+\fB\-f\fR, \fB\-\-force\fR
 .RS 4
 When used with
-\fBenable\fR, override any existing conflicting symlinks\&.
+\fBenable\fR, overwrite any existing conflicting symlinks\&.
+.sp
 When used with
 \fBhalt\fR,
 \fBpoweroff\fR,
@@ -232,11 +237,20 @@ When used with
 \fB\-\-runtime\fR
 .RS 4
 When used with
-\fBenable\fR/\fBdisable\fR/\fBis\-enabled\fR
-(and related commands), make changes only temporarily, so that they are dropped on the next reboot\&. This will have the effect that changes are not made in subdirectories of
+\fBenable\fR,
+\fBdisable\fR,
+\fBis\-enabled\fR
+(and related commands), make changes only temporarily, so that they are lost on the next reboot\&. This will have the effect that changes are not made in subdirectories of
 /etc
 but in
 /run, with identical immediate effects, however, since the latter is lost on reboot, the changes are lost too\&.
+.sp
+Similar, when used with
+\fBset\-cgroup\-attr\fR,
+\fBunset\-cgroup\-attr\fR,
+\fBset\-cgroup\fR
+and
+\fBunset\-cgroup\fR, make changes only temporarily, so that they are lost on the next reboot\&.
 .RE
 .PP
 \fB\-H\fR, \fB\-\-host\fR
@@ -249,47 +263,44 @@ Execute operation remotely\&. Specify a hostname, or username and hostname separ
 Acquire privileges via PolicyKit before executing the operation\&.
 .RE
 .PP
-\fB\-\-lines=\fR, \fB\-n\fR
+\fB\-n\fR, \fB\-\-lines=\fR
 .RS 4
 When used with
 \fBstatus\fR
 controls the number of journal lines to show, counting from the most recent ones\&. Takes a positive integer argument\&. Defaults to 10\&.
 .RE
 .PP
-\fB\-\-follow\fR, \fB\-f\fR
-.RS 4
-When used with
-\fBstatus\fR
-continously prints new journal entries as they are appended to the journal\&.
-.RE
-.PP
-\fB\-\-output=\fR, \fB\-o\fR
+\fB\-o\fR, \fB\-\-output=\fR
 .RS 4
 When used with
 \fBstatus\fR
 controls the formatting of the journal entries that are shown\&. For the available choices see
-\fBsystemd-journalctl\fR(1)\&. Defaults to
+\fBjournalctl\fR(1)\&. Defaults to
 short\&.
 .RE
+.SH "COMMANDS"
 .PP
 The following commands are understood:
 .PP
 \fBlist\-units\fR
 .RS 4
-List known units\&.
+List known units (subject to limitations specified with
+\fB\-t\fR)\&.
+.sp
+This is the default command\&.
 .RE
 .PP
-\fBstart [NAME\&.\&.\&.]\fR
+\fBstart \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Start (activate) one or more units specified on the command line\&.
 .RE
 .PP
-\fBstop [NAME\&.\&.\&.]\fR
+\fBstop \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Stop (deactivate) one or more units specified on the command line\&.
 .RE
 .PP
-\fBreload [NAME\&.\&.\&.]\fR
+\fBreload \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Asks all units listed on the command line to reload their configuration\&. Note that this will reload the service\-specific configuration, not the unit configuration file of systemd\&. If you want systemd to reload the configuration file of a unit use the
 \fBdaemon\-reload\fR
@@ -306,31 +317,31 @@ or
 commands\&.
 .RE
 .PP
-\fBrestart [NAME\&.\&.\&.]\fR
+\fBrestart \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Restart one or more units specified on the command line\&. If the units are not running yet they will be started\&.
 .RE
 .PP
-\fBtry\-restart [NAME\&.\&.\&.]\fR
+\fBtry\-restart \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Restart one or more units specified on the command line if the units are running\&. Do nothing if units are not running\&. Note that for compatibility with Red Hat init scripts
 \fBcondrestart\fR
 is equivalent to this command\&.
 .RE
 .PP
-\fBreload\-or\-restart [NAME\&.\&.\&.]\fR
+\fBreload\-or\-restart \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Reload one or more units if they support it\&. If not, restart them instead\&. If the units are not running yet they will be started\&.
 .RE
 .PP
-\fBreload\-or\-try\-restart [NAME\&.\&.\&.]\fR
+\fBreload\-or\-try\-restart \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Reload one or more units if they support it\&. If not, restart them instead\&. Do nothing if the units are not running\&. Note that for compatibility with SysV init scripts
 \fBforce\-reload\fR
 is equivalent to this command\&.
 .RE
 .PP
-\fBisolate [NAME]\fR
+\fBisolate \fR\fB\fINAME\fR\fR
 .RS 4
 Start the unit specified on the command line and its dependencies and stop all others\&.
 .sp
@@ -338,14 +349,14 @@ This is similar to changing the runlevel in a traditional init system\&. The
 \fBisolate\fR
 command will immediately stop processes that are not enabled in the new unit, possibly including the graphical environment or terminal you are currently using\&.
 .sp
-Note that this works only on units where
+Note that this is allowed only on units where
 \fBAllowIsolate=\fR
 is enabled\&. See
 \fBsystemd.unit\fR(5)
 for details\&.
 .RE
 .PP
-\fBkill [NAME\&.\&.\&.]\fR
+\fBkill \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Send a signal to one or more processes of the unit\&. Use
 \fB\-\-kill\-who=\fR
@@ -356,23 +367,33 @@ to select the kill mode and
 to select the signal to send\&.
 .RE
 .PP
-\fBis\-active [NAME\&.\&.\&.]\fR
+\fBis\-active \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Check whether any of the specified units are active (i\&.e\&. running)\&. Returns an exit code 0 if at least one is active, non\-zero otherwise\&. Unless
 \fB\-\-quiet\fR
 is specified this will also print the current unit state to STDOUT\&.
 .RE
 .PP
-\fBstatus [NAME\&.\&.\&.|PID\&.\&.\&.]\fR
+\fBis\-failed \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
-Show terse runtime status information about one or more units, followed by its most recent log data from the journal\&. This function is intended to generate human\-readable output\&. If you are looking for computer\-parsable output, use
-\fBshow\fR
-instead\&. If a PID is passed information about the unit the process of the PID belongs to is shown\&.
+Check whether any of the specified units are failed\&. Returns an exit code 0 if at least one is failed, non\-zero otherwise\&. Unless
+\fB\-\-quiet\fR
+is specified this will also print the current unit state to STDOUT\&.
 .RE
 .PP
-\fBshow [NAME\&.\&.\&.|JOB\&.\&.\&.]\fR
+\fBstatus [\fR\fB\fINAME\fR\fR\fB\&.\&.\&.|\fR\fB\fIPID\fR\fR\fB\&.\&.\&.]\fR
 .RS 4
-Show properties of one or more units, jobs or the manager itself\&. If no argument is specified properties of the manager will be shown\&. If a unit name is specified properties of the unit is shown, and if a job id is specified properties of the job is shown\&. By default, empty properties are suppressed\&. Use
+Show terse runtime status information about one or more units, followed by most recent log data from the journal\&. If no units are specified, show all units (subject to limitations specified with
+\fB\-t\fR)\&. If a PID is passed show information about the unit the process belongs to\&.
+.sp
+This function is intended to generate human\-readable output\&. If you are looking for computer\-parsable output, use
+\fBshow\fR
+instead\&.
+.RE
+.PP
+\fBshow [\fR\fB\fINAME\fR\fR\fB\&.\&.\&.|\fR\fB\fIJOB\fR\fR\fB\&.\&.\&.]\fR
+.RS 4
+Show properties of one or more units, jobs, or the manager itself\&. If no argument is specified properties of the manager will be shown\&. If a unit name is specified properties of the unit is shown, and if a job id is specified properties of the job is shown\&. By default, empty properties are suppressed\&. Use
 \fB\-\-all\fR
 to show those too\&. To select specific properties to show use
 \fB\-\-property=\fR\&. This command is intended to be used whenever computer\-parsable output is required\&. Use
@@ -380,9 +401,69 @@ to show those too\&. To select specific properties to show use
 if you are looking for formatted human\-readable output\&.
 .RE
 .PP
-\fBreset\-failed [NAME\&.\&.\&.]\fR
+\fBget\-cgroup\-attr \fR\fB\fINAME\fR\fR\fB \fR\fB\fIATTRIBUTE\fR\fR\fB\&.\&.\&.\fR
 .RS 4
-Reset the \*(Aqfailed\*(Aq state of the specified units, or if no unit name is passed of all units\&. When a unit fails in some way (i\&.e\&. process exiting with non\-zero error code, terminating abnormally or timing out) it will automatically enter the \*(Aqfailed\*(Aq state and its exit code and status is recorded for introspection by the administrator until the service is restarted or reset with this command\&.
+Retrieve the specified control group attributes of the specified unit\&. Takes a unit name and one or more attribute names such as
+cpu\&.shares\&. This will output the current values of the specified attributes, separated by new\-lines\&. For attributes that take list of items the output will be new\-line separated, too\&. This operation will always try to retrieve the data in question from the kernel first, and if that is not available use the configured values instead\&. Instead of low\-level control group attribute names high\-level pretty names may be used, as used for unit execution environment configuration, see
+\fBsystemd.exec\fR(5)
+for details\&. For example, passing
+memory\&.limit_in_bytes
+and
+MemoryLimit
+is equivalent\&.
+.RE
+.PP
+\fBset\-cgroup\-attr \fR\fB\fINAME\fR\fR\fB \fR\fB\fIATTRIBUTE\fR\fR\fB \fR\fB\fIVALUE\fR\fR\fB\&.\&.\&.\fR
+.RS 4
+Set the specified control group attribute of the specified unit to the specified value\&. Takes a unit name and an attribute name such as
+cpu\&.shares, plus one or more values (multiple values may only be used for attributes that take multiple values)\&. This operation will immediately update the kernel attribute for this unit and persistently store this setting for later reboots (unless
+\fB\-\-runtime\fR
+is passed, in which case the setting is not saved persistently and only valid until the next reboot\&.) Instead of low\-level control group attribute names high\-level pretty names may be used, as used for unit execution environment configuration, see
+\fBsystemd.exec\fR(5)
+for details\&. For example, passing
+memory\&.limit_in_bytes
+and
+MemoryLimit
+is equivalent\&. This operation will implicitly create a control group for the unit in the controller the attribute belongs to, if needed\&. For attributes that take multiple values, this operation will append the specified values to the previously set values list (use
+\fBunset\-cgroup\-attr\fR
+to reset the list explicitly)\&. For attributes that take a single value only the list will be reset implicitly\&.
+.RE
+.PP
+\fBunset\-cgroup\-attr \fR\fB\fINAME\fR\fR\fB \fR\fB\fIATTRIBUTE\fR\fR\fB\&.\&.\&.\fR
+.RS 4
+Unset the specified control group attributes of the specified unit\&. Takes a unit name and one or more attribut names such as
+cpu\&.shares\&. This operation might or might not have an immediate effect on the current kernel attribute value\&. This will remove any persistently stored configuration values for this attribute (as set with
+\fBset\-cgroup\-attr\fR
+before), unless
+\fB\-\-runtime\fR
+is passed, in which case the configuration is reset only until the next reboot\&. Again, high\-level control group attributes may be used instead of the low\-level kernel ones\&. For attributes which take multiple values, all currently set values are reset\&.
+.RE
+.PP
+\fBset\-cgroup \fR\fB\fINAME\fR\fR\fB \fR\fB\fICGROUP\fR\fR\fB\&.\&.\&.\fR, \fBunset\-cgroup \fR\fB\fINAME\fR\fR\fB \fR\fB\fICGROUP\fR\fR\fB\&.\&.\&.\fR
+.RS 4
+Add or remove a unit to/from a specific control group hierarchy and/or control group path\&. Takes a unit name, plus a control group specification in the syntax
+\fICONTROLLER\fR:\fIPATH\fR
+or
+\fICONTROLLER\fR\&. In the latter syntax (where the path is ommitted) the default unit control group path is implied\&. Examples:
+cpu
+or
+cpu:/foo/bar\&. If a unit is removed from a control group hierarchy all its processes will be moved to the root group of the hierarchy and all control group attributes will be reset\&. These operations are immediately reflected in the kernel hierarchy, and stored persistently to disk (unless
+\fB\-\-runtime\fR
+is passed)\&.
+.RE
+.PP
+\fBhelp \fR\fB\fINAME\fR\fR\fB\&.\&.\&.|\fR\fB\fIPID\fR\fR\fB\&.\&.\&.\fR
+.RS 4
+Show manual pages for one or more units, if available\&. If a PID is passed the manual pages for the unit the process of the PID belongs to is shown\&.
+.RE
+.PP
+\fBreset\-failed [\fR\fB\fINAME\fR\fR\fB\&.\&.\&.]\fR
+.RS 4
+Reset the
+failed
+state of the specified units, or if no unit name is passed of all units\&. When a unit fails in some way (i\&.e\&. process exiting with non\-zero error code, terminating abnormally or timing out) it will automatically enter the
+failed
+state and its exit code and status is recorded for introspection by the administrator until the service is restarted or reset with this command\&.
 .RE
 .PP
 \fBlist\-unit\-files\fR
@@ -390,14 +471,14 @@ Reset the \*(Aqfailed\*(Aq state of the specified units, or if no unit name is p
 List installed unit files\&.
 .RE
 .PP
-\fBenable [NAME\&.\&.\&.]\fR
+\fBenable \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
-Enable one or more unit files, as specified on the command line\&. This will create a number of symlinks as encoded in the
+Enable one or more unit files or unit file instances, as specified on the command line\&. This will create a number of symlinks as encoded in the
 [Install]
 sections of the unit files\&. After the symlinks have been created the systemd configuration is reloaded (in a way that is equivalent to
 \fBdaemon\-reload\fR) to ensure the changes are taken into account immediately\&. Note that this does not have the effect that any of the units enabled are also started at the same time\&. If this is desired a separate
 \fBstart\fR
-command must be invoked for the unit\&.
+command must be invoked for the unit\&. Also note that in case of instance enablement, symlinks named same as instances are created in install location, however they all point to the same template unit file\&.
 .sp
 This command will print the actions executed\&. This output may be suppressed by passing
 \fB\-\-quiet\fR\&.
@@ -415,19 +496,20 @@ Depending on whether
 \fB\-\-user\fR
 or
 \fB\-\-global\fR
-is specified this enables the unit for the system, for the calling user only or for all future logins of all users\&. Note that in the latter case no systemd daemon configuration is reloaded\&.
+is specified this enables the unit for the system, for the calling user only or for all future logins of all users\&. Note that in the last case no systemd daemon configuration is reloaded\&.
 .RE
 .PP
-\fBdisable [NAME\&.\&.\&.]\fR
+\fBdisable \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Disables one or more units\&. This removes all symlinks to the specified unit files from the unit configuration directory, and hence undoes the changes made by
 \fBenable\fR\&. Note however that this removes all symlinks to the unit files (i\&.e\&. including manual additions), not just those actually created by
-\fBenable\fR\&. This call implicitly reloads the systemd daemon configuration after completing the disabling of the units\&. Note that this command does not implicitly stop the units that is being disabled\&. If this is desired an additional
-\fBstop\fRcommand should be executed afterwards\&.
+\fBenable\fR\&. This call implicitly reloads the systemd daemon configuration after completing the disabling of the units\&. Note that this command does not implicitly stop the units that are being disabled\&. If this is desired an additional
+\fBstop\fR
+command should be executed afterwards\&.
 .sp
 This command will print the actions executed\&. This output may be suppressed by passing
 \fB\-\-quiet\fR\&.
-.PP
+.sp
 This command honors
 \fB\-\-system\fR,
 \fB\-\-user\fR,
@@ -436,14 +518,14 @@ in a similar way as
 \fBenable\fR\&.
 .RE
 .PP
-\fBis\-enabled [NAME\&.\&.\&.]\fR
+\fBis\-enabled \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
-Checks whether any of the specified unit files is enabled (as with
+Checks whether any of the specified unit files are enabled (as with
 \fBenable\fR)\&. Returns an exit code of 0 if at least one is enabled, non\-zero otherwise\&. Prints the current enable status\&. To suppress this output use
 \fB\-\-quiet\fR\&.
 .RE
 .PP
-\fBreenable [NAME\&.\&.\&.]\fR
+\fBreenable \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Reenable one or more unit files, as specified on the command line\&. This is a combination of
 \fBdisable\fR
@@ -454,28 +536,31 @@ and is useful to reset the symlinks a unit is enabled with to the defaults confi
 section of the unit file\&.
 .RE
 .PP
-\fBpreset [NAME\&.\&.\&.]\fR
+\fBpreset \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
-Reset one or more unit files, as specified on the command line, to the defaults configured in a preset file\&. This has the same effect as
+Reset one or more unit files, as specified on the command line, to the defaults configured in the preset policy files\&. This has the same effect as
 \fBdisable\fR
 or
-\fBenable\fR, depending how the unit is listed in the preset files\&.
+\fBenable\fR, depending how the unit is listed in the preset files\&. For more information on preset policy format see
+\fBsystemd.preset\fR(5)\&. For more information on the concept of presets please consult the
+\m[blue]\fBPreset\fR\m[]\&\s-2\u[1]\d\s+2
+document\&.
 .RE
 .PP
-\fBmask [NAME\&.\&.\&.]\fR
+\fBmask \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Mask one or more unit files, as specified on the command line\&. This will link these units to
 /dev/null, making it impossible to start them\&. This is a stronger version of
 \fBdisable\fR, since it prohibits all kinds of activation of the unit, including manual activation\&. Use this option with care\&.
 .RE
 .PP
-\fBunmask [NAME\&.\&.\&.]\fR
+\fBunmask \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Unmask one or more unit files, as specified on the command line\&. This will undo the effect of
 \fBmask\fR\&.
 .RE
 .PP
-\fBlink [NAME\&.\&.\&.]\fR
+\fBlink \fR\fB\fIFILENAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Link a unit file that is not in the unit file search paths into the unit file search path\&. This requires an absolute path to a unit file\&. The effect of this can be undone with
 \fBdisable\fR\&. The effect of this command is that a unit file is available for
@@ -483,7 +568,7 @@ Link a unit file that is not in the unit file search paths into the unit file se
 and other commands although it isn\*(Aqt installed directly in the unit search path\&.
 .RE
 .PP
-\fBload [NAME\&.\&.\&.]\fR
+\fBload \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Load one or more units specified on the command line\&. This will simply load their configuration from disk, but not start them\&. To start them you need to use the
 \fBstart\fR
@@ -494,8 +579,7 @@ command for that\&. All in all, this command is of little use except for debuggi
 This command should not be confused with the
 \fBdaemon\-reload\fR
 or
-\fBreload\fR
-commands\&.
+\fBreload\fR\&.
 .RE
 .PP
 \fBlist\-jobs\fR
@@ -503,7 +587,7 @@ commands\&.
 List jobs that are in progress\&.
 .RE
 .PP
-\fBcancel [JOB\&.\&.\&.]\fR
+\fBcancel \fR\fB\fIJOB\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Cancel one or more jobs specified on the command line by their numeric job IDs\&. If no job id is specified, cancel all pending jobs\&.
 .RE
@@ -513,20 +597,16 @@ Cancel one or more jobs specified on the command line by their numeric job IDs\&
 Dump server status\&. This will output a (usually very long) human readable manager status dump\&. Its format is subject to change without notice and should not be parsed by applications\&.
 .RE
 .PP
-\fBdot\fR
+\fBlist\-dependencies \fR\fB\fINAME\fR\fR
 .RS 4
-Generate textual dependency graph description in dot format for further processing with the GraphViz
-\fBdot\fR(1)
-tool\&. Use a command line like
-\fBsystemctl dot | dot \-Tsvg > systemd\&.svg\fR
-to generate a graphical dependency tree\&. Unless
-\fB\-\-order\fR
-or
-\fB\-\-require\fR
-is passed the generated graph will show both ordering and requirement dependencies\&.
+Shows required and wanted units of the specified unit\&. If no unit is specified
+default\&.target
+is implied\&. Target units are recursively expanded\&. When
+\fB\-\-all\fR
+is passed all other units are recursively expanded as well\&.
 .RE
 .PP
-\fBsnapshot [NAME]\fR
+\fBsnapshot [\fR\fB\fINAME\fR\fR\fB]\fR
 .RS 4
 Create a snapshot\&. If a snapshot name is specified, the new snapshot will be named after it\&. If none is specified an automatic snapshot name is generated\&. In either case, the snapshot name used is printed to STDOUT, unless
 \fB\-\-quiet\fR
@@ -535,11 +615,11 @@ is specified\&.
 A snapshot refers to a saved state of the systemd manager\&. It is implemented itself as a unit that is generated dynamically with this command and has dependencies on all units active at the time\&. At a later time the user may return to this state by using the
 \fBisolate\fR
 command on the snapshot unit\&.
-.PP
+.sp
 Snapshots are only useful for saving and restoring which units are running or are stopped, they do not save/restore any other state\&. Snapshots are dynamic and lost on reboot\&.
 .RE
 .PP
-\fBdelete [NAME\&.\&.\&.]\fR
+\fBdelete \fR\fB\fINAME\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Remove a snapshot previously created with
 \fBsnapshot\fR\&.
@@ -567,12 +647,12 @@ Reexecute the systemd manager\&. This will serialize the manager state, reexecut
 Dump the systemd manager environment block\&. The environment block will be dumped in straight\-forward form suitable for sourcing into a shell script\&. This environment block will be passed to all processes the manager spawns\&.
 .RE
 .PP
-\fBset\-environment [NAME=VALUE\&.\&.\&.]\fR
+\fBset\-environment \fR\fB\fIVARIABLE=VALUE\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Set one or more systemd manager environment variables, as specified on the command line\&.
 .RE
 .PP
-\fBunset\-environment [NAME\&.\&.\&.]\fR
+\fBunset\-environment \fR\fB\fIVARIABLE\fR\fR\fB\&.\&.\&.\fR
 .RS 4
 Unset one or more systemd manager environment variables\&. If only a variable name is specified it will be removed regardless of its value\&. If a variable and a value are specified the variable is only removed if it has the specified value\&.
 .RE
@@ -580,7 +660,7 @@ Unset one or more systemd manager environment variables\&. If only a variable na
 \fBdefault\fR
 .RS 4
 Enter default mode\&. This is mostly equivalent to
-\fBstart default\&.target\fR\&.
+\fBisolate default\&.target\fR\&.
 .RE
 .PP
 \fBrescue\fR
@@ -600,40 +680,40 @@ but also prints a wall message to all users\&.
 \fBhalt\fR
 .RS 4
 Shut down and halt the system\&. This is mostly equivalent to
-\fBstart halt\&.target\fR
+\fBstart halt\&.target \-\-irreversible\fR
 but also prints a wall message to all users\&. If combined with
 \fB\-\-force\fR
 shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the system halt\&. If
 \fB\-\-force\fR
-is specified twice the the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
+is specified twice the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
 .RE
 .PP
 \fBpoweroff\fR
 .RS 4
 Shut down and power\-off the system\&. This is mostly equivalent to
-\fBstart poweroff\&.target\fR
+\fBstart poweroff\&.target \-\-irreversible\fR
 but also prints a wall message to all users\&. If combined with
 \fB\-\-force\fR
 shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the powering off\&. If
 \fB\-\-force\fR
-is specified twice the the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
+is specified twice the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
 .RE
 .PP
 \fBreboot\fR
 .RS 4
 Shut down and reboot the system\&. This is mostly equivalent to
-\fBstart reboot\&.target\fR
+\fBstart reboot\&.target \-\-irreversible\fR
 but also prints a wall message to all users\&. If combined with
 \fB\-\-force\fR
 shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the reboot\&. If
 \fB\-\-force\fR
-is specified twice the the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
+is specified twice the operation is immediately executed without terminating any processes or unmounting any file systems\&. This may result in data loss\&.
 .RE
 .PP
 \fBkexec\fR
 .RS 4
 Shut down and reboot the system via kexec\&. This is mostly equivalent to
-\fBstart kexec\&.target\fR
+\fBstart kexec\&.target \-\-irreversible\fR
 but also prints a wall message to all users\&. If combined with
 \fB\-\-force\fR
 shutdown of all running services is skipped, however all processes are killed and all file systems are unmounted or mounted read\-only, immediately followed by the reboot\&.
@@ -644,6 +724,32 @@ shutdown of all running services is skipped, however all processes are killed an
 Ask the systemd manager to quit\&. This is only supported for user service managers (i\&.e\&. in conjunction with the
 \fB\-\-user\fR
 option) and will fail otherwise\&.
+.RE
+.PP
+\fBsuspend\fR
+.RS 4
+Suspend the system\&. This will trigger activation of the special
+suspend\&.target
+target\&.
+.RE
+.PP
+\fBhibernate\fR
+.RS 4
+Hibernate the system\&. This will trigger activation of the special
+hibernate\&.target
+target\&.
+.RE
+.PP
+\fBhybrid\-sleep\fR
+.RS 4
+Hibernate and suspend the system\&. This will trigger activation of the special
+hybrid\-sleep\&.target
+target\&.
+.RE
+.PP
+\fBswitch\-root \fR\fB\fIROOT\fR\fR\fB [\fR\fB\fIINIT\fR\fR\fB]\fR
+.RS 4
+Switches to a different root directory and executes a new system manager process below it\&. This is intended for usage in initial RAM disks ("initrd"), and will transition from the initrd\*(Aqs system manager process (a\&.k\&.a "init" process) to the main system manager process\&. Takes two arguments: the directory to make the new root directory, and the path to the new system manager binary below it to execute as PID 1\&. If the latter is omitted or the empty string, a systemd binary will automatically be searched for and used as init\&. If the system manager path is omitted or equal to the empty string the state of the initrd\*(Aqs system manager process is passed to the main system manager, which allows later introspection of the state of the services involved in the initrd boot\&.
 .RE
 .SH "EXIT STATUS"
 .PP
@@ -665,14 +771,15 @@ is equivalent to passing
 
 \fBsystemd\fR(1),
 \fBsystemadm\fR(1),
-\fBsystemd-journalctl\fR(1),
-\fBsystemd-loginctl\fR(1),
+\fBjournalctl\fR(1),
+\fBloginctl\fR(1),
 \fBsystemd.unit\fR(5),
 \fBsystemd.special\fR(7),
-\fBwall\fR(1)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+\fBwall\fR(1),
+\fBsystemd.preset\fR(5)
+.SH "NOTES"
+.IP " 1." 4
+Preset
 .RS 4
-Developer
+\%http://freedesktop.org/wiki/Software/systemd/Preset
 .RE

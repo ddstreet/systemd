@@ -1,4 +1,8 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-cgls</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-cgls"><a name="systemd-cgls"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-cgls — Recursively show control group contents</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-cgls [OPTIONS...]  [CGROUP...]</code> </p></div></div><div class="refsect1" title="Description"><a name="id533304"></a><h2>Description</h2><p><span class="command"><strong>systemd-cgls</strong></span> recursively
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-cgls</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-cgls"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-cgls — Recursively show control group contents</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-cgls [OPTIONS...]  [CGROUP...]</code> </p></div></div><div class="refsect1"><a name="idp3909152"></a><h2>Description</h2><p><span class="command"><strong>systemd-cgls</strong></span> recursively
                 shows the contents of the selected Linux control group
                 hierarchy in a tree. If arguments are specified shows
                 all member processes of the specified control groups
@@ -10,13 +14,18 @@
                 point <code class="filename">/sys/fs/cgroup</code> shows the contents
                 of the control group the working directory refers
                 to. Otherwise the full systemd control group hierarchy
-                is shown.</p></div><div class="refsect1" title="Options"><a name="id533331"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
-                                text and exits.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output into a
-				pager.</p></dd><dt><span class="term"><code class="option">-k</code></span></dt><dd><p>Include kernel
-                                threads in output.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a name="id533387"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="See Also"><a name="id533397"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemd-cgtop</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">ps</span>(1)</span>
+                is shown.</p><p>By default empty control groups are not
+                shown.</p></div><div class="refsect1"><a name="idp3912768"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
+                                string and exits.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output into a
+                                pager.</p></dd><dt><span class="term"><code class="option">--all</code></span></dt><dd><p>Don't hide empty
+                                control groups in the
+                                output.</p></dd><dt><span class="term"><code class="option">--full</code></span></dt><dd><p>Do not ellipsize cgroup
+                                members.</p></dd><dt><span class="term"><code class="option">-k</code></span></dt><dd><p>Include kernel
+                                threads in output.</p></dd></dl></div></div><div class="refsect1"><a name="idp25200"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idp26384"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>,
+                        <a href="systemd-cgtop.html"><span class="citerefentry"><span class="refentrytitle">systemd-cgtop</span>(1)</span></a>,
+                        <a href="ps.html"><span class="citerefentry"><span class="refentrytitle">ps</span>(1)</span></a>
                 </p></div></div></body></html>

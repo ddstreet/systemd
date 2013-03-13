@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd-cat
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd-cat
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\-CAT" "1" "03/16/2012" "systemd" "systemd-cat"
+.TH "SYSTEMD\-CAT" "1" "" "systemd" "systemd-cat"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -40,7 +40,7 @@ systemd-cat \- Connect a pipeline or program\*(Aqs output with the journal
 may be used to connect STDOUT and STDERR of a process with the journal, or as a filter tool in a shell pipeline to pass the output the previous pipeline element generates to the journal\&.
 .PP
 If no parameter is passed
-\fBsystemd\-command\fR
+\fBsystemd\-cat\fR
 will write everything it reads from standard input (STDIN) to the journal\&.
 .PP
 If parameters are passed they are executed as command line with standard output (STDOUT) and standard error output (STDERR) connected to the journal, so that all it writes is stored in the journal\&.
@@ -48,7 +48,7 @@ If parameters are passed they are executed as command line with standard output 
 .PP
 The following options are understood:
 .PP
-\fB\-\-h\fR, \fB\-\-help\fR
+\fB\-h\fR, \fB\-\-help\fR
 .RS 4
 Prints a short help text and exits\&.
 .RE
@@ -73,7 +73,7 @@ err,
 warning,
 notice,
 info,
-debug, resp\&. a value between 0 and 7 (corresponding to the same named levels)\&. These priority values are the same as defined by
+debug, or a value between 0 and 7 (corresponding to the same named levels)\&. These priority values are the same as defined by
 \fBsyslog\fR(3)\&. Defaults to
 info\&. Note that this simply controls the default, individual lines may be logged with different levels if they are prefixed accordingly\&. For details see
 \fB\-\-level\-prefix=\fR
@@ -130,9 +130,3 @@ Even though the two examples have very similar effects the first is preferable s
 \fBsystemd\fR(1),
 \fBsystemctl\fR(1),
 \fBlogger\fR(1)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

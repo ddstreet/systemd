@@ -1,7 +1,13 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-nspawn</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-nspawn"><a name="systemd-nspawn"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-nspawn — Spawn a namespace container for debugging, testing and building</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-nspawn [OPTIONS...]  [COMMAND]  [ARGS...]</code> </p></div></div><div class="refsect1" title="Description"><a name="id389371"></a><h2>Description</h2><p><span class="command"><strong>systemd-nspawn</strong></span> may be used to
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-nspawn</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-nspawn"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-nspawn — Spawn a namespace container for debugging, testing and building</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-nspawn</code>  [OPTIONS...] [<em class="replaceable"><code>COMMAND</code></em>
+                         [ARGS...]
+                        ]</p></div><div class="cmdsynopsis"><p><code class="command">systemd-nspawn</code>   -b  [OPTIONS...] [ARGS...]</p></div></div><div class="refsect1"><a name="idp3968208"></a><h2>Description</h2><p><span class="command"><strong>systemd-nspawn</strong></span> may be used to
                 run a command or OS in a light-weight namespace
                 container. In many ways it is similar to
-                <span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span>,
+                <a href="chroot.html"><span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span></a>,
                 but more powerful since it fully virtualizes the file
                 system hierarchy, as well as the process tree, the
                 various IPC subsystems and the host and domain
@@ -23,13 +29,17 @@
                 this program is debugging and testing as well as
                 building of packages, distributions and software
                 involved with boot and systems management.</p><p>In contrast to
-                <span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span>
+                <a href="chroot.html"><span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span></a>
                 <span class="command"><strong>systemd-nspawn</strong></span> may be used to boot
                 full Linux-based operating systems in a
                 container.</p><p>Use a tool like
-                <span class="citerefentry"><span class="refentrytitle">debootstrap</span>(8)</span> or <span class="citerefentry"><span class="refentrytitle">mock</span>(1)</span>
+                <a href="yum.html"><span class="citerefentry"><span class="refentrytitle">yum</span>(8)</span></a>,
+                <a href="debootstrap.html"><span class="citerefentry"><span class="refentrytitle">debootstrap</span>(8)</span></a>
+                or
+                <a href="pacman.html"><span class="citerefentry"><span class="refentrytitle">pacman</span>(8)</span></a>
                 to set up an OS directory tree suitable as file system
-                hierarchy for <span class="command"><strong>systemd-nspawn</strong></span> containers.</p><p>Note that <span class="command"><strong>systemd-nspawn</strong></span> will
+                hierarchy for <span class="command"><strong>systemd-nspawn</strong></span>
+                containers.</p><p>Note that <span class="command"><strong>systemd-nspawn</strong></span> will
                 mount file systems private to the container to
                 <code class="filename">/dev</code>,
                 <code class="filename">/run</code> and similar. These will
@@ -40,37 +50,144 @@
                 see each other. The PID namespace separation of the
                 two containers is complete and the containers will
                 share very few runtime objects except for the
-                underlying file system.</p></div><div class="refsect1" title="Options"><a name="id421642"></a><h2>Options</h2><p>If no arguments are passed the container is set
-                up and a shell started in it, otherwise the passed
-                command and arguments are executed in it. The
-                following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
-                                text and exits.</p></dd><dt><span class="term"><code class="option">--directory=</code>, </span><span class="term"><code class="option">-D</code></span></dt><dd><p>Directory to use as
+                underlying file system. It is however possible to
+                enter an existing container, see
+                <a class="link" href="#example-nsenter" title="Example 4">Example 4</a> below.
+                </p><p><span class="command"><strong>systemd-nspawn</strong></span> implements the
+                <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/ContainerInterface" target="_top">Container
+                Interface</a> specification.</p></div><div class="refsect1"><a name="idp34592"></a><h2>Options</h2><p>If option <code class="option">-b</code> is specified, the
+                arguments are used as arguments for the init
+                binary. Otherwise, <em class="replaceable"><code>COMMAND</code></em>
+                specifies the program to launch in the container, and
+                the remaining arguments are used as arguments for this
+                program. If <code class="option">-b</code> is not used and no
+                arguments are specifed, a shell is launched in the
+                container.</p><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a version string
+                                and exits.</p></dd><dt><span class="term"><code class="option">-D</code>, </span><span class="term"><code class="option">--directory=</code></span></dt><dd><p>Directory to use as
                                 file system root for the namespace
                                 container. If omitted the current
                                 directory will be
-                                used.</p></dd><dt><span class="term"><code class="option">--user=</code>, </span><span class="term"><code class="option">-u</code></span></dt><dd><p>Run the command
+                                used.</p></dd><dt><span class="term"><code class="option">-b</code>, </span><span class="term"><code class="option">--boot</code></span></dt><dd><p>Automatically search
+                                for an init binary and invoke it
+                                instead of a shell or a user supplied
+                                program. If this option is used, arguments
+                                specified on the command line are used
+                                as arguments for the init binary.
+                                </p></dd><dt><span class="term"><code class="option">-u</code>, </span><span class="term"><code class="option">--user=</code></span></dt><dd><p>Run the command
                                 under specified user, create home
                                 directory and cd into it. As rest
                                 of systemd-nspawn, this is not
                                 the security feature and limits
                                 against accidental changes only.
+                                </p></dd><dt><span class="term"><code class="option">--uuid=</code></span></dt><dd><p>Set the specified uuid
+                                for the container. The init system
+                                will initialize
+                                <code class="filename">/etc/machine-id</code>
+                                from this if this file is not set yet.
+                                </p></dd><dt><span class="term"><code class="option">-C</code>, </span><span class="term"><code class="option">--controllers=</code></span></dt><dd><p>Makes the container appear in
+                                other hierarchies than the name=systemd:/ one.
+                                Takes a comma-separated list of controllers.
                                 </p></dd><dt><span class="term"><code class="option">--private-network</code></span></dt><dd><p>Turn off networking in
                                 the container. This makes all network
                                 interfaces unavailable in the
                                 container, with the exception of the
-                                loopback device.</p></dd></dl></div></div><div class="refsect1" title="Example 1"><a name="id421726"></a><h2>Example 1</h2><pre class="programlisting"># debootstrap --arch=amd64 unstable debian-tree/
-# systemd-nspawn -D debian-tree/</pre><p>This installs a minimal Debian unstable
+                                loopback device.</p></dd><dt><span class="term"><code class="option">--read-only</code></span></dt><dd><p>Mount the root file
+                                system read only for the
+                                container.</p></dd><dt><span class="term"><code class="option">--capability=</code></span></dt><dd><p>List one or more
+                                additional capabilities to grant the
+                                container. Takes a comma separated
+                                list of capability names, see
+                                <a href="capabilities.html"><span class="citerefentry"><span class="refentrytitle">capabilities</span>(7)</span></a>
+                                for more information. Note that the
+                                following capabilities will be granted
+                                in any way: CAP_CHOWN,
+                                CAP_DAC_OVERRIDE, CAP_DAC_READ_SEARCH,
+                                CAP_FOWNER, CAP_FSETID, CAP_IPC_OWNER,
+                                CAP_KILL, CAP_LEASE,
+                                CAP_LINUX_IMMUTABLE,
+                                CAP_NET_BIND_SERVICE,
+                                CAP_NET_BROADCAST, CAP_NET_RAW,
+                                CAP_SETGID, CAP_SETFCAP, CAP_SETPCAP,
+                                CAP_SETUID, CAP_SYS_ADMIN,
+                                CAP_SYS_CHROOT, CAP_SYS_NICE,
+                                CAP_SYS_PTRACE, CAP_SYS_TTY_CONFIG,
+                                CAP_SYS_RESOURCE, CAP_SYS_BOOT,
+                                CAP_AUDIT_WRITE,
+                                CAP_AUDIT_CONTROL.</p></dd><dt><span class="term"><code class="option">--link-journal=</code></span></dt><dd><p>Control whether the
+                                container's journal shall be made
+                                visible to the host system. If enabled
+                                allows viewing the container's journal
+                                files from the host (but not vice
+                                versa). Takes one of
+                                <code class="literal">no</code>,
+                                <code class="literal">host</code>,
+                                <code class="literal">guest</code>,
+                                <code class="literal">auto</code>. If
+                                <code class="literal">no</code>, the journal is
+                                not linked. If <code class="literal">host</code>,
+                                the journal files are stored on the
+                                host file system (beneath
+                                <code class="filename">/var/log/journal/<em class="replaceable"><code>machine-id</code></em></code>)
+                                and the subdirectory is bind-mounted
+                                into the container at the same
+                                location. If <code class="literal">guest</code>,
+                                the journal files are stored on the
+                                guest file system (beneath
+                                <code class="filename">/var/log/journal/<em class="replaceable"><code>machine-id</code></em></code>)
+                                and the subdirectory is symlinked into the host
+                                at the same location. If
+                                <code class="literal">auto</code> (the default),
+                                and the right subdirectory of
+                                <code class="filename">/var/log/journal</code>
+                                exists, it will be bind mounted
+                                into the container. If the
+                                subdirectory doesn't exist, no
+                                linking is performed. Effectively,
+                                booting a container once with
+                                <code class="literal">guest</code> or
+                                <code class="literal">host</code> will link the
+                                journal persistently if further on
+                                the default of <code class="literal">auto</code>
+                                is used.</p></dd><dt><span class="term"><code class="option">-j</code></span></dt><dd><p>Equivalent to
+                                <code class="option">--link-journal=guest</code>.</p></dd><dt><span class="term"><code class="option">--bind=</code>, </span><span class="term"><code class="option">--bind-ro=</code></span></dt><dd><p>Bind mount a file or
+                                directory from the host into the
+                                container. Either takes a path
+                                argument -- in which case the
+                                specified path will be mounted from
+                                the host to the same path in the
+                                container --, or a colon-separated
+                                pair of paths -- in which case the
+                                first specified path is the source in
+                                the host, and the second path is the
+                                destination in the container. The
+                                <code class="option">--bind-ro=</code> option
+                                creates read-only bind
+                                mount.</p></dd></dl></div></div><div class="refsect1"><a name="idp5062448"></a><h2>Example 1</h2><pre class="programlisting"># yum -y --releasever=19 --nogpg --installroot=/srv/mycontainer --disablerepo='*' --enablerepo=fedora install systemd passwd yum fedora-release vim-minimal
+# systemd-nspawn -bD /srv/mycontainer</pre><p>This installs a minimal Fedora distribution into
+                the directory <code class="filename">/srv/mycontainer/</code> and
+                then boots an OS in a namespace container in
+                it.</p></div><div class="refsect1"><a name="idp5065056"></a><h2>Example 2</h2><pre class="programlisting"># debootstrap --arch=amd64 unstable ~/debian-tree/
+# systemd-nspawn -D ~/debian-tree/</pre><p>This installs a minimal Debian unstable
                 distribution into the directory
-                <code class="filename">debian-tree/</code> and then spawns a
-                shell in a namespace container in it.</p></div><div class="refsect1" title="Example 2"><a name="id389146"></a><h2>Example 2</h2><pre class="programlisting"># mock --init
-# systemd-nspawn -D /var/lib/mock/fedora-rawhide-x86_64/root/ /sbin/init systemd.log_level=debug</pre><p>This installs a minimal Fedora distribution into
-                a subdirectory of <code class="filename">/var/lib/mock/</code>
-                and then boots an OS in a namespace container in it,
-                with systemd as init system, configured for debug
-                logging.</p></div><div class="refsect1" title="Exit status"><a name="id389170"></a><h2>Exit status</h2><p>The exit code of the program executed in the
-                container is returned.</p></div><div class="refsect1" title="See Also"><a name="id389181"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">debootstrap</span>(8)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">mock</span>(1)</span>
+                <code class="filename">~/debian-tree/</code> and then spawns a
+                shell in a namespace container in it.</p></div><div class="refsect1"><a name="idp5067776"></a><h2>Example 3</h2><pre class="programlisting"># pacstrap -c -d ~/arch-tree/ base
+# systemd-nspawn -bD ~/arch-tree/</pre><p>This installs a mimimal Arch Linux distribution into
+                the directory <code class="filename">~/arch-tree/</code> and then
+                boots an OS in a namespace container in it.</p></div><div class="refsect1"><a name="example-nsenter"></a><h2>Example 4</h2><p>To enter the container, PID of one of the
+                processes sharing the new namespaces must be used.
+                <span class="command"><strong>systemd-nspawn</strong></span> prints the PID
+                (as viewed from the outside) of the launched process,
+                and it can be used to enter the container.</p><pre class="programlisting"># nsenter -muinpt $PID</pre><p><a href="nsenter.html"><span class="citerefentry"><span class="refentrytitle">nsenter</span>(1)</span></a>
+                is part of
+                <a class="ulink" href="https://github.com/karelzak/util-linux" target="_top">util-linux</a>.
+                Kernel support for entering namespaces was added in
+                Linux 3.8.</p></div><div class="refsect1"><a name="idp5074976"></a><h2>Exit status</h2><p>The exit code of the program executed in the
+                container is returned.</p></div><div class="refsect1"><a name="idp5076224"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="chroot.html"><span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span></a>,
+                        <a href="unshare.html"><span class="citerefentry"><span class="refentrytitle">unshare</span>(1)</span></a>,
+                        <a href="yum.html"><span class="citerefentry"><span class="refentrytitle">yum</span>(8)</span></a>,
+                        <a href="debootstrap.html"><span class="citerefentry"><span class="refentrytitle">debootstrap</span>(8)</span></a>,
+                        <a href="pacman.html"><span class="citerefentry"><span class="refentrytitle">pacman</span>(8)</span></a>
                 </p></div></div></body></html>

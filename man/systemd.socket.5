@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd.socket
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd.socket
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SOCKET" "5" "03/16/2012" "systemd" "systemd.socket"
+.TH "SYSTEMD\&.SOCKET" "5" "" "systemd" "systemd.socket"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,10 +28,10 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-systemd.socket \- systemd socket configuration files
+systemd.socket \- Socket unit configuration
 .SH "SYNOPSIS"
 .PP
-systemd\&.socket
+\fIsocket\fR\&.socket
 .SH "DESCRIPTION"
 .PP
 A unit configuration file whose name ends in
@@ -48,8 +48,10 @@ Additional options are listed in
 \fBExecStartPost=\fR,
 \fBExecStopPre=\fR
 and
-\fBExecStoptPost=\fR
-commands are executed in\&.
+\fBExecStopPost=\fR
+commands are executed in, and in
+\fBsystemd.kill\fR(5)
+which define the way the processes are terminated\&.
 .PP
 For each socket file a matching service file (see
 \fBsystemd.service\fR(5)
@@ -94,29 +96,35 @@ in the service file)\&.
 .SH "OPTIONS"
 .PP
 Socket files must include a [Socket] section, which carries information about the socket or FIFO it supervises\&. A number of options that may be used in this section are shared with other unit types\&. These options are documented in
-\fBsystemd.exec\fR(5)\&. The options specific to the [Socket] section of socket units are the following:
+\fBsystemd.exec\fR(5)
+and
+\fBsystemd.kill\fR(5)\&. The options specific to the [Socket] section of socket units are the following:
 .PP
 \fIListenStream=\fR, \fIListenDatagram=\fR, \fIListenSequentialPacket=\fR
 .RS 4
-Specifies an address to listen on for a stream (SOCK_STREAM), datagram (SOCK_DGRAM) resp\&. sequential packet (SOCK_SEQPACKET) socket\&. The address can be written in various formats:
+Specifies an address to listen on for a stream (SOCK_STREAM), datagram (SOCK_DGRAM), or sequential packet (SOCK_SEQPACKET) socket, respectively\&. The address can be written in various formats:
 .sp
 If the address starts with a slash (/), it is read as file system socket in the AF_UNIX socket family\&.
 .sp
 If the address starts with an at symbol (@) it is read as abstract namespace socket in the AF_UNIX family\&. The @ is replaced with a NUL character before binding\&. For details see
 \fBunix\fR(7)\&.
 .sp
-If the address string is a single number it is read as port number to listen on for both IPv4 and IPv6\&.
+If the address string is a single number it is read as port number to listen on via IPv6\&. Depending on the value of
+\fIBindIPv6Only=\fR
+(see below) this might result in the service being available via both IPv6 and IPv4 (default) or just via IPv6\&.
 .sp
 If the address string is a string in the format v\&.w\&.x\&.y:z it is read as IPv4 specifier for listening on an address v\&.w\&.x\&.y on a port z\&.
 .sp
-If the address string is a string in the format [x]:y it is read as IPv6 address x on a port y\&.
+If the address string is a string in the format [x]:y it is read as IPv6 address x on a port y\&. Note that this might make the service available via IPv4, too, depending on the
+\fIBindIPv6Only=\fR
+setting (see below)\&.
 .sp
 Note that SOCK_SEQPACKET (i\&.e\&.
 \fIListenSequentialPacket=\fR) is only available for AF_UNIX sockets\&. SOCK_STREAM (i\&.e\&.
 \fIListenStream=\fR) when used for IP sockets refers to TCP sockets, SOCK_DGRAM (i\&.e\&.
 \fIListenDatagram=\fR) to UDP\&.
 .sp
-These options may be specified more than once in which case incoming traffic on any of the sockets will trigger service activation, and all listed sockets will be passed to the service, regardless whether there is incoming traffic on them or not\&.
+These options may be specified more than once in which case incoming traffic on any of the sockets will trigger service activation, and all listed sockets will be passed to the service, regardless whether there is incoming traffic on them or not\&. If the empty string is assigned to any of these options, the list of addresses to listen on is reset, all prior uses of any of these options will have no effect\&.
 .sp
 If an IP address is used here, it is often desirable to listen on it before the interface it is configured on is up and running, and even regardless whether it will be up and running ever at all\&. To deal with this it is recommended to set the
 \fIFreeBind=\fR
@@ -125,14 +133,14 @@ option described below\&.
 .PP
 \fIListenFIFO=\fR
 .RS 4
-Specifies a file system FIFO to listen on\&. This expects an absolute file system path as argument\&. Behaviour otherwise is very similar to the
+Specifies a file system FIFO to listen on\&. This expects an absolute file system path as argument\&. Behavior otherwise is very similar to the
 \fIListenDatagram=\fR
 directive above\&.
 .RE
 .PP
 \fIListenSpecial=\fR
 .RS 4
-Specifies a special file in the file system to listen on\&. This expects an absolute file system path as argument\&. Behaviour otherwise is very similar to the
+Specifies a special file in the file system to listen on\&. This expects an absolute file system path as argument\&. Behavior otherwise is very similar to the
 \fIListenFIFO=\fR
 directive above\&. Use this to open character device nodes as well as special files in
 /proc
@@ -145,14 +153,14 @@ and
 Specifies a Netlink family to create a socket for to listen on\&. This expects a short string referring to the AF_NETLINK family name (such as
 \fIaudit\fR
 or
-\fIkobject\-uevent\fR) as argument, optionally suffixed by a whitespace followed by a multicast group integer\&. Behaviour otherwise is very similar to the
+\fIkobject\-uevent\fR) as argument, optionally suffixed by a whitespace followed by a multicast group integer\&. Behavior otherwise is very similar to the
 \fIListenDatagram=\fR
 directive above\&.
 .RE
 .PP
 \fIListenMessageQueue=\fR
 .RS 4
-Specifies a POSIX message queue name to listen on\&. This expects a valid message queue name (i\&.e\&. beginning with /)\&. Behaviour otherwise is very similar to the
+Specifies a POSIX message queue name to listen on\&. This expects a valid message queue name (i\&.e\&. beginning with /)\&. Behavior otherwise is very similar to the
 \fIListenFIFO=\fR
 directive above\&. On Linux message queue descriptors are actually file descriptors and can be inherited between processes\&.
 .RE
@@ -170,7 +178,8 @@ for details)\&. If
 \fBipv6\-only\fR, they will be accessible via IPv6 only\&. If
 \fBdefault\fR
 (which is the default, surprise!) the system wide default setting is used, as controlled by
-/proc/sys/net/ipv6/bindv6only\&.
+/proc/sys/net/ipv6/bindv6only, which in turn defaults to the equivalent of
+\fBboth\fR\&.
 .RE
 .PP
 \fIBacklog=\fR
@@ -190,12 +199,12 @@ is created\&.
 .PP
 \fIDirectoryMode=\fR
 .RS 4
-If listening on a file system socket of FIFO, the parent directories are automatically created if needed\&. This option specifies the file system access mode used when creating these directories\&. Takes an access mode in octal notation\&. Defaults to 0755\&.
+If listening on a file system socket or FIFO, the parent directories are automatically created if needed\&. This option specifies the file system access mode used when creating these directories\&. Takes an access mode in octal notation\&. Defaults to 0755\&.
 .RE
 .PP
 \fISocketMode=\fR
 .RS 4
-If listening on a file system socket of FIFO, this option specifies the file system access mode used when creating the file node\&. Takes an access mode in octal notation\&. Defaults to 0666\&.
+If listening on a file system socket or FIFO, this option specifies the file system access mode used when creating the file node\&. Takes an access mode in octal notation\&. Defaults to 0666\&.
 .RE
 .PP
 \fIAccept=\fR
@@ -211,7 +220,7 @@ Takes a boolean argument\&. If true, a service instance is spawned for each inco
 The maximum number of connections to simultaneously run services instances for, when
 \fBAccept=true\fR
 is set\&. If more concurrent connections are coming in, they will be refused until at least one existing connection is terminated\&. This setting has no effect for sockets configured with
-\fBAccept=no\fR
+\fBAccept=false\fR
 or datagram sockets\&. Defaults to 64\&.
 .RE
 .PP
@@ -235,7 +244,7 @@ for details\&.)\&.
 .PP
 \fIReceiveBuffer=\fR, \fISendBuffer=\fR
 .RS 4
-Takes an integer argument controlling the receive resp\&. send buffer sizes of this socket\&. This controls the SO_RCVBUF resp\&. SO_SNDBUF socket options (see
+Takes an integer argument controlling the receive or send buffer sizes of this socket, respectively\&. This controls the SO_RCVBUF and SO_SNDBUF socket options (see
 \fBsocket\fR(7)
 for details\&.)\&.
 .RE
@@ -269,6 +278,17 @@ Takes an integer value\&. Controls the firewall mark of packets generated by thi
 for details\&.
 .RE
 .PP
+\fISmackLabel=\fR, \fISmackLabelIPIn=\fR, \fISmackLabelIPOut=\fR
+.RS 4
+Takes a string value\&. Controls the extended attributes
+security\&.SMACK64,
+security\&.SMACK64IPIN
+and
+security\&.SMACK64IPOUT, respectively, i\&.e\&. the security label of the FIFO, or the security label for the incoming or outgoing connections of the socket, respectively\&. See
+\m[blue]\fBSmack\&.txt\fR\m[]\&\s-2\u[2]\d\s+2
+for details\&.
+.RE
+.PP
 \fIPipeSize=\fR
 .RS 4
 Takes an integer value\&. Controls the pipe buffer size of FIFOs configured in this socket unit\&. See
@@ -278,7 +298,7 @@ for details\&.
 .PP
 \fIMessageQueueMaxMessages=\fR, \fIMessageQueueMessageSize=\fR
 .RS 4
-These two settings take integer values and control the mq_maxmsg resp\&. mq_msgsize field when creating the message queue\&. Note that either none or both of these variables need to be set\&. See
+These two settings take integer values and control the mq_maxmsg field or the mq_msgsize field, respectively, when creating the message queue\&. Note that either none or both of these variables need to be set\&. See
 \fBmq_setattr\fR(3)
 for details\&.
 .RE
@@ -320,14 +340,14 @@ Takes a string value\&. Controls the TCP congestion algorithm used by this socke
 .PP
 \fIExecStartPre=\fR, \fIExecStartPost=\fR
 .RS 4
-Takes one or more command lines, which are executed before (resp\&. after) the listening sockets/FIFOs are created and bound\&. The first token of the command line must be an absolute file name, then followed by arguments for the process\&. Multiple command lines may be specified following the same scheme as used for
+Takes one or more command lines, which are executed before or after the listening sockets/FIFOs are created and bound, respectively\&. The first token of the command line must be an absolute file name, then followed by arguments for the process\&. Multiple command lines may be specified following the same scheme as used for
 \fIExecStartPre=\fR
 of service unit files\&.
 .RE
 .PP
 \fIExecStopPre=\fR, \fIExecStopPost=\fR
 .RS 4
-Additional commands that are executed before (resp\&. after) the listening sockets/FIFOs are closed and removed\&. Multiple command lines may be specified following the same scheme as used for
+Additional commands that are executed before or after the listening sockets/FIFOs are closed and removed, respectively\&. Multiple command lines may be specified following the same scheme as used for
 \fIExecStartPre=\fR
 of service unit files\&.
 .RE
@@ -342,37 +362,20 @@ and
 \fIExecStopPost=\fR
 to finish\&. If a command does not exit within the configured time, the socket will be considered failed and be shut down again\&. All commands still running, will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL\&. (See
 \fBKillMode=\fR
-below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
-.RE
-.PP
-\fIKillMode=\fR
-.RS 4
-Specifies how processes of this socket unit shall be killed\&. One of
-\fBcontrol\-group\fR,
-\fBprocess\fR,
-\fBnone\fR\&.
-.sp
-This option is mostly equivalent to the
-\fBKillMode=\fR
-option of service files\&. See
-\fBsystemd.service\fR(5)
-for details\&.
-.RE
-.PP
-\fIKillSignal=\fR
-.RS 4
-Specifies which signal to use when killing a process of this socket\&. Defaults to SIGTERM\&.
-.RE
-.PP
-\fISendSIGKILL=\fR
-.RS 4
-Specifies whether to send SIGKILL to remaining processes after a timeout, if the normal shutdown procedure left processes of the socket around\&. Takes a boolean value\&. Defaults to "yes"\&.
+in
+\fBsystemd.kill\fR(5)\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
 .RE
 .PP
 \fIService=\fR
 .RS 4
 Specifies the service unit name to activate on incoming traffic\&. This defaults to the service that bears the same name as the socket (ignoring the different suffixes)\&. In most cases it should not be necessary to use this option\&.
 .RE
+.PP
+Check
+\fBsystemd.exec\fR(5)
+and
+\fBsystemd.kill\fR(5)
+for more settings\&.
 .SH "SEE ALSO"
 .PP
 
@@ -380,16 +383,17 @@ Specifies the service unit name to activate on incoming traffic\&. This defaults
 \fBsystemctl\fR(8),
 \fBsystemd.unit\fR(5),
 \fBsystemd.exec\fR(5),
-\fBsystemd.service\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBsystemd.kill\fR(5),
+\fBsystemd.service\fR(5),
+\fBsystemd.directives\fR(7)
 .SH "NOTES"
 .IP " 1." 4
 TCP Keepalive HOWTO
 .RS 4
 \%http://www.tldp.org/HOWTO/html_single/TCP-Keepalive-HOWTO/
+.RE
+.IP " 2." 4
+Smack.txt
+.RS 4
+\%https://www.kernel.org/doc/Documentation/security/Smack.txt
 .RE

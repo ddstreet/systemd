@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: sd_login_monitor_new
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: sd_login_monitor_new
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_LOGIN_MONITOR_NEW" "3" "03/16/2012" "systemd" "sd_login_monitor_new"
+.TH "SD_LOGIN_MONITOR_NEW" "3" "" "systemd" "sd_login_monitor_new"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-sd_login_monitor_new, sd_login_monitor_unref, sd_login_monitor_flush, sd_login_monitor_get_fd \- Monitor login sessions, seats and users
+sd_login_monitor_new, sd_login_monitor_unref, sd_login_monitor_flush, sd_login_monitor_get_fd, sd_login_monitor \- Monitor login sessions, seats and users
 .SH "SYNOPSIS"
 .sp
 .ft B
@@ -47,13 +47,13 @@ sd_login_monitor_new, sd_login_monitor_unref, sd_login_monitor_flush, sd_login_m
 .SH "DESCRIPTION"
 .PP
 \fBsd_login_monitor_new()\fR
-may be used to monitor login session, users and seats\&. Via a monitor object a file descriptor can be integrated into an application defined event loop which is woken up each time a user logs in, logs out or a seat is added or removed, or a session, user, or seat changes state otherwise\&. The first parameter takes a string which can be either
+may be used to monitor login sessions, users and seats\&. Via a monitor object a file descriptor can be integrated into an application defined event loop which is woken up each time a user logs in, logs out or a seat is added or removed, or a session, user, or seat changes state otherwise\&. The first parameter takes a string which can be
 seat
 (to get only notifications about seats being added, removed or changed),
 session
 (to get only notifications about sessions being created or removed or changed) or
 uid
-(to get only notifications when a user changes state in respect to logins)\&. If notifications shall be generated in all these conditions, NULL may be passed\&. Note that in future additional categories may be defined\&. The second parameter returns a monitor object and needs to be freed with the
+(to get only notifications when a user changes state in respect to logins)\&. If notifications shall be generated in all these conditions, NULL may be passed\&. Note that in the future additional categories may be defined\&. The second parameter returns a monitor object and needs to be freed with the
 \fBsd_login_monitor_unref()\fR
 call after use\&.
 .PP
@@ -99,11 +99,5 @@ file\&.
 .PP
 
 \fBsystemd\fR(1),
-\fBsd-login\fR(7),
+\fBsd-login\fR(3),
 \fBsd_get_seats\fR(3)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

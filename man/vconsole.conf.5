@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: vconsole.conf
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: vconsole.conf
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "VCONSOLE\&.CONF" "5" "03/16/2012" "systemd" "vconsole.conf"
+.TH "VCONSOLE\&.CONF" "5" "" "systemd" "vconsole.conf"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-vconsole.conf \- configuration file for the virtual console
+vconsole.conf \- Configuration file for the virtual console
 .SH "SYNOPSIS"
 .PP
 /etc/vconsole\&.conf
@@ -36,11 +36,12 @@ vconsole.conf \- configuration file for the virtual console
 .PP
 The
 /etc/vconsole\&.conf
-file configures the virtual console, i\&.e\&. keyboard mapping and console font\&.
+file configures the virtual console, i\&.e\&. keyboard mapping and console font\&. It is applied at boot by
+\fBsystemd-vconsole-setup.service\fR(8)\&.
 .PP
 The basic file format of the
 vconsole\&.conf
-is a newline\-separated list environment\-like shell\-compatible variable assignments\&. It is possible to source the configuration from shell scripts, however, beyond mere variable assignments no shell features are supported, allowing applications to read the file without implementing a shell compatible execution engine\&.
+is a newline\-separated list of environment\-like shell\-compatible variable assignments\&. It is possible to source the configuration from shell scripts, however, beyond mere variable assignments no shell features are supported, allowing applications to read the file without implementing a shell compatible execution engine\&.
 .PP
 Note that the kernel command line options
 \fIvconsole\&.keymap=\fR,
@@ -57,21 +58,18 @@ The following options are understood:
 .PP
 \fIKEYMAP=\fR, \fIKEYMAP_TOGGLE=\fR
 .RS 4
-Configures the key mapping table of for they keyboard\&.
+Configures the key mapping table for the keyboard\&.
 \fIKEYMAP=\fR
 defaults to
 us
 if not set\&. The
 \fIKEYMAP_TOGGLE=\fR
-can be used to configured a second toggle keymap and is by default unset\&.
+can be used to configure a second toggle keymap and is by default unset\&.
 .RE
 .PP
 \fIFONT=\fR, \fIFONT_MAP=\fR, \fIFONT_UNIMAP=\fR
 .RS 4
 Configures the console font, the console map and the unicode font map\&.
-\fIFONT=\fR
-defaults to
-latarcyrheb\-sun16\&.
 .RE
 .SH "EXAMPLE"
 .PP
@@ -93,12 +91,8 @@ FONT=latarcyrheb\-sun16
 .PP
 
 \fBsystemd\fR(1),
+\fBsystemd-vconsole-setup.service\fR(8),
 \fBloadkeys\fR(1),
 \fBsetfont\fR(8),
-\fBlocale.conf\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBlocale.conf\fR(5),
+\fBsystemd-localed.service\fR(8)

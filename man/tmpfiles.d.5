@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: tmpfiles.d
 .\"    Author: Brandon Philips <brandon@ifup.org>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: tmpfiles.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "TMPFILES\&.D" "5" "03/16/2012" "systemd" "tmpfiles.d"
+.TH "TMPFILES\&.D" "5" "" "systemd" "tmpfiles.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -45,19 +45,25 @@ or
 /tmp\&.
 .SH "CONFIGURATION FORMAT"
 .PP
-Each configuration file is named in the style of
+Each configuration file shall be named in the style of
 <program>\&.conf\&. Files in
 /etc/
 override files with the same name in
-/usr/lib/\&. Files in
-/run
-override files with the same name in
-/etc/
+/usr/lib/
 and
+/run/\&. Files in
+/run/
+override files with the same name in
 /usr/lib/\&. Packages should install their configuration files in
-/usr/lib/, files in
+/usr/lib/\&. Files in
 /etc/
-are reserved for the local administrator, who may choose to override the configurations installed from packages\&. The list of configuration files are sorted by their filename in alphabetical order, regardless in which of the directories they reside, to guarantee that a configuration file takes precedence over another configuration file with an alphabetically later name\&.
+are reserved for the local administrator, who may use this logic to override the configuration files installed by vendor packages\&. All configuration files are sorted by their filename in alphabetical order, regardless in which of the directories they reside, to guarantee that a specific configuration file takes precedence over another file with an alphabetically later name\&.
+.PP
+If the administrator wants to disable a configuration file supplied by the vendor the recommended way is to place a symlink to
+/dev/null
+in
+/etc/tmpfiles\&.d/
+bearing the same file name\&.
 .PP
 The configuration format is one line per path containing action, path, mode, ownership, age and argument fields:
 .sp
@@ -86,7 +92,7 @@ Create or truncate a file (optionally writing a short string into it, if the arg
 .PP
 \fIw\fR
 .RS 4
-Write the argument parameter to a file, if it exists\&.
+Write the argument parameter to a file, if the file exists\&. Lines of this type accept shell\-style globs in place of normal path names\&. The argument parameter will be written without a trailing newline\&. C\-style backslash escapes are interpreted\&.
 .RE
 .PP
 \fId\fR
@@ -121,7 +127,12 @@ Create a block device node if it doesn\*(Aqt exist yet
 .PP
 \fIx\fR
 .RS 4
-Ignore a path during cleaning\&. Use this type to exclude paths from clean\-up as controlled with the Age parameter\&. Note that lines of this type do not influence the effect of r or R lines\&. Lines of this type accept shell\-style globs in place of of normal path names\&.
+Ignore a path during cleaning\&. Use this type to exclude paths from clean\-up as controlled with the Age parameter\&. Note that lines of this type do not influence the effect of r or R lines\&. Lines of this type accept shell\-style globs in place of normal path names\&.
+.RE
+.PP
+\fIX\fR
+.RS 4
+Ignore a path during cleanup\&. Use this type to prevent path removal as controlled with the Age parameter\&. Note that if path is a directory, content of a directory is not excluded from clean\-up, only directory itself\&. Lines of this type accept shell\-style globs in place of normal path names\&.
 .RE
 .PP
 \fIr\fR
@@ -157,9 +168,13 @@ The date field, when set, is used to decide what files to delete when cleaning\&
 .RS 4
 .RE
 .PP
-If multiple integers and units are specified the time values are summed up\&.
+If multiple integers and units are specified the time values are summed up\&. If an integer is given without a unit, s is assumed\&.
+.PP
+When the age is set to zero, the files are cleaned unconditionally\&.
 .PP
 The age field only applies to lines starting with d, D and x\&. If omitted or set to \- no automatic clean\-up is done\&.
+.PP
+If the age field starts with a tilde character (~) the clean\-up is only applied to files and directories one level inside the directory specified, but not the files and directories immediately inside it\&.
 .SS "Argument"
 .PP
 For L lines determines the destination path of the symlink\&. For c, b determines the major/minor of the device node, with major and minor formatted as integers, separated by :, e\&.g\&. "1:3"\&. For f, F, w may be used to specify a short string that is written to the file, suffixed by a newline\&. Ignored for all other lines\&.
@@ -184,10 +199,5 @@ d /var/run/uscreens 0755 root root 10d12h
 .PP
 
 \fBsystemd\fR(1),
-\fBsystemd-tmpfiles\fR(8)
-.SH "AUTHOR"
-.PP
-\fBBrandon Philips\fR <\&brandon@ifup\&.org\&>
-.RS 4
-Documentation
-.RE
+\fBsystemd-tmpfiles\fR(8),
+\fBsystemd-delta\fR(1)

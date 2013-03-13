@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: sd_seat_get_active
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: sd_seat_get_active
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_SEAT_GET_ACTIVE" "3" "03/16/2012" "systemd" "sd_seat_get_active"
+.TH "SD_SEAT_GET_ACTIVE" "3" "" "systemd" "sd_seat_get_active"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -42,10 +42,14 @@ sd_seat_get_active, sd_seat_get_sessions, sd_seat_can_multi_session \- Determine
 .BI "int sd_seat_get_sessions(const\ char*\ " "seat" ", char***\ " "sessions" ", uid_t**\ " "uid" ", unsigned*\ " "n_uids" ");"
 .HP \w'int\ sd_seat_can_multi_session('u
 .BI "int sd_seat_can_multi_session(const\ char*\ " "seat" ");"
+.HP \w'int\ sd_seat_can_tty('u
+.BI "int sd_seat_can_tty(const\ char*\ " "seat" ");"
+.HP \w'int\ sd_seat_can_graphical('u
+.BI "int sd_seat_can_graphical(const\ char*\ " "seat" ");"
 .SH "DESCRIPTION"
 .PP
 \fBsd_seat_get_active()\fR
-may be used to determine which session is currently active on a seat, if there is any\&. Returns the session identifier and the user identifier of the Unix user the session is belonging to\&. Either the session or the user identifier parameter can be be passed NULL, in case only one of the parameters shall be queried\&. The returned string needs to be freed with the libc
+may be used to determine which session is currently active on a seat, if there is any\&. Returns the session identifier and the user identifier of the Unix user the session is belonging to\&. Either the session or the user identifier parameter can be passed NULL, in case only one of the parameters shall be queried\&. The returned string needs to be freed with the libc
 \fBfree\fR(3)
 call after use\&.
 .PP
@@ -55,7 +59,13 @@ may be used to determine all sessions on the specified seat\&. Returns two array
 call after use\&. Note that instead of an empty array NULL may be returned and should be considered equivalent to an empty array\&.
 .PP
 \fBsd_seat_can_multi_session()\fR
-may be used to determine whether a specific seat is capable of multi\-session, i\&.e\&. allows multiple login sessions in parallel (whith only one being active at a time)\&.
+may be used to determine whether a specific seat is capable of multi\-session, i\&.e\&. allows multiple login sessions in parallel (with only one being active at a time)\&.
+.PP
+\fBsd_seat_can_tty()\fR
+may be used to determine whether a specific seat provides TTY functionality, i\&.e\&. is useful as a text console\&.
+.PP
+\fBsd_seat_can_graphical()\fR
+may be used to determine whether a specific seat provides graphics functionality, i\&.e\&. is useful as a graphics display\&.
 .PP
 If the
 seat
@@ -64,17 +74,23 @@ parameter of any of these functions is passed as NULL the operation is executed 
 .PP
 On success
 \fBsd_seat_get_active()\fR
-return return 0 or a positive integer\&. On success
+returns 0 or a positive integer\&. On success
 \fBsd_seat_get_sessions()\fR
 returns the number of entries in the session identifier array\&. If the test succeeds
-\fBsd_seat_can_multi_session\fR
-returns a positive integer, if it fails 0\&. On failure, these calls return a negative errno\-style error code\&.
+\fBsd_seat_can_multi_session\fR,
+\fBsd_seat_can_tty\fR
+and
+\fBsd_seat_can_graphical\fR
+return a positive integer, if it fails 0\&. On failure, these calls return a negative errno\-style error code\&.
 .SH "NOTES"
 .PP
 The
 \fBsd_seat_get_active()\fR,
-\fBsd_seat_get_sessions()\fR, and
-\fBsd_seat_can_multi_session()\fR
+\fBsd_seat_get_sessions()\fR,
+\fBsd_seat_can_multi_session()\fR,
+\fBsd_seat_can_tty()\fR
+and
+\fBsd_seat_can_grapical()\fR
 interfaces are available as shared library, which can be compiled and linked to with the
 libsystemd\-login
 \fBpkg-config\fR(1)
@@ -83,11 +99,5 @@ file\&.
 .PP
 
 \fBsystemd\fR(1),
-\fBsd-login\fR(7),
+\fBsd-login\fR(3),
 \fBsd_session_get_seat\fR(3)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

@@ -1,13 +1,17 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-cat</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-cat"><a name="systemd-cat"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-cat — Connect a pipeline or program's output with the journal</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-cat [OPTIONS...]  [COMMAND]  [ARGUMENTS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-cat [OPTIONS...]</code> </p></div></div><div class="refsect1" title="Description"><a name="id525650"></a><h2>Description</h2><p><span class="command"><strong>systemd-cat</strong></span> may be used to
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-cat</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-cat"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-cat — Connect a pipeline or program's output with the journal</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-cat [OPTIONS...]  [COMMAND]  [ARGUMENTS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-cat [OPTIONS...]</code> </p></div></div><div class="refsect1"><a name="idp3913296"></a><h2>Description</h2><p><span class="command"><strong>systemd-cat</strong></span> may be used to
                 connect STDOUT and STDERR of a process with the
                 journal, or as a filter tool in a shell pipeline to
                 pass the output the previous pipeline element
                 generates to the journal.</p><p>If no parameter is passed
-                <span class="command"><strong>systemd-command</strong></span> will write
+                <span class="command"><strong>systemd-cat</strong></span> will write
                 everything it reads from standard input (STDIN) to the journal.</p><p>If parameters are passed they are executed as
                 command line with standard output (STDOUT) and standard
                 error output (STDERR) connected to the journal, so
-                that all it writes is stored in the journal.</p></div><div class="refsect1" title="Options"><a name="id525682"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                that all it writes is stored in the journal.</p></div><div class="refsect1"><a name="idp3917136"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">-t</code>, </span><span class="term"><code class="option">--identifier=</code></span></dt><dd><p>Specify a short string
                                 that is used to identify the logging
@@ -22,12 +26,12 @@
                                 <code class="literal">warning</code>,
                                 <code class="literal">notice</code>,
                                 <code class="literal">info</code>,
-                                <code class="literal">debug</code>, resp. a
+                                <code class="literal">debug</code>, or a
                                 value between 0 and 7 (corresponding
                                 to the same named levels). These
                                 priority values are the same as
                                 defined by
-                                <span class="citerefentry"><span class="refentrytitle">syslog</span>(3)</span>. Defaults
+                                <a href="syslog.html"><span class="citerefentry"><span class="refentrytitle">syslog</span>(3)</span></a>. Defaults
                                 to <code class="literal">info</code>. Note that
                                 this simply controls the default,
                                 individual lines may be logged with
@@ -44,18 +48,18 @@
                                 (<code class="literal">notice</code>), and
                                 similar for the other priority
                                 levels. Takes a boolean
-                                argument.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a name="id557988"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="Examples"><a name="id525394"></a><h2>Examples</h2><div class="example"><a name="id525399"></a><p class="title"><b>Example 1. Invoke a program</b></p><div class="example-contents"><p>This calls <code class="filename">/bin/ls</code>
+                                argument.</p></dd></dl></div></div><div class="refsect1"><a name="idp38896"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idp40080"></a><h2>Examples</h2><div class="example"><a name="idp48032"></a><p class="title"><b>Example 1. Invoke a program</b></p><div class="example-contents"><p>This calls <code class="filename">/bin/ls</code>
                         with STDOUT/STDERR connected to the
-                        journal:</p><pre class="programlisting"># systemd-cat ls</pre></div></div><br class="example-break"><div class="example"><a name="id525422"></a><p class="title"><b>Example 2. Usage in a shell pipeline</b></p><div class="example-contents"><p>This builds a shell pipeline also
+                        journal:</p><pre class="programlisting"># systemd-cat ls</pre></div></div><br class="example-break"><div class="example"><a name="idp50736"></a><p class="title"><b>Example 2. Usage in a shell pipeline</b></p><div class="example-contents"><p>This builds a shell pipeline also
                         invoking <code class="filename">/bin/ls</code> and
                         writes the output it generates to the
                         journal:</p><pre class="programlisting"># ls | systemd-cat</pre></div></div><br class="example-break"><p>Even though the two examples have very similar
                 effects the first is preferable since only one process
                 is running at a time, and both STDOUT and STDERR are
                 captured while in the second example only STDOUT is
-                captured.</p></div><div class="refsect1" title="See Also"><a name="id525451"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">logger</span>(1)</span>
+                captured.</p></div><div class="refsect1"><a name="idp54240"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>,
+                        <a href="logger.html"><span class="citerefentry"><span class="refentrytitle">logger</span>(1)</span></a>
                 </p></div></div></body></html>

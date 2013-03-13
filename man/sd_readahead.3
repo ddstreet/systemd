@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: sd_readahead
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: sd_readahead
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_READAHEAD" "3" "03/16/2012" "systemd" "sd_readahead"
+.TH "SD_READAHEAD" "3" "" "systemd" "sd_readahead"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -74,7 +74,7 @@ which is then used as flag file to notify the read\-ahead subsystem\&.
 .PP
 For details about the algorithm check the liberally licensed reference implementation sources:
 \m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/readahead/sd-readahead.c\fR\m[]
-resp\&.
+and
 \m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h\fR\m[]
 .PP
 \fBsd_readahead()\fR
@@ -83,7 +83,7 @@ sd\-readahead\&.c
 and
 sd\-readahead\&.h
 files\&. It is recommended that applications consuming this API copy the implementation into their source tree\&. For more details about the reference implementation see
-\fBsd-readahead\fR(7)
+\fBsd-readahead\fR(3)
 .PP
 If \-DDISABLE_SYSTEMD is set during compilation this function will always return 0 and otherwise become a NOP\&.
 .SH "EXAMPLES"
@@ -106,11 +106,5 @@ sd_readahead("noreplay");
 .PP
 
 \fBsystemd\fR(1),
-\fBsd-readahead\fR(7),
+\fBsd-readahead\fR(3),
 \fBdaemon\fR(7)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

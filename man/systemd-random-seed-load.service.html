@@ -1,0 +1,18 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-random-seed-load.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-random-seed-load.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-random-seed-load.service, systemd-random-seed-save.service, systemd-random-seed — Load and save the system random seed at boot and shutdown</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">systemd-random-seed-load.service</code></p><p><code class="filename">systemd-random-seed-save.service</code></p><p><code class="filename">/usr/lib/systemd/systemd-random-seed</code></p></div><div class="refsect1"><a name="idp3891728"></a><h2>Description</h2><p><code class="filename">systemd-random-seed-load.service</code>
+                is an early-boot service that restores the random seed
+                of the
+                system. <code class="filename">systemd-random-seed-save.service</code>
+                is a late-shutdown service that saves the random seed
+                of the system. See
+                <a href="random.html"><span class="citerefentry"><span class="refentrytitle">random</span>(4)</span></a>
+                for details. Saving/restoring the random seed across
+                boots increases the amount of available entropy early
+                at boot. On disk the random seed is stored in
+                <code class="filename">/var/lib/random-seed</code>.</p></div><div class="refsect1"><a name="idp145488"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="random.html"><span class="citerefentry"><span class="refentrytitle">random</span>(4)</span></a>
+                </p></div></div></body></html>
