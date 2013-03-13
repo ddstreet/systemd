@@ -1,3 +1,10 @@
+systemd (198-0ubuntu2) raring; urgency=low
+
+  * libgudev-1.0-dev: Don't depend on exact binary version of
+    gir1.2-gudev-1.0, as libgudev-* have an epoch.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 13 Mar 2013 13:45:13 +0100
+
 systemd (198-0ubuntu1) raring; urgency=low
 
   FFE for new version and libudev1 soname bump: LP #1153224
