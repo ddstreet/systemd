@@ -59,12 +59,12 @@ extern "C" {
   You may find an up-to-date version of these source files online:
 
   http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h
-  http://cgit.freedesktop.org/systemd/systemd/plain/src/sd-daemon.c
+  http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c
 
   This should compile on non-Linux systems, too, but with the
   exception of the sd_is_xxx() calls all functions will become NOPs.
 
-  See sd-daemon(7) for more information.
+  See sd-daemon(3) for more information.
 */
 
 #ifndef _sd_printf_attr_

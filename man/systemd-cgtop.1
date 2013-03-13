@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd-cgtop
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd-cgtop
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\-CGTOP" "1" "03/16/2012" "systemd" "systemd-cgtop"
+.TH "SYSTEMD\-CGTOP" "1" "" "systemd" "systemd-cgtop"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -59,7 +59,7 @@ to the
 setting in
 /etc/systemd/system\&.conf
 (see
-\fBsystemd.conf\fR(5)
+\fBsystemd-system.conf\fR(5)
 for details)\&. Alternatively, it is possible to enable resource accounting individually for services, by making use of the
 \fIControlGroup=\fR
 option in the unit files (See
@@ -80,6 +80,11 @@ The following options are understood:
 \fB\-h\fR, \fB\-\-help\fR
 .RS 4
 Prints a short help text and exits\&.
+.RE
+.PP
+\fB\-\-version\fR
+.RS 4
+Prints a version string and exits\&.
 .RE
 .PP
 \fB\-p\fR
@@ -107,6 +112,20 @@ Order by memory usage\&.
 Order by disk I/O load\&.
 .RE
 .PP
+\fB\-b\fR, \fB\-\-batch\fR
+.RS 4
+Run in "batch" mode: do not accept input and run until the iteration limit set with
+\fB\-\-iterations\fR
+is exhausted or until killed\&. This mode could be useful for sending output from
+\fBsystemd\-cgtop\fR
+to other programs or to a file\&.
+.RE
+.PP
+\fB\-n\fR, \fB\-\-iterations=\fR
+.RS 4
+Perform only this many iterations\&.
+.RE
+.PP
 \fB\-d\fR, \fB\-\-delay=\fR
 .RS 4
 Specify refresh delay in seconds (or if one of
@@ -120,7 +139,7 @@ is specified as unit in this time unit)\&.
 .RS 4
 Maximum control group tree traversal depth\&. Specifies how deep
 \fBsystemd\-cgtop\fR
-shall traverse the control group hierarchies\&. If 0 is specified only the root group is monitored, for 1 only the first level of control groups is monitored, and so on\&. Defaults to 2\&.
+shall traverse the control group hierarchies\&. If 0 is specified only the root group is monitored, for 1 only the first level of control groups is monitored, and so on\&. Defaults to 3\&.
 .RE
 .SH "KEYS"
 .PP
@@ -144,12 +163,12 @@ Terminate the program\&.
 .PP
 p, t, c, m, i
 .RS 4
-Change ordering of control groups by path, number of tasks, CPU load, memory usage resp\&. IO load\&.
+Sort the control groups by path, number of tasks, CPU load, memory usage, or IO load, respectively\&.
 .RE
 .PP
 +, \-
 .RS 4
-Increase, resp\&. decrease refresh delay\&.
+Increase or decrease refresh delay, respectively\&.
 .RE
 .SH "EXIT STATUS"
 .PP
@@ -161,9 +180,3 @@ On success 0 is returned, a non\-zero failure code otherwise\&.
 \fBsystemctl\fR(1),
 \fBsystemd-cgls\fR(1),
 \fBtop\fR(1)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

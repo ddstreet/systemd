@@ -1,11 +1,15 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>telinit</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="telinit"><a name="telinit"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>telinit — Change SysV runlevel</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">telinit [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a name="id336389"></a><h2>Description</h2><p><span class="command"><strong>telinit</strong></span> may be used to change
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>telinit</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="telinit"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>telinit — Change SysV runlevel</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">telinit [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idp3961232"></a><h2>Description</h2><p><span class="command"><strong>telinit</strong></span> may be used to change
                 the SysV system runlevel. Since the concept of SysV
                 runlevels is obsolete the runlevel requests
                 will be transparently translated into systemd unit
-                activation requests.</p></div><div class="refsect1" title="Options"><a name="id336406"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                activation requests.</p></div><div class="refsect1"><a name="idp3963248"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--no-wall</code></span></dt><dd><p>Don't send wall
                                 message before
-                                reboot/halt/power-off.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl><dt><span class="term"><span class="command"><strong>0</strong></span></span></dt><dd><p>Power-off the
+                                reboot/halt/power-off.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="command"><strong>0</strong></span></span></dt><dd><p>Power-off the
                                 machine. This is translated into an
                                 activation request for
                                 <code class="filename">poweroff.target</code>
@@ -38,11 +42,11 @@
                                 reexecute daemon and deserialize state
                                 again. This is equivalent to
                                 <span class="command"><strong>systemctl
-                                daemon-reexec</strong></span>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a name="id336184"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="Notes"><a name="id336194"></a><h2>Notes</h2><p>This is a legacy command available for compatibility
+                                daemon-reexec</strong></span>.</p></dd></dl></div></div><div class="refsect1"><a name="idp50928"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idp52112"></a><h2>Notes</h2><p>This is a legacy command available for compatibility
                 only. It should not be used anymore, as the concept of
-                runlevels is obsolete.</p></div><div class="refsect1" title="See Also"><a name="id336206"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span>
+                runlevels is obsolete.</p></div><div class="refsect1"><a name="idp53472"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>,
+                        <a href="wall.html"><span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span></a>
                 </p></div></div></body></html>

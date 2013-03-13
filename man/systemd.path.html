@@ -1,9 +1,13 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.path</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd.path"><a name="systemd.path"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.path — systemd path configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.path</code></p></div><div class="refsect1" title="Description"><a name="id355382"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.path</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd.path"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.path — Path unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>path</code></em>.path</code></p></div><div class="refsect1"><a name="idp3964336"></a><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.path</code> encodes information about
                 a path monitored by systemd, for
                 path-based activation.</p><p>This man page lists the configuration options
                 specific to this unit type. See
-                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>
                 for the common options of all unit configuration
                 files. The common configuration items are configured
                 in the generic [Unit] and [Install] sections. The
@@ -16,25 +20,24 @@
                 matching service <code class="filename">foo.service</code>. The
                 unit to activate may be controlled by
                 <code class="varname">Unit=</code> (see below).</p><p>Internally, path units use the
-                <span class="citerefentry"><span class="refentrytitle">inotify</span>(7)</span>
+                <a href="inotify.html"><span class="citerefentry"><span class="refentrytitle">inotify</span>(7)</span></a>
                 API to monitor file systems. Due to that, it suffers by the
                 same limitations as inotify, and for example cannot be
                 used to monitor files or directories changed by other
-                machines on remote NFS file systems.</p><p>If an path unit is beneath another mount
+                machines on remote NFS file systems.</p><p>If a path unit is beneath another mount
                 point in the file system hierarchy, a dependency
-                between both units is created automatically.</p><p>Unless <code class="varname">DefaultDependencies=</code>
-                is set to <code class="option">false</code>, path units will
-                implicitly have dependencies of type
-                <code class="varname">Conflicts=</code> and
+                between both units is created automatically.</p><p>Unless <code class="varname">DefaultDependencies=false</code>
+                is used, path units will implicitly have dependencies of
+                type <code class="varname">Conflicts=</code> and
                 <code class="varname">Before=</code> on
                 <code class="filename">shutdown.target</code>. These ensure
                 that path units are terminated cleanly prior to system
                 shutdown. Only path units involved with early boot or
-                late system shutdown should disable this
-                option.</p></div><div class="refsect1" title="Options"><a name="id355476"></a><h2>Options</h2><p>Path files must include a [Path] section,
+                late system shutdown should disable this option.
+                </p></div><div class="refsect1"><a name="idp3975088"></a><h2>Options</h2><p>Path files must include a [Path] section,
                 which carries information about the path(s) it
                 monitors. The options specific to the [Path] section
-                of path units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PathExists=</code>, </span><span class="term"><code class="varname">PathExistsGlob=</code>, </span><span class="term"><code class="varname">PathChanged=</code>, </span><span class="term"><code class="varname">PathModified=</code>, </span><span class="term"><code class="varname">DirectoryNotEmpty=</code></span></dt><dd><p>Defines paths to
+                of path units are the following:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">PathExists=</code>, </span><span class="term"><code class="varname">PathExistsGlob=</code>, </span><span class="term"><code class="varname">PathChanged=</code>, </span><span class="term"><code class="varname">PathModified=</code>, </span><span class="term"><code class="varname">DirectoryNotEmpty=</code></span></dt><dd><p>Defines paths to
                                 monitor for certain changes:
                                 <code class="varname">PathExists=</code> may be
                                 used to watch the mere existence of a
@@ -43,18 +46,20 @@
                                 is
                                 activated. <code class="varname">PathExistsGlob=</code>
                                 works similar, but checks for the
-                                existance of at least one file
+                                existence of at least one file
                                 matching the globbing pattern
                                 specified. <code class="varname">PathChanged=</code>
                                 may be used to watch a file or
                                 directory and activate the configured
-                                unit whenever it changes. It is not activated
-                                on every write to the watched file but it is
-                                activated if the file which was open for writing
-                                gets closed. <code class="varname">PathModified=</code>
-                                is similar, but additionally it is activated
-                                also on simple writes to the watched file.
-
+                                unit whenever it changes. It is not
+                                activated on every write to the
+                                watched file but it is activated if
+                                the file which was open for writing
+                                gets
+                                closed. <code class="varname">PathModified=</code>
+                                is similar, but additionally it is
+                                activated also on simple writes to the
+                                watched file.
                                 <code class="varname">DirectoryNotEmpty=</code>
                                 may be used to watch a directory and
                                 activate the configured unit whenever
@@ -62,7 +67,12 @@
                                 directives must be absolute file
                                 system paths.</p><p>Multiple directives may be
                                 combined, of the same and of different
-                                types, to watch multiple paths.</p><p>If a path is already existing
+                                types, to watch multiple paths. If the
+                                empty string is assigned to any of
+                                these options the list of paths to
+                                watch is reset, and any prior
+                                assignments of these options will not
+                                have any effect.</p><p>If a path already exists
                                 (in case of
                                 <code class="varname">PathExists=</code> and
                                 <code class="varname">PathExistsGlob=</code>) or
@@ -73,7 +83,13 @@
                                 activated, then the configured unit is
                                 immediately activated as
                                 well. Something similar does not apply
-                                to <code class="varname">PathChanged=</code>.
+                                to <code class="varname">PathChanged=</code> and
+                                <code class="varname">PathModified=</code>.</p><p>If the path itself or any of the
+                                containing directories are not
+                                accessible, <span class="command"><strong>systemd</strong></span>
+                                will watch for permission changes and
+                                notice that conditions are satisfied
+                                when permissions allow that.
                                 </p></dd><dt><span class="term"><code class="varname">Unit=</code></span></dt><dd><p>The unit to activate
                                 when any of the configured paths
                                 changes. The argument is a unit name,
@@ -98,10 +114,11 @@
                                 create the directories in
                                 question. Takes an access mode in
                                 octal notation. Defaults to
-                                <code class="option">0755</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id355177"></a><h2>See Also</h2><p>
-                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">inotify</span>(7)</span>
+                                <code class="option">0755</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idm34848"></a><h2>See Also</h2><p>
+                          <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                          <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
+                          <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,
+                          <a href="systemd.service.html"><span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span></a>,
+                          <a href="inotify.html"><span class="citerefentry"><span class="refentrytitle">inotify</span>(7)</span></a>,
+                          <a href="systemd.directives.html"><span class="citerefentry"><span class="refentrytitle">systemd.directives</span>(7)</span></a>
                   </p></div></div></body></html>

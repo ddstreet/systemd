@@ -1,7 +1,11 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>hostname</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="hostname"><a name="hostname"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>hostname — Local host name configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/hostname</code></p></div><div class="refsect1" title="Description"><a name="id508027"></a><h2>Description</h2><p>The <code class="filename">/etc/hostname</code> file
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>hostname</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="hostname"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>hostname — Local host name configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/hostname</code></p></div><div class="refsect1"><a name="idp3907984"></a><h2>Description</h2><p>The <code class="filename">/etc/hostname</code> file
                 configures the name of the local system that is set
                 during boot, with the
-                <span class="citerefentry"><span class="refentrytitle">sethostname</span>(2)</span>
+                <a href="sethostname.html"><span class="citerefentry"><span class="refentrytitle">sethostname</span>(2)</span></a>
                 system call. It should contain a single
                 newline-terminated host name string. The
                 host name may be a free-form string up to 64 characters
@@ -11,13 +15,18 @@
                 name labels, even though this is not a
                 strict requirement.</p><p>Depending on the operating system other
                 configuration files might be checked for configuration
-                of the host name as well, however only as fallback.</p></div><div class="refsect1" title="History"><a name="id508058"></a><h2>History</h2><p>The simple configuration file format of
+                of the host name as well, however only as fallback.</p><p>You may use
+                <a href="hostnamectl.html"><span class="citerefentry"><span class="refentrytitle">hostnamectl</span>(1)</span></a>
+                to change the value of this file from the command
+                line.</p></div><div class="refsect1"><a name="idp3913040"></a><h2>History</h2><p>The simple configuration file format of
                 <code class="filename">/etc/hostname</code> originates from
-                Debian GNU/Linux.</p></div><div class="refsect1" title="See Also"><a name="id508074"></a><h2>See Also</h2><p>
-                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">sethostname</span>(2)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">hostname</span>(1)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">hostname</span>(7)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">machine-info</span>(5)</span>
+                Debian GNU/Linux.</p></div><div class="refsect1"><a name="idp3914912"></a><h2>See Also</h2><p>
+                          <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                          <a href="sethostname.html"><span class="citerefentry"><span class="refentrytitle">sethostname</span>(2)</span></a>,
+                          <a href="hostname.html"><span class="citerefentry"><span class="refentrytitle">hostname</span>(1)</span></a>,
+                          <a href="hostname.html"><span class="citerefentry"><span class="refentrytitle">hostname</span>(7)</span></a>,
+                          <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a>,
+                          <a href="machine-info.html"><span class="citerefentry"><span class="refentrytitle">machine-info</span>(5)</span></a>,
+                          <a href="hostnamectl.html"><span class="citerefentry"><span class="refentrytitle">hostnamectl</span>(1)</span></a>,
+                          <a href="systemd-hostnamed.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-hostnamed.service</span>(8)</span></a>
                   </p></div></div></body></html>

@@ -6,16 +6,16 @@
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -38,7 +38,7 @@
         "  <property name=\"Timestamp\" type=\"t\" access=\"read\"/>\n" \
         "  <property name=\"TimestampMonotonic\" type=\"t\" access=\"read\"/>\n" \
         "  <property name=\"RuntimePath\" type=\"s\" access=\"read\"/>\n" \
-        "  <property name=\"ControlGroupPath\" type=\"s\" access=\"read\"/>\n" \
+        "  <property name=\"DefaultControlGroup\" type=\"s\" access=\"read\"/>\n" \
         "  <property name=\"Service\" type=\"s\" access=\"read\"/>\n"   \
         "  <property name=\"Display\" type=\"(so)\" access=\"read\"/>\n" \
         "  <property name=\"State\" type=\"s\" access=\"read\"/>\n"     \
@@ -189,6 +189,26 @@ static int bus_user_append_idle_hint_since(DBusMessageIter *i, const char *prope
         return 0;
 }
 
+static int bus_user_append_default_cgroup(DBusMessageIter *i, const char *property, void *data) {
+        User *u = data;
+        char *t;
+        int r;
+        bool success;
+
+        assert(i);
+        assert(property);
+        assert(u);
+
+        r = cg_join_spec(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, &t);
+        if (r < 0)
+                return r;
+
+        success = dbus_message_iter_append_basic(i, DBUS_TYPE_STRING, &t);
+        free(t);
+
+        return success ? 0 : -ENOMEM;
+}
+
 static int get_user_for_path(Manager *m, const char *path, User **_u) {
         User *u;
         unsigned long lu;
@@ -220,7 +240,7 @@ static const BusProperty bus_login_user_properties[] = {
         { "Timestamp",              bus_property_append_usec,        "t", offsetof(User, timestamp.realtime)  },
         { "TimestampMonotonic",     bus_property_append_usec,        "t", offsetof(User, timestamp.monotonic) },
         { "RuntimePath",            bus_property_append_string,      "s", offsetof(User, runtime_path),       true },
-        { "ControlGroupPath",       bus_property_append_string,      "s", offsetof(User, cgroup_path),        true },
+        { "DefaultControlGroup",    bus_user_append_default_cgroup,  "s", 0 },
         { "Service",                bus_property_append_string,      "s", offsetof(User, service),            true },
         { "Display",                bus_user_append_display,      "(so)", 0 },
         { "State",                  bus_user_append_state,           "s", 0 },

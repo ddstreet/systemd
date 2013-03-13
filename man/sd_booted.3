@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: sd_booted
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: sd_booted
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_BOOTED" "3" "03/16/2012" "systemd" "sd_booted"
+.TH "SD_BOOTED" "3" "" "systemd" "sd_booted"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-sd_booted \- Test whether the system is running the systemd init system\&.
+sd_booted \- Test whether the system is running the systemd init system
 .SH "SYNOPSIS"
 .sp
 .ft B
@@ -59,8 +59,8 @@ and
 /sys/fs/cgroup/systemd\&.
 .PP
 For details about the algorithm check the liberally licensed reference implementation sources:
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/sd-daemon.c\fR\m[]
-resp\&.
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c\fR\m[]
+and
 \m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h\fR\m[]
 .PP
 \fBsd_booted()\fR
@@ -72,17 +72,11 @@ files\&. These interfaces are available as shared library, which can be compiled
 libsystemd\-daemon
 \fBpkg-config\fR(1)
 file\&. Alternatively, applications consuming these APIs may copy the implementation into their source tree\&. For more details about the reference implementation see
-\fBsd_daemon\fR(7)\&.
+\fBsd-daemon\fR(3)\&.
 .PP
 If the reference implementation is used as drop\-in files and \-DDISABLE_SYSTEMD is set during compilation this function will always return 0 and otherwise become a NOP\&.
 .SH "SEE ALSO"
 .PP
 
 \fBsystemd\fR(1),
-\fBsd_daemon\fR(7)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBsd-daemon\fR(3)

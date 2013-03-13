@@ -1,4 +1,8 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd"><a name="systemd"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd, init — systemd System and Service Manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">init [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1" title="Description"><a name="id285074"></a><h2>Description</h2><p>systemd is a system and service manager for
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd, init — systemd system and service manager</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">init [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idp3916704"></a><h2>Description</h2><p>systemd is a system and service manager for
                 Linux operating systems. When run as first process on
                 boot (as PID 1), it acts as init system that brings
                 up and maintains userspace services.</p><p>For compatibility with SysV, if systemd is called
@@ -7,14 +11,15 @@
                 all command line arguments unmodified. That means
                 <span class="command"><strong>init</strong></span> and <span class="command"><strong>telinit</strong></span>
                 are mostly equivalent when invoked from normal login sessions. See
-                <span class="citerefentry"><span class="refentrytitle">telinit</span>(8)</span>
+                <a href="telinit.html"><span class="citerefentry"><span class="refentrytitle">telinit</span>(8)</span></a>
                 for more information.</p><p>When run as system instance, systemd interprets
                 the configuration file
                 <code class="filename">system.conf</code>, otherwise
                 <code class="filename">user.conf</code>. See
-                <span class="citerefentry"><span class="refentrytitle">systemd.conf</span>(5)</span>
-                for more information.</p></div><div class="refsect1" title="Options"><a name="id285145"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
-                                text and exits.</p></dd><dt><span class="term"><code class="option">--test</code></span></dt><dd><p>Determine startup
+                <a href="systemd-system.conf.html"><span class="citerefentry"><span class="refentrytitle">systemd-system.conf</span>(5)</span></a>
+                for more information.</p></div><div class="refsect1"><a name="idp86928"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a systemd version
+                                identifier and exits.</p></dd><dt><span class="term"><code class="option">--test</code></span></dt><dd><p>Determine startup
                                 sequence, dump it and exit. This is an
                                 option useful for debugging
                                 only.</p></dd><dt><span class="term"><code class="option">--dump-configuration-items</code></span></dt><dd><p>Dump understood unit
@@ -33,11 +38,13 @@
                                 is dumped.</p></dd><dt><span class="term"><code class="option">--unit=</code></span></dt><dd><p>Set default unit to
                                 activate on startup. If not specified
                                 defaults to
-                                <code class="filename">default.target</code>.</p></dd><dt><span class="term"><code class="option">--system</code>, </span><span class="term"><code class="option">--user</code></span></dt><dd><p>Tell systemd to run a
-                                system instance (resp. user
-                                instance), even if the process ID is
-                                not 1 (resp. is 1), i.e. systemd is
-                                not (resp. is) run as init process.
+                                <code class="filename">default.target</code>.</p></dd><dt><span class="term"><code class="option">--system</code>, </span><span class="term"><code class="option">--user</code></span></dt><dd><p>For <code class="option">--system</code>,
+                                tell systemd to run a
+                                system instance, even if the process ID is
+                                not 1, i.e. systemd is not run as init process.
+                                <code class="option">--user</code> does the opposite,
+                                running a user instance even if the process
+                                ID is 1.
                                 Normally it should not be necessary to
                                 pass these options, as systemd
                                 automatically detects the mode it is
@@ -64,13 +71,6 @@
                                 instance. Takes a boolean argument
                                 which may be omitted which is
                                 interpreted as
-                                <code class="option">true</code>.</p></dd><dt><span class="term"><code class="option">--sysv-console=</code></span></dt><dd><p>Controls whether
-                                output of SysV init scripts will be
-                                directed to the console. This switch
-                                has no effect when run as user
-                                instance. Takes a boolean argument
-                                which may be omitted which is
-                                interpreted as
                                 <code class="option">true</code>.</p></dd><dt><span class="term"><code class="option">--log-target=</code></span></dt><dd><p>Set log
                                 target. Argument must be one of
                                 <code class="option">console</code>,
@@ -81,7 +81,7 @@
                                 <code class="option">syslog-or-kmsg</code>,
                                 <code class="option">null</code>.</p></dd><dt><span class="term"><code class="option">--log-level=</code></span></dt><dd><p>Set log level. As
                                 argument this accepts a numerical log
-                                level or the well-known <span class="citerefentry"><span class="refentrytitle">syslog</span>(3)</span>
+                                level or the well-known <a href="syslog.html"><span class="citerefentry"><span class="refentrytitle">syslog</span>(3)</span></a>
                                 symbolic names (lowercase):
                                 <code class="option">emerg</code>,
                                 <code class="option">alert</code>,
@@ -101,13 +101,13 @@
                                 value. If the argument is omitted
                                 it defaults to
                                 <code class="option">true</code>.</p></dd><dt><span class="term"><code class="option">--default-standard-output=</code>, </span><span class="term"><code class="option">--default-standard-error=</code></span></dt><dd><p>Sets the default
-                                output resp. error output for all
-                                services and sockets, i.e. controls
+                                output or error output for all
+                                services and sockets, respectively. That is, controls
                                 the default for
                                 <code class="option">StandardOutput=</code>
-                                resp. <code class="option">StandardError=</code>
+                                and <code class="option">StandardError=</code>
                                 (see
-                                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>
+                                <a href="systemd.exec.html"><span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span></a>
                                 for details). Takes one of
                                 <code class="option">inherit</code>,
                                 <code class="option">null</code>,
@@ -124,13 +124,13 @@
                                 and
                                 <code class="option">--default-standard-error=</code>
                                 to
-                                <code class="option">inherit</code>.</p></dd></dl></div></div><div class="refsect1" title="Concepts"><a name="id326306"></a><h2>Concepts</h2><p>systemd provides a dependency system between
+                                <code class="option">inherit</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp68480"></a><h2>Concepts</h2><p>systemd provides a dependency system between
                 various entities called "units". Units encapsulate
                 various objects that are relevant for system boot-up
                 and maintenance. The majority of units are configured
                 in unit configuration files, whose syntax and basic
                 set of options is described in
-                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,
                 however some are created automatically from other
                 configuration or dynamically from system state. Units
                 may be 'active' (meaning started, bound, plugged in,
@@ -150,44 +150,44 @@
                 here.</p><p>The following unit types are available:</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>Service units, which control
                         daemons and the processes they consist of. For
                         details see
-                        <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>.</p></li><li class="listitem"><p>Socket units, which
+                        <a href="systemd.service.html"><span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span></a>.</p></li><li class="listitem"><p>Socket units, which
                         encapsulate local IPC or network sockets in
                         the system, useful for socket-based
                         activation. For details about socket units see
-                        <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>,
+                        <a href="systemd.socket.html"><span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span></a>,
                         for details on socket-based activation and
                         other forms of activation, see
-                        <span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span>.</p></li><li class="listitem"><p>Target units are useful to
+                        <a href="daemon.html"><span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span></a>.</p></li><li class="listitem"><p>Target units are useful to
                         group units, or provide well-known
                         synchronization points during boot-up, see
-                        <span class="citerefentry"><span class="refentrytitle">systemd.target</span>(5)</span>.</p></li><li class="listitem"><p>Device units expose kernel
+                        <a href="systemd.target.html"><span class="citerefentry"><span class="refentrytitle">systemd.target</span>(5)</span></a>.</p></li><li class="listitem"><p>Device units expose kernel
                         devices in systemd and may be used to
                         implement device-based activation. For details
                         see
-                        <span class="citerefentry"><span class="refentrytitle">systemd.device</span>(5)</span>.</p></li><li class="listitem"><p>Mount units control mount
+                        <a href="systemd.device.html"><span class="citerefentry"><span class="refentrytitle">systemd.device</span>(5)</span></a>.</p></li><li class="listitem"><p>Mount units control mount
                         points in the file system, for details see
-                        <span class="citerefentry"><span class="refentrytitle">systemd.mount</span>(5)</span>.</p></li><li class="listitem"><p>Automount units provide
+                        <a href="systemd.mount.html"><span class="citerefentry"><span class="refentrytitle">systemd.mount</span>(5)</span></a>.</p></li><li class="listitem"><p>Automount units provide
                         automount capabilities, for on-demand mounting
                         of file systems as well as parallelized
                         boot-up. See
-                        <span class="citerefentry"><span class="refentrytitle">systemd.automount</span>(5)</span>.</p></li><li class="listitem"><p>Snapshot units can be used to
+                        <a href="systemd.automount.html"><span class="citerefentry"><span class="refentrytitle">systemd.automount</span>(5)</span></a>.</p></li><li class="listitem"><p>Snapshot units can be used to
                         temporarily save the state of the set of
                         systemd units, which later may be restored by
                         activating the saved snapshot unit. For more
                         information see
-                        <span class="citerefentry"><span class="refentrytitle">systemd.snapshot</span>(5)</span>.</p></li><li class="listitem"><p>Timer units are useful for
+                        <a href="systemd.snapshot.html"><span class="citerefentry"><span class="refentrytitle">systemd.snapshot</span>(5)</span></a>.</p></li><li class="listitem"><p>Timer units are useful for
                         triggering activation of other units based on
                         timers. You may find details in
-                        <span class="citerefentry"><span class="refentrytitle">systemd.timer</span>(5)</span>.</p></li><li class="listitem"><p>Swap units are very similar to
+                        <a href="systemd.timer.html"><span class="citerefentry"><span class="refentrytitle">systemd.timer</span>(5)</span></a>.</p></li><li class="listitem"><p>Swap units are very similar to
                         mount units and encapsulate memory swap
                         partitions or files of the operating
-                        system. They are described in <span class="citerefentry"><span class="refentrytitle">systemd.swap</span>(5)</span>.</p></li><li class="listitem"><p>Path units may be used
+                        system. They are described in <a href="systemd.swap.html"><span class="citerefentry"><span class="refentrytitle">systemd.swap</span>(5)</span></a>.</p></li><li class="listitem"><p>Path units may be used
                         to activate other services when file system
                         objects change or are modified. See
-                        <span class="citerefentry"><span class="refentrytitle">systemd.path</span>(5)</span>.</p></li></ol></div><p>Units are named as their configuration
+                        <a href="systemd.path.html"><span class="citerefentry"><span class="refentrytitle">systemd.path</span>(5)</span></a>.</p></li></ol></div><p>Units are named as their configuration
                 files. Some units have special semantics. A detailed
                 list is available in
-                <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>.</p><p>systemd knows various kinds of dependencies,
+                <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>.</p><p>systemd knows various kinds of dependencies,
                 including positive and negative requirement
                 dependencies (i.e. <code class="varname">Requires=</code> and
                 <code class="varname">Conflicts=</code>) as well as ordering
@@ -225,7 +225,7 @@
                 graphical.target). However it is at the discretion of
                 the administrator to configure it as an alias to any
                 other target unit. See
-                <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>
+                <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>
                 for details about these target units.</p><p>Processes systemd spawns are placed in
                 individual Linux control groups named after the unit
                 which they belong to in the private systemd
@@ -237,7 +237,7 @@
                 file system hierarchy (beneath
                 <code class="filename">/sys/fs/cgroup/systemd/</code>), or in tools
                 such as
-                <span class="citerefentry"><span class="refentrytitle">ps</span>(1)</span>
+                <a href="ps.html"><span class="citerefentry"><span class="refentrytitle">ps</span>(1)</span></a>
                 (<span class="command"><strong>ps xawf -eo pid,user,cgroup,args</strong></span>
                 is particularly useful to list all processes and the
                 systemd units they belong to.).</p><p>systemd is compatible with the SysV init system
@@ -279,7 +279,15 @@
                 ideas behind systemd please refer to the <a class="ulink" href="http://0pointer.de/blog/projects/systemd.html" target="_top">Original
                 Design Document</a>.</p><p>Note that some but not all interfaces provided
                 by systemd are covered by the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise" target="_top">Interface
-                Stability Promise</a>.</p></div><div class="refsect1" title="Directories"><a name="id326681"></a><h2>Directories</h2><div class="variablelist"><dl><dt><span class="term">System unit directories</span></dt><dd><p>The systemd system
+                Stability Promise</a>.</p><p>Units may be generated dynamically at boot and
+                system manager reload time, for example based on other
+                configuration files or parameters passed on the kernel
+                command line. For details see the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/Generators" target="_top">Generators
+                Specification</a>.</p><p>Systems which invoke systemd in a container
+                or initrd environment should implement the
+                <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/ContainerInterface" target="_top">Container
+                Interface</a> or <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InitrdInterface" target="_top">initrd
+                Interface</a> specifications, respectively.</p></div><div class="refsect1"><a name="idp4748832"></a><h2>Directories</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term">System unit directories</span></dt><dd><p>The systemd system
                                 manager reads unit configuration from
                                 various directories. Packages that
                                 want to install unit files shall place
@@ -301,8 +309,10 @@
                                 <span class="command"><strong>enable</strong></span> and
                                 <span class="command"><strong>disable</strong></span> commands of
                                 the
-                                <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>
-                                tool.</p></dd></dl></div><div class="variablelist"><dl><dt><span class="term">User unit directories</span></dt><dd><p>Similar rules apply
+                                <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>
+                                tool. Full list of directories is provided in
+                                <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>.
+                                </p></dd></dl></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">User unit directories</span></dt><dd><p>Similar rules apply
                                 for the user unit
                                 directories. However, here the <a class="ulink" href="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html" target="_top">XDG
                                 Base Directory specification</a>
@@ -318,11 +328,13 @@
                                 <span class="command"><strong>enable</strong></span> and
                                 <span class="command"><strong>disable</strong></span> commands of
                                 the
-                                <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>
+                                <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>
                                 tool can handle both global (i.e. for
                                 all users) and private (for one user)
                                 enabling/disabling of
-                                units.</p></dd></dl></div><div class="variablelist"><dl><dt><span class="term">SysV init scripts directory</span></dt><dd><p>The location of the
+                                units. Full list of directories is provided in
+                                <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>.
+                                </p></dd></dl></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">SysV init scripts directory</span></dt><dd><p>The location of the
                                 SysV init script directory varies
                                 between distributions. If systemd
                                 cannot find a native unit file for a
@@ -330,7 +342,7 @@
                                 SysV init script of the same name
                                 (with the
                                 <code class="filename">.service</code> suffix
-                                removed).</p></dd></dl></div><div class="variablelist"><dl><dt><span class="term">SysV runlevel link farm directory</span></dt><dd><p>The location of the
+                                removed).</p></dd></dl></div><div class="variablelist"><dl class="variablelist"><dt><span class="term">SysV runlevel link farm directory</span></dt><dd><p>The location of the
                                 SysV runlevel link farm directory
                                 varies between distributions. systemd
                                 will take the link farm into account
@@ -339,7 +351,7 @@
                                 unit with a native unit configuration
                                 file cannot be started by activating it
                                 in the SysV runlevel link
-                                farm.</p></dd></dl></div></div><div class="refsect1" title="Signals"><a name="id326919"></a><h2>Signals</h2><div class="variablelist"><dl><dt><span class="term">SIGTERM</span></dt><dd><p>Upon receiving this
+                                farm.</p></dd></dl></div></div><div class="refsect1"><a name="idp4770336"></a><h2>Signals</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term">SIGTERM</span></dt><dd><p>Upon receiving this
                                 signal the systemd system manager
                                 serializes its state, reexecutes
                                 itself and deserializes the saved
@@ -430,32 +442,34 @@
                                 on the kernel command
                                 line.</p></dd><dt><span class="term">SIGRTMIN+22, </span><span class="term">SIGRTMIN+23</span></dt><dd><p>Sets the log level to
                                 <code class="literal">debug</code>
-                                (resp. <code class="literal">info</code> on
+                                (or <code class="literal">info</code> on
                                 <code class="literal">SIGRTMIN+23</code>), as
                                 controlled via
                                 <code class="varname">systemd.log_level=debug</code>
-                                (resp. <code class="varname">systemd.log_level=info</code>
+                                (or <code class="varname">systemd.log_level=info</code>
                                 on <code class="literal">SIGRTMIN+23</code>) on
                                 the kernel command
-                                line.</p></dd><dt><span class="term">SIGRTMIN+26, </span><span class="term">SIGRTMIN+27, </span><span class="term">SIGRTMIN+28, </span><span class="term">SIGRTMIN+29</span></dt><dd><p>Sets the log level to
+                                line.</p></dd><dt><span class="term">SIGRTMIN+24</span></dt><dd><p>Immediately exits the
+                                manager (only available for --user
+                                instances).</p></dd><dt><span class="term">SIGRTMIN+26, </span><span class="term">SIGRTMIN+27, </span><span class="term">SIGRTMIN+28, </span><span class="term">SIGRTMIN+29</span></dt><dd><p>Sets the log level to
                                 <code class="literal">journal-or-kmsg</code>
-                                (resp. <code class="literal">console</code> on
-                                <code class="literal">SIGRTMIN+27</code>;
-                                resp. <code class="literal">kmsg</code> on
-                                <code class="literal">SIGRTMIN+28</code>;
-                                resp. <code class="literal">syslog-or-kmsg</code>
+                                (or <code class="literal">console</code> on
+                                <code class="literal">SIGRTMIN+27</code>,
+                                <code class="literal">kmsg</code> on
+                                <code class="literal">SIGRTMIN+28</code>,
+                                or <code class="literal">syslog-or-kmsg</code>
                                 on <code class="literal">SIGRTMIN+29</code>), as
                                 controlled via
                                 <code class="varname">systemd.log_target=journal-or-kmsg</code>
-                                (resp. <code class="varname">systemd.log_target=console</code>
-                                on <code class="literal">SIGRTMIN+27</code>;
-                                resp. <code class="varname">systemd.log_target=kmsg</code>
-                                on <code class="literal">SIGRTMIN+28</code>;
-                                resp
+                                (or <code class="varname">systemd.log_target=console</code>
+                                on <code class="literal">SIGRTMIN+27</code>,
+                                <code class="varname">systemd.log_target=kmsg</code>
+                                on <code class="literal">SIGRTMIN+28</code>,
+                                or
                                 <code class="varname">systemd.log_target=syslog-or-kmsg</code>
                                 on <code class="literal">SIGRTMIN+29</code>) on
                                 the kernel command
-                                line.</p></dd></dl></div></div><div class="refsect1" title="Environment"><a name="id327464"></a><h2>Environment</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">$SYSTEMD_LOG_LEVEL</code></span></dt><dd><p>systemd reads the
+                                line.</p></dd></dl></div></div><div class="refsect1"><a name="idp4836208"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_LOG_LEVEL</code></span></dt><dd><p>systemd reads the
                                 log level from this environment
                                 variable. This can be overridden with
                                 <code class="option">--log-level=</code>.</p></dd><dt><span class="term"><code class="varname">$SYSTEMD_LOG_TARGET</code></span></dt><dd><p>systemd reads the
@@ -480,25 +494,29 @@
                                 farms.</p></dd><dt><span class="term"><code class="varname">$LISTEN_PID</code>, </span><span class="term"><code class="varname">$LISTEN_FDS</code></span></dt><dd><p>Set by systemd for
                                 supervised processes during
                                 socket-based activation. See
-                                <span class="citerefentry"><span class="refentrytitle">sd_listen_fds</span>(3)</span>
+                                <a href="sd_listen_fds.html"><span class="citerefentry"><span class="refentrytitle">sd_listen_fds</span>(3)</span></a>
                                 for more information.
                                 </p></dd><dt><span class="term"><code class="varname">$NOTIFY_SOCKET</code></span></dt><dd><p>Set by systemd for
                                 supervised processes for status and
                                 start-up completion notification. See
-                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>
+                                <a href="sd_notify.html"><span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span></a>
                                 for more information.
-                                </p></dd></dl></div></div><div class="refsect1" title="Kernel Command Line"><a name="id327657"></a><h2>Kernel Command Line</h2><p>When run as system instance systemd parses a
+                                </p></dd></dl></div></div><div class="refsect1"><a name="idp4859632"></a><h2>Kernel Command Line</h2><p>When run as system instance systemd parses a
                 number of kernel command line
-                arguments<sup>[<a name="id327665" href="#ftn.id327665" class="footnote">1</a>]</sup>:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">systemd.unit=</code></span></dt><dd><p>Overrides the unit to
+                arguments<a href="#ftn.idp4860656" class="footnote"><sup class="footnote"><a name="idp4860656"></a>[1]</sup></a>:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">systemd.unit=</code>, </span><span class="term"><code class="varname">rd.systemd.unit=</code></span></dt><dd><p>Overrides the unit to
                                 activate on boot. Defaults to
                                 <code class="filename">default.target</code>. This
                                 may be used to temporarily boot into a
                                 different boot unit, for example
                                 <code class="filename">rescue.target</code> or
                                 <code class="filename">emergency.service</code>. See
-                                <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>
-                                for details about these
-                                units.</p></dd><dt><span class="term"><code class="varname">systemd.dump_core=</code></span></dt><dd><p>Takes a boolean
+                                <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>
+                                for details about these units. The
+                                option prefixed with
+                                <code class="literal">rd.</code> is honored
+                                only in the initial RAM disk (initrd),
+                                while the one that isn't prefixed only
+                                in the main system.</p></dd><dt><span class="term"><code class="varname">systemd.dump_core=</code></span></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 systemd dumps core when it
                                 crashes. Otherwise no core dump is
@@ -523,10 +541,6 @@
                                 argument. If <code class="option">true</code>
                                 shows terse service status updates on
                                 the console during bootup. Defaults to
-                                <code class="option">true</code>.</p></dd><dt><span class="term"><code class="varname">systemd.sysv_console=</code></span></dt><dd><p>Takes a boolean
-                                argument. If <code class="option">true</code>
-                                output of SysV init scripts will be
-                                directed to the console. Defaults to
                                 <code class="option">true</code>, unless
                                 <code class="option">quiet</code> is passed as
                                 kernel command line option in which
@@ -535,33 +549,70 @@
                                 with the same effect as the
                                 <code class="varname">$SYSTEMD_LOG_TARGET</code>, <code class="varname">$SYSTEMD_LOG_LEVEL</code>, <code class="varname">$SYSTEMD_LOG_COLOR</code>, <code class="varname">$SYSTEMD_LOG_LOCATION</code>
                                 environment variables described above.</p></dd><dt><span class="term"><code class="varname">systemd.default_standard_output=</code>, </span><span class="term"><code class="varname">systemd.default_standard_error=</code></span></dt><dd><p>Controls default
-                                standard output/error output for
+                                standard output and error output for
                                 services, with the same effect as the
                                 <code class="option">--default-standard-output=</code>
-                                resp. <code class="option">--default-standard-error=</code>
+                                and <code class="option">--default-standard-error=</code>
                                 command line arguments described
-                                above.</p></dd><dt><span class="term"><code class="varname">systemd.setenv=</code></span></dt><dd><p>Takes a string
+                                above, respectively.</p></dd><dt><span class="term"><code class="varname">systemd.setenv=</code></span></dt><dd><p>Takes a string
                                 argument in the form
                                 VARIABLE=VALUE. May be used to set
                                 environment variables for the init
                                 process and all its children at boot
                                 time. May be used more than once to
                                 set multiple variables. If the equal
-                                sign and variable are missing unsets
+                                sign and variable are missing it unsets
                                 an environment variable which might be
                                 passed in from the initial ram
-                                disk.</p></dd></dl></div></div><div class="refsect1" title="Sockets and FIFOs"><a name="id327933"></a><h2>Sockets and FIFOs</h2><div class="variablelist"><dl><dt><span class="term"><code class="filename">/run/systemd/notify</code></span></dt><dd><p>Daemon status
+                                disk.</p></dd><dt><span class="term"><code class="varname">quiet</code></span></dt><dd><p>If passed turns off
+                                status output at boot, much like
+                                <code class="varname">systemd.show_status=false</code>
+                                would. Note that this option is also
+                                read by the kernel itself and disables
+                                kernel log output to the
+                                kernel. Passing this option hence
+                                turns off the usual output from both
+                                the system manager and the
+                                kernel.</p></dd><dt><span class="term"><code class="varname">emergency</code></span></dt><dd><p>Boot into emergency
+                                mode. This is equivalent to
+                                <code class="varname">systemd.unit=emergency.target</code>
+                                and provided for compatibility
+                                reasons and to be easier to type.</p></dd><dt><span class="term"><code class="varname">single</code>, </span><span class="term"><code class="varname">s</code>, </span><span class="term"><code class="varname">S</code>, </span><span class="term"><code class="varname">1</code></span></dt><dd><p>Boot into rescue
+                                mode. This is equivalent to
+                                <code class="varname">systemd.unit=rescue.target</code>
+                                and provided for compatibility reasons
+                                and to be easier to
+                                type.</p></dd><dt><span class="term"><code class="varname">2</code>, </span><span class="term"><code class="varname">3</code>, </span><span class="term"><code class="varname">4</code>, </span><span class="term"><code class="varname">5</code></span></dt><dd><p>Boot into the
+                                specified legacy SysV runlevel. These
+                                are equivalent to
+                                <code class="varname">systemd.unit=runlevel2.target</code>,
+                                <code class="varname">systemd.unit=runlevel3.target</code>,
+                                <code class="varname">systemd.unit=runlevel4.target</code>,
+                                and <code class="varname">systemd.unit=runlevel5.target</code>, respectively,
+                                and provided for compatibility reasons
+                                and to be easier to
+                                type.</p></dd><dt><span class="term"><code class="varname">locale.LANG=</code>, </span><span class="term"><code class="varname">locale.LANGUAGE=</code>, </span><span class="term"><code class="varname">locale.LC_CTYPE=</code>, </span><span class="term"><code class="varname">locale.LC_NUMERIC=</code>, </span><span class="term"><code class="varname">locale.LC_TIME=</code>, </span><span class="term"><code class="varname">locale.LC_COLLATE=</code>, </span><span class="term"><code class="varname">locale.LC_MONETARY=</code>, </span><span class="term"><code class="varname">locale.LC_MESSAGES=</code>, </span><span class="term"><code class="varname">locale.LC_PAPER=</code>, </span><span class="term"><code class="varname">locale.LC_NAME=</code>, </span><span class="term"><code class="varname">locale.LC_ADDRESS=</code>, </span><span class="term"><code class="varname">locale.LC_TELEPHONE=</code>, </span><span class="term"><code class="varname">locale.LC_MEASUREMENT=</code>, </span><span class="term"><code class="varname">locale.LC_IDENTIFICATION=</code></span></dt><dd><p>Set the system locale
+                                to use. This overrides the settings in
+                                <code class="filename">/etc/locale.conf</code>. For
+                                more information see
+                                <a href="locale.conf.html"><span class="citerefentry"><span class="refentrytitle">locale.conf</span>(5)</span></a>
+                                and
+                                <a href="locale.html"><span class="citerefentry"><span class="refentrytitle">locale</span>(7)</span></a>.
+                                </p></dd></dl></div><p>For other kernel command line parameters
+                understood by components of the core OS, please refer
+                to
+                <a href="kernel-command-line.html"><span class="citerefentry"><span class="refentrytitle">kernel-command-line</span>(7)</span></a>.</p></div><div class="refsect1"><a name="idp4925200"></a><h2>Sockets and FIFOs</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="filename">/run/systemd/notify</code></span></dt><dd><p>Daemon status
                                 notification socket. This is an
                                 AF_UNIX datagram socket and is used to
                                 implement the daemon notification
                                 logic as implemented by
-                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>.</p></dd><dt><span class="term"><code class="filename">/run/systemd/shutdownd</code></span></dt><dd><p>Used internally by the
-                                <span class="citerefentry"><span class="refentrytitle">shutdown</span>(8)</span>
+                                <a href="sd_notify.html"><span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span></a>.</p></dd><dt><span class="term"><code class="filename">/run/systemd/shutdownd</code></span></dt><dd><p>Used internally by the
+                                <a href="shutdown.html"><span class="citerefentry"><span class="refentrytitle">shutdown</span>(8)</span></a>
                                 tool to implement delayed
                                 shutdowns. This is an AF_UNIX datagram
                                 socket.</p></dd><dt><span class="term"><code class="filename">/run/systemd/private</code></span></dt><dd><p>Used internally as
                                 communication channel between
-                                <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>
+                                <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>
                                 and the systemd process. This is an
                                 AF_UNIX stream socket. This interface
                                 is private to systemd and should not
@@ -573,16 +624,21 @@
                                 unit. This is a named pipe in the file
                                 system. This interface is obsolete and
                                 should not be used in new
-                                applications.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id328034"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemd-notify</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(7)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(5)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span>
-                </p></div><div class="footnotes"><br><hr width="100" align="left"><div class="footnote"><p><sup>[<a id="ftn.id327665" href="#id327665" class="para">1</a>] </sup>If run inside a Linux
+                                applications.</p></dd></dl></div></div><div class="refsect1"><a name="idp4937280"></a><h2>See Also</h2><p>
+                        <a href="systemd-system.conf.html"><span class="citerefentry"><span class="refentrytitle">systemd-system.conf</span>(5)</span></a>,
+                        <a href="locale.conf.html"><span class="citerefentry"><span class="refentrytitle">locale.conf</span>(5)</span></a>,
+                        <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>,
+                        <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>,
+                        <a href="systemd-notify.html"><span class="citerefentry"><span class="refentrytitle">systemd-notify</span>(1)</span></a>,
+                        <a href="daemon.html"><span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span></a>,
+                        <a href="sd-daemon.html"><span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(3)</span></a>,
+                        <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,
+                        <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(5)</span></a>,
+                        <a href="pkg-config.html"><span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span></a>,
+                        <a href="kernel-command-line.html"><span class="citerefentry"><span class="refentrytitle">kernel-command-line</span>(7)</span></a>,
+                        <a href="bootup.html"><span class="citerefentry"><span class="refentrytitle">bootup</span>(7)</span></a>,
+                        <a href="systemd.directives.html"><span class="citerefentry"><span class="refentrytitle">systemd.directives</span>(7)</span></a>
+                </p></div><div class="footnotes"><br><hr style="width:100; align:left;"><div id="ftn.idp4860656" class="footnote"><p><a href="#idp4860656" class="para"><sup class="para">[1] </sup></a>If run inside a Linux
                 container these arguments may be passed as command
                 line arguments to systemd itself, next to any of the
                 command line options listed in the Options section

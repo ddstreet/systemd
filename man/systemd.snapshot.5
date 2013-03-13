@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd.snapshot
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd.snapshot
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SNAPSHOT" "5" "03/16/2012" "systemd" "systemd.snapshot"
+.TH "SYSTEMD\&.SNAPSHOT" "5" "" "systemd" "systemd.snapshot"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,10 +28,10 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-systemd.snapshot \- systemd snapshot units
+systemd.snapshot \- Snapshot unit configuration
 .SH "SYNOPSIS"
 .PP
-systemd\&.snapshot
+\fIsnapshot\fR\&.snapshot
 .SH "DESCRIPTION"
 .PP
 Snapshot units are not configured via unit configuration files\&. Nonetheless they are named similar to filenames\&. A unit name whose name ends in
@@ -49,10 +49,5 @@ for details) or an equivalent command\&. When created, they will automatically g
 
 \fBsystemd\fR(1),
 \fBsystemctl\fR(8),
-\fBsystemd.unit\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBsystemd.unit\fR(5),
+\fBsystemd.directives\fR(7)

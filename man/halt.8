@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: halt
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: halt
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "HALT" "8" "03/16/2012" "systemd" "halt"
+.TH "HALT" "8" "" "systemd" "halt"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -53,17 +53,17 @@ Prints a short help text and exits\&.
 .PP
 \fB\-\-halt\fR
 .RS 4
-Halt the machine, regardless which one of the three commands is invoked\&.
+Halt the machine, regardless of which one of the three commands is invoked\&.
 .RE
 .PP
 \fB\-p\fR, \fB\-\-poweroff\fR
 .RS 4
-Power\-off the machine, regardless which one of the three commands is invoked\&.
+Power\-off the machine, regardless of which one of the three commands is invoked\&.
 .RE
 .PP
 \fB\-\-reboot\fR
 .RS 4
-Reboot the machine, regardless which one of the three commands is invoked\&.
+Reboot the machine, regardless of which one of the three commands is invoked\&.
 .RE
 .PP
 \fB\-f\fR, \fB\-\-force\fR
@@ -79,11 +79,6 @@ Only write wtmp shutdown entry, don\*(Aqt actually halt, power\-off, reboot\&.
 \fB\-d\fR, \fB\-\-no\-wtmp\fR
 .RS 4
 Don\*(Aqt write wtmp shutdown entry\&.
-.RE
-.PP
-\fB\-n\fR, \fB\-\-no\-sync\fR
-.RS 4
-Don\*(Aqt sync hard disks/storage media before halt, power\-off, reboot\&.
 .RE
 .PP
 \fB\-\-no\-wall\fR
@@ -103,9 +98,3 @@ These are legacy commands available for compatibility only\&.
 \fBsystemctl\fR(1),
 \fBshutdown\fR(8),
 \fBwall\fR(1)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

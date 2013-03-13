@@ -1,6 +1,9 @@
 # systemd internal services and sockets
 console-shell.service
 debian-fixup.service
+debug-shell.service
+console-shell.service
+console-getty.service
 emergency.service
 fsck-root.service
 fsck@.service
@@ -28,6 +31,8 @@ systemd-random-seed-load.service
 systemd-random-seed-save.service
 systemd-readahead-collect.service
 systemd-readahead-done.service
+systemd-readahead-replay.service
+systemd-readahead-drop.service
 systemd-readahead-replay.service
 systemd-remount-api-vfs.service
 systemd-shutdownd.service

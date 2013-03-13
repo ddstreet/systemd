@@ -1,27 +1,29 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>halt</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="halt"><a name="halt"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>halt, poweroff, reboot — Halt, power-off or reboot the machine</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">halt [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">poweroff [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">reboot [OPTIONS...]</code> </p></div></div><div class="refsect1" title="Description"><a name="id313862"></a><h2>Description</h2><p><span class="command"><strong>halt</strong></span>,
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>halt</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="halt"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>halt, poweroff, reboot — Halt, power-off or reboot the machine</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">halt [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">poweroff [OPTIONS...]</code> </p></div><div class="cmdsynopsis"><p><code class="command">reboot [OPTIONS...]</code> </p></div></div><div class="refsect1"><a name="idp3913248"></a><h2>Description</h2><p><span class="command"><strong>halt</strong></span>,
                 <span class="command"><strong>poweroff</strong></span>, <span class="command"><strong>reboot</strong></span>
                 may be used to halt, power-off or reboot the
-                machine.</p></div><div class="refsect1" title="Options"><a name="id313889"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                machine.</p></div><div class="refsect1"><a name="idp3916448"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--halt</code></span></dt><dd><p>Halt the machine,
-                                regardless which one of the three
+                                regardless of which one of the three
                                 commands is invoked.</p></dd><dt><span class="term"><code class="option">-p</code>, </span><span class="term"><code class="option">--poweroff</code></span></dt><dd><p>Power-off the machine,
-                                regardless which one of the three
+                                regardless of which one of the three
                                 commands is invoked.</p></dd><dt><span class="term"><code class="option">--reboot</code></span></dt><dd><p>Reboot the machine,
-                                regardless which one of the three
+                                regardless of which one of the three
                                 commands is invoked.</p></dd><dt><span class="term"><code class="option">-f</code>, </span><span class="term"><code class="option">--force</code></span></dt><dd><p>Force immediate halt,
                                 power-off, reboot. Don't contact the
                                 init system.</p></dd><dt><span class="term"><code class="option">-w</code>, </span><span class="term"><code class="option">--wtmp-only</code></span></dt><dd><p>Only write wtmp
                                 shutdown entry, don't actually halt,
                                 power-off, reboot.</p></dd><dt><span class="term"><code class="option">-d</code>, </span><span class="term"><code class="option">--no-wtmp</code></span></dt><dd><p>Don't write wtmp
-                                shutdown entry.</p></dd><dt><span class="term"><code class="option">-n</code>, </span><span class="term"><code class="option">--no-sync</code></span></dt><dd><p>Don't sync hard disks/storage media before
-                                halt, power-off,
-                                reboot.</p></dd><dt><span class="term"><code class="option">--no-wall</code></span></dt><dd><p>Don't send wall
+                                shutdown entry.</p></dd><dt><span class="term"><code class="option">--no-wall</code></span></dt><dd><p>Don't send wall
                                 message before
-                                halt, power-off, reboot.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a name="id346170"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="Notes"><a name="id346180"></a><h2>Notes</h2><p>These are legacy commands available for
-                compatibility only.</p></div><div class="refsect1" title="See Also"><a name="id346191"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">shutdown</span>(8)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span>
+                                halt, power-off, reboot.</p></dd></dl></div></div><div class="refsect1"><a name="idp33616"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idp34800"></a><h2>Notes</h2><p>These are legacy commands available for
+                compatibility only.</p></div><div class="refsect1"><a name="idp35984"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>,
+                        <a href="shutdown.html"><span class="citerefentry"><span class="refentrytitle">shutdown</span>(8)</span></a>,
+                        <a href="wall.html"><span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span></a>
                 </p></div></div></body></html>

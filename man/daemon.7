@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "DAEMON" "7" "03/16/2012" "systemd" "daemon"
+.TH "DAEMON" "7" "" "systemd" "daemon"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-daemon \- Writing and Packaging System Daemons
+daemon \- Writing and packaging system daemons
 .SH "DESCRIPTION"
 .PP
 A daemon is a service process that runs in the background and supervises the system or provides functionality to other processes\&. Traditionally, daemons are implemented following a scheme originating in SysV Unix\&. Modern daemons should follow a simpler yet more powerful scheme (here called "new\-style" daemons), as implemented by
@@ -133,7 +133,7 @@ again, to ensure the daemon can never re\-acquire a terminal again\&.
 .\}
 Call
 \fBexit()\fR
-in the first child, so that only the second child (the actual daemon process) stays around\&. This ensures that the daemon process is reparented to init/PID 1, as all daemons should be\&.
+in the first child, so that only the second child (the actual daemon process) stays around\&. This ensures that the daemon process is re\-parented to init/PID 1, as all daemons should be\&.
 .RE
 .sp
 .RS 4
@@ -222,16 +222,16 @@ and hence available in both the original and the daemon process\&.
 .\}
 Call
 \fBexit()\fR
-in the original process\&. The process that invoked the daemon must be able to rely that this
+in the original process\&. The process that invoked the daemon must be able to rely on that this
 \fBexit()\fR
-happens after initialization is complete and all external communication channels established and accessible\&.
+happens after initialization is complete and all external communication channels are established and accessible\&.
 .RE
 .PP
 The BSD
 \fBdaemon()\fR
 function should not be used, as it implements only a subset of these steps\&.
 .PP
-A daemon that needs to provide compatibility with SysV systems should implement the scheme pointed out above\&. However, it is recommended to make this behaviour optional and configurable via a command line argument, to ease debugging as well as to simplify integration into systems using systemd\&.
+A daemon that needs to provide compatibility with SysV systems should implement the scheme pointed out above\&. However, it is recommended to make this behavior optional and configurable via a command line argument, to ease debugging as well as to simplify integration into systems using systemd\&.
 .SS "New\-Style Daemons"
 .PP
 Modern services for Linux should be implemented as new\-style daemons\&. This makes it easier to supervise and control them at runtime and simplifies their implementation\&.
@@ -312,7 +312,7 @@ for details\&.
 .sp -1
 .IP "  6." 4.2
 .\}
-As much as possible, rely on the init systemd\*(Aqs functionality to limit the access of the daemon to files, services and other resources\&. i\&.e\&. in the case of systemd, rely on systemd\*(Aqs resource limit control instead of implementing your own, rely on systemd\*(Aqs privilege dropping code instead of implementing it in the daemon, and similar\&. See
+As much as possible, rely on the init system\*(Aqs functionality to limit the access of the daemon to files, services and other resources\&. i\&.e\&. in the case of systemd, rely on systemd\*(Aqs resource limit control instead of implementing your own, rely on systemd\*(Aqs privilege dropping code instead of implementing it in the daemon, and similar\&. See
 \fBsystemd.exec\fR(5)
 for the available controls\&.
 .RE
@@ -369,7 +369,7 @@ priority system\&. In fact, using this style of logging also enables the init sy
 \fBdmesg\fR(1)\&. This kind of logging may be enabled by setting
 \fIStandardError=syslog\fR
 in the service unit file\&. For details see
-\fBsd-daemon\fR(7)
+\fBsd-daemon\fR(3)
 and
 \fBsystemd.exec\fR(5)\&.
 .RE
@@ -402,10 +402,10 @@ for details about the two boot targets\&.
 .PP
 In order to maximize the possible parallelization and robustness and simplify configuration and development, it is recommended for all new\-style daemons that communicate via listening sockets to employ socket\-based activation\&. In a socket\-based activation scheme the creation and binding of the listening socket as primary communication channel of daemons to local (and sometimes remote) clients is moved out of the daemon code and into the init system\&. Based on per\-daemon configuration the init system installs the sockets and then hands them off to the spawned process as soon as the respective daemon is to be started\&. Optionally activation of the service can be delayed until the first inbound traffic arrives at the socket, to implement on\-demand activation of daemons\&. However, the primary advantage of this scheme is that all providers and all consumers of the sockets can be started in parallel as soon as all sockets are established\&. In addition to that daemons can be restarted with losing only a minimal number of client transactions or even any client request at all (the latter is particularly true for state\-less protocols, such as DNS or syslog), because the socket stays bound and accessible during the restart, and all requests are queued while the daemon cannot process them\&.
 .PP
-New\-style daemons which support socket activation must be able to receive their sockets from the init system, instead of of creating and binding them themselves\&. For details about the programming interfaces for this scheme provided by systemd see
+New\-style daemons which support socket activation must be able to receive their sockets from the init system, instead of creating and binding them themselves\&. For details about the programming interfaces for this scheme provided by systemd see
 \fBsd_listen_fds\fR(3)
 and
-\fBsd-daemon\fR(7)\&. For details about porting existing daemons to socket\-based activation see below\&. With minimal effort it is possible to implement socket\-based activation in addition to traditional internal socket creation in the same codebase in order to support both new\-style and old\-style init systems from the same daemon binary\&.
+\fBsd-daemon\fR(3)\&. For details about porting existing daemons to socket\-based activation see below\&. With minimal effort it is possible to implement socket\-based activation in addition to traditional internal socket creation in the same codebase in order to support both new\-style and old\-style init systems from the same daemon binary\&.
 .PP
 systemd implements socket\-based activation via
 \&.socket
@@ -576,7 +576,7 @@ At the build installation time (e\&.g\&.
 \fBmake install\fR
 during package build) packages are recommended to install their systemd unit files in the directory returned by
 \fBpkg\-config systemd \-\-variable=systemdsystemunitdir\fR
-(for system services), resp\&.
+(for system services) or
 \fBpkg\-config systemd \-\-variable=systemduserunitdir\fR
 (for user services)\&. This will make the services available in the system on explicit request but not activate them automatically during boot\&. Optionally, during package installation (e\&.g\&.
 \fBrpm \-i\fR
@@ -646,47 +646,64 @@ endif
 In the
 \fBrpm\fR(8)
 \&.spec
-file use a snippet like the following to enable/disable the service during installation/deinstallation\&. Consult the packaging guidelines of your distribution for details and the equivalent for other package managers:
+file use snippets like the following to enable/disable the service during installation/deinstallation\&. This makes use of the RPM macros shipped along systemd\&. Consult the packaging guidelines of your distribution for details and the equivalent for other package managers\&.
+.PP
+At the top of the file:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+BuildRequires: systemd
+%{?systemd_requires}
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+And as scriptlets, further down:
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
 %post
-if [ $1 \-eq 1 ]; then
-        # On install (not upgrade), enable (but don\*(Aqt start) the
-        # units by default
-        /bin/systemctl enable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
-
-        # Alternatively, just call
-        # /bin/systemctl daemon\-reload >/dev/null 2>&1 || :
-        # here, if the daemon should not be enabled by default on
-        # installation
-fi
+%systemd_post foobar\&.service foobar\&.socket
 
 %preun
-if [ $1 \-eq 0 ]; then
-        # On uninstall (not upgrade), disable and stop the units
-        /bin/systemctl \-\-no\-reload disable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
-        /bin/systemctl stop foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
-fi
+%systemd_preun foobar\&.service foobar\&.socket
 
 %postun
-# Reload init system configuration, to make systemd honour changed
-# or deleted unit files
-/bin/systemctl daemon\-reload >/dev/null 2>&1 || :
-if [ $1 \-ge 1 ] ; then
-        # On upgrade (not uninstall), optionally, restart the daemon
-        /bin/systemctl try\-restart foobar\&.service >/dev/null 2>&1 || :
-fi
+%systemd_postun
 .fi
 .if n \{\
 .RE
 .\}
 .PP
-Depending on whether your service should or should not be started/stopped/restarted during package installation, deinstallation or upgrade, a different set of commands may be specified\&. See
-\fBsystemctl\fR(1)
-for details\&.
+If the service shall be restarted during upgrades replace the
+%postun
+scriptlet above with the following:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+%postun
+%systemd_postun_with_restart foobar\&.service
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Note that
+%systemd_post
+and
+%systemd_preun
+expect the names of all units that are installed/removed as arguments, separated by spaces\&.
+%systemd_postun
+expects no arguments\&.
+%systemd_postun_with_restart
+expects the units to restart as arguments\&.
 .PP
 To facilitate upgrades from a package version that shipped only SysV init scripts to a package version that ships both a SysV init script and a native systemd service file, use a fragment like the following:
 .sp
@@ -763,17 +780,11 @@ If the daemon exposes interfaces via D\-Bus, write and install a D\-Bus activati
 .PP
 
 \fBsystemd\fR(1),
-\fBsd-daemon\fR(7),
+\fBsd-daemon\fR(3),
 \fBsd_listen_fds\fR(3),
 \fBsd_notify\fR(3),
 \fBdaemon\fR(3),
 \fBsystemd.service\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
 .SH "NOTES"
 .IP " 1." 4
 LSB recommendations for SysV init scripts

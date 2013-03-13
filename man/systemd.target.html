@@ -1,9 +1,13 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.target</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd.target"><a name="systemd.target"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.target — systemd target configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.target</code></p></div><div class="refsect1" title="Description"><a name="id379071"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.target</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd.target"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.target — Target unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>target</code></em>.target</code></p></div><div class="refsect1"><a name="idp3959520"></a><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.target</code> encodes information about
                 a target unit of systemd, which is used for grouping
                 units and as well-known synchronization points during
                 start-up.</p><p>This unit type has no specific options. See
-                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>
                 for the common options of all unit configuration
                 files. The common configuration items are configured
                 in the generic [Unit] and [Install] sections. A
@@ -20,7 +24,7 @@
                 target units such as
                 <code class="filename">runlevel3.target</code> exist which are used by
                 the SysV runlevel compatibility code in systemd. See
-                <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>
+                <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>
                 for details).</p><p>Unless <code class="varname">DefaultDependencies=</code>
                 is set to <code class="option">false</code>, target units will
                 implicitly complement all configured dependencies of
@@ -30,9 +34,10 @@
                 dependencies of type <code class="varname">After=</code> if the
                 units in question also have
                 <code class="varname">DefaultDependencies=true</code>.
-                </p></div><div class="refsect1" title="See Also"><a name="id379152"></a><h2>See Also</h2><p>
-                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>
+                </p></div><div class="refsect1"><a name="idp3969424"></a><h2>See Also</h2><p>
+                          <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                          <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
+                          <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,
+                          <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>,
+                          <a href="systemd.directives.html"><span class="citerefentry"><span class="refentrytitle">systemd.directives</span>(7)</span></a>
                   </p></div></div></body></html>
