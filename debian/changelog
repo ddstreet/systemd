@@ -1,3 +1,26 @@
+systemd (198-0ubuntu1) raring; urgency=low
+
+  FFE for new version and libudev1 soname bump: LP #1153224
+
+  [ Michael Biebl ]
+  * New upstream release with merged udev+systemd code bases.
+
+  [ Martin Pitt ]
+  * Split off new systemd-services binary package with logind, timedated,
+    hostnamed, and localed. These can be used without the systemd init parts.
+  * Add fallback to poweroff/reboot/pm-suspend/pm-hibernate if logind is
+    running without systemd.
+  * Clean up empty sessions when not running under systemd.
+  * Add upstart job for logind.
+  * Add Conflicts/Replaces/Provides for libpam-xdg-support and logind.
+  * Disable udev and systemd packages for Ubuntu. udev (and its udebs) will be
+    re-enabled once we apply our customizations from the standalone package,
+    and the packages are confirmed to work. For systemd{,-sysv}, we need to
+    decide whether or not we want these in universe.
+  * Add epoch to libgudev packages for Ubuntu, as we had in udev.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 13 Mar 2013 10:46:40 +0100
+
 systemd (44-10) unstable; urgency=low
 
   * Team upload.

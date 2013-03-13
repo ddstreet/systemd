@@ -6,16 +6,16 @@
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -40,12 +40,14 @@
         "   <arg name=\"who\" type=\"s\"/>\n"                           \
         "   <arg name=\"signal\" type=\"s\"/>\n"                        \
         "  </method>\n"                                                 \
+        "  <signal name=\"Lock\"/>\n"                                   \
+        "  <signal name=\"Unlock\"/>\n"                                 \
         "  <property name=\"Id\" type=\"s\" access=\"read\"/>\n"        \
         "  <property name=\"User\" type=\"(uo)\" access=\"read\"/>\n"   \
         "  <property name=\"Name\" type=\"s\" access=\"read\"/>\n"      \
         "  <property name=\"Timestamp\" type=\"t\" access=\"read\"/>\n" \
         "  <property name=\"TimestampMonotonic\" type=\"t\" access=\"read\"/>\n" \
-        "  <property name=\"ControlGroupPath\" type=\"s\" access=\"read\"/>\n" \
+        "  <property name=\"DefaultControlGroup\" type=\"s\" access=\"read\"/>\n" \
         "  <property name=\"VTNr\" type=\"u\" access=\"read\"/>\n"      \
         "  <property name=\"Seat\" type=\"(so)\" access=\"read\"/>\n"   \
         "  <property name=\"TTY\" type=\"s\" access=\"read\"/>\n"       \
@@ -53,12 +55,13 @@
         "  <property name=\"Remote\" type=\"b\" access=\"read\"/>\n"    \
         "  <property name=\"RemoteHost\" type=\"s\" access=\"read\"/>\n" \
         "  <property name=\"RemoteUser\" type=\"s\" access=\"read\"/>\n" \
-        "  <property name=\"Service\" type=\"s\" access=\"read\"/>\n" \
+        "  <property name=\"Service\" type=\"s\" access=\"read\"/>\n"   \
         "  <property name=\"Leader\" type=\"u\" access=\"read\"/>\n"    \
         "  <property name=\"Audit\" type=\"u\" access=\"read\"/>\n"     \
         "  <property name=\"Type\" type=\"s\" access=\"read\"/>\n"      \
-        "  <property name=\"Class\" type=\"s\" access=\"read\"/>\n"      \
+        "  <property name=\"Class\" type=\"s\" access=\"read\"/>\n"     \
         "  <property name=\"Active\" type=\"b\" access=\"read\"/>\n"    \
+        "  <property name=\"State\" type=\"s\" access=\"read\"/>\n"     \
         "  <property name=\"Controllers\" type=\"as\" access=\"read\"/>\n" \
         "  <property name=\"ResetControllers\" type=\"as\" access=\"read\"/>\n" \
         "  <property name=\"KillProcesses\" type=\"b\" access=\"read\"/>\n" \
@@ -182,12 +185,16 @@ static int bus_session_append_idle_hint_since(DBusMessageIter *i, const char *pr
         Session *s = data;
         dual_timestamp t;
         uint64_t u;
+        int r;
 
         assert(i);
         assert(property);
         assert(s);
 
-        session_get_idle_hint(s, &t);
+        r = session_get_idle_hint(s, &t);
+        if (r < 0)
+                return r;
+
         u = streq(property, "IdleSinceHint") ? t.realtime : t.monotonic;
 
         if (!dbus_message_iter_append_basic(i, DBUS_TYPE_UINT64, &u))
@@ -196,8 +203,44 @@ static int bus_session_append_idle_hint_since(DBusMessageIter *i, const char *pr
         return 0;
 }
 
+static int bus_session_append_default_cgroup(DBusMessageIter *i, const char *property, void *data) {
+        Session *s = data;
+        char *t;
+        int r;
+        bool success;
+
+        assert(i);
+        assert(property);
+        assert(s);
+
+        r = cg_join_spec(SYSTEMD_CGROUP_CONTROLLER, s->cgroup_path, &t);
+        if (r < 0)
+                return r;
+
+        success = dbus_message_iter_append_basic(i, DBUS_TYPE_STRING, &t);
+        free(t);
+
+        return success ? 0 : -ENOMEM;
+}
+
 static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_session_append_type, session_type, SessionType);
 static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_session_append_class, session_class, SessionClass);
+
+static int bus_session_append_state(DBusMessageIter *i, const char *property, void *data) {
+        Session *s = data;
+        const char *state;
+
+        assert(i);
+        assert(property);
+        assert(s);
+
+        state = session_state_to_string(session_get_state(s));
+
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_STRING, &state))
+                return -ENOMEM;
+
+        return 0;
+}
 
 static int get_session_for_path(Manager *m, const char *path, Session **_s) {
         Session *s;
@@ -228,7 +271,7 @@ static const BusProperty bus_login_session_properties[] = {
         { "Id",                     bus_property_append_string,         "s", offsetof(Session, id),                 true },
         { "Timestamp",              bus_property_append_usec,           "t", offsetof(Session, timestamp.realtime)  },
         { "TimestampMonotonic",     bus_property_append_usec,           "t", offsetof(Session, timestamp.monotonic) },
-        { "ControlGroupPath",       bus_property_append_string,         "s", offsetof(Session, cgroup_path),        true },
+        { "DefaultControlGroup",    bus_session_append_default_cgroup,  "s", 0,                                     },
         { "VTNr",                   bus_property_append_uint32,         "u", offsetof(Session, vtnr)                },
         { "Seat",                   bus_session_append_seat,         "(so)", 0 },
         { "TTY",                    bus_property_append_string,         "s", offsetof(Session, tty),                true },
@@ -242,6 +285,7 @@ static const BusProperty bus_login_session_properties[] = {
         { "Type",                   bus_session_append_type,            "s", offsetof(Session, type)                },
         { "Class",                  bus_session_append_class,           "s", offsetof(Session, class)               },
         { "Active",                 bus_session_append_active,          "b", 0 },
+        { "State",                  bus_session_append_state,           "s", 0 },
         { "Controllers",            bus_property_append_strv,          "as", offsetof(Session, controllers),        true },
         { "ResetControllers",       bus_property_append_strv,          "as", offsetof(Session, reset_controllers),  true },
         { "KillProcesses",          bus_property_append_bool,           "b", offsetof(Session, kill_processes)      },
@@ -525,4 +569,22 @@ int session_send_lock(Session *s, bool lock) {
                 return -ENOMEM;
 
         return 0;
+}
+
+int session_send_lock_all(Manager *m, bool lock) {
+        Session *session;
+        Iterator i;
+        int r = 0;
+
+        assert(m);
+
+        HASHMAP_FOREACH(session, m->sessions, i) {
+                int k;
+
+                k = session_send_lock(session, lock);
+                if (k < 0)
+                        r = k;
+        }
+
+        return r;
 }

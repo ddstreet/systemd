@@ -1,0 +1,33 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-activate</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-activate"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-activate — Test socket activation of daemons</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">/usr/lib/systemd/systemd-activate</code>  [OPTIONS...]  <em class="replaceable"><code>daemon</code></em>  [OPTIONS...]</p></div></div><div class="refsect1"><a name="idp3911664"></a><h2>Description</h2><p><span class="command"><strong>systemd-activate</strong></span> can be used to
+    launch a socket activated daemon from the command-line for
+    testing purposes. It can also be used to launch single instances
+    of the daemon per connection (inetd-style).
+    </p><p>The daemon to launch and its options should be specifed
+    after options intended for <span class="command"><strong>systemd-activate</strong></span>.
+    </p><p>If the <code class="option">-a</code> option is given, file descriptor
+    of the connection will be used as the standard input and output of
+    the launched process. Otherwise, standard input and output will be
+    inherited, and sockets will be passed through file descriptors 3
+    and higher. Sockets passed through <code class="varname">$LISTEN_FDS</code>
+    to <span class="command"><strong>systemd-activate</strong></span> will be passed through to
+    the dameon, in the original positions. Other sockets specified
+    with <code class="option">--listen</code> will use consecutive descriptors.
+    </p></div><div class="refsect1"><a name="idp3917600"></a><h2>Options</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+        text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
+        string and exits.</p></dd><dt><span class="term"><code class="option">-l</code>, </span><span class="term"><code class="option">--listen=<em class="replaceable"><code>address</code></em></code></span></dt><dd><p>Listen on this <em class="replaceable"><code>address</code></em>.
+        Takes a string like <code class="literal">2000</code> or
+        <code class="literal">127.0.0.1:2001</code>.</p></dd><dt><span class="term"><code class="option">-a</code>, </span><span class="term"><code class="option">--accept</code></span></dt><dd><p>Launch a separate instance of daemon per
+        connection and pass the connection socket as standard input
+        and standard output.</p></dd></dl></div></div><div class="refsect1"><a name="idp28736"></a><h2>Environment variables</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$LISTEN_FDS</code>, </span><span class="term"><code class="varname">$LISTEN_PID</code></span></dt><dd><p>See
+        <a href="sd_listen_fds.html"><span class="citerefentry"><span class="refentrytitle">sd_listen_fds</span>(3)</span></a>.</p></dd><dt><span class="term"><code class="varname">$SYSTEMD_LOG_TARGET</code>, </span><span class="term"><code class="varname">$SYSTEMD_LOG_LEVEL</code>, </span><span class="term"><code class="varname">$SYSTEMD_LOG_COLOR</code>, </span><span class="term"><code class="varname">$SYSTEMD_LOG_LOCATION</code></span></dt><dd><p>Same as in
+        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>.</p></dd></dl></div></div><div class="refsect1"><a name="idp36960"></a><h2>Example 1</h2><pre class="programlisting">$ /usr/lib/systemd/systemd-activate -l 2000 -a cat</pre><p>This runs an echo server on port 2000.</p></div><div class="refsect1"><a name="idp38848"></a><h2>Example 2</h2><pre class="programlisting">$ /usr/lib/systemd/systemd-activate -l 19531 /usr/lib/systemd/systemd-journal-gatewayd</pre><p>This runs a socket activated instance of
+    <a href="systemd-journal-gatewayd.html"><span class="citerefentry"><span class="refentrytitle">systemd-journal-gatewayd</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp48816"></a><h2>See Also</h2><p>
+      <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+      <a href="systemd.socket.html"><span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span></a>,
+      <a href="systemd.service.html"><span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span></a>,
+      <a href="cat.html"><span class="citerefentry"><span class="refentrytitle">cat</span>(1)</span></a>
+    </p></div></div></body></html>

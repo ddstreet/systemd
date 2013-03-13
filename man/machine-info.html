@@ -1,4 +1,8 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>machine-info</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="machine-info"><a name="machine-info"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>machine-info — Local machine information file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-info</code></p></div><div class="refsect1" title="Description"><a name="id274043"></a><h2>Description</h2><p>The <code class="filename">/etc/machine-info</code> file
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>machine-info</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="machine-info"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>machine-info — Local machine information file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/machine-info</code></p></div><div class="refsect1"><a name="idp3965184"></a><h2>Description</h2><p>The <code class="filename">/etc/machine-info</code> file
                 contains machine meta data.</p><p>The basic file format of
                 <code class="filename">machine-info</code> is a
                 newline-separated list of environment-like
@@ -11,9 +15,12 @@
                 meta data about the machine that is set by the user or
                 administrator.</p><p>Depending on the operating system other
                 configuration files might be checked for machine
-                information as well, however only as fallback.</p></div><div class="refsect1" title="Options"><a name="id274084"></a><h2>Options</h2><p>The following machine meta data parameters may
+                information as well, however only as fallback.</p><p>You may use
+                <a href="hostnamectl.html"><span class="citerefentry"><span class="refentrytitle">hostnamectl</span>(1)</span></a>
+                to change the settings of this file from the command
+                line.</p></div><div class="refsect1"><a name="idp3971632"></a><h2>Options</h2><p>The following machine meta data parameters may
                 be set using
-                <code class="filename">/etc/machine-info</code>:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PRETTY_HOSTNAME=</code></span></dt><dd><p>A pretty
+                <code class="filename">/etc/machine-info</code>:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">PRETTY_HOSTNAME=</code></span></dt><dd><p>A pretty
                                 human-readable UTF8 machine identifier
                                 string. This should contain a name
                                 like <code class="literal">Lennart's
@@ -38,10 +45,35 @@
                                 this parameter is not set an
                                 application should fall back to
                                 <code class="literal">computer</code> or a
-                                similar icon name.</p></dd></dl></div></div><div class="refsect1" title="Example"><a name="id306306"></a><h2>Example</h2><pre class="programlisting">PRETTY_HOSTNAME="Lennart's Computer"
-ICON_NAME=computer-laptop</pre></div><div class="refsect1" title="See Also"><a name="id306318"></a><h2>See Also</h2><p>
-                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span>
+                                similar icon name.</p></dd><dt><span class="term"><code class="varname">CHASSIS=</code></span></dt><dd><p>The chassis
+                                type. Currently, the following chassis
+                                types are defined:
+                                <code class="literal">desktop</code>,
+                                <code class="literal">laptop</code>,
+                                <code class="literal">server</code>,
+                                <code class="literal">tablet</code>,
+                                <code class="literal">handset</code>, as well as
+                                the special chassis types
+                                <code class="literal">vm</code> and
+                                <code class="literal">container</code> for
+                                virtualized systems that lack an
+                                immediate physical chassis. Note that
+                                many systems allow detection of the
+                                chassis type automatically (based on
+                                firmware information or
+                                suchlike). This setting (if set) shall
+                                take precedence over automatically
+                                detected information and is useful to
+                                override misdetected configuration or
+                                to manually configure the chassis type
+                                where automatic detection is not
+                                available.</p></dd></dl></div></div><div class="refsect1"><a name="idp33344"></a><h2>Example</h2><pre class="programlisting">PRETTY_HOSTNAME="Lennart's Tablet"
+ICON_NAME=computer-tablet
+CHASSIS=tablet</pre></div><div class="refsect1"><a name="idp34800"></a><h2>See Also</h2><p>
+                          <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                          <a href="os-release.html"><span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span></a>,
+                          <a href="hostname.html"><span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span></a>,
+                          <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a>,
+                          <a href="hostnamectl.html"><span class="citerefentry"><span class="refentrytitle">hostnamectl</span>(1)</span></a>,
+                          <a href="systemd-hostnamed.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-hostnamed.service</span>(8)</span></a>
                   </p></div></div></body></html>

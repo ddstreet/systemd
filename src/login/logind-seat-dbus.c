@@ -6,16 +6,16 @@
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -36,6 +36,8 @@
         "  <property name=\"Id\" type=\"s\" access=\"read\"/>\n"        \
         "  <property name=\"ActiveSession\" type=\"so\" access=\"read\"/>\n" \
         "  <property name=\"CanMultiSession\" type=\"b\" access=\"read\"/>\n" \
+        "  <property name=\"CanTTY\" type=\"b\" access=\"read\"/>\n" \
+        "  <property name=\"CanGraphical\" type=\"b\" access=\"read\"/>\n" \
         "  <property name=\"Sessions\" type=\"a(so)\" access=\"read\"/>\n" \
         "  <property name=\"IdleHint\" type=\"b\" access=\"read\"/>\n"  \
         "  <property name=\"IdleSinceHint\" type=\"t\" access=\"read\"/>\n" \
@@ -133,7 +135,7 @@ static int bus_seat_append_sessions(DBusMessageIter *i, const char *property, vo
         return 0;
 }
 
-static int bus_seat_append_multi_session(DBusMessageIter *i, const char *property, void *data) {
+static int bus_seat_append_can_multi_session(DBusMessageIter *i, const char *property, void *data) {
         Seat *s = data;
         dbus_bool_t b;
 
@@ -142,6 +144,38 @@ static int bus_seat_append_multi_session(DBusMessageIter *i, const char *propert
         assert(s);
 
         b = seat_can_multi_session(s);
+
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_BOOLEAN, &b))
+                return -ENOMEM;
+
+        return 0;
+}
+
+static int bus_seat_append_can_tty(DBusMessageIter *i, const char *property, void *data) {
+        Seat *s = data;
+        dbus_bool_t b;
+
+        assert(i);
+        assert(property);
+        assert(s);
+
+        b = seat_can_tty(s);
+
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_BOOLEAN, &b))
+                return -ENOMEM;
+
+        return 0;
+}
+
+static int bus_seat_append_can_graphical(DBusMessageIter *i, const char *property, void *data) {
+        Seat *s = data;
+        dbus_bool_t b;
+
+        assert(i);
+        assert(property);
+        assert(s);
+
+        b = seat_can_graphical(s);
 
         if (!dbus_message_iter_append_basic(i, DBUS_TYPE_BOOLEAN, &b))
                 return -ENOMEM;
@@ -210,7 +244,9 @@ static int get_seat_for_path(Manager *m, const char *path, Seat **_s) {
 static const BusProperty bus_login_seat_properties[] = {
         { "Id",                     bus_property_append_string,      "s", offsetof(Seat, id), true },
         { "ActiveSession",          bus_seat_append_active,       "(so)", 0 },
-        { "CanMultiSession",        bus_seat_append_multi_session,   "b", 0 },
+        { "CanMultiSession",        bus_seat_append_can_multi_session, "b", 0 },
+        { "CanTTY",                 bus_seat_append_can_tty,         "b", 0 },
+        { "CanGraphical",           bus_seat_append_can_graphical,   "b", 0 },
         { "Sessions",               bus_seat_append_sessions,    "a(so)", 0 },
         { "IdleHint",               bus_seat_append_idle_hint,       "b", 0 },
         { "IdleSinceHint",          bus_seat_append_idle_hint_since, "t", 0 },

@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: systemd.automount
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: systemd.automount
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.AUTOMOUNT" "5" "03/16/2012" "systemd" "systemd.automount"
+.TH "SYSTEMD\&.AUTOMOUNT" "5" "" "systemd" "systemd.automount"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,10 +28,10 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-systemd.automount \- systemd automount configuration files
+systemd.automount \- Automount unit configuration
 .SH "SYNOPSIS"
 .PP
-systemd\&.automount
+\fIautomount\fR\&.automount
 .SH "DESCRIPTION"
 .PP
 A unit configuration file whose name ends in
@@ -83,7 +83,7 @@ Automount files must include an [Automount] section, which carries information a
 .PP
 \fIWhere=\fR
 .RS 4
-Takes an absolute path of a directory of the automount point\&. If the automount point is not existing at time of the automount point is installed it is created\&. This string must be reflected in the unit file name\&. (See above\&.) This option is mandatory\&.
+Takes an absolute path of a directory of the automount point\&. If the automount point is not existing at time that the automount point is installed it is created\&. This string must be reflected in the unit file name\&. (See above\&.) This option is mandatory\&.
 .RE
 .PP
 \fIDirectoryMode=\fR
@@ -98,10 +98,5 @@ Directories of automount points (and any parent directories) are automatically c
 \fBsystemd.unit\fR(5),
 \fBsystemd.mount\fR(5),
 \fBmount\fR(8),
-\fBautomount\fR(8)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBautomount\fR(8),
+\fBsystemd.directives\fR(7)

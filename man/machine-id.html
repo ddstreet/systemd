@@ -1,4 +1,8 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>machine-id</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="machine-id"><a name="machine-id"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>machine-id — local machine ID configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1" title="Description"><a name="id377910"></a><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>machine-id</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="machine-id"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>machine-id — Local machine ID configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1"><a name="idp3965184"></a><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
                 contains the unique machine id of the local system
                 that is set during installation. The machine ID is a
                 single newline-terminated, hexadecimal, lowercase 32
@@ -15,11 +19,11 @@
                 not change even if the local network configuration
                 changes. Due to this and its greater length it is
                 a more useful replacement for the
-                <span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span>
+                <a href="gethostid.html"><span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span></a>
                 call POSIX specifies.</p><p>The
-                <span class="citerefentry"><span class="refentrytitle">systemd-machine-id-setup</span>(1)</span>
+                <a href="systemd-machine-id-setup.html"><span class="citerefentry"><span class="refentrytitle">systemd-machine-id-setup</span>(1)</span></a>
                 tool may be used by installer tools to initialize the
-                machine ID at install time.</p></div><div class="refsect1" title="Relation to OSF UUIDs"><a name="id377967"></a><h2>Relation to OSF UUIDs</h2><p>Note that the machine ID historically is not an
+                machine ID at install time.</p></div><div class="refsect1"><a name="idp3972192"></a><h2>Relation to OSF UUIDs</h2><p>Note that the machine ID historically is not an
                 OSF UUID as defined by <a class="ulink" href="http://tools.ietf.org/html/rfc4122" target="_top">RFC
                 4122</a>, nor a Microsoft GUID. Starting with
                 systemd v30 newly generated machine IDs however do
@@ -34,16 +38,18 @@ id[6] = (id[6] &amp; 0x0F) | 0x40;
 id[8] = (id[8] &amp; 0x3F) | 0x80;</pre><p>(This code is inspired by
                 <code class="literal">generate_random_uuid()</code> of
                 <code class="filename">drivers/char/random.c</code> from the
-                kernel sources.)</p></div><div class="refsect1" title="History"><a name="id378019"></a><h2>History</h2><p>The simple configuration file format of
+                kernel sources.)</p></div><div class="refsect1"><a name="idp3978368"></a><h2>History</h2><p>The simple configuration file format of
                 <code class="filename">/etc/machine-id</code> originates in the
                 <code class="filename">/var/lib/dbus/machine-id</code> file
                 introduced by D-Bus. In fact this latter file might be a
                 symlink to
-                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1" title="See Also"><a name="id410176"></a><h2>See Also</h2><p>
-                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">systemd-machine-id-setup</span>(1)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">machine-info</span>(5)</span>,
-                          <span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span>
+                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1"><a name="idp25008"></a><h2>See Also</h2><p>
+                          <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                          <a href="systemd-machine-id-setup.html"><span class="citerefentry"><span class="refentrytitle">systemd-machine-id-setup</span>(1)</span></a>,
+                          <a href="gethostid.html"><span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span></a>,
+                          <a href="hostname.html"><span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span></a>,
+                          <a href="machine-info.html"><span class="citerefentry"><span class="refentrytitle">machine-info</span>(5)</span></a>,
+                          <a href="os-release.html"><span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span></a>,
+                          <a href="sd-id128.html"><span class="citerefentry"><span class="refentrytitle">sd-id128</span>(3)</span></a>,
+                          <a href="sd_id128_get_machine.html"><span class="citerefentry"><span class="refentrytitle">sd_id128_get_machine</span>(3)</span></a>
                   </p></div></div></body></html>

@@ -1,5 +1,9 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd-login</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="sd-login"><a name="sd-login"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd-login — APIs for
-                tracking logins</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-login.h&gt;</pre></div><div class="cmdsynopsis"><p><code class="command">pkg-config --cflags --libs libsystemd-login</code> </p></div></div><div class="refsect1" title="Description"><a name="id352562"></a><h2>Description</h2><p><code class="filename">sd-login.h</code> provides APIs to
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd-login</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="sd-login"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd-login — APIs for
+                tracking logins</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-login.h&gt;</pre></div><div class="cmdsynopsis"><p><code class="command">pkg-config --cflags --libs libsystemd-login</code> </p></div></div><div class="refsect1"><a name="idp3908912"></a><h2>Description</h2><p><code class="filename">sd-login.h</code> provides APIs to
                 introspect and monitor seat, login session and user
                 status information on the local system. </p><p>See <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/multiseat" target="_top">Multi-Seat
                 on Linux</a> for an introduction into multi-seat
@@ -24,32 +28,32 @@
                 each other.</p><p>If the functions return string arrays, these are
                 generally NULL terminated and need to be freed by the
                 caller with the libc
-                <span class="citerefentry"><span class="refentrytitle">free</span>(3)</span>
+                <a href="free.html"><span class="citerefentry"><span class="refentrytitle">free</span>(3)</span></a>
                 call after use, including the strings referenced
                 therein. Similar, individual strings returned need to
                 be freed, as well.</p><p>As a special exception, instead of an empty
                 string array NULL may be returned, which should be
                 treated equivalent to an empty string array.</p><p>See
-                <span class="citerefentry"><span class="refentrytitle">sd_pid_get_session</span>(3)</span>,
-                <span class="citerefentry"><span class="refentrytitle">sd_uid_get_state</span>(3)</span>,
-                <span class="citerefentry"><span class="refentrytitle">sd_session_is_active</span>(3)</span>,
-                <span class="citerefentry"><span class="refentrytitle">sd_seat_get_active</span>(3)</span>,
-                <span class="citerefentry"><span class="refentrytitle">sd_get_seats</span>(3)</span>,
-                <span class="citerefentry"><span class="refentrytitle">sd_login_monitor_new</span>(3)</span>
+                <a href="sd_pid_get_session.html"><span class="citerefentry"><span class="refentrytitle">sd_pid_get_session</span>(3)</span></a>,
+                <a href="sd_uid_get_state.html"><span class="citerefentry"><span class="refentrytitle">sd_uid_get_state</span>(3)</span></a>,
+                <a href="sd_session_is_active.html"><span class="citerefentry"><span class="refentrytitle">sd_session_is_active</span>(3)</span></a>,
+                <a href="sd_seat_get_active.html"><span class="citerefentry"><span class="refentrytitle">sd_seat_get_active</span>(3)</span></a>,
+                <a href="sd_get_seats.html"><span class="citerefentry"><span class="refentrytitle">sd_get_seats</span>(3)</span></a>,
+                <a href="sd_login_monitor_new.html"><span class="citerefentry"><span class="refentrytitle">sd_login_monitor_new</span>(3)</span></a>
                 for more information about the functions
-                implemented.</p></div><div class="refsect1" title="Notes"><a name="id384826"></a><h2>Notes</h2><p>These APIs are implemented as shared library,
+                implemented.</p></div><div class="refsect1"><a name="idp26800"></a><h2>Notes</h2><p>These APIs are implemented as shared library,
                 which can be compiled and linked to with the
                 <code class="literal">libsystemd-login</code>
-                <span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span>
-                file.</p></div><div class="refsect1" title="See Also"><a name="id384850"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd_pid_get_session</span>(3)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd_uid_get_state</span>(3)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd_session_is_active</span>(3)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd_seat_get_active</span>(3)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd_get_seats</span>(3)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd_login_monitor_new</span>(3)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(7)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(7)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span>
+                <a href="pkg-config.html"><span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span></a>
+                file.</p></div><div class="refsect1"><a name="idp29696"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="sd_pid_get_session.html"><span class="citerefentry"><span class="refentrytitle">sd_pid_get_session</span>(3)</span></a>,
+                        <a href="sd_uid_get_state.html"><span class="citerefentry"><span class="refentrytitle">sd_uid_get_state</span>(3)</span></a>,
+                        <a href="sd_session_is_active.html"><span class="citerefentry"><span class="refentrytitle">sd_session_is_active</span>(3)</span></a>,
+                        <a href="sd_seat_get_active.html"><span class="citerefentry"><span class="refentrytitle">sd_seat_get_active</span>(3)</span></a>,
+                        <a href="sd_get_seats.html"><span class="citerefentry"><span class="refentrytitle">sd_get_seats</span>(3)</span></a>,
+                        <a href="sd_login_monitor_new.html"><span class="citerefentry"><span class="refentrytitle">sd_login_monitor_new</span>(3)</span></a>,
+                        <a href="sd-daemon.html"><span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(3)</span></a>,
+                        <a href="sd-readahead.html"><span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(3)</span></a>,
+                        <a href="pkg-config.html"><span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span></a>
                 </p></div></div></body></html>

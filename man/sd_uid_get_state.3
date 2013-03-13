@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: sd_uid_get_state
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: sd_uid_get_state
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_UID_GET_STATE" "3" "03/16/2012" "systemd" "sd_uid_get_state"
+.TH "SD_UID_GET_STATE" "3" "" "systemd" "sd_uid_get_state"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -37,13 +37,13 @@ sd_uid_get_state, sd_uid_is_on_seat, sd_uid_get_sessions, sd_uid_get_seats \- De
 .fi
 .ft
 .HP \w'int\ sd_uid_get_state('u
-.BI "int sd_uid_get_state(uid_t\ " "pid" ", char**\ " "state" ");"
+.BI "int sd_uid_get_state(uid_t\ " "uid" ", char**\ " "state" ");"
 .HP \w'int\ sd_uid_is_on_seat('u
-.BI "int sd_uid_is_on_seat(uid_t\ " "pid" ", int\ " "require_active" ", const\ char*\ " "seat" ");"
+.BI "int sd_uid_is_on_seat(uid_t\ " "uid" ", int\ " "require_active" ", const\ char*\ " "seat" ");"
 .HP \w'int\ sd_uid_get_sessions('u
-.BI "int sd_uid_get_sessions(uid_t\ " "pid" ", int\ " "require_active" ", char***\ " "sessions" ");"
+.BI "int sd_uid_get_sessions(uid_t\ " "uid" ", int\ " "require_active" ", char***\ " "sessions" ");"
 .HP \w'int\ sd_uid_get_seats('u
-.BI "int sd_uid_get_seats(uid_t\ " "pid" ", int\ " "require_active" ", char***\ " "seats" ");"
+.BI "int sd_uid_get_seats(uid_t\ " "uid" ", int\ " "require_active" ", char***\ " "seats" ");"
 .SH "DESCRIPTION"
 .PP
 \fBsd_uid_get_state()\fR
@@ -53,21 +53,23 @@ offline
 lingering
 (user not logged in, but some user services running),
 online
-(user logged in, but not active),
+(user logged in, but not active, i\&.e\&. has no session in the foreground),
 active
-(user logged in on an active seat)\&. In the future additional states might be defined, client code should be written to be robust in regards to additional state strings being returned\&. The returned string needs to be freed with the libc
+(user logged in, and has at least one active session, i\&.e\&. one session in the foreground),
+closing
+(user not logged in, and not lingering, but some processes are still around)\&. In the future additional states might be defined, client code should be written to be robust in regards to additional state strings being returned\&. The returned string needs to be freed with the libc
 \fBfree\fR(3)
 call after use\&.
 .PP
 \fBsd_uid_is_on_seat()\fR
 may be used to determine whether a specific user is logged in or active on a specific seat\&. Accepts a Unix user identifier and a seat identifier string as parameters\&. The
 \fIrequire_active\fR
-parameter is a boolean\&. If non\-zero (true) this function will test if the user is active (i\&.e\&. has a session that is in the foreground and accepting user input) on the specified seat, otherwise (false) only if the user is logged in (and possibly inactive) on the specified seat\&.
+parameter is a boolean value\&. If non\-zero (true) this function will test if the user is active (i\&.e\&. has a session that is in the foreground and accepting user input) on the specified seat, otherwise (false) only if the user is logged in (and possibly inactive) on the specified seat\&.
 .PP
 \fBsd_uid_get_sessions()\fR
-may be used to determine the current sessions of the specified user\&. Acceptes a Unix user identifier as parameter\&. The
+may be used to determine the current sessions of the specified user\&. Accepts a Unix user identifier as parameter\&. The
 \fIrequire_active\fR
-boolean parameter controls whether the returned list shall consist of only those sessions where the user is currently active (true) or where the user is currently logged in at all, possibly inactive (false)\&. The call returns a NULL terminated string array of session identifiers in
+parameter controls whether the returned list shall consist of only those sessions where the user is currently active (> 0), where the user is currently online but possibly inactive (= 0), or logged in at all but possibly closing the session (< 0)\&. The call returns a NULL terminated string array of session identifiers in
 \fIsessions\fR
 which needs to be freed by the caller with the libc
 \fBfree\fR(3)
@@ -103,11 +105,5 @@ file\&.
 .PP
 
 \fBsystemd\fR(1),
-\fBsd-login\fR(7),
+\fBsd-login\fR(3),
 \fBsd_pid_get_owner_uid\fR(3)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE

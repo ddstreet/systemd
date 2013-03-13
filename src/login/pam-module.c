@@ -6,16 +6,16 @@
   Copyright 2010 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -35,11 +35,13 @@
 #include <systemd/sd-daemon.h>
 
 #include "util.h"
+#include "audit.h"
 #include "macro.h"
 #include "strv.h"
 #include "dbus-common.h"
 #include "def.h"
 #include "socket-util.h"
+#include "fileio.h"
 
 static int parse_argv(pam_handle_t *handle,
                       int argc, const char **argv,
@@ -48,6 +50,7 @@ static int parse_argv(pam_handle_t *handle,
                       bool *kill_processes,
                       char ***kill_only_users,
                       char ***kill_exclude_users,
+                      const char **class,
                       bool *debug) {
 
         unsigned i;
@@ -133,6 +136,11 @@ static int parse_argv(pam_handle_t *handle,
                                 strv_free(*kill_exclude_users);
                                 *kill_exclude_users = l;
                         }
+
+                } else if (startswith(argv[i], "class=")) {
+
+                        if (class)
+                                *class = argv[i] + 6;
 
                 } else if (startswith(argv[i], "debug=")) {
                         if ((k = parse_boolean(argv[i] + 6)) < 0) {
@@ -321,7 +329,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         struct passwd *pw;
         bool kill_processes = false, debug = false;
-        const char *username, *id, *object_path, *runtime_path, *service = NULL, *tty = NULL, *display = NULL, *remote_user = NULL, *remote_host = NULL, *seat = NULL, *type, *class, *cvtnr = NULL;
+        const char *username, *id, *object_path, *runtime_path, *service = NULL, *tty = NULL, *display = NULL, *remote_user = NULL, *remote_host = NULL, *seat = NULL, *type = NULL, *class = NULL, *class_pam = NULL, *cvtnr = NULL;
         char **controllers = NULL, **reset_controllers = NULL, **kill_only_users = NULL, **kill_exclude_users = NULL;
         DBusError error;
         uint32_t uid, pid;
@@ -330,7 +338,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
         int session_fd = -1;
         DBusConnection *bus = NULL;
         DBusMessage *m = NULL, *reply = NULL;
-        dbus_bool_t remote;
+        dbus_bool_t remote, existing;
         int r;
         uint32_t vtnr = 0;
 
@@ -348,7 +356,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                        argc, argv,
                        &controllers, &reset_controllers,
                        &kill_processes, &kill_only_users, &kill_exclude_users,
-                       &debug) < 0) {
+                       &class_pam, &debug) < 0) {
                 r = PAM_SESSION_ERR;
                 goto finish;
         }
@@ -414,7 +422,6 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                         "/org/freedesktop/login1",
                         "org.freedesktop.login1.Manager",
                         "CreateSession");
-
         if (!m) {
                 pam_syslog(handle, LOG_ERR, "Could not allocate create session message.");
                 r = PAM_BUF_ERR;
@@ -428,8 +435,14 @@ _public_ PAM_EXTERN int pam_sm_open_session(
         pam_get_item(handle, PAM_TTY, (const void**) &tty);
         pam_get_item(handle, PAM_RUSER, (const void**) &remote_user);
         pam_get_item(handle, PAM_RHOST, (const void**) &remote_host);
+
         seat = pam_getenv(handle, "XDG_SEAT");
+        if (isempty(seat))
+                seat = getenv("XDG_SEAT");
+
         cvtnr = pam_getenv(handle, "XDG_VTNR");
+        if (isempty(cvtnr))
+                cvtnr = getenv("XDG_VTNR");
 
         service = strempty(service);
         tty = strempty(tty);
@@ -447,11 +460,20 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                         display = tty;
                 tty = "";
         } else if (streq(tty, "cron")) {
-                /* cron has been setting PAM_TTY to "cron" for a very long time
-                 * and it cannot stop doing that for compatibility reasons. */
+                /* cron has been setting PAM_TTY to "cron" for a very
+                 * long time and it probably shouldn't stop doing that
+                 * for compatibility reasons. */
                 tty = "";
+                type = "unspecified";
+        } else if (streq(tty, "ssh")) {
+                /* ssh has been setting PAM_TTY to "ssh" for a very
+                 * long time and probably shouldn't stop doing that
+                 * for compatibility reasons. */
+                tty = "";
+                type ="tty";
         }
 
+        /* If this fails vtnr will be 0, that's intended */
         if (!isempty(cvtnr))
                 safe_atou32(cvtnr, &vtnr);
 
@@ -462,10 +484,15 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                         get_seat_from_display(display, NULL, &vtnr);
         }
 
-        type = !isempty(display) ? "x11" :
-                   !isempty(tty) ? "tty" : "unspecified";
+        if (!type)
+                type = !isempty(display) ? "x11" :
+                        !isempty(tty) ? "tty" : "unspecified";
 
         class = pam_getenv(handle, "XDG_SESSION_CLASS");
+        if (isempty(class))
+                class = getenv("XDG_SESSION_CLASS");
+        if (isempty(class))
+                class = class_pam;
         if (isempty(class))
                 class = "user";
 
@@ -517,8 +544,8 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         if (debug)
                 pam_syslog(handle, LOG_DEBUG, "Asking logind to create session: "
-                           "uid=%u pid=%u service=%s type=%s seat=%s vtnr=%u tty=%s display=%s remote=%s remote_user=%s remote_host=%s",
-                           uid, pid, service, type, seat, vtnr, tty, display, yes_no(remote), remote_user, remote_host);
+                           "uid=%u pid=%u service=%s type=%s class=%s seat=%s vtnr=%u tty=%s display=%s remote=%s remote_user=%s remote_host=%s",
+                           uid, pid, service, type, class, seat, vtnr, tty, display, yes_no(remote), remote_user, remote_host);
 
         reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
         if (!reply) {
@@ -534,6 +561,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                                    DBUS_TYPE_UNIX_FD, &session_fd,
                                    DBUS_TYPE_STRING, &seat,
                                    DBUS_TYPE_UINT32, &vtnr,
+                                   DBUS_TYPE_BOOLEAN, &existing,
                                    DBUS_TYPE_INVALID)) {
                 pam_syslog(handle, LOG_ERR, "Failed to parse message: %s", bus_error_message(&error));
                 r = PAM_SESSION_ERR;
@@ -575,6 +603,12 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                         pam_syslog(handle, LOG_ERR, "Failed to set virtual terminal number.");
                         goto finish;
                 }
+        }
+
+        r = pam_set_data(handle, "systemd.existing", INT_TO_PTR(!!existing), NULL);
+        if (r != PAM_SUCCESS) {
+                pam_syslog(handle, LOG_ERR, "Failed to install existing flag.");
+                return r;
         }
 
         if (session_fd >= 0) {
@@ -619,12 +653,82 @@ _public_ PAM_EXTERN int pam_sm_close_session(
                 int flags,
                 int argc, const char **argv) {
 
-        const void *p = NULL;
+        const void *p = NULL, *existing = NULL;
+        const char *id;
+        DBusConnection *bus = NULL;
+        DBusMessage *m = NULL, *reply = NULL;
+        DBusError error;
+        int r;
 
+        assert(handle);
+
+        dbus_error_init(&error);
+
+        /* Only release session if it wasn't pre-existing when we
+         * tried to create it */
+        pam_get_data(handle, "systemd.existing", &existing);
+
+        id = pam_getenv(handle, "XDG_SESSION_ID");
+        if (id && !existing) {
+
+                /* Before we go and close the FIFO we need to tell
+                 * logind that this is a clean session shutdown, so
+                 * that it doesn't just go and slaughter us
+                 * immediately after closing the fd */
+
+                bus = dbus_bus_get_private(DBUS_BUS_SYSTEM, &error);
+                if (!bus) {
+                        pam_syslog(handle, LOG_ERR, "Failed to connect to system bus: %s", bus_error_message(&error));
+                        r = PAM_SESSION_ERR;
+                        goto finish;
+                }
+
+                m = dbus_message_new_method_call(
+                                "org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                "ReleaseSession");
+                if (!m) {
+                        pam_syslog(handle, LOG_ERR, "Could not allocate release session message.");
+                        r = PAM_BUF_ERR;
+                        goto finish;
+                }
+
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_STRING, &id,
+                                              DBUS_TYPE_INVALID)) {
+                        pam_syslog(handle, LOG_ERR, "Could not attach parameters to message.");
+                        r = PAM_BUF_ERR;
+                        goto finish;
+                }
+
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        pam_syslog(handle, LOG_ERR, "Failed to release session: %s", bus_error_message(&error));
+                        r = PAM_SESSION_ERR;
+                        goto finish;
+                }
+        }
+
+        r = PAM_SUCCESS;
+
+finish:
         pam_get_data(handle, "systemd.session-fd", &p);
-
         if (p)
                 close_nointr(PTR_TO_INT(p) - 1);
 
-        return PAM_SUCCESS;
+        dbus_error_free(&error);
+
+        if (bus) {
+                dbus_connection_close(bus);
+                dbus_connection_unref(bus);
+        }
+
+        if (m)
+                dbus_message_unref(m);
+
+        if (reply)
+                dbus_message_unref(reply);
+
+        return r;
 }

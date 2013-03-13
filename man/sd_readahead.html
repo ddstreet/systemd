@@ -1,4 +1,8 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_readahead</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="sd_readahead"><a name="sd_notify"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_readahead — Control ongoing disk boot-time read-ahead operations</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-readahead.h"</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <b class="fsfunc">sd_readahead</b>(</code></td><td>const char *<var class="pdparam">action</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a name="id303623"></a><h2>Description</h2><p><code class="function">sd_readahead()</code> may be
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_readahead</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="sd_readahead"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_readahead — Control ongoing disk boot-time read-ahead operations</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-readahead.h"</pre><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_readahead</b>(</code></td><td>const char *<var class="pdparam">action</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1"><a name="idp4496416"></a><h2>Description</h2><p><code class="function">sd_readahead()</code> may be
                 called by programs involved with early boot-up to
                 control ongoing boot-time disk read-ahead operations. It may be
                 used to terminate read-ahead operations in case an
@@ -6,7 +10,7 @@
                 hence read-ahead replay or collection is unlikely to
                 have the desired speed-up effect on the current or
                 future boot-ups.</p><p>The <em class="parameter"><code>action</code></em> should be one
-                of the following strings:</p><div class="variablelist"><dl><dt><span class="term">cancel</span></dt><dd><p>Terminates read-ahead
+                of the following strings:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">cancel</span></dt><dd><p>Terminates read-ahead
                                 data collection, and drops all
                                 read-ahead data collected during this
                                 boot-up.</p></dd><dt><span class="term">done</span></dt><dd><p>Terminates read-ahead
@@ -14,9 +18,9 @@
                                 read-ahead data collected during this
                                 boot-up around for use during
                                 subsequent boot-ups.</p></dd><dt><span class="term">noreplay</span></dt><dd><p>Terminates read-ahead
-                                replay.</p></dd></dl></div></div><div class="refsect1" title="Return Value"><a name="id303691"></a><h2>Return Value</h2><p>On failure, these calls return a negative
+                                replay.</p></dd></dl></div></div><div class="refsect1"><a name="idp1816240"></a><h2>Return Value</h2><p>On failure, these calls return a negative
                 errno-style error code. It is generally recommended to
-                ignore the return value of this call.</p></div><div class="refsect1" title="Notes"><a name="id303702"></a><h2>Notes</h2><p>This function is provided by the reference
+                ignore the return value of this call.</p></div><div class="refsect1"><a name="idp1817600"></a><h2>Notes</h2><p>This function is provided by the reference
                 implementation of APIs for controlling boot-time
                 read-ahead and distributed with the systemd
                 package. The algorithm it implements is simple, and
@@ -28,23 +32,23 @@
                 subsystem.</p><p>For details about the algorithm check the
                 liberally licensed reference implementation sources:
                 <a class="ulink" href="http://cgit.freedesktop.org/systemd/systemd/plain/src/readahead/sd-readahead.c" target="_top">http://cgit.freedesktop.org/systemd/systemd/plain/src/readahead/sd-readahead.c</a>
-                resp. <a class="ulink" href="http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h" target="_top">http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h</a></p><p><code class="function">sd_readahead()</code> is
+                and <a class="ulink" href="http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h" target="_top">http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h</a></p><p><code class="function">sd_readahead()</code> is
                 implemented in the reference implementation's drop-in
                 <code class="filename">sd-readahead.c</code> and
                 <code class="filename">sd-readahead.h</code> files. It is
                 recommended that applications consuming this API copy
                 the implementation into their source tree. For more
                 details about the reference implementation see
-                <span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(7)</span></p><p>If -DDISABLE_SYSTEMD is set during compilation
+                <a href="sd-readahead.html"><span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(3)</span></a></p><p>If -DDISABLE_SYSTEMD is set during compilation
                 this function will always return 0 and otherwise
-                become a NOP.</p></div><div class="refsect1" title="Examples"><a name="id335898"></a><h2>Examples</h2><div class="example"><a name="id335904"></a><p class="title"><b>Example 1. Cancelling all read-ahead operations</b></p><div class="example-contents"><p>During boots where SELinux has to
+                become a NOP.</p></div><div class="refsect1"><a name="idp3912176"></a><h2>Examples</h2><div class="example"><a name="idp3912848"></a><p class="title"><b>Example 1. Cancelling all read-ahead operations</b></p><div class="example-contents"><p>During boots where SELinux has to
                         relabel the file system hierarchy, it will
                         create a large amount of disk accesses that
                         are not necessary during normal boots. Hence
                         it is a good idea to disable both read-ahead replay and read-ahead collection.
                         </p><pre class="programlisting">sd_readahead("cancel");
-sd_readahead("noreplay");</pre></div></div><br class="example-break"></div><div class="refsect1" title="See Also"><a name="id335923"></a><h2>See Also</h2><p>
-                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(7)</span>,
-                        <span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span>
+sd_readahead("noreplay");</pre></div></div><br class="example-break"></div><div class="refsect1"><a name="idp3915168"></a><h2>See Also</h2><p>
+                        <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
+                        <a href="sd-readahead.html"><span class="citerefentry"><span class="refentrytitle">sd-readahead</span>(3)</span></a>,
+                        <a href="daemon.html"><span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span></a>
                 </p></div></div></body></html>

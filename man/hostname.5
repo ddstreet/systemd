@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: hostname
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
-.\"    Manual: /etc/hostname
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
+.\"    Manual: hostname
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "HOSTNAME" "5" "03/16/2012" "systemd" "/etc/hostname"
+.TH "HOSTNAME" "5" "" "systemd" "hostname"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -41,6 +41,10 @@ file configures the name of the local system that is set during boot, with the
 system call\&. It should contain a single newline\-terminated host name string\&. The host name may be a free\-form string up to 64 characters in length, however it is recommended that it consists only of 7bit ASCII lower\-case characters and no spaces or dots, and limits itself to the format allowed for DNS domain name labels, even though this is not a strict requirement\&.
 .PP
 Depending on the operating system other configuration files might be checked for configuration of the host name as well, however only as fallback\&.
+.PP
+You may use
+\fBhostnamectl\fR(1)
+to change the value of this file from the command line\&.
 .SH "HISTORY"
 .PP
 The simple configuration file format of
@@ -54,10 +58,6 @@ originates from Debian GNU/Linux\&.
 \fBhostname\fR(1),
 \fBhostname\fR(7),
 \fBmachine-id\fR(5),
-\fBmachine-info\fR(5)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBmachine-info\fR(5),
+\fBhostnamectl\fR(1),
+\fBsystemd-hostnamed.service\fR(8)

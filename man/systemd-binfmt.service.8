@@ -1,0 +1,50 @@
+'\" t
+.\"     Title: systemd-binfmt.service
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
+.\"    Manual: systemd-binfmt.service
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\-BINFMT\&.SE" "8" "" "systemd" "systemd-binfmt.service"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd-binfmt.service, systemd-binfmt \- Configure additional binary formats for executables at boot
+.SH "SYNOPSIS"
+.PP
+systemd\-binfmt\&.service
+.PP
+/usr/lib/systemd/systemd\-binfmt
+.SH "DESCRIPTION"
+.PP
+systemd\-binfmt\&.service
+is an early\-boot service that registers additional binary formats for executables in the kernel\&.
+.PP
+See
+\fBbinfmt.d\fR(5)
+for information about the configuration of this service\&.
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBbinfmt.d\fR(5),
+\fBwine\fR(8)

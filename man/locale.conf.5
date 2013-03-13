@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: locale.conf
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/16/2012
+.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
+.\"      Date: 03/07/2013
 .\"    Manual: locale.conf
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "LOCALE\&.CONF" "5" "03/16/2012" "systemd" "locale.conf"
+.TH "LOCALE\&.CONF" "5" "" "systemd" "locale.conf"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-locale.conf \- configuration file for locale settings
+locale.conf \- Configuration file for locale settings
 .SH "SYNOPSIS"
 .PP
 /etc/locale\&.conf
@@ -36,7 +36,8 @@ locale.conf \- configuration file for locale settings
 .PP
 The
 /etc/locale\&.conf
-file configures system\-wide locale settings\&.
+file configures system\-wide locale settings\&. It is read at early\-boot by
+\fBsystemd\fR(1)\&.
 .PP
 The basic file format of
 locale\&.conf
@@ -83,7 +84,7 @@ The following locale settings may be set using
 \fILC_MEASUREMENT=\fR,
 \fILC_IDENTIFICATION=\fR\&. Note that
 \fILC_ALL\fR
-may not be be configured in this file\&. For details about the meaning and semantics of these settings, refer to
+may not be configured in this file\&. For details about the meaning and semantics of these settings, refer to
 \fBlocale\fR(7)\&.
 .SH "EXAMPLE"
 .PP
@@ -105,10 +106,5 @@ LC_MESSAGES=C
 .PP
 
 \fBsystemd\fR(1),
-\fBlocale\fR(7)
-.SH "AUTHOR"
-.PP
-\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
-.RS 4
-Developer
-.RE
+\fBlocale\fR(7),
+\fBsystemd-localed.service\fR(8)
