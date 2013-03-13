@@ -5,13 +5,15 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (44-10) unstable; urgency=low
+ systemd (44-11) unstable; urgency=low
  .
    * Team upload.
-   * Using the return code of "systemctl is-enabled" to determine whether we
-     enable a service or not is unreliable since it also returns a non-zero
-     exit code for masked services. As we don't want to enable masked services,
-     grep for the string "disabled" instead.
+   * Run debian-enable-units.service after sysinit.target to ensure our tmp
+     files aren't nuked by systemd-tmpfiles.
+   * The mountoverflowtmp SysV init script no longer exists so remove that
+     from remount-rootfs.service to avoid an unnecessary diff to upstream.
+   * Do not fail on purge if /var/lib/systemd is empty and has been removed
+     by dpkg.
 Author: Michael Biebl <biebl@debian.org>
 
 ---
@@ -572,17 +574,6 @@ Last-Update: <YYYY-MM-DD>
 +        print ''.join((tab_extend(key, 3), tab_extend(value[1]),
 +                       tab_extend(value[2], 2), tab_extend(value[3], 2),
 +                       options))
---- systemd-44.orig/units/remount-rootfs.service
-+++ systemd-44/units/remount-rootfs.service
-@@ -10,7 +10,7 @@ Description=Remount Root FS
- DefaultDependencies=no
- Conflicts=shutdown.target
- After=systemd-readahead-collect.service systemd-readahead-replay.service fsck-root.service
--Before=local-fs-pre.target local-fs.target shutdown.target
-+Before=local-fs-pre.target local-fs.target shutdown.target mountoverflowtmp.service
- Wants=local-fs-pre.target
- 
- [Service]
 --- systemd-44.orig/units/remote-fs.target
 +++ systemd-44/units/remote-fs.target
 @@ -9,6 +9,7 @@
