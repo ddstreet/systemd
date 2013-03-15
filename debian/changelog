@@ -1,3 +1,20 @@
+systemd (198-0ubuntu3) raring; urgency=low
+
+  * Add 0018-Add-env-variable-for-machine-ID-path.patch: During package build,
+    in minimal chroots, or other systems which do not already have an
+    /etc/machine-id we get six test failures. Introduce a
+    $SYSTEMD_MACHINE_ID_PATH environment variable which can specify a location
+    other than /etc/machine-id, so that the unit tests are independent from
+    the environment.
+  * debian/rules: Re-enable unit tests. Don't run them under fakeroot as that
+    hangs some tests, and supply a local machine id file.
+  * Add autopkgtests for hostnamed, localed, and timedated.
+  * 0010-Add-back-support-for-Debian-specific-config-files.patch: Update patch
+    for localed to use /etc/default/locale instead of /etc/locale.conf.
+  * Rename udev-gtk-udeb to libudev1-udeb, and build it for Ubuntu.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 15 Mar 2013 11:37:45 +0100
+
 systemd (198-0ubuntu2) raring; urgency=low
 
   * libgudev-1.0-dev: Don't depend on exact binary version of

@@ -56,7 +56,7 @@ CONFFLAGS_udeb = \
 # Ubuntu: udev transition to current version postponed to next release
 # Ubuntu: systemd{,-sysv} not yet approved for universe
 ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo ubuntu),ubuntu)
-BINARY_BLACKLIST = -Nudev -Nudev-udeb -Nudev-gtk-udeb -Nsystemd -Nsystemd-sysv
+BINARY_BLACKLIST = -Nudev -Nudev-udeb -Nsystemd -Nsystemd-sysv
 endif
 
 override_dh_auto_configure: $(FLAVORS:%=debian/stamps/configure-%)
@@ -90,14 +90,14 @@ override_dh_install:
 	rm -f debian/install/*/etc/init.d/README
 	find debian/install/ -name '*.la' -delete
 ifeq (udeb ,$(filter udeb, $(FLAVORS)))
-	dh_install -pudev-udeb -pudev-gtk-udeb --sourcedir=debian/install/udeb
+	dh_install -pudev-udeb -plibudev1-udeb --sourcedir=debian/install/udeb
 	# udev-udeb
 	install -D --mode=755 debian/extra/udev.startup \
 		debian/udev-udeb/lib/debian-installer/start-udev
 	install -D --mode=755 debian/extra/udev.base-installer \
 		debian/udev-udeb/usr/lib/base-installer.d/05udev
 endif
-	dh_install -Nudev-udeb -Nudev-gtk-udeb --sourcedir=debian/install/deb -O--parallel -Xetc/rpm/ --list-missing
+	dh_install -Nudev-udeb -Nlibudev1-udeb --sourcedir=debian/install/deb -O--parallel -Xetc/rpm/ --list-missing
 	# install some files manually, --sourcedir makes that necessary
 	# systemd
 	cp -a debian/pam-configs debian/libpam-systemd/usr/share/
@@ -157,7 +157,7 @@ endif
 	rm debian/udev/lib/udev/rules.d/99-systemd.rules
 
 override_dh_makeshlibs:
-	dh_makeshlibs -plibudev1 --add-udeb=udev-gtk-udeb
+	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb
 	dh_makeshlibs --remaining-packages
 
 override_dh_installinit:
@@ -173,8 +173,11 @@ autoreconf:
 override_dh_autoreconf:
 	dh_autoreconf debian/rules -- autoreconf
 
-# some tests fail under fakeroot, so disable for now
 override_dh_auto_test:
+	# some tests hang under fakeroot, so disable fakeroot
+	echo "01234567890123456789012345678901" > debian/build/machine-id
+	env -u LD_PRELOAD SYSTEMD_MACHINE_ID_PATH=$(CURDIR)/debian/build/machine-id \
+		make -C debian/build/deb check
 
 %:
 	dh $@ --with autoreconf,python2

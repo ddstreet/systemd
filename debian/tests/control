@@ -1,0 +1,3 @@
+Tests: timedated hostnamed localed
+Depends: systemd-services
+Restrictions: needs-root
