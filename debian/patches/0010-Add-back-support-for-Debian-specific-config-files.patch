@@ -1,17 +1,18 @@
-From b0883fd2ba52c9537f36c3279296ebc32e3603bb Mon Sep 17 00:00:00 2001
+From 1d8fc085f507c7cfe0cbf0afb7df73964f400f6d Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Tue, 5 Mar 2013 04:10:06 +0100
-Subject: [PATCH 10/15] Add back support for Debian specific config files
+Subject: [PATCH] Add back support for Debian specific config files
 
-For now fallback to read the locale settings from /etc/default/locale.
+For now fallback to use /etc/default/locale for locale settings.
 
 This reverts the Debian specific bits from
 46a2911bf2780f616396df5671dd901cc7cb54fd
 99f861310d3f05f4e86cb9582a94b891dbb3382b
 ---
- src/core/locale-setup.c  |   21 +++++++++++++++++++++
- src/timedate/timedated.c |   18 ++++++++++++++++++
- 2 files changed, 39 insertions(+)
+ src/core/locale-setup.c  | 21 +++++++++++++++++++++
+ src/locale/localed.c     | 29 ++++++++++++++++++++++++++---
+ src/timedate/timedated.c | 18 ++++++++++++++++++
+ 3 files changed, 65 insertions(+), 3 deletions(-)
 
 diff --git a/src/core/locale-setup.c b/src/core/locale-setup.c
 index eefb256..6456ea4 100644
@@ -45,6 +46,66 @@ index eefb256..6456ea4 100644
          if (!variables[VARIABLE_LANG]) {
                  variables[VARIABLE_LANG] = strdup("C");
                  if (!variables[VARIABLE_LANG]) {
+diff --git a/src/locale/localed.c b/src/locale/localed.c
+index 4f85b8b..7d736b4 100644
+--- a/src/locale/localed.c
++++ b/src/locale/localed.c
+@@ -216,6 +216,24 @@ static int read_data_locale(void) {
+                            "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
+                            NULL);
+ 
++        if (r == -ENOENT)
++                r = parse_env_file("/etc/default/locale", NEWLINE,
++                                   "LANG",              &data[PROP_LANG],
++                                   "LANGUAGE",          &data[PROP_LANGUAGE],
++                                   "LC_CTYPE",          &data[PROP_LC_CTYPE],
++                                   "LC_NUMERIC",        &data[PROP_LC_NUMERIC],
++                                   "LC_TIME",           &data[PROP_LC_TIME],
++                                   "LC_COLLATE",        &data[PROP_LC_COLLATE],
++                                   "LC_MONETARY",       &data[PROP_LC_MONETARY],
++                                   "LC_MESSAGES",       &data[PROP_LC_MESSAGES],
++                                   "LC_PAPER",          &data[PROP_LC_PAPER],
++                                   "LC_NAME",           &data[PROP_LC_NAME],
++                                   "LC_ADDRESS",        &data[PROP_LC_ADDRESS],
++                                   "LC_TELEPHONE",      &data[PROP_LC_TELEPHONE],
++                                   "LC_MEASUREMENT",    &data[PROP_LC_MEASUREMENT],
++                                   "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
++                                   NULL);
++
+         if (r == -ENOENT) {
+                 int p;
+ 
+@@ -354,8 +372,13 @@ static int read_data(void) {
+ static int write_data_locale(void) {
+         int r, p;
+         char **l = NULL;
++        const char *path = "/etc/locale.conf";
+ 
+-        r = load_env_file("/etc/locale.conf", &l);
++        r = load_env_file(path, &l);
++        if (r < 0 && r == -ENOENT) {
++                path = "/etc/default/locale";
++                r = load_env_file(path, &l);
++        }
+         if (r < 0 && r != -ENOENT)
+                 return r;
+ 
+@@ -387,13 +410,13 @@ static int write_data_locale(void) {
+         if (strv_isempty(l)) {
+                 strv_free(l);
+ 
+-                if (unlink("/etc/locale.conf") < 0)
++                if (unlink(path) < 0)
+                         return errno == ENOENT ? 0 : -errno;
+ 
+                 return 0;
+         }
+ 
+-        r = write_env_file_label("/etc/locale.conf", l);
++        r = write_env_file_label(path, l);
+         strv_free(l);
+ 
+         return r;
 diff --git a/src/timedate/timedated.c b/src/timedate/timedated.c
 index 7753493..1f64b3b 100644
 --- a/src/timedate/timedated.c
@@ -93,5 +154,5 @@ index 7753493..1f64b3b 100644
  }
  
 -- 
-1.7.10.4
+1.8.1.2
 
