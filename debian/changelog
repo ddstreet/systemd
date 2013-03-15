@@ -1,3 +1,10 @@
+systemd (198-0ubuntu4) raring; urgency=low
+
+  * Add 0019-disable-unit-name-test.patch: Disable test-unit-name for now, as
+    it fails on the buildds, presumably because of a missing /etc/hostname.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 15 Mar 2013 11:55:21 +0100
+
 systemd (198-0ubuntu3) raring; urgency=low
 
   * Add 0018-Add-env-variable-for-machine-ID-path.patch: During package build,

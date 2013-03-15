@@ -1,0 +1,15 @@
+Description: test-unit-name fails on buildds for now, presumably due to a missing /etc/hostname?
+Author: Martin Pitt <martin.pitt@ubuntu.com>
+
+Index: systemd/Makefile.am
+===================================================================
+--- systemd.orig/Makefile.am	2013-03-15 11:53:16.827457737 +0100
++++ systemd/Makefile.am	2013-03-15 11:53:49.775459331 +0100
+@@ -1038,7 +1038,6 @@
+ 	test-strbuf \
+ 	test-strv \
+ 	test-strxcpyx \
+-	test-unit-name \
+ 	test-unit-file \
+ 	test-util \
+ 	test-date \
