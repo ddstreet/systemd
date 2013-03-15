@@ -1038,7 +1038,6 @@ noinst_tests += \
 	test-strbuf \
 	test-strv \
 	test-strxcpyx \
-	test-unit-name \
 	test-unit-file \
 	test-util \
 	test-date \
