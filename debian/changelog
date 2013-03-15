@@ -1,3 +1,16 @@
+systemd (198-0ubuntu5) raring; urgency=low
+
+  * Mark systemd-services as Multi-Arch: foreign.
+  * Add autopkgtest for logind. Note that in Jenkins this will only have very
+    light coverage as there it does not have a seat. When run locally, it will
+    also cover hotplug and coldplug ACLs.
+  * Add 0020-uaccess-rule-with-old-udev.patch: Our old udev does not yet
+    understand RUN{builtin}, use IMPORT.  This can be dropped when moving to a
+    recent udev. Depend on the udev version with the uaccess builtin backport,
+    so that applying ACLs on hotplugged devices actually works.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 15 Mar 2013 19:15:32 +0100
+
 systemd (198-0ubuntu4) raring; urgency=low
 
   * Add 0019-disable-unit-name-test.patch: Disable test-unit-name for now, as
