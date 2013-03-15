@@ -93,11 +93,13 @@ Recommends: libpam-systemd
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         udev (>= 175-0ubuntu23),
          dbus
 Replaces: systemd (<< 198-1), logind, ubuntu-system-service
 Breaks: systemd (<< 198-1)
 Conflicts: logind
 Provides: logind
+Multi-Arch: foreign
 Description: systemd runtime services
  This package contains the logind and D-BUS services (localed, hostname,
  timedated) from systemd.

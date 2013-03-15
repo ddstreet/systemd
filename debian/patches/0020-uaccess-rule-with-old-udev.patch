@@ -1,0 +1,15 @@
+Description: Our old udev does not yet understand RUN{builtin}, use IMPORT.  This can be dropped when moving to a recent udev.
+Author: Martin Pitt <martin.pitt@ubuntu.com>
+
+Index: systemd/src/login/73-seat-late.rules.in
+===================================================================
+--- systemd.orig/src/login/73-seat-late.rules.in	2012-04-12 00:24:39.564670081 +0200
++++ systemd/src/login/73-seat-late.rules.in	2013-03-15 19:13:13.548735264 +0100
+@@ -12,6 +12,6 @@
+ 
+ ENV{ID_SEAT}!="", TAG+="$env{ID_SEAT}"
+ 
+-TAG=="uaccess", ENV{MAJOR}!="", RUN{builtin}+="uaccess"
++TAG=="uaccess", ENV{MAJOR}!="", IMPORT{builtin}+="uaccess"
+ 
+ LABEL="seat_late_end"
