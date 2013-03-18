@@ -2,7 +2,7 @@
 set -e
 
 echo " * cgroup is mounted"
-test -d /sys/fs/cgroup/systemd/user
+mountpoint -q /sys/fs/cgroup/systemd
 echo " * daemon is started"
 # should happen with upstart script, not with D-BUS activation
 pidof systemd-logind > /dev/null
