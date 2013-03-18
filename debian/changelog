@@ -1,3 +1,9 @@
+systemd (198-0ubuntu6) raring; urgency=low
+
+  * Fix logind autopkgtest when there are no seats (as in Jenkins).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 18 Mar 2013 09:49:55 +0100
+
 systemd (198-0ubuntu5) raring; urgency=low
 
   * Mark systemd-services as Multi-Arch: foreign.
