@@ -1,3 +1,13 @@
+systemd (198-0ubuntu7) raring; urgency=low
+
+  * Make systemd-services installable without forcing the usage of logind, so
+    that we can install it by default for the other D-BUS services:
+    - Move systemd-logind upstart job into libpam-systemd.
+    - Drop systemd-services' Recommends: to libpam-systemd.
+    - LP: #1156074
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 19 Mar 2013 13:14:33 +0100
+
 systemd (198-0ubuntu6) raring; urgency=low
 
   * Fix logind autopkgtest when there are no seats (as in Jenkins).
