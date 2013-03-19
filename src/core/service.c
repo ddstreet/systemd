@@ -354,7 +354,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 "local_fs",             NULL,
                 "network",              SPECIAL_NETWORK_TARGET,
                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
-                "portmap",              SPECIAL_RPCBIND_TARGET,
+                "portmap",              SPECIAL_RPCBIND_SERVICE,
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
                 "syslog",               NULL,
                 "time",                 SPECIAL_TIME_SYNC_TARGET,
