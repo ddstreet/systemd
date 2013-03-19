@@ -89,7 +89,6 @@ Package: systemd-services
 Architecture: linux-any
 Section: admin
 Priority: extra
-Recommends: libpam-systemd
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends},
          ${misc:Depends},
@@ -114,7 +113,8 @@ Depends: systemd-services (= ${binary:Version}),
          ${shlibs:Depends},
          ${misc:Depends}
 Conflicts: libpam-xdg-support
-Replaces: libpam-xdg-support
+Replaces: libpam-xdg-support, systemd-services (<< 198-0ubuntu7)
+Breaks: systemd-services (<< 198-0ubuntu7)
 Provides: libpam-xdg-support
 Description: system and service manager - PAM module
  systemd is a replacement for sysvinit.  It is dependency-based and
