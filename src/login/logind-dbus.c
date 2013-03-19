@@ -1043,6 +1043,30 @@ static int bus_manager_log_shutdown(
                           q, NULL);
 }
 
+/* Called if org.freedesktop.systemd1 is not available, i. e. running
+ * standalone logind */
+static int execute_shutdown_or_sleep_fallback(
+                Manager *m,
+                const char *unit_name) {
+    const char* cmd;
+
+    if (streq(unit_name, "suspend.target"))
+            cmd = "/usr/sbin/pm-suspend";
+    else if (streq(unit_name, "hibernate.target"))
+            cmd = "/usr/sbin/pm-hibernate";
+    else if (streq(unit_name, "reboot.target"))
+            cmd = "/sbin/reboot";
+    else if (streq(unit_name, "shutdown.target"))
+            cmd = "/sbin/poweroff";
+    else {
+            log_error("execute_shutdown_or_sleep_fallback: unknown unit name %s", unit_name);
+            return 0;
+    }
+
+    log_info("execute_shutdown_or_sleep_fallback: Running command '%s' for unit %s", cmd, unit_name);
+    return system(cmd);
+}
+
 static int execute_shutdown_or_sleep(
                 Manager *m,
                 InhibitWhat w,
@@ -1072,8 +1096,11 @@ static int execute_shutdown_or_sleep(
                         DBUS_TYPE_STRING, &unit_name,
                         DBUS_TYPE_STRING, &mode,
                         DBUS_TYPE_INVALID);
-        if (r < 0)
-                return r;
+        if (r < 0) {
+            log_info("execute_shutdown_or_sleep: failed to call org.freedesktop.systemd1, using fallback: %s", bus_error_message(error));
+            dbus_error_free(error);
+            return execute_shutdown_or_sleep_fallback(m, unit_name);
+        }
 
         if (!dbus_message_get_args(
                             reply,
