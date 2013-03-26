@@ -180,7 +180,7 @@ override_dh_auto_test:
 		make -C debian/build/deb check
 
 %:
-	dh $@ --with autoreconf,python2
+	dh $@ --with autoreconf,gir,python2
 
 override_dh_gencontrol:
 ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo ubuntu),ubuntu)
