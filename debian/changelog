@@ -1,3 +1,10 @@
+systemd (198-0ubuntu8) raring; urgency=low
+
+  * Add gir addon, to call dh_girepository to get the gir:Depends
+    dependency. (LP: #1159997)
+
+ -- Dmitrijs Ledkovs <dmitrij.ledkov@ubuntu.com>  Tue, 26 Mar 2013 09:24:38 +0000
+
 systemd (198-0ubuntu7) raring; urgency=low
 
   * Make systemd-services installable without forcing the usage of logind, so
