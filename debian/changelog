@@ -1,3 +1,16 @@
+systemd (198-0ubuntu9) raring; urgency=low
+
+  * debian/tests/control: Add libpam-systemd dependency for logind test, as
+    it checks for the mounted cgroup. Mounting that moved into libpam-systemd,
+    see 198-0ubuntu7.
+  * Drop usr/lib/systemd/ from systemd-services, this doesn't belong there and
+    is already installed into systemd.
+  * 0016-Add-poweroff-reboot-suspend-hibernate-fallback.patch: Send
+    PrepareFor{Sleep,Shutdown}() signals with "false" after the operation
+    finished. Thanks to Iain Lane for the initial patch! (LP: #1157122)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 26 Mar 2013 11:08:39 +0100
+
 systemd (198-0ubuntu8) raring; urgency=low
 
   * Add gir addon, to call dh_girepository to get the gir:Depends
