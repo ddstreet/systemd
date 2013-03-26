@@ -1067,6 +1067,8 @@ static int execute_shutdown_or_sleep_fallback(
     return system(cmd);
 }
 
+static int send_prepare_for(Manager *m, InhibitWhat w, bool _active);
+
 static int execute_shutdown_or_sleep(
                 Manager *m,
                 InhibitWhat w,
@@ -1099,7 +1101,19 @@ static int execute_shutdown_or_sleep(
         if (r < 0) {
             log_info("execute_shutdown_or_sleep: failed to call org.freedesktop.systemd1, using fallback: %s", bus_error_message(error));
             dbus_error_free(error);
-            return execute_shutdown_or_sleep_fallback(m, unit_name);
+
+            r = execute_shutdown_or_sleep_fallback(m, unit_name);
+
+            /* In the fallback case, we're running standalone logind and so the
+             * 'false' events won't be sent for us by the job finishing. Send
+             * them explicitly here as the best thing we can do. */
+            send_prepare_for (m, w, false);
+
+            free(m->action_job);
+            m->action_job = NULL;
+            m->action_unit = NULL;
+            m->action_what = 0;
+            return r;
         }
 
         if (!dbus_message_get_args(
