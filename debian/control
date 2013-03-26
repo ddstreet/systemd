@@ -1,8 +1,7 @@
 Source: systemd
 Section: admin
 Priority: extra
-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-XSBC-Original-Maintainer: Tollef Fog Heen <tfheen@debian.org>
+Maintainer: Tollef Fog Heen <tfheen@debian.org>
 Standards-Version: 3.9.2
 Vcs-Git: git://anonscm.debian.org/pkg-systemd/systemd.git -b debian
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-systemd/systemd.git;a=summary

@@ -1,3 +1,3 @@
 Tests: timedated hostnamed localed logind
-Depends: systemd-services, acl
+Depends: systemd-services, libpam-systemd, acl
 Restrictions: needs-root
