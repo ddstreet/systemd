@@ -383,11 +383,7 @@ dist_systemunit_DATA = \
 	units/systemd-udevd-control.socket \
 	units/systemd-udevd-kernel.socket \
 	units/system-update.target \
-	units/initrd-parse-etc.service \
-	units/initrd-cleanup.service \
-	units/initrd-switch-root.target \
-	units/initrd-udevadm-cleanup-db.service \
-	units/initrd-switch-root.service
+	units/initrd-switch-root.target
 
 nodist_systemunit_DATA = \
 	units/getty@.service \
@@ -419,7 +415,11 @@ nodist_systemunit_DATA = \
 	units/systemd-udevd.service \
 	units/systemd-udev-trigger.service \
 	units/systemd-udev-settle.service \
-	units/debug-shell.service
+	units/debug-shell.service \
+	units/initrd-parse-etc.service \
+	units/initrd-cleanup.service \
+	units/initrd-udevadm-cleanup-db.service \
+	units/initrd-switch-root.service
 
 dist_userunit_DATA = \
 	units/user/default.target \
@@ -461,6 +461,10 @@ EXTRA_DIST += \
 	units/systemd-hybrid-sleep.service.in \
 	units/systemd-suspend.service.in \
 	units/quotaon.service.in \
+	units/initrd-parse-etc.service.in \
+	units/initrd-cleanup.service.in \
+	units/initrd-udevadm-cleanup-db.service.in \
+	units/initrd-switch-root.service.in \
 	introspect.awk \
 	man/custom-html.xsl
 
