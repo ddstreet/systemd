@@ -18,7 +18,7 @@ usr/share/bash-completion/completions/hostnamectl
 usr/share/bash-completion/completions/timedatectl
 usr/share/bash-completion/completions/localectl
 usr/share/bash-completion/completions/loginctl
-usr/share/dbus-1/system-services/org.freedesktop.login1.service
+#usr/share/dbus-1/system-services/org.freedesktop.login1.service
 usr/share/dbus-1/system-services/org.freedesktop.hostname1.service
 usr/share/dbus-1/system-services/org.freedesktop.locale1.service
 usr/share/dbus-1/system-services/org.freedesktop.timedate1.service
