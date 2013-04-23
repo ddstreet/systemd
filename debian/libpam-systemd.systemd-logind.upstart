@@ -10,6 +10,10 @@ respawn
 env SYSTEMD_LOG_TARGET=syslog
 
 pre-start script
+    # only start if PAM module is actually available, not if libpam-systemd is
+    # removed but not purged
+    [ -e /lib/*/security/pam_systemd.so ] || { stop; exit 0; }
+
     # this is being done by systemd or mountall usually, but not during
     # upgrades from earlier distro releases
     if ! mountpoint -q /sys/fs/cgroup; then

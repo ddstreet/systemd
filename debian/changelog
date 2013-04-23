@@ -1,3 +1,10 @@
+systemd (198-0ubuntu11) raring; urgency=low
+
+  * debian/libpam-systemd.systemd-logind.upstart: Don't start if
+    libpam-systemd is removed but not purged. (LP: #1171691)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 23 Apr 2013 07:38:20 +0200
+
 systemd (198-0ubuntu10) raring; urgency=low
 
   * debian/systemd-services.install: Don't install the D-BUS activation file
