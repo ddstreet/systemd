@@ -1,3 +1,16 @@
+systemd (198-0ubuntu12) saucy; urgency=low
+
+  [ Martin Pitt ]
+  * debian/rules: Don't build ddebs for blacklisted binary packages.
+  * debian/systemd-services.install: Put back logind D-BUS activation file,
+    now that we will use logind by default.
+
+  [ Iain Lane ]
+  * Use the shutdown fallback for "poweroff.target" too; this is invoked by
+    org.freedesktop.login1.Manager.PowerOff (LP: #1171504)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sun, 28 Apr 2013 06:34:43 -0700
+
 systemd (198-0ubuntu11) raring; urgency=low
 
   * debian/libpam-systemd.systemd-logind.upstart: Don't start if
