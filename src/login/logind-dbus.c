@@ -1056,7 +1056,8 @@ static int execute_shutdown_or_sleep_fallback(
             cmd = "/usr/sbin/pm-hibernate";
     else if (streq(unit_name, "reboot.target"))
             cmd = "/sbin/reboot";
-    else if (streq(unit_name, "shutdown.target"))
+    else if (streq(unit_name, "shutdown.target") ||
+             streq(unit_name, "poweroff.target"))
             cmd = "/sbin/poweroff";
     else {
             log_error("execute_shutdown_or_sleep_fallback: unknown unit name %s", unit_name);
