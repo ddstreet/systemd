@@ -1088,7 +1088,6 @@ tests += \
 	test-strv \
 	test-path-util \
 	test-strxcpyx \
-	test-unit-name \
 	test-unit-file \
 	test-util \
 	test-date \
