@@ -1096,7 +1096,6 @@ tests += \
 	test-sched-prio \
 	test-calendarspec \
 	test-strip-tab-ansi \
-	test-cgroup-util \
 	test-prioq \
 	test-fileio \
 	test-time

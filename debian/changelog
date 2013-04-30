@@ -1,3 +1,12 @@
+systemd (202-0ubuntu2) saucy; urgency=low
+
+  * Merge 0019-disable-unit-name-test.patch and
+    0021-disable-catalog-test.patch to
+    0019-disable-failing-buildd-tests.patch, and disable the cgroup-util as
+    well (which fails on the buildds, too).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 30 Apr 2013 08:40:07 -0700
+
 systemd (202-0ubuntu1) saucy; urgency=low
 
   * New upstream release.
@@ -12,7 +21,7 @@ systemd (202-0ubuntu1) saucy; urgency=low
   * Disable 0004-Don-t-run-systemd-udev-rules-if-systemd-is-not-activ.patch.
     We'll drop udev-acl and use uaccess exclusively.
 
- -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 29 Apr 2013 17:29:24 -0700
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 29 Apr 2013 17:15:47 -0700
 
 systemd (198-0ubuntu12) saucy; urgency=low
 
