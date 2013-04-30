@@ -31,9 +31,11 @@
 #include "util.h"
 #include "sd-journal.h"
 #include "sd-daemon.h"
+#include "sd-bus.h"
+#include "bus-message.h"
+#include "bus-internal.h"
 #include "logs-show.h"
 #include "microhttpd-util.h"
-#include "virt.h"
 #include "build.h"
 #include "fileio.h"
 
@@ -109,7 +111,6 @@ static int open_journal(RequestMeta *m) {
 
         return sd_journal_open(&m->journal, SD_JOURNAL_LOCAL_ONLY|SD_JOURNAL_SYSTEM_ONLY);
 }
-
 
 static int respond_oom_internal(struct MHD_Connection *connection) {
         struct MHD_Response *response;
@@ -334,7 +335,7 @@ static int request_parse_range(
 
                 colon2 = strchr(colon + 1, ':');
                 if (colon2) {
-                        char _cleanup_free_ *t;
+                        _cleanup_free_ char *t;
 
                         t = strndup(colon + 1, colon2 - colon - 1);
                         if (!t)
@@ -741,6 +742,48 @@ static int request_handler_file(
         return ret;
 }
 
+static int get_virtualization(char **v) {
+        _cleanup_bus_message_unref_ sd_bus_message *reply = NULL;
+        _cleanup_bus_unref_ sd_bus *bus = NULL;
+        const char *t;
+        char *b;
+        int r;
+
+        r = sd_bus_open_system(&bus);
+        if (r < 0)
+                return r;
+
+        r = sd_bus_call_method(
+                        bus,
+                        "org.freedesktop.systemd1",
+                        "/org/freedesktop/systemd1",
+                        "org.freedesktop.DBus.Properties",
+                        "Get",
+                        NULL,
+                        &reply,
+                        "ss",
+                        "org.freedesktop.systemd1.Manager",
+                        "Virtualization");
+        if (r < 0)
+                return r;
+
+        r = sd_bus_message_read(reply, "v", "s", &t);
+        if (r < 0)
+                return r;
+
+        if (isempty(t)) {
+                *v = NULL;
+                return 0;
+        }
+
+        b = strdup(t);
+        if (!b)
+                return -ENOMEM;
+
+        *v = b;
+        return 1;
+}
+
 static int request_handler_machine(
                 struct MHD_Connection *connection,
                 void *connection_cls) {
@@ -752,7 +795,7 @@ static int request_handler_machine(
         uint64_t cutoff_from, cutoff_to, usage;
         char *json;
         sd_id128_t mid, bid;
-        const char *v = "bare";
+        _cleanup_free_ char *v = NULL;
 
         assert(connection);
         assert(m);
@@ -783,7 +826,7 @@ static int request_handler_machine(
 
         parse_env_file("/etc/os-release", NEWLINE, "PRETTY_NAME", &os_name, NULL);
 
-        detect_virtualization(&v);
+        get_virtualization(&v);
 
         r = asprintf(&json,
                      "{ \"machine_id\" : \"" SD_ID128_FORMAT_STR "\","
@@ -798,7 +841,7 @@ static int request_handler_machine(
                      SD_ID128_FORMAT_VAL(bid),
                      hostname_cleanup(hostname),
                      os_name ? os_name : "Linux",
-                     v,
+                     v ? v : "bare",
                      (unsigned long long) usage,
                      (unsigned long long) cutoff_from,
                      (unsigned long long) cutoff_to);

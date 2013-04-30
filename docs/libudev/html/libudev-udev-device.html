@@ -79,6 +79,9 @@ const <span class="returnvalue">char</span> *        <a class="link" href="libud
 const <span class="returnvalue">char</span> *        <a class="link" href="libudev-udev-device.html#udev-device-get-action" title="udev_device_get_action ()">udev_device_get_action</a>              (<em class="parameter"><code><span class="type">struct udev_device</span> *udev_device</code></em>);
 const <span class="returnvalue">char</span> *        <a class="link" href="libudev-udev-device.html#udev-device-get-sysattr-value" title="udev_device_get_sysattr_value ()">udev_device_get_sysattr_value</a>       (<em class="parameter"><code><span class="type">struct udev_device</span> *udev_device</code></em>,
                                                          <em class="parameter"><code>const <span class="type">char</span> *sysattr</code></em>);
+<span class="returnvalue">int</span>                 <a class="link" href="libudev-udev-device.html#udev-device-set-sysattr-value" title="udev_device_set_sysattr_value ()">udev_device_set_sysattr_value</a>       (<em class="parameter"><code><span class="type">struct udev_device</span> *udev_device</code></em>,
+                                                         <em class="parameter"><code>const <span class="type">char</span> *sysattr</code></em>,
+                                                         <em class="parameter"><code><span class="type">char</span> *value</code></em>);
 struct <a class="link" href="libudev-udev-list.html#udev-list-entry" title="struct udev_list_entry"><span class="returnvalue">udev_list_entry</span></a> * <a class="link" href="libudev-udev-device.html#udev-device-get-sysattr-list-entry" title="udev_device_get_sysattr_list_entry ()">udev_device_get_sysattr_list_entry</a>
                                                         (<em class="parameter"><code><span class="type">struct udev_device</span> *udev_device</code></em>);
 unsigned long long <span class="returnvalue">int</span> <a class="link" href="libudev-udev-device.html#udev-device-get-seqnum" title="udev_device_get_seqnum ()">udev_device_get_seqnum</a>           (<em class="parameter"><code><span class="type">struct udev_device</span> *udev_device</code></em>);
@@ -872,6 +875,40 @@ value and not open the attribute again.
 <tr>
 <td><p><span class="term"><span class="emphasis"><em>Returns</em></span> :</span></p></td>
 <td>the content of a sys attribute file, or <span class="type">NULL</span> if there is no sys attribute value.</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<hr>
+<div class="refsect2">
+<a name="udev-device-set-sysattr-value"></a><h3>udev_device_set_sysattr_value ()</h3>
+<pre class="programlisting"><span class="returnvalue">int</span>                 udev_device_set_sysattr_value       (<em class="parameter"><code><span class="type">struct udev_device</span> *udev_device</code></em>,
+                                                         <em class="parameter"><code>const <span class="type">char</span> *sysattr</code></em>,
+                                                         <em class="parameter"><code><span class="type">char</span> *value</code></em>);</pre>
+<p>
+Update the contents of the sys attribute and the cached value of the device.
+</p>
+<div class="variablelist"><table border="0" class="variablelist">
+<colgroup>
+<col align="left" valign="top">
+<col>
+</colgroup>
+<tbody>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>udev_device</code></em> :</span></p></td>
+<td>udev device</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>sysattr</code></em> :</span></p></td>
+<td>attribute name</td>
+</tr>
+<tr>
+<td><p><span class="term"><em class="parameter"><code>value</code></em> :</span></p></td>
+<td>new value to be set</td>
+</tr>
+<tr>
+<td><p><span class="term"><span class="emphasis"><em>Returns</em></span> :</span></p></td>
+<td>Negative error code on failure or 0 on success.</td>
 </tr>
 </tbody>
 </table></div>

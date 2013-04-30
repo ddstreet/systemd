@@ -1,7 +1,7 @@
-From a2af6ad6f4e2edcb6f25f3b7cd9b36bd290fd67c Mon Sep 17 00:00:00 2001
+From 2fc25ba811344649f621223edcbb7719235b80ab Mon Sep 17 00:00:00 2001
 From: Tollef Fog Heen <tfheen@err.no>
 Date: Tue, 16 Oct 2012 18:39:27 +0200
-Subject: [PATCH 02/15] Avoid reloading services when shutting down
+Subject: [PATCH 02/10] Avoid reloading services when shutting down
 
 Doing so won't work and makes no sense.  Thanks to Michael Stapelberg
 for the patch.  Closes: #624599.
@@ -10,10 +10,10 @@ for the patch.  Closes: #624599.
  1 file changed, 26 insertions(+)
 
 diff --git a/src/core/manager.c b/src/core/manager.c
-index c261b25..483c0f6 100644
+index 208b240..c24c640 100644
 --- a/src/core/manager.c
 +++ b/src/core/manager.c
-@@ -899,6 +899,8 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
+@@ -885,6 +885,8 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
  int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool override, DBusError *e, Job **_ret) {
          int r;
          Transaction *tr;
@@ -22,7 +22,7 @@ index c261b25..483c0f6 100644
  
          assert(m);
          assert(type < _JOB_TYPE_MAX);
-@@ -910,6 +912,30 @@ int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool ove
+@@ -896,6 +898,30 @@ int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool ove
                  return -EINVAL;
          }
  

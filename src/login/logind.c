@@ -37,6 +37,7 @@
 #include "dbus-loop.h"
 #include "strv.h"
 #include "conf-parser.h"
+#include "mkdir.h"
 
 Manager *manager_new(void) {
         Manager *m;
@@ -1040,16 +1041,13 @@ int manager_get_session_by_cgroup(Manager *m, const char *cgroup, Session **sess
                 return 1;
         }
 
-        p = strdup(cgroup);
-        if (!p)
-                return log_oom();
+        p = strdupa(cgroup);
 
         for (;;) {
                 char *e;
 
                 e = strrchr(p, '/');
                 if (!e || e == p) {
-                        free(p);
                         *session = NULL;
                         return 0;
                 }
@@ -1058,7 +1056,6 @@ int manager_get_session_by_cgroup(Manager *m, const char *cgroup, Session **sess
 
                 s = hashmap_get(m->session_cgroups, p);
                 if (s) {
-                        free(p);
                         *session = s;
                         return 1;
                 }
@@ -1079,7 +1076,7 @@ int manager_get_user_by_cgroup(Manager *m, const char *cgroup, User **user) {
                 return 1;
         }
 
-        p = strdup(cgroup);
+        p = strdupa(cgroup);
         if (!p)
                 return log_oom();
 
@@ -1088,7 +1085,6 @@ int manager_get_user_by_cgroup(Manager *m, const char *cgroup, User **user) {
 
                 e = strrchr(p, '/');
                 if (!e || e == p) {
-                        free(p);
                         *user = NULL;
                         return 0;
                 }
@@ -1097,7 +1093,6 @@ int manager_get_user_by_cgroup(Manager *m, const char *cgroup, User **user) {
 
                 u = hashmap_get(m->user_cgroups, p);
                 if (u) {
-                        free(p);
                         *user = u;
                         return 1;
                 }
@@ -1105,21 +1100,18 @@ int manager_get_user_by_cgroup(Manager *m, const char *cgroup, User **user) {
 }
 
 int manager_get_session_by_pid(Manager *m, pid_t pid, Session **session) {
-        char *p;
+        _cleanup_free_ char *p = NULL;
         int r;
 
         assert(m);
         assert(pid >= 1);
         assert(session);
 
-        r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, pid, &p);
+        r = cg_pid_get_path(SYSTEMD_CGROUP_CONTROLLER, pid, &p);
         if (r < 0)
                 return r;
 
-        r = manager_get_session_by_cgroup(m, p, session);
-        free(p);
-
-        return r;
+        return manager_get_session_by_cgroup(m, p, session);
 }
 
 void manager_cgroup_notify_empty(Manager *m, const char *cgroup) {
@@ -1173,7 +1165,10 @@ static void manager_dispatch_other(Manager *m, int fd) {
 static int manager_connect_bus(Manager *m) {
         DBusError error;
         int r;
-        struct epoll_event ev;
+        struct epoll_event ev = {
+                .events = EPOLLIN,
+                .data.u32 = FD_BUS,
+        };
 
         assert(m);
         assert(!m->bus);
@@ -1229,10 +1224,6 @@ static int manager_connect_bus(Manager *m) {
                 goto fail;
         }
 
-        zero(ev);
-        ev.events = EPOLLIN;
-        ev.data.u32 = FD_BUS;
-
         if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->bus_fd, &ev) < 0)
                 goto fail;
 
@@ -1245,7 +1236,10 @@ fail:
 }
 
 static int manager_connect_console(Manager *m) {
-        struct epoll_event ev;
+        struct epoll_event ev = {
+                .events = 0,
+                .data.u32 = FD_CONSOLE,
+        };
 
         assert(m);
         assert(m->console_active_fd < 0);
@@ -1270,10 +1264,6 @@ static int manager_connect_console(Manager *m) {
                 return -errno;
         }
 
-        zero(ev);
-        ev.events = 0;
-        ev.data.u32 = FD_CONSOLE;
-
         if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->console_active_fd, &ev) < 0)
                 return -errno;
 
@@ -1281,8 +1271,11 @@ static int manager_connect_console(Manager *m) {
 }
 
 static int manager_connect_udev(Manager *m) {
-        struct epoll_event ev;
         int r;
+        struct epoll_event ev = {
+                .events = EPOLLIN,
+                .data.u32 = FD_SEAT_UDEV,
+        };
 
         assert(m);
         assert(!m->udev_seat_monitor);
@@ -1303,9 +1296,6 @@ static int manager_connect_udev(Manager *m) {
 
         m->udev_seat_fd = udev_monitor_get_fd(m->udev_seat_monitor);
 
-        zero(ev);
-        ev.events = EPOLLIN;
-        ev.data.u32 = FD_SEAT_UDEV;
         if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->udev_seat_fd, &ev) < 0)
                 return -errno;
 
@@ -1446,7 +1436,7 @@ int manager_get_idle_hint(Manager *m, dual_timestamp *t) {
 
 int manager_dispatch_idle_action(Manager *m) {
         struct dual_timestamp since;
-        struct itimerspec its;
+        struct itimerspec its = {};
         int r;
         usec_t n;
 
@@ -1458,7 +1448,6 @@ int manager_dispatch_idle_action(Manager *m) {
                 goto finish;
         }
 
-        zero(its);
         n = now(CLOCK_MONOTONIC);
 
         r = manager_get_idle_hint(m, &since);
@@ -1481,7 +1470,10 @@ int manager_dispatch_idle_action(Manager *m) {
         }
 
         if (m->idle_action_fd < 0) {
-                struct epoll_event ev;
+                struct epoll_event ev = {
+                        .events = EPOLLIN,
+                        .data.u32 = FD_IDLE_ACTION,
+                };
 
                 m->idle_action_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK|TFD_CLOEXEC);
                 if (m->idle_action_fd < 0) {
@@ -1489,10 +1481,6 @@ int manager_dispatch_idle_action(Manager *m) {
                         r = -errno;
                         goto finish;
                 }
-
-                zero(ev);
-                ev.events = EPOLLIN;
-                ev.data.u32 = FD_IDLE_ACTION;
 
                 if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->idle_action_fd, &ev) < 0) {
                         log_error("Failed to add idle action timer to epoll: %m");
@@ -1701,7 +1689,7 @@ static int manager_parse_config_file(Manager *m) {
                 return -errno;
         }
 
-        r = config_parse(fn, f, "Login\0", config_item_perf_lookup, (void*) logind_gperf_lookup, false, m);
+        r = config_parse(NULL, fn, f, "Login\0", config_item_perf_lookup, (void*) logind_gperf_lookup, false, m);
         if (r < 0)
                 log_warning("Failed to parse configuration file: %s", strerror(-r));
 
@@ -1726,6 +1714,15 @@ int main(int argc, char *argv[]) {
                 r = -EINVAL;
                 goto finish;
         }
+
+        /* Always create the directories people can create inotify
+         * watches in. Note that some applications might check for the
+         * existence of /run/systemd/seats/ to determine whether
+         * logind is available, so please always make sure this check
+         * stays in. */
+        mkdir_label("/run/systemd/seats", 0755);
+        mkdir_label("/run/systemd/users", 0755);
+        mkdir_label("/run/systemd/sessions", 0755);
 
         m = manager_new();
         if (!m) {

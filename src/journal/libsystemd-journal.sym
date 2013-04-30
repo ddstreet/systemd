@@ -93,3 +93,14 @@ LIBSYSTEMD_JOURNAL_198 {
 global:
         sd_journal_reliable_fd;
 } LIBSYSTEMD_JOURNAL_196;
+
+LIBSYSTEMD_JOURNAL_201 {
+global:
+        sd_journal_get_events;
+        sd_journal_get_timeout;
+} LIBSYSTEMD_JOURNAL_198;
+
+LIBSYSTEMD_JOURNAL_202 {
+global:
+        sd_journal_add_conjunction;
+} LIBSYSTEMD_JOURNAL_201;

@@ -31,8 +31,10 @@
 #include "journald-console.h"
 #include "journald-syslog.h"
 
-#define ENTRY_SIZE_MAX (1024*1024*64)
-#define DATA_SIZE_MAX (1024*1024*64)
+/* Make sure not to make this smaller than the maximum coredump
+ * size. See COREDUMP_MAX in coredump.c */
+#define ENTRY_SIZE_MAX (1024*1024*768)
+#define DATA_SIZE_MAX (1024*1024*768)
 
 static bool valid_user_field(const char *p, size_t l) {
         const char *a;
@@ -121,11 +123,12 @@ void server_process_native_message(
 
                 /* A property follows */
 
-                if (n+N_IOVEC_META_FIELDS >= m) {
+                /* n received properties, +1 for _TRANSPORT */
+                if (n + 1 + N_IOVEC_META_FIELDS >= m) {
                         struct iovec *c;
                         unsigned u;
 
-                        u = MAX((n+N_IOVEC_META_FIELDS+1) * 2U, 4U);
+                        u = MAX((n + 1 + N_IOVEC_META_FIELDS) * 2U, 4U);
                         c = realloc(iovec, u * sizeof(struct iovec));
                         if (!c) {
                                 log_oom();

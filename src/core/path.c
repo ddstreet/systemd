@@ -31,7 +31,7 @@
 #include "mkdir.h"
 #include "dbus-path.h"
 #include "special.h"
-#include "bus-errors.h"
+#include "dbus-common.h"
 #include "path-util.h"
 #include "macro.h"
 
@@ -53,7 +53,6 @@ int path_spec_watch(PathSpec *s, Unit *u) {
         };
 
         bool exists = false;
-        char _cleanup_free_ *path = NULL;
         char *slash, *oldslash = NULL;
         int r;
 
@@ -61,10 +60,6 @@ int path_spec_watch(PathSpec *s, Unit *u) {
         assert(s);
 
         path_spec_unwatch(s, u);
-
-        path = strdup(s->path);
-        if (!path)
-                return -ENOMEM;
 
         s->inotify_fd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC);
         if (s->inotify_fd < 0) {
@@ -78,25 +73,32 @@ int path_spec_watch(PathSpec *s, Unit *u) {
 
         /* This assumes the path was passed through path_kill_slashes()! */
 
-        for(slash = strchr(path, '/'); ; slash = strchr(slash+1, '/')) {
+        for (slash = strchr(s->path, '/'); ; slash = strchr(slash+1, '/')) {
+                char *cut = NULL;
                 int flags;
                 char tmp;
 
                 if (slash) {
-                        tmp = slash[slash == path];
-                        slash[slash == path] = '\0';
+                        cut = slash + (slash == s->path);
+                        tmp = *cut;
+                        *cut = '\0';
+
                         flags = IN_MOVE_SELF | IN_DELETE_SELF | IN_ATTRIB | IN_CREATE | IN_MOVED_TO;
-                } else {
+                } else
                         flags = flags_table[s->type];
-                }
 
-                r = inotify_add_watch(s->inotify_fd, path, flags);
+                r = inotify_add_watch(s->inotify_fd, s->path, flags);
                 if (r < 0) {
-                        if (errno == EACCES || errno == ENOENT)
+                        if (errno == EACCES || errno == ENOENT) {
+                                if (cut)
+                                        *cut = tmp;
                                 break;
+                        }
 
-                        log_warning("Failed to add watch on %s: %m", path);
+                        log_warning("Failed to add watch on %s: %m", s->path);
                         r = -errno;
+                        if (cut)
+                                *cut = tmp;
                         goto fail;
                 } else {
                         exists = true;
@@ -104,28 +106,29 @@ int path_spec_watch(PathSpec *s, Unit *u) {
                         /* Path exists, we don't need to watch parent
                            too closely. */
                         if (oldslash) {
-                                char tmp2 = oldslash[oldslash == path];
-                                oldslash[oldslash == path] = '\0';
+                                char *cut2 = oldslash + (oldslash == s->path);
+                                char tmp2 = *cut2;
+                                *cut2 = '\0';
 
-                                inotify_add_watch(s->inotify_fd, path, IN_MOVE_SELF);
+                                inotify_add_watch(s->inotify_fd, s->path, IN_MOVE_SELF);
                                 /* Error is ignored, the worst can happen is
                                    we get spurious events. */
 
-                                oldslash[oldslash == path] = tmp2;
+                                *cut2 = tmp2;
                         }
                 }
 
-                if (slash) {
-                        slash[slash == path] = tmp;
+                if (cut)
+                        *cut = tmp;
+
+                if (slash)
                         oldslash = slash;
-                } else {
+                else {
                         /* whole path has been iterated over */
                         s->primary_wd = r;
                         break;
                 }
         }
-
-        assert(errno == EACCES || errno == ENOENT || streq(path, s->path));
 
         if (!exists) {
                 log_error("Failed to add watch on any of the components of %s: %m",
@@ -153,7 +156,7 @@ void path_spec_unwatch(PathSpec *s, Unit *u) {
 }
 
 int path_spec_fd_event(PathSpec *s, uint32_t events) {
-        uint8_t _cleanup_free_ *buf = NULL;
+        _cleanup_free_ uint8_t *buf = NULL;
         struct inotify_event *e;
         ssize_t k;
         int l;
@@ -358,12 +361,12 @@ static int path_add_default_dependencies(Path *p) {
 
         assert(p);
 
-        if (UNIT(p)->manager->running_as == SYSTEMD_SYSTEM) {
-                r = unit_add_dependency_by_name(UNIT(p), UNIT_BEFORE,
-                                                SPECIAL_BASIC_TARGET, NULL, true);
-                if (r < 0)
-                        return r;
+        r = unit_add_dependency_by_name(UNIT(p), UNIT_BEFORE,
+                                        SPECIAL_PATHS_TARGET, NULL, true);
+        if (r < 0)
+                return r;
 
+        if (UNIT(p)->manager->running_as == SYSTEMD_SYSTEM) {
                 r = unit_add_two_dependencies_by_name(UNIT(p), UNIT_AFTER, UNIT_REQUIRES,
                                                       SPECIAL_SYSINIT_TARGET, NULL, true);
                 if (r < 0)

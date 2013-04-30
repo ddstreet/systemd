@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.service — Service unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code></p></div><div class="refsect1"><a name="idp3964272"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.service — Service unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code></p></div><div class="refsect1"><a name="idp3777728"></a><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.service</code> encodes information
                 about a process controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -42,7 +42,7 @@
                 comprehensive but not 100%. For details about the
                 incompatibilities see the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/Incompatibilities" target="_top">Incompatibilities
                 with SysV</a> document.
-                </p></div><div class="refsect1"><a name="idp23504"></a><h2>Options</h2><p>Service files must include a
+                </p></div><div class="refsect1"><a name="idp4800992"></a><h2>Options</h2><p>Service files must include a
                 <code class="literal">[Service]</code> section, which carries
                 information about the service and the process it
                 supervises. A number of options that may be used in
@@ -181,7 +181,9 @@
                                 arguments that are executed when this
                                 service is started. The first
                                 argument must be an absolute path
-                                name.</p><p>When
+                                name.</p><p>When <code class="varname">Type</code> is
+                                not <code class="option">oneshot</code>, only one
+                                command may be given. When
                                 <code class="varname">Type=oneshot</code> is
                                 used, more than one command may be
                                 specified. Multiple command lines may
@@ -195,18 +197,19 @@
                                 for compatibility with parsers
                                 suitable for XDG
                                 <code class="filename">.desktop</code> files.
-                                The commands are invoked one by one
-                                sequentially in the order they appear
-                                in the unit file.  When
-                                <code class="varname">Type</code> is not
-                                <code class="option">oneshot</code>, only one
-                                command may be given. Lone semicolons
-                                may be escaped as
+                                Lone semicolons may be escaped as
                                 '<code class="literal">\;</code>'. If the empty
                                 string is assigned to this option the
                                 list of commands to start is reset,
                                 prior assignments of this option will
-                                have no effect.</p><p>Unless
+                                have no effect.</p><p>If more than one command is
+                                specified, the commands are invoked
+                                one by one sequentially in the order
+                                they appear in the unit file. If one
+                                of the commands fails (and is not
+                                prefixed with '<code class="literal">-</code>'),
+                                other lines are not executed and the
+                                unit is considered failed.</p><p>Unless
                                 <code class="varname">Type=forking</code> is
                                 set, the process started via this
                                 command line will be considered the
@@ -216,9 +219,8 @@
                                 <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>. Note
                                 that the first argument of the command
                                 line (i.e. the program to execute) may
-                                not include specifiers.</p><p>On top of that basic environment
-                                variable substitution is
-                                supported. Use
+                                not include specifiers.</p><p>Basic environment variable
+                                substitution is supported. Use
                                 <code class="literal">${FOO}</code> as part of a
                                 word, or as a word of its own on the
                                 command line, in which case it will be
@@ -230,8 +232,8 @@
                                 word on the command line, in which
                                 case it will be replaced by the value
                                 of the environment variable split up
-                                at whitespace, resulting in no or more
-                                arguments. Note that the first
+                                at whitespace, resulting in zero or
+                                more arguments. Note that the first
                                 argument (i.e. the program to execute)
                                 may not be a variable, since it must
                                 be a literal and absolute path
@@ -255,11 +257,11 @@
                                 lines. If shell command lines are to
                                 be used they need to be passed
                                 explicitly to a shell implementation
-                                of some kind. Example:
-                                <code class="literal">ExecStart=/bin/sh -c 'dmesg | tac'</code></p><p>For services run by a user
+                                of some kind. Example:</p><pre class="programlisting">ExecStart=/bin/sh -c 'dmesg | tac'
+                                </pre><p>For services run by a user
                                 instance of systemd the special
                                 environment variable
-                                <code class="literal">MANAGERPID</code> is set
+                                <code class="varname">$MANAGERPID</code> is set
                                 to the PID of the systemd
                                 instance.</p></dd><dt><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span></dt><dd><p>Additional commands
                                 that are executed before or after
@@ -269,7 +271,10 @@
                                 <code class="varname">ExecStart=</code>, except
                                 that multiple command lines are allowed
                                 and the commands are executed one
-                                after the other, serially.</p></dd><dt><span class="term"><code class="varname">ExecReload=</code></span></dt><dd><p>Commands to execute to
+                                after the other, serially.</p><p>If any of those commands (not
+                                prefixed with '<code class="literal">-</code>')
+                                fail, the rest are not executed and
+                                the unit is considered failed.</p></dd><dt><span class="term"><code class="varname">ExecReload=</code></span></dt><dd><p>Commands to execute to
                                 trigger a configuration reload in the
                                 service. This argument takes multiple
                                 command lines, following the same
@@ -279,14 +284,12 @@
                                 optional. Specifier and environment
                                 variable substitution is supported
                                 here following the same scheme as for
-                                <code class="varname">ExecStart=</code>. One
-                                additional special environment
-                                variables is set: if known
-                                <code class="literal">$MAINPID</code> is set to
+                                <code class="varname">ExecStart=</code>.</p><p>One additional special
+                                environment variables is set: if known
+                                <code class="varname">$MAINPID</code> is set to
                                 the main process of the daemon, and
                                 may be used for command lines like the
-                                following: <span class="command"><strong>/bin/kill -HUP
-                                $MAINPID</strong></span>.</p></dd><dt><span class="term"><code class="varname">ExecStop=</code></span></dt><dd><p>Commands to execute to
+                                following:</p><pre class="programlisting">/bin/kill -HUP $MAINPID</pre></dd><dt><span class="term"><code class="varname">ExecStop=</code></span></dt><dd><p>Commands to execute to
                                 stop the service started via
                                 <code class="varname">ExecStart=</code>. This
                                 argument takes multiple command lines,
@@ -305,12 +308,15 @@
                                 service stop is requested. Specifier
                                 and environment variable substitution
                                 is supported (including
-                                <code class="literal">$MAINPID</code>, see
+                                <code class="varname">$MAINPID</code>, see
                                 above).</p></dd><dt><span class="term"><code class="varname">ExecStopPost=</code></span></dt><dd><p>Additional commands
                                 that are executed after the service
-                                was stopped using the commands
-                                configured in
-                                <code class="varname">ExecStop=</code>. This
+                                was stopped. This includes cases where
+                                the commands configured in
+                                <code class="varname">ExecStop=</code> were used,
+                                where the service doesn't have any
+                                <code class="varname">ExecStop=</code> defined, or
+                                where the service exited unexpectedly. This
                                 argument takes multiple command lines,
                                 following the same scheme as described
                                 for <code class="varname">ExecStart</code>. Use
@@ -633,7 +639,7 @@
                 <a href="systemd.exec.html"><span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span></a>
                 and
                 <a href="systemd.kill.html"><span class="citerefentry"><span class="refentrytitle">systemd.kill</span>(5)</span></a>
-                for more settings.</p></div><div class="refsect1"><a name="idp5156816"></a><h2>Compatibility Options</h2><p>The following options are also available in the
+                for more settings.</p></div><div class="refsect1"><a name="idp1908608"></a><h2>Compatibility Options</h2><p>The following options are also available in the
                 <code class="literal">[Service]</code> section, but exist purely
                 for compatibility reasons and should not be used in
                 newly written service files.</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">SysVStartPriority=</code></span></dt><dd><p>Set the SysV start
@@ -676,7 +682,7 @@
                                 <code class="filename">/etc/fstab</code>'s
                                 fs_passno column. See
                                 <a href="fstab.html"><span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span></a>
-                                for details.</p></dd></dl></div></div><div class="refsect1"><a name="idp5169696"></a><h2>See Also</h2><p>
+                                for details.</p></dd></dl></div></div><div class="refsect1"><a name="idp4899456"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                           <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,

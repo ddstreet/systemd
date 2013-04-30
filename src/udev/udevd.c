@@ -98,7 +98,9 @@ struct event {
         dev_t devnum;
         int ifindex;
         bool is_block;
+#ifdef HAVE_FIRMWARE
         bool nodelay;
+#endif
 };
 
 static inline struct event *node_to_event(struct udev_list_node *node)
@@ -265,7 +267,7 @@ static void worker_new(struct event *event)
                 prctl(PR_SET_PDEATHSIG, SIGTERM);
 
                 /* reset OOM score, we only protect the main daemon */
-                write_one_line_file("/proc/self/oom_score_adj", "0");
+                write_string_file("/proc/self/oom_score_adj", "0");
 
                 for (;;) {
                         struct udev_event *udev_event;
@@ -442,8 +444,10 @@ static int event_queue_insert(struct udev_device *dev)
         event->devnum = udev_device_get_devnum(dev);
         event->is_block = streq("block", udev_device_get_subsystem(dev));
         event->ifindex = udev_device_get_ifindex(dev);
+#ifdef HAVE_FIRMWARE
         if (streq(udev_device_get_subsystem(dev), "firmware"))
                 event->nodelay = true;
+#endif
 
         udev_queue_export_device_queued(udev_queue_export, dev);
         log_debug("seq %llu queued, '%s' '%s'\n", udev_device_get_seqnum(dev),
@@ -523,9 +527,11 @@ static bool is_devpath_busy(struct event *event)
                         return true;
                 }
 
+#ifdef HAVE_FIRMWARE
                 /* allow to bypass the dependency tracking */
                 if (event->nodelay)
                         continue;
+#endif
 
                 /* parent device event found */
                 if (event->devpath[common] == '/') {
@@ -813,7 +819,11 @@ static void static_dev_create_from_modules(struct udev *udev)
         char buf[4096];
         FILE *f;
 
-        uname(&kernel);
+        if (uname(&kernel) < 0) {
+                log_error("uname failed: %m");
+                return;
+        }
+
         strscpyl(modules, sizeof(modules), ROOTPREFIX "/lib/modules/", kernel.release, "/modules.devname", NULL);
         f = fopen(modules, "re");
         if (f == NULL)
@@ -871,29 +881,6 @@ static void static_dev_create_from_modules(struct udev *udev)
         }
 
         fclose(f);
-}
-
-static int mem_size_mb(void)
-{
-        FILE *f;
-        char buf[4096];
-        long int memsize = -1;
-
-        f = fopen("/proc/meminfo", "re");
-        if (f == NULL)
-                return -1;
-
-        while (fgets(buf, sizeof(buf), f) != NULL) {
-                long int value;
-
-                if (sscanf(buf, "MemTotal: %ld kB", &value) == 1) {
-                        memsize = value / 1024;
-                        break;
-                }
-        }
-
-        fclose(f);
-        return memsize;
 }
 
 static int systemd_fds(struct udev *udev, int *rctrl, int *rnetlink)
@@ -1117,7 +1104,7 @@ int main(int argc, char *argv[])
                 }
 
                 /* get our own cgroup, we regularly kill everything udev has left behind */
-                if (cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 0, &udev_cgroup) < 0)
+                if (cg_pid_get_path(SYSTEMD_CGROUP_CONTROLLER, 0, &udev_cgroup) < 0)
                         udev_cgroup = NULL;
         } else {
                 /* open control and netlink socket */
@@ -1181,7 +1168,7 @@ int main(int argc, char *argv[])
 
                 setsid();
 
-                write_one_line_file("/proc/self/oom_score_adj", "-1000");
+                write_string_file("/proc/self/oom_score_adj", "-1000");
         } else {
                 sd_notify(1, "READY=1");
         }
@@ -1272,13 +1259,13 @@ int main(int argc, char *argv[])
         }
 
         if (children_max <= 0) {
-                int memsize = mem_size_mb();
+                cpu_set_t cpu_set;
 
-                /* set value depending on the amount of RAM */
-                if (memsize > 0)
-                        children_max = 16 + (memsize / 8);
-                else
-                        children_max = 16;
+                children_max = 8;
+
+                if (sched_getaffinity(0, sizeof (cpu_set), &cpu_set) == 0) {
+                        children_max +=  CPU_COUNT(&cpu_set) * 2;
+                }
         }
         log_debug("set children_max to %u\n", children_max);
 

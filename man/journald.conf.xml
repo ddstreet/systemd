@@ -183,7 +183,7 @@
                                 messages is generated. This rate
                                 limiting is applied per-service, so
                                 that two services which log do not
-                                interfere with each others'
+                                interfere with each other's
                                 limits. Defaults to 200 messages in
                                 10s. The time specification for
                                 <varname>RateLimitInterval=</varname>
@@ -320,6 +320,16 @@
                                 the units year, month, week, day, h, m
                                 to override the default time unit of
                                 seconds. </para></listitem>
+                        </varlistentry>
+
+
+                        <varlistentry>
+                                <term><varname>SyncIntervalSec=</varname></term>
+
+                                <listitem><para>The timeout before syncing journal
+                                data to disk. After syncing journal files have
+                                OFFLINE state. Default timeout is 5 minutes.
+                                </para></listitem>
                         </varlistentry>
 
                         <varlistentry>

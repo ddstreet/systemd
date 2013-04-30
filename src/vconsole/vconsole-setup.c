@@ -57,7 +57,7 @@ static int disable_utf8(int fd) {
         if (loop_write(fd, "\033%@", 3, false) < 0)
                 r = -errno;
 
-        k = write_one_line_file("/sys/module/vt/parameters/default_utf8", "0");
+        k = write_string_file("/sys/module/vt/parameters/default_utf8", "0");
         if (k < 0)
                 r = k;
 
@@ -89,7 +89,7 @@ static int enable_utf8(int fd) {
         if (loop_write(fd, "\033%G", 3, false) < 0)
                 r = -errno;
 
-        k = write_one_line_file("/sys/module/vt/parameters/default_utf8", "1");
+        k = write_string_file("/sys/module/vt/parameters/default_utf8", "1");
         if (k < 0)
                 r = k;
 
@@ -179,20 +179,18 @@ static int font_load(const char *vc, const char *font, const char *map, const ch
  * to apply a new font to all VTs.
  */
 static void font_copy_to_all_vcs(int fd) {
-        struct vt_stat vcs;
-        int i;
-        int r;
+        struct vt_stat vcs = {};
+        int i, r;
 
         /* get active, and 16 bit mask of used VT numbers */
-        zero(vcs);
         r = ioctl(fd, VT_GETSTATE, &vcs);
         if (r < 0)
                 return;
 
         for (i = 1; i <= 15; i++) {
                 char vcname[16];
-                int vcfd;
-                struct console_font_op cfo;
+                _cleanup_close_ int vcfd = -1;
+                struct console_font_op cfo = {};
 
                 if (i == vcs.v_active)
                         continue;
@@ -208,12 +206,9 @@ static void font_copy_to_all_vcs(int fd) {
                         continue;
 
                 /* copy font from active VT, where the font was uploaded to */
-                zero(cfo);
                 cfo.op = KD_FONT_OP_COPY;
                 cfo.height = vcs.v_active-1; /* tty1 == index 0 */
                 ioctl(vcfd, KDFONTOP, &cfo);
-
-                close_nointr_nofail(vcfd);
         }
 }
 
@@ -256,8 +251,18 @@ int main(int argc, char **argv) {
 
         utf8 = is_locale_utf8();
 
-        r = 0;
+        r = parse_env_file("/etc/vconsole.conf", NEWLINE,
+                           "KEYMAP", &vc_keymap,
+                           "KEYMAP_TOGGLE", &vc_keymap_toggle,
+                           "FONT", &vc_font,
+                           "FONT_MAP", &vc_font_map,
+                           "FONT_UNIMAP", &vc_font_unimap,
+                           NULL);
 
+        if (r < 0 && r != -ENOENT)
+                log_warning("Failed to read /etc/vconsole.conf: %s", strerror(-r));
+
+        /* Let the kernel command line override /etc/vconsole.conf */
         if (detect_container(NULL) <= 0) {
                 r = parse_env_file("/proc/cmdline", WHITESPACE,
                                    "vconsole.keymap", &vc_keymap,
@@ -269,21 +274,6 @@ int main(int argc, char **argv) {
 
                 if (r < 0 && r != -ENOENT)
                         log_warning("Failed to read /proc/cmdline: %s", strerror(-r));
-        }
-
-        /* Hmm, nothing set on the kernel cmd line? Then let's
-         * try /etc/vconsole.conf */
-        if (r <= 0) {
-                r = parse_env_file("/etc/vconsole.conf", NEWLINE,
-                                   "KEYMAP", &vc_keymap,
-                                   "KEYMAP_TOGGLE", &vc_keymap_toggle,
-                                   "FONT", &vc_font,
-                                   "FONT_MAP", &vc_font_map,
-                                   "FONT_UNIMAP", &vc_font_unimap,
-                                   NULL);
-
-                if (r < 0 && r != -ENOENT)
-                        log_warning("Failed to read /etc/vconsole.conf: %s", strerror(-r));
         }
 
         if (utf8)

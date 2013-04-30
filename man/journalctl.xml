@@ -49,7 +49,9 @@
 
         <refsynopsisdiv>
                 <cmdsynopsis>
-                        <command>journalctl <arg choice="opt" rep="repeat">OPTIONS</arg> <arg choice="opt" rep="repeat">MATCHES</arg></command>
+                        <command>journalctl</command>
+                        <arg choice="opt" rep="repeat">OPTIONS</arg>
+                        <arg choice="opt" rep="repeat">MATCHES</arg>
                 </cmdsynopsis>
         </refsynopsisdiv>
 
@@ -171,7 +173,7 @@
                                 implied pager tool. This implies
                                 <option>-n1000</option> to guarantee
                                 that the pager won't buffer logs of
-                                unbounded size. This may be overriden
+                                unbounded size. This may be overridden
                                 with an explicit <option>-n</option>
                                 with some other numeric value on the
                                 command line. Note that this option is
@@ -324,22 +326,30 @@
                                 <term><option>-u</option></term>
                                 <term><option>--unit=</option></term>
 
-                                <listitem><para>Show data only of the
-                                specified unit. This will add a match
-                                for <literal>_SYSTEMD_UNIT=</literal>
-                                for the specified
-                                unit.</para></listitem>
+                                <listitem><para>Show messages for the
+                                specified systemd unit. This will add
+                                a match for messages from the unit
+                                (<literal>_SYSTEMD_UNIT=</literal>)
+                                and additional matches for messages
+                                from systemd and messages about
+                                coredumps for the specified unit.</para>
+                                <para>This parameter can be specified multiple times.
+                                </para></listitem>
                         </varlistentry>
 
                         <varlistentry>
                                 <term><option>--user-unit=</option></term>
 
-                                <listitem><para>Show data only of the
+                                <listitem><para>Show messages for the
                                 specified user session unit. This will
-                                add a match for
-                                <literal>_SYSTEMD_USER_UNIT=</literal>
-                                for the specified
-                                unit.</para></listitem>
+                                add a match for messages from the unit
+                                (<literal>_SYSTEMD_USER_UNIT=</literal>
+                                and <literal>_UID=</literal>) and
+                                additional matches for messages from
+                                session systemd and messages about
+                                coredumps for the specified unit.</para>
+                                <para>This parameter can be specified multiple times.
+                                </para></listitem>
                         </varlistentry>
 
                         <varlistentry>
@@ -431,12 +441,26 @@
                                 <term><option>-D</option></term>
                                 <term><option>--directory=</option></term>
 
-                                <listitem><para>Takes an absolute
+                                <listitem><para>Takes a
                                 directory path as argument. If
                                 specified journalctl will operate on the
                                 specified journal directory instead of
                                 the default runtime and system journal
                                 paths.</para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
+                                <term><option>--root=<replaceable>ROOT</replaceable></option></term>
+
+                                <listitem><para>Takes a directory path
+                                as argument. If specified journalctl
+                                will operate on catalog file hierarchy
+                                underneath the specified directory
+                                instead of the root directory
+                                (e.g. <option>--update-catalog</option>
+                                will create
+                                <filename><replaceable>ROOT</replaceable>/var/lib/systemd/catalog/database</filename>).
+                                </para></listitem>
                         </varlistentry>
 
                         <varlistentry>
@@ -473,12 +497,39 @@
                         </varlistentry>
 
                         <varlistentry>
-                                <term><option>--list-catalog</option></term>
+                                <term><option>--list-catalog
+                                <optional><replaceable>ID128...</replaceable></optional>
+                                </option></term>
 
                                 <listitem><para>List the contents of
                                 the message catalog, as table of
                                 message IDs plus their short
-                                description strings.</para></listitem>
+                                description strings.</para>
+
+                                <para>If any
+                                <replaceable>ID128</replaceable>s are
+                                specified, only those entries are shown.
+                                </para>
+                                </listitem>
+                        </varlistentry>
+
+                        <varlistentry>
+                                <term><option>--dump-catalog
+                                <optional><replaceable>ID128...</replaceable></optional>
+                                </option></term>
+
+                                <listitem><para>Show the contents of
+                                the message catalog, with entries
+                                separated by a line consisting of two
+                                dashes and the id (the format is the
+                                same as <filename>.catalog</filename>
+                                files.</para>
+
+                                <para>If any
+                                <replaceable>ID128</replaceable>s are
+                                specified, only those entries are shown.
+                                </para>
+                                </listitem>
                         </varlistentry>
 
                         <varlistentry>

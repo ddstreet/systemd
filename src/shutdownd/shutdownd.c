@@ -46,29 +46,28 @@ union shutdown_buffer {
 };
 
 static int read_packet(int fd, union shutdown_buffer *_b) {
-        struct msghdr msghdr;
-        struct iovec iovec;
         struct ucred *ucred;
+        ssize_t n;
+
+        union shutdown_buffer b; /* We maintain our own copy here, in
+                                  * order not to corrupt the last message */
+        struct iovec iovec = {
+                iovec.iov_base = &b,
+                iovec.iov_len = sizeof(b) - 1,
+        };
         union {
                 struct cmsghdr cmsghdr;
                 uint8_t buf[CMSG_SPACE(sizeof(struct ucred))];
-        } control;
-        ssize_t n;
-        union shutdown_buffer b; /* We maintain our own copy here, in order not to corrupt the last message */
+        } control = {};
+        struct msghdr msghdr = {
+                .msg_iov = &iovec,
+                msghdr.msg_iovlen = 1,
+                msghdr.msg_control = &control,
+                msghdr.msg_controllen = sizeof(control),
+        };
 
         assert(fd >= 0);
         assert(_b);
-
-        zero(iovec);
-        iovec.iov_base = &b;
-        iovec.iov_len = sizeof(b) - 1;
-
-        zero(control);
-        zero(msghdr);
-        msghdr.msg_iov = &iovec;
-        msghdr.msg_iovlen = 1;
-        msghdr.msg_control = &control;
-        msghdr.msg_controllen = sizeof(control);
 
         n = recvmsg(fd, &msghdr, MSG_DONTWAIT);
         if (n <= 0) {
@@ -157,29 +156,26 @@ static usec_t when_wall(usec_t n, usec_t elapse) {
                 usec_t delay;
                 usec_t interval;
         } table[] = {
-                { 10 * USEC_PER_MINUTE, USEC_PER_MINUTE      },
-                { USEC_PER_HOUR,        15 * USEC_PER_MINUTE },
-                { 3 * USEC_PER_HOUR,    30 * USEC_PER_MINUTE }
+                { 0,                    USEC_PER_MINUTE      },
+                { 10 * USEC_PER_MINUTE, 15 * USEC_PER_MINUTE },
+                { USEC_PER_HOUR,        30 * USEC_PER_MINUTE },
+                { 3 * USEC_PER_HOUR,    USEC_PER_HOUR        },
         };
 
         usec_t left, sub;
-        unsigned i;
+        unsigned i = ELEMENTSOF(table) - 1;
 
         /* If the time is already passed, then don't announce */
         if (n >= elapse)
                 return 0;
 
         left = elapse - n;
-        for (i = 0; i < ELEMENTSOF(table); i++)
-                if (n + table[i].delay >= elapse) {
-                        sub = ((left / table[i].interval) * table[i].interval);
-                        break;
-                }
+        while (left < table[i].delay)
+                i--;
+        sub = (left / table[i].interval) * table[i].interval;
 
-        if (i >= ELEMENTSOF(table))
-                sub = ((left / USEC_PER_HOUR) * USEC_PER_HOUR);
-
-        return elapse > sub ? elapse - sub : 1;
+        assert(sub < elapse);
+        return elapse - sub;
 }
 
 static usec_t when_nologin(usec_t elapse) {
@@ -273,8 +269,8 @@ int main(int argc, char *argv[]) {
         };
 
         int r = EXIT_FAILURE, n_fds;
-        union shutdown_buffer b;
-        struct pollfd pollfd[_FD_MAX];
+        union shutdown_buffer b = {};
+        struct pollfd pollfd[_FD_MAX] = {};
         bool exec_shutdown = false, unlink_nologin = false;
         unsigned i;
 
@@ -304,9 +300,6 @@ int main(int argc, char *argv[]) {
                 log_error("Need exactly one file descriptor.");
                 return EXIT_FAILURE;
         }
-
-        zero(b);
-        zero(pollfd);
 
         pollfd[FD_SOCKET].fd = SD_LISTEN_FDS_START;
         pollfd[FD_SOCKET].events = POLLIN;
@@ -405,13 +398,12 @@ int main(int argc, char *argv[]) {
                 }
 
                 if (pollfd[FD_WALL_TIMER].revents) {
-                        struct itimerspec its;
+                        struct itimerspec its = {};
 
                         warn_wall(n, &b.command);
                         flush_fd(pollfd[FD_WALL_TIMER].fd);
 
                         /* Restart timer */
-                        zero(its);
                         timespec_store(&its.it_value, when_wall(n, b.command.usec));
                         if (timerfd_settime(pollfd[FD_WALL_TIMER].fd, TFD_TIMER_ABSTIME, &its, NULL) < 0) {
                                 log_error("timerfd_settime(): %m");
@@ -424,7 +416,7 @@ int main(int argc, char *argv[]) {
 
                         log_info("Creating /run/nologin, blocking further logins...");
 
-                        e = write_one_line_file_atomic("/run/nologin", "System is going down.");
+                        e = write_string_file_atomic("/run/nologin", "System is going down.");
                         if (e < 0)
                                 log_error("Failed to create /run/nologin: %s", strerror(-e));
                         else
