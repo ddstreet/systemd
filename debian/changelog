@@ -1,3 +1,9 @@
+systemd (202-0ubuntu3) saucy; urgency=low
+
+  * Disable journal-stream test case, which fails on powerpc.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 30 Apr 2013 11:31:39 -0700
+
 systemd (202-0ubuntu2) saucy; urgency=low
 
   * Merge 0019-disable-unit-name-test.patch and

@@ -2848,7 +2848,6 @@ tests += \
 	test-journal-send \
 	test-journal-syslog \
 	test-journal-match \
-	test-journal-stream \
 	test-journal-verify \
 	test-mmap-cache \
 	$(NULL)

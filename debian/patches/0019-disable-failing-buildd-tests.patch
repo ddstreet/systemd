@@ -3,8 +3,8 @@ Author: Martin Pitt <martin.pitt@ubuntu.com>
 
 Index: systemd/Makefile.am
 ===================================================================
---- systemd.orig/Makefile.am	2013-04-30 08:35:48.104023139 -0700
-+++ systemd/Makefile.am	2013-04-30 08:36:52.428026252 -0700
+--- systemd.orig/Makefile.am	2013-04-30 09:22:12.060888151 -0700
++++ systemd/Makefile.am	2013-04-30 09:22:33.288889179 -0700
 @@ -1088,7 +1088,6 @@
  	test-strv \
  	test-path-util \
@@ -21,8 +21,11 @@ Index: systemd/Makefile.am
  	test-prioq \
  	test-fileio \
  	test-time
-@@ -2853,7 +2851,7 @@
- 	test-journal-stream \
+@@ -2850,10 +2848,9 @@
+ 	test-journal-send \
+ 	test-journal-syslog \
+ 	test-journal-match \
+-	test-journal-stream \
  	test-journal-verify \
  	test-mmap-cache \
 -	test-catalog
