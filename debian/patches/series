@@ -12,6 +12,5 @@
 0016-Add-poweroff-reboot-suspend-hibernate-fallback.patch
 0017-Clean-up-empty-sessions-when-not-running-under-syste.patch
 0018-Add-env-variable-for-machine-ID-path.patch
-0019-disable-unit-name-test.patch
+0019-disable-failing-buildd-tests.patch
 0020-uaccess-rule-with-old-udev.patch
-0021-disable-catalog-test.patch
