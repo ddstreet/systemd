@@ -2852,7 +2852,7 @@ tests += \
 	test-journal-stream \
 	test-journal-verify \
 	test-mmap-cache \
-	test-catalog
+	$(NULL)
 
 pkginclude_HEADERS += \
 	src/systemd/sd-journal.h \
