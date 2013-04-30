@@ -1,5 +1,214 @@
 systemd System and Service Manager
 
+CHANGES WITH 202:
+
+        * The output of 'systemctl list-jobs' got some polishing. The
+          '--type=' argument may now be passed more than once. A new
+          command 'systemctl list-sockets' has been added which shows
+          a list of kernel sockets systemd is listening on with the
+          socket units they belong to, plus the units these socket
+          units activate.
+
+        * The experimental libsystemd-bus library got substantial
+          updates to work in conjunction with the (also experimental)
+          kdbus kernel project. It works well enough to exchange
+          messages with some sophistication. Note that kdbus is not
+          ready yet, and the library is mostly an elaborate test case
+          for now, and not installable.
+
+        * systemd gained a new unit 'systemd-static-nodes.service'
+          that generates static device nodes earlier during boot, and
+          can run in conjunction with udev.
+
+        * libsystemd-login gained a new call sd_pid_get_user_unit()
+          to retrieve the user systemd unit a process is running
+          in. This is useful for systems where systemd is used as
+          session manager.
+
+        * systemd-nspawn now places all containers in the new /machine
+          top-level cgroup directory in the name=systemd
+          hierarchy. libvirt will soon do the same, so that we get a
+          uniform separation of /system, /user and /machine for system
+          services, user processes and containers/virtual
+          machines. This new cgroup hierarchy is also useful to stick
+          stable names to specific container instances, which can be
+          recognized later this way (this name may be controlled
+          via systemd-nspawn's new -M switch). libsystemd-login also
+          gained a new call sd_pid_get_machine_name() to retrieve the
+          name of the container/VM a specific process belongs to.
+
+        * bootchart can now store its data in the journal.
+
+        * libsystemd-journal gained a new call
+          sd_journal_add_conjunction() for AND expressions to the
+          matching logic. This can be used to express more complex
+          logical expressions.
+
+        * journactl can now take multiple --unit= and --user-unit=
+          switches.
+
+        * The cryptsetup logic now understands the "luks.key=" kernel
+          command line switch for specifying a file to read the
+          decryption key from. Also, if a configured key file is not
+          found the tool will now automatically fall back to prompting
+          the user.
+
+        Contributions from: Anatol Pomozov, Auke Kok, Harald Hoyer,
+        Henrik Grindal Bakken, Josh Triplett, Kay Sievers, Lennart
+        Poettering, Lukas Nykryn, Mantas Mikulėnas Marius Vollmer,
+        Martin Jansa, Martin Pitt, Michael Biebl, Michal Schmidt,
+        Mirco Tischler, Pali Rohar, Simon Peeters, Steven Hiscocks,
+        Tom Gundersen, Zbigniew Jędrzejewski-Szmek
+
+CHANGES WITH 201:
+
+        * journalctl --update-catalog now understands a new --root=
+          option to operate on catalogs found in a different root
+          directory.
+
+        * During shutdown after systemd has terminated all running
+          services a final killing loop kills all remaining left-over
+          processes. We will now print the name of these processes
+          when we send SIGKILL to them, since this usually indicates a
+          problem.
+
+        * If /etc/crypttab refers to password files stored on
+          configured mount points automatic dependencies will now be
+          generated to ensure the specific mount is established first
+          before the key file is attempted to be read.
+
+        * 'systemctl status' will now show information about the
+          network sockets a socket unit is listening on.
+
+        * 'systemctl status' will also shown information about any
+          drop-in configuration file for units. (Drop-In configuration
+          files in this context are files such as
+          /etc/systemd/systemd/foobar.service.d/*.conf)
+
+        * systemd-cgtop now optionally shows summed up CPU times of
+          cgroups. Press '%' while running cgtop to switch between
+          percentage and absolute mode. This is useful to determine
+          which cgroups use up the most CPU time over the entire
+          runtime of the system. systemd-cgtop has also been updated
+          to be 'pipeable' for processing with further shell tools.
+
+        * 'hostnamectl set-hostname' will now allow setting of FQDN
+          hostnames.
+
+        * The formatting and parsing of time span values has been
+          changed. The parser now understands fractional expressions
+          such as "5.5h". The formatter will now output fractional
+          expressions for all time spans under 1min, i.e. "5.123456s"
+          rather than "5s 123ms 456us". For time spans under 1s
+          millisecond values are shown, for those under 1ms
+          microsecond values are shown. This should greatly improve
+          all time-related output of systemd.
+
+        * libsystemd-login and libsystemd-journal gained new
+          functions for querying the poll() events mask and poll()
+          timeout value for integration into arbitrary event
+          loops.
+
+        * localectl gained the ability to list available X11 keymaps
+          (models, layouts, variants, options).
+
+        * 'systemd-analyze dot' gained the ability to filter for
+          specific units via shell-style globs, to create smaller,
+          more useful graphs. I.e. it's now possible to create simple
+          graphs of all the dependencies between only target units, or
+          of all units that Avahi has dependencies with.
+
+        Contributions from: Cristian Rodríguez, Dr. Tilmann Bubeck,
+        Harald Hoyer, Holger Hans Peter Freyther, Kay Sievers, Kelly
+        Anderson, Koen Kooi, Lennart Poettering, Maksim Melnikau,
+        Marc-Antoine Perennou, Marius Vollmer, Martin Pitt, Michal
+        Schmidt, Oleksii Shevchuk, Ronny Chevalier, Simon McVittie,
+        Steven Hiscocks, Thomas Weißschuh, Umut Tezduyar, Václav
+        Pavlín, Zbigniew Jędrzejewski-Szmek, Łukasz Stelmach
+
+CHANGES WITH 200:
+
+        * The boot-time readahead implementation for rotating media
+          will now read the read-ahead data in multiple passes which
+          consist of all read requests made in equidistant time
+          intervals. This means instead of strictly reading read-ahead
+          data in its physical order on disk we now try to find a
+          middle ground between physical and access time order.
+
+        * /etc/os-release files gained a new BUILD_ID= field for usage
+          on operating systems that provide continuous builds of OS
+          images.
+
+        Contributions from: Auke Kok, Eelco Dolstra, Kay Sievers,
+        Lennart Poettering, Lukas Nykryn, Martin Pitt, Václav Pavlín
+        William Douglas, Zbigniew Jędrzejewski-Szmek
+
+CHANGES WITH 199:
+
+        * systemd-python gained an API exposing libsystemd-daemon.
+
+        * The SMACK setup logic gained support for uploading CIPSO
+          security policy.
+
+        * Behaviour of PrivateTmp=, ReadWriteDirectories=,
+          ReadOnlyDirectories= and InaccessibleDirectories= has
+          changed. The private /tmp and /var/tmp directories are now
+          shared by all processes of a service (which means
+          ExecStartPre= may now leave data in /tmp that ExecStart= of
+          the same service can still access). When a service is
+          stopped its temporary directories are immediately deleted
+          (normal clean-up with tmpfiles is still done in addition to
+          this though).
+
+        * By default, systemd will now set a couple of sysctl
+          variables in the kernel: the safe sysrq options are turned
+          on, IP route verification is turned on, and source routing
+          disabled. The recently added hardlink and softlink
+          protection of the kernel is turned on. These settings should
+          be reasonably safe, and good defaults for all new systems.
+
+        * The predictable network naming logic may now be turned off
+          with a new kernel command line switch: net.ifnames=0.
+
+        * A new libsystemd-bus module has been added that implements a
+          pretty complete D-Bus client library. For details see:
+
+          http://lists.freedesktop.org/archives/systemd-devel/2013-March/009797.html
+
+        * journald will now explicitly flush the journal files to disk
+          at the latest 5min after each write. The file will then also
+          be marked offline until the next write. This should increase
+          reliability in case of a crash. The synchronization delay
+          can be configured via SyncIntervalSec= in journald.conf.
+
+        * There's a new remote-fs-setup.target unit that can be used
+          to pull in specific services when at least one remote file
+          system is to be mounted.
+
+        * There are new targets timers.target and paths.target as
+          canonical targets to pull user timer and path units in
+          from. This complements sockets.target with a similar
+          purpose for socket units.
+
+        * libudev gained a new call udev_device_set_attribute_value()
+          to set sysfs attributes of a device.
+
+        * The udev daemon now sets the default number of worker
+          processes executed in parallel based on the number of available
+          CPUs instead of the amount of available RAM. This is supposed
+          to provide a more reliable default and limit a too aggressive
+          paralellism for setups with 1000s of devices connected.
+
+        Contributions from: Auke Kok, Colin Walters, Cristian
+        Rodríguez, Daniel Buch, Dave Reisner, Frederic Crozat, Hannes
+        Reinecke, Harald Hoyer, Jan Alexander Steffens, Jan
+        Engelhardt, Josh Triplett, Kay Sievers, Lennart Poettering,
+        Mantas Mikulėnas, Martin Pitt, Mathieu Bridon, Michael Biebl,
+        Michal Schmidt, Michal Sekletar, Miklos Vajna, Nathaniel Chen,
+        Oleksii Shevchuk, Ozan Çağlayan, Thomas Hindoe Paaboel
+        Andersen, Tollef Fog Heen, Tom Gundersen, Umut Tezduyar,
+        Zbigniew Jędrzejewski-Szmek
+
 CHANGES WITH 198:
 
         * Configuration of unit files may now be extended via drop-in
@@ -7,7 +216,7 @@ CHANGES WITH 198:
           themselves. More specifically, if the administrator wants to
           change one value for a service file foobar.service he can
           now do so by dropping in a configuration snippet into
-          /etc/systemd/systemd/foobar.service.d/*.conf. The unit logic
+          /etc/systemd/system/foobar.service.d/*.conf. The unit logic
           will load all these snippets and apply them on top of the
           main unit configuration file, possibly extending or
           overriding its settings. Using these drop-in snippets is
@@ -443,7 +652,7 @@ CHANGES WITH 196:
           the underlying file system of a journal file is capable of
           properly reporting file change notifications, or whether
           applications that want to reflect journal changes "live"
-          need to recheck journal files continously in appropriate
+          need to recheck journal files continuously in appropriate
           time intervals.
 
         * It is now possible to set the "age" field for tmpfiles
@@ -776,7 +985,7 @@ CHANGES WITH 190:
         * There's now a new RPM macro definition for the system preset
           dir: %_presetdir.
 
-        * journald will now warn if it can't foward a message to the
+        * journald will now warn if it can't forward a message to the
           syslog daemon because it's socket is full.
 
         * timedated will no longer write or process /etc/timezone,
@@ -911,7 +1120,7 @@ CHANGES WITH 188:
           the maximum number of iterations to run for. It also gained
           -b, to run in batch mode (accepting no input).
 
-        * The suffix ".service" may now be ommited on most systemctl
+        * The suffix ".service" may now be omitted on most systemctl
           command lines involving service unit names.
 
         * There's a new bus call in logind to lock all sessions, as
@@ -1400,7 +1609,7 @@ CHANGES WITH 44:
 
         * Show /etc/os-release data in systemd-analyze output
 
-        * Many bugfixes for the journal, including endianess fixes and
+        * Many bugfixes for the journal, including endianness fixes and
           ensuring that disk space enforcement works
 
         * sd-login.h is C++ comptaible again

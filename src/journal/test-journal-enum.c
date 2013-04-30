@@ -23,10 +23,13 @@
 
 #include "log.h"
 #include "sd-journal.h"
+#include "macro.h"
+#include "util.h"
+#include "journal-internal.h"
 
 int main(int argc, char *argv[]) {
         unsigned n = 0;
-        sd_journal *j;
+        _cleanup_journal_close_ sd_journal*j = NULL;
 
         log_set_max_level(LOG_DEBUG);
 
@@ -48,6 +51,5 @@ int main(int argc, char *argv[]) {
                         break;
         }
 
-        sd_journal_close(j);
         return 0;
 }

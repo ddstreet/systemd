@@ -203,12 +203,10 @@ static void bus_toggle_watch(DBusWatch *bus_watch, void *data) {
 }
 
 static int bus_timeout_arm(Manager *m, Watch *w) {
-        struct itimerspec its;
+        struct itimerspec its = {};
 
         assert(m);
         assert(w);
-
-        zero(its);
 
         if (dbus_timeout_get_enabled(w->data.bus_timeout)) {
                 timespec_store(&its.it_value, dbus_timeout_get_interval(w->data.bus_timeout) * USEC_PER_MSEC);
@@ -406,7 +404,7 @@ static DBusHandlerResult api_bus_message_filter(DBusConnection *connection, DBus
         dbus_error_free(&error);
 
         if (reply) {
-                if (!dbus_connection_send(connection, reply, NULL))
+                if (!bus_maybe_send_reply(connection, message, reply))
                         goto oom;
 
                 dbus_message_unref(reply);
@@ -978,9 +976,8 @@ static DBusConnection* manager_bus_connect_private(Manager *m, DBusBusType type)
         }
 
         return connection;
+
 fail:
-        if (connection)
-                dbus_connection_close(connection);
         dbus_error_free(&error);
         return NULL;
 }
@@ -1054,7 +1051,7 @@ fail:
 static int bus_init_private(Manager *m) {
         DBusError error;
         int r;
-        const char *const external_only[] = {
+        static const char *const external_only[] = {
                 "EXTERNAL",
                 NULL
         };

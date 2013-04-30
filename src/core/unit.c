@@ -48,6 +48,7 @@
 #include "mkdir.h"
 #include "label.h"
 #include "fileio-label.h"
+#include "bus-errors.h"
 
 const UnitVTable * const unit_vtable[_UNIT_TYPE_MAX] = {
         [UNIT_SERVICE] = &service_vtable,
@@ -407,6 +408,7 @@ void unit_free(Unit *u) {
         strv_free(u->documentation);
         free(u->fragment_path);
         free(u->source_path);
+        strv_free(u->dropin_paths);
         free(u->instance);
 
         set_free_free(u->names);
@@ -695,8 +697,11 @@ void unit_dump(Unit *u, FILE *f, const char *prefix) {
         if (u->source_path)
                 fprintf(f, "%s\tSource Path: %s\n", prefix, u->source_path);
 
+        STRV_FOREACH(j, u->dropin_paths)
+                fprintf(f, "%s\tDropIn Path: %s\n", prefix, *j);
+
         if (u->job_timeout > 0)
-                fprintf(f, "%s\tJob Timeout: %s\n", prefix, format_timespan(timespan, sizeof(timespan), u->job_timeout));
+                fprintf(f, "%s\tJob Timeout: %s\n", prefix, format_timespan(timespan, sizeof(timespan), u->job_timeout, 0));
 
         condition_dump_list(u->conditions, f, prefix);
 
@@ -909,8 +914,8 @@ int unit_load(Unit *u) {
         if (u->on_failure_isolate &&
             set_size(u->dependencies[UNIT_ON_FAILURE]) > 1) {
 
-                log_error("More than one OnFailure= dependencies specified for %s but OnFailureIsolate= enabled. Refusing.",
-                          u->id);
+                log_error_unit(u->id,
+                               "More than one OnFailure= dependencies specified for %s but OnFailureIsolate= enabled. Refusing.", u->id);
 
                 r = -EINVAL;
                 goto fail;
@@ -929,7 +934,8 @@ fail:
         unit_add_to_dbus_queue(u);
         unit_add_to_gc_queue(u);
 
-        log_debug("Failed to load configuration for %s: %s", u->id, strerror(-r));
+        log_debug_unit(u->id, "Failed to load configuration for %s: %s",
+                       u->id, strerror(-r));
 
         return r;
 }
@@ -1026,10 +1032,10 @@ static void unit_status_log_starting_stopping_reloading(Unit *u, JobType t) {
                                SD_MESSAGE_UNIT_RELOADING;
 
         log_struct_unit(LOG_INFO,
-                   u->id,
-                   MESSAGE_ID(mid),
-                   "MESSAGE=%s", buf,
-                   NULL);
+                        u->id,
+                        MESSAGE_ID(mid),
+                        "MESSAGE=%s", buf,
+                        NULL);
 }
 #pragma GCC diagnostic pop
 
@@ -1062,13 +1068,14 @@ int unit_start(Unit *u) {
          * but we don't want to recheck the condition in that case. */
         if (state != UNIT_ACTIVATING &&
             !unit_condition_test(u)) {
-                log_debug("Starting of %s requested but condition failed. Ignoring.", u->id);
+                log_debug_unit(u->id, "Starting of %s requested but condition failed. Ignoring.", u->id);
                 return -EALREADY;
         }
 
         /* Forward to the main object, if we aren't it. */
         if ((following = unit_following(u))) {
-                log_debug("Redirecting start request from %s to %s.", u->id, following->id);
+                log_debug_unit(u->id, "Redirecting start request from %s to %s.",
+                               u->id, following->id);
                 return unit_start(following);
         }
 
@@ -1119,7 +1126,8 @@ int unit_stop(Unit *u) {
                 return -EALREADY;
 
         if ((following = unit_following(u))) {
-                log_debug("Redirecting stop request from %s to %s.", u->id, following->id);
+                log_debug_unit(u->id, "Redirecting stop request from %s to %s.",
+                               u->id, following->id);
                 return unit_stop(following);
         }
 
@@ -1159,7 +1167,8 @@ int unit_reload(Unit *u) {
                 return -ENOEXEC;
 
         if ((following = unit_following(u))) {
-                log_debug("Redirecting reload request from %s to %s.", u->id, following->id);
+                log_debug_unit(u->id, "Redirecting reload request from %s to %s.",
+                               u->id, following->id);
                 return unit_reload(following);
         }
 
@@ -1212,7 +1221,7 @@ static void unit_check_unneeded(Unit *u) {
                 if (unit_pending_active(other))
                         return;
 
-        log_info("Service %s is not needed anymore. Stopping.", u->id);
+        log_info_unit(u->id, "Service %s is not needed anymore. Stopping.", u->id);
 
         /* Ok, nobody needs us anymore. Sniff. Then let's commit suicide */
         manager_add_job(u->manager, JOB_STOP, u, JOB_FAIL, true, NULL, NULL);
@@ -1239,11 +1248,6 @@ static void retroactively_start_dependencies(Unit *u) {
                 if (!set_get(u->dependencies[UNIT_AFTER], other) &&
                     !UNIT_IS_ACTIVE_OR_ACTIVATING(unit_active_state(other)))
                         manager_add_job(u->manager, JOB_START, other, JOB_FAIL, false, NULL, NULL);
-
-        SET_FOREACH(other, u->dependencies[UNIT_REQUISITE], i)
-                if (!set_get(u->dependencies[UNIT_AFTER], other) &&
-                    !UNIT_IS_ACTIVE_OR_ACTIVATING(unit_active_state(other)))
-                        manager_add_job(u->manager, JOB_START, other, JOB_REPLACE, true, NULL, NULL);
 
         SET_FOREACH(other, u->dependencies[UNIT_WANTS], i)
                 if (!set_get(u->dependencies[UNIT_AFTER], other) &&
@@ -1309,13 +1313,14 @@ void unit_trigger_on_failure(Unit *u) {
         if (set_size(u->dependencies[UNIT_ON_FAILURE]) <= 0)
                 return;
 
-        log_info("Triggering OnFailure= dependencies of %s.", u->id);
+        log_info_unit(u->id, "Triggering OnFailure= dependencies of %s.", u->id);
 
         SET_FOREACH(other, u->dependencies[UNIT_ON_FAILURE], i) {
                 int r;
 
-                if ((r = manager_add_job(u->manager, JOB_START, other, u->on_failure_isolate ? JOB_ISOLATE : JOB_REPLACE, true, NULL, NULL)) < 0)
-                        log_error("Failed to enqueue OnFailure= job: %s", strerror(-r));
+                r = manager_add_job(u->manager, JOB_START, other, u->on_failure_isolate ? JOB_ISOLATE : JOB_REPLACE, true, NULL, NULL);
+                if (r < 0)
+                        log_error_unit(u->id, "Failed to enqueue OnFailure= job: %s", strerror(-r));
         }
 }
 
@@ -1454,10 +1459,8 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                         check_unneeded_dependencies(u);
 
                 if (ns != os && ns == UNIT_FAILED) {
-                        log_struct_unit(LOG_NOTICE,
-                                   u->id,
-                                   "MESSAGE=Unit %s entered failed state", u->id,
-                                   NULL);
+                        log_notice_unit(u->id,
+                                        "MESSAGE=Unit %s entered failed state.", u->id);
                         unit_trigger_on_failure(u);
                 }
         }
@@ -1520,16 +1523,15 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
 }
 
 int unit_watch_fd(Unit *u, int fd, uint32_t events, Watch *w) {
-        struct epoll_event ev;
+        struct epoll_event ev = {
+                .data.ptr = w,
+                .events = events,
+        };
 
         assert(u);
         assert(fd >= 0);
         assert(w);
         assert(w->type == WATCH_INVALID || (w->type == WATCH_FD && w->fd == fd && w->data.unit == u));
-
-        zero(ev);
-        ev.data.ptr = w;
-        ev.events = events;
 
         if (epoll_ctl(u->manager->epoll_fd,
                       w->type == WATCH_INVALID ? EPOLL_CTL_ADD : EPOLL_CTL_MOD,
@@ -1578,7 +1580,7 @@ void unit_unwatch_pid(Unit *u, pid_t pid) {
 }
 
 int unit_watch_timer(Unit *u, clockid_t clock_id, bool relative, usec_t usec, Watch *w) {
-        struct itimerspec its;
+        struct itimerspec its = {};
         int flags, fd;
         bool ours;
 
@@ -1603,8 +1605,6 @@ int unit_watch_timer(Unit *u, clockid_t clock_id, bool relative, usec_t usec, Wa
         } else
                 assert_not_reached("Invalid watch type");
 
-        zero(its);
-
         if (usec <= 0) {
                 /* Set absolute time in the past, but not 0, since we
                  * don't want to disarm the timer */
@@ -1622,11 +1622,10 @@ int unit_watch_timer(Unit *u, clockid_t clock_id, bool relative, usec_t usec, Wa
                 goto fail;
 
         if (w->type == WATCH_INVALID) {
-                struct epoll_event ev;
-
-                zero(ev);
-                ev.data.ptr = w;
-                ev.events = EPOLLIN;
+                struct epoll_event ev = {
+                        .data.ptr = w,
+                        .events = EPOLLIN,
+                };
 
                 if (epoll_ctl(u->manager->epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0)
                         goto fail;
@@ -2557,7 +2556,10 @@ void unit_status_printf(Unit *u, const char *status, const char *unit_status_msg
 }
 
 bool unit_need_daemon_reload(Unit *u) {
+        _cleanup_strv_free_ char **t = NULL;
+        char **path;
         struct stat st;
+        unsigned loaded_cnt, current_cnt;
 
         assert(u);
 
@@ -2582,7 +2584,30 @@ bool unit_need_daemon_reload(Unit *u) {
                         return true;
         }
 
-        return false;
+        t = unit_find_dropin_paths(u);
+        loaded_cnt = strv_length(t);
+        current_cnt = strv_length(u->dropin_paths);
+
+        if (loaded_cnt == current_cnt) {
+                if (loaded_cnt == 0)
+                        return false;
+
+                if (strv_overlap(u->dropin_paths, t)) {
+                        STRV_FOREACH(path, u->dropin_paths) {
+                                zero(st);
+                                if (stat(*path, &st) < 0)
+                                        return true;
+
+                                if (u->dropin_mtime > 0 &&
+                                    timespec_load(&st.st_mtim) > u->dropin_mtime)
+                                        return true;
+                        }
+
+                        return false;
+                } else
+                        return true;
+        } else
+                return true;
 }
 
 void unit_reset_failed(Unit *u) {
@@ -2642,6 +2667,71 @@ int unit_kill(Unit *u, KillWho w, int signo, DBusError *error) {
                 return -ENOTSUP;
 
         return UNIT_VTABLE(u)->kill(u, w, signo, error);
+}
+
+int unit_kill_common(
+                Unit *u,
+                KillWho who,
+                int signo,
+                pid_t main_pid,
+                pid_t control_pid,
+                DBusError *error) {
+
+        int r = 0;
+
+        if (who == KILL_MAIN && main_pid <= 0) {
+                if (main_pid < 0)
+                        dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "%s units have no main processes", unit_type_to_string(u->type));
+                else
+                        dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No main process to kill");
+                return -ESRCH;
+        }
+
+        if (who == KILL_CONTROL && control_pid <= 0) {
+                if (control_pid < 0)
+                        dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "%s units have no control processes", unit_type_to_string(u->type));
+                else
+                        dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No control process to kill");
+                return -ESRCH;
+        }
+
+        if (who == KILL_CONTROL || who == KILL_ALL)
+                if (control_pid > 0)
+                        if (kill(control_pid, signo) < 0)
+                                r = -errno;
+
+        if (who == KILL_MAIN || who == KILL_ALL)
+                if (main_pid > 0)
+                        if (kill(main_pid, signo) < 0)
+                                r = -errno;
+
+        if (who == KILL_ALL) {
+                _cleanup_set_free_ Set *pid_set = NULL;
+                int q;
+
+                pid_set = set_new(trivial_hash_func, trivial_compare_func);
+                if (!pid_set)
+                        return -ENOMEM;
+
+                /* Exclude the control/main pid from being killed via the cgroup */
+                if (control_pid > 0) {
+                        q = set_put(pid_set, LONG_TO_PTR(control_pid));
+                        if (q < 0)
+                                return q;
+                }
+
+                if (main_pid > 0) {
+                        q = set_put(pid_set, LONG_TO_PTR(main_pid));
+                        if (q < 0)
+                                return q;
+                }
+
+                q = cgroup_bonding_kill_list(u->cgroup_bondings, signo, false, false, pid_set, NULL);
+                if (q < 0 && q != -EAGAIN && q != -ESRCH && q != -ENOENT)
+                        r = q;
+        }
+
+        return r;
 }
 
 int unit_following_set(Unit *u, Set **s) {
@@ -2819,7 +2909,7 @@ int unit_write_drop_in(Unit *u, bool runtime, const char *name, const char *data
                 return r;
 
         mkdir_p(p, 0755);
-        return write_one_line_file_atomic_label(q, data);
+        return write_string_file_atomic_label(q, data);
 }
 
 int unit_remove_drop_in(Unit *u, bool runtime, const char *name) {

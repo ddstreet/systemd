@@ -30,6 +30,7 @@
 #include "util.h"
 #include "utf8.h"
 #include "hashmap.h"
+#include "journal-internal.h"
 
 #define PRINT_THRESHOLD 128
 #define JSON_THRESHOLD 4096
@@ -277,7 +278,7 @@ static int output_short(
         } else if ((flags & OUTPUT_FULL_WIDTH) || (message_len + n + 1 < n_columns))
                 fprintf(f, ": %s%.*s%s\n", color_on, (int) message_len, message, color_off);
         else if (n < n_columns && n_columns - n - 2 >= 3) {
-                char _cleanup_free_ *e;
+                _cleanup_free_ char *e;
 
                 e = ellipsize_mem(message, message_len, n_columns - n - 2, 90);
 
@@ -303,7 +304,7 @@ static int output_verbose(
 
         const void *data;
         size_t length;
-        char _cleanup_free_ *cursor = NULL;
+        _cleanup_free_ char *cursor = NULL;
         uint64_t realtime;
         char ts[FORMAT_TIMESTAMP_MAX];
         int r;
@@ -365,7 +366,7 @@ static int output_export(
         char sid[33];
         int r;
         usec_t realtime, monotonic;
-        char _cleanup_free_ *cursor = NULL;
+        _cleanup_free_ char *cursor = NULL;
         const void *data;
         size_t length;
 
@@ -494,7 +495,7 @@ static int output_json(
                 OutputFlags flags) {
 
         uint64_t realtime, monotonic;
-        char _cleanup_free_ *cursor = NULL;
+        _cleanup_free_ char *cursor = NULL;
         const void *data;
         size_t length;
         sd_id128_t boot_id;
@@ -869,6 +870,67 @@ finish:
         return r;
 }
 
+int add_matches_for_unit(sd_journal *j, const char *unit) {
+        int r;
+        _cleanup_free_ char *m1 = NULL, *m2 = NULL, *m3 = NULL;
+
+        assert(j);
+        assert(unit);
+
+        if (asprintf(&m1, "_SYSTEMD_UNIT=%s", unit) < 0 ||
+            asprintf(&m2, "COREDUMP_UNIT=%s", unit) < 0 ||
+            asprintf(&m3, "UNIT=%s", unit) < 0)
+                return -ENOMEM;
+
+        (void)(
+            /* Look for messages from the service itself */
+            (r = sd_journal_add_match(j, m1, 0)) ||
+
+            /* Look for coredumps of the service */
+            (r = sd_journal_add_disjunction(j)) ||
+            (r = sd_journal_add_match(j,
+                        "MESSAGE_ID=fc2e22bc6ee647b6b90729ab34a250b1", 0)) ||
+            (r = sd_journal_add_match(j, m2, 0)) ||
+
+             /* Look for messages from PID 1 about this service */
+            (r = sd_journal_add_disjunction(j)) ||
+            (r = sd_journal_add_match(j, "_PID=1", 0)) ||
+            (r = sd_journal_add_match(j, m3, 0))
+        );
+        return r;
+}
+
+int add_matches_for_user_unit(sd_journal *j, const char *unit, uid_t uid) {
+        int r;
+        _cleanup_free_ char *m1 = NULL, *m2 = NULL, *m3 = NULL, *m4 = NULL;
+
+        assert(j);
+        assert(unit);
+
+        if (asprintf(&m1, "_SYSTEMD_USER_UNIT=%s", unit) < 0 ||
+            asprintf(&m2, "USER_UNIT=%s", unit) < 0 ||
+            asprintf(&m3, "COREDUMP_USER_UNIT=%s", unit) < 0 ||
+            asprintf(&m4, "_UID=%d", uid) < 0)
+                return -ENOMEM;
+
+        (void) (
+                /* Look for messages from the user service itself */
+                (r = sd_journal_add_match(j, m1, 0)) ||
+                (r = sd_journal_add_match(j, m4, 0)) ||
+
+                /* Look for messages from systemd about this service */
+                (r = sd_journal_add_disjunction(j)) ||
+                (r = sd_journal_add_match(j, m2, 0)) ||
+                (r = sd_journal_add_match(j, m4, 0)) ||
+
+                /* Look for coredumps of the service */
+                (r = sd_journal_add_disjunction(j)) ||
+                (r = sd_journal_add_match(j, m3, 0)) ||
+                (r = sd_journal_add_match(j, m4, 0))
+        );
+        return r;
+}
+
 int show_journal_by_unit(
                 FILE *f,
                 const char *unit,
@@ -876,81 +938,13 @@ int show_journal_by_unit(
                 unsigned n_columns,
                 usec_t not_before,
                 unsigned how_many,
-                OutputFlags flags) {
-
-        _cleanup_free_ char *m1 = NULL, *m2 = NULL, *m3 = NULL;
-        sd_journal *j = NULL;
-        int r;
-
-        assert(mode >= 0);
-        assert(mode < _OUTPUT_MODE_MAX);
-        assert(unit);
-
-        if (how_many <= 0)
-                return 0;
-
-        if (asprintf(&m1, "_SYSTEMD_UNIT=%s", unit) < 0 ||
-            asprintf(&m2, "COREDUMP_UNIT=%s", unit) < 0 ||
-            asprintf(&m3, "UNIT=%s", unit) < 0) {
-                r = -ENOMEM;
-                goto finish;
-        }
-
-        r = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY|SD_JOURNAL_SYSTEM_ONLY);
-        if (r < 0)
-                goto finish;
-
-        /* Look for messages from the service itself */
-        r = sd_journal_add_match(j, m1, 0);
-        if (r < 0)
-                goto finish;
-
-        /* Look for coredumps of the service */
-        r = sd_journal_add_disjunction(j);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, "MESSAGE_ID=fc2e22bc6ee647b6b90729ab34a250b1", 0);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, m2, 0);
-        if (r < 0)
-                goto finish;
-
-        /* Look for messages from PID 1 about this service */
-        r = sd_journal_add_disjunction(j);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, "_PID=1", 0);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, m3, 0);
-        if (r < 0)
-                goto finish;
-
-        r = show_journal(f, j, mode, n_columns, not_before, how_many, flags);
-        if (r < 0)
-                goto finish;
-
-finish:
-        if (j)
-                sd_journal_close(j);
-
-        return r;
-}
-
-int show_journal_by_user_unit(
-                FILE *f,
-                const char *unit,
-                OutputMode mode,
-                unsigned n_columns,
-                usec_t not_before,
-                unsigned how_many,
                 uid_t uid,
-                OutputFlags flags) {
+                OutputFlags flags,
+                bool system) {
 
-        _cleanup_free_ char *m1 = NULL, *m2 = NULL, *m3 = NULL, *m4 = NULL;
-        sd_journal *j = NULL;
+        _cleanup_journal_close_ sd_journal*j = NULL;
         int r;
+        int jflags = SD_JOURNAL_LOCAL_ONLY | system * SD_JOURNAL_SYSTEM_ONLY;
 
         assert(mode >= 0);
         assert(mode < _OUTPUT_MODE_MAX);
@@ -959,57 +953,22 @@ int show_journal_by_user_unit(
         if (how_many <= 0)
                 return 0;
 
-        if (asprintf(&m1, "_SYSTEMD_USER_UNIT=%s", unit) < 0 ||
-            asprintf(&m2, "USER_UNIT=%s", unit) < 0 ||
-            asprintf(&m3, "COREDUMP_USER_UNIT=%s", unit) < 0 ||
-            asprintf(&m4, "_UID=%d", uid) < 0) {
-                r = -ENOMEM;
-                goto finish;
-        }
+        r = sd_journal_open(&j, jflags);
+        if (r < 0)
+                return r;
 
-        r = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY);
+        if (system)
+                r = add_matches_for_unit(j, unit);
+        else
+                r = add_matches_for_user_unit(j, unit, uid);
         if (r < 0)
-                goto finish;
-
-        /* Look for messages from the user service itself */
-        r = sd_journal_add_match(j, m1, 0);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, m4, 0);
-        if (r < 0)
-                goto finish;
-
-        /* Look for messages from systemd about this service */
-        r = sd_journal_add_disjunction(j);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, m2, 0);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, m4, 0);
-        if (r < 0)
-                goto finish;
-
-        /* Look for coredumps of the service */
-        r = sd_journal_add_disjunction(j);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, m3, 0);
-        if (r < 0)
-                goto finish;
-        r = sd_journal_add_match(j, m4, 0);
-        if (r < 0)
-                goto finish;
+                return r;
 
         r = show_journal(f, j, mode, n_columns, not_before, how_many, flags);
         if (r < 0)
-                goto finish;
+                return r;
 
-finish:
-        if (j)
-                sd_journal_close(j);
-
-        return r;
+        return 0;
 }
 
 static const char *const output_mode_table[_OUTPUT_MODE_MAX] = {

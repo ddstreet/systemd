@@ -1,7 +1,7 @@
-From 8cd55a82e3c82463e5048f67c89bc06a62971b64 Mon Sep 17 00:00:00 2001
+From 1e6c6f45454113142721e48176f69db63b1261ce Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Mon, 26 Nov 2012 19:44:22 +0100
-Subject: [PATCH 04/15] Don't run systemd udev rules if systemd is not active
+Subject: [PATCH 04/10] Don't run systemd udev rules if systemd is not active
 
 ---
  rules/99-systemd.rules.in       |    1 +
@@ -22,3 +22,42 @@ index d17bdd9..9ae1289 100644
  
  SUBSYSTEM=="tty", KERNEL=="tty[a-zA-Z]*|hvc*|xvc*|hvsi*", TAG+="systemd"
  
+diff --git a/src/login/70-uaccess.rules b/src/login/70-uaccess.rules
+index a118f8e..47ebe41 100644
+--- a/src/login/70-uaccess.rules
++++ b/src/login/70-uaccess.rules
+@@ -7,6 +7,7 @@
+ 
+ ACTION=="remove", GOTO="uaccess_end"
+ ENV{MAJOR}=="", GOTO="uaccess_end"
++TEST!="/sys/fs/cgroup/systemd", GOTO="uaccess_end"
+ 
+ # PTP/MTP protocol devices, cameras, portable media players
+ SUBSYSTEM=="usb", ENV{ID_USB_INTERFACES}=="*:060101:*", TAG+="uaccess"
+diff --git a/src/login/71-seat.rules.in b/src/login/71-seat.rules.in
+index ad26acbb..af3f5bc 100644
+--- a/src/login/71-seat.rules.in
++++ b/src/login/71-seat.rules.in
+@@ -6,6 +6,7 @@
+ #  (at your option) any later version.
+ 
+ ACTION=="remove", GOTO="seat_end"
++TEST!="/sys/fs/cgroup/systemd", GOTO="seat_end"
+ 
+ TAG=="uaccess", SUBSYSTEM!="sound", TAG+="seat"
+ SUBSYSTEM=="sound", KERNEL=="card*", TAG+="seat"
+diff --git a/src/login/73-seat-late.rules.in b/src/login/73-seat-late.rules.in
+index 901df75..4a3ffd8 100644
+--- a/src/login/73-seat-late.rules.in
++++ b/src/login/73-seat-late.rules.in
+@@ -6,6 +6,7 @@
+ #  (at your option) any later version.
+ 
+ ACTION=="remove", GOTO="seat_late_end"
++TEST!="/sys/fs/cgroup/systemd", GOTO="seat_late_end"
+ 
+ ENV{ID_SEAT}=="", ENV{ID_AUTOSEAT}=="1", ENV{ID_FOR_SEAT}!="", ENV{ID_SEAT}="seat-$env{ID_FOR_SEAT}"
+ ENV{ID_SEAT}=="", IMPORT{parent}="ID_SEAT"
+-- 
+1.7.10.4
+

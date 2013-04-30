@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-analyze"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-analyze — Analyze system boot-up performance</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] time</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] blame </code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] plot  [&gt; file.svg]</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] dot </code> </p></div></div><div class="refsect1"><a name="idp3917344"></a><h2>Description</h2><p><span class="command"><strong>systemd-analyze</strong></span> may be used
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd-analyze"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-analyze — Analyze system boot-up performance</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] time</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] blame </code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] plot  [&gt; file.svg]</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] dot  [pattern...] </code> </p></div></div><div class="refsect1"><a name="idp3907744"></a><h2>Description</h2><p><span class="command"><strong>systemd-analyze</strong></span> may be used
                 to determine system boot-up performance of the current
                 boot.</p><p><span class="command"><strong>systemd-analyze time</strong></span>
                 prints the time spent in the kernel before
@@ -22,17 +22,22 @@
                 of another service to complete.</p><p><span class="command"><strong>systemd-analyze plot</strong></span> prints
                 an SVG graphic detailing which system services have
                 been started at what time, highlighting the time they
-                spent on initialization.</p><p><span class="command"><strong>systemd-analyze dot</strong></span>
-                Generate textual dependency graph description in dot
-                format for further processing with the GraphViz
+                spent on initialization.</p><p><span class="command"><strong>systemd-analyze dot</strong></span> Generate
+                textual dependency graph description in dot format for
+                further processing with the GraphViz
                 <a href="dot.html"><span class="citerefentry"><span class="refentrytitle">dot</span>(1)</span></a>
                 tool. Use a command line like <span class="command"><strong>systemd-analyze
-                dot | dot -Tsvg &gt; systemd.svg</strong></span> to generate
-                a graphical dependency tree. Unless
+                dot | dot -Tsvg &gt; systemd.svg</strong></span> to generate a
+                graphical dependency tree. Unless
                 <code class="option">--order</code> or <code class="option">--require</code>
                 is passed the generated graph will show both ordering
-                and requirement dependencies.</p><p>If no command is passed <span class="command"><strong>systemd-analyze
-                time</strong></span> is implied.</p></div><div class="refsect1"><a name="idp28144"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                and requirement dependencies. Optional pattern
+                globbing style specifications
+                (e.g. <code class="filename">*.target</code>) may be given at
+                the end. A unit dependency is included in the graph if
+                any of these patterns match either the origin or
+                destination node.</p><p>If no command is passed <span class="command"><strong>systemd-analyze
+                time</strong></span> is implied.</p></div><div class="refsect1"><a name="idp3919344"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--user</code></span></dt><dd><p>Shows performance data
                                 of user sessions instead of the system
                                 manager.</p></dd><dt><span class="term"><code class="option">--order</code>, </span><span class="term"><code class="option">--require</code></span></dt><dd><p>When used in
@@ -54,8 +59,24 @@
                                 <code class="varname">Conflicts=</code> are
                                 shown. If neither is passed, shows
                                 dependencies of all these
-                                types.</p></dd></dl></div></div><div class="refsect1"><a name="idp48576"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1"><a name="idp49760"></a><h2>See Also</h2><p>
+                                types.</p></dd><dt><span class="term"><code class="option">--from-pattern=</code>, </span><span class="term"><code class="option">--to-pattern=</code></span></dt><dd><p>When used in
+                                conjunction with the
+                                <span class="command"><strong>dot</strong></span> command (see
+                                above), selects which relationships
+                                are shown in the dependency graph.
+                                They both require
+                                <a href="glob.html"><span class="citerefentry"><span class="refentrytitle">glob</span>(7)</span></a>
+                                patterns as arguments, which are
+                                matched against lefthand and
+                                righthand, respectively, nodes of a
+                                relationship. Each of these can be
+                                used more than once which means a
+                                unit name must match one of given
+                                values.</p></dd></dl></div></div><div class="refsect1"><a name="idp37664"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idp38848"></a><h2>Examples</h2><p>This plots all dependencies of any unit whose
+                name starts with "<code class="literal">avahi-daemon.</code>":</p><pre class="programlisting">$ systemd-analyze dot 'avahi-daemon.*' | dot -Tsvg &gt; avahi.svg
+$ eog avahi.svg</pre><p>This plots the dependencies between all known target units:</p><pre class="programlisting">systemd-analyze dot --to-pattern='*.target' --from-patter='*.target' | dot -Tsvg &gt; targets.svg
+$ eog targets.svg</pre></div><div class="refsect1"><a name="idp49584"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>
                 </p></div></div></body></html>

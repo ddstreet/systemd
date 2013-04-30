@@ -35,8 +35,8 @@
 #include "libudev-private.h"
 #include "macro.h"
 
-#define BUFSIZE                        16
-#define UDEV_ALARM_TIMEOUT        180
+#define BUFSIZE 16
+#define UDEV_ALARM_TIMEOUT 180
 
 enum collect_state {
         STATE_NONE,
@@ -139,12 +139,12 @@ static int checkout(int fd)
 
  restart:
         len = bufsize >> 1;
-        buf = calloc(1,bufsize + 1);
-        if (!buf) {
-                fprintf(stderr, "Out of memory.\n");
+        buf = malloc(bufsize + 1);
+        if (!buf)
                 return log_oom();
-        }
         memset(buf, ' ', bufsize);
+        buf[bufsize] = '\0';
+
         ptr = buf + len;
         while ((read(fd, buf + len, len)) > 0) {
                 while (ptr && *ptr) {

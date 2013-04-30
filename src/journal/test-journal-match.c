@@ -28,8 +28,8 @@
 #include "log.h"
 
 int main(int argc, char *argv[]) {
-        sd_journal *j;
-        char *t;
+        _cleanup_journal_close_ sd_journal*j;
+        _cleanup_free_ char *t;
 
         log_set_max_level(LOG_DEBUG);
 
@@ -54,14 +54,23 @@ int main(int argc, char *argv[]) {
         assert_se(sd_journal_add_match(j, "ONE=two", 0) >= 0);
         assert_se(sd_journal_add_match(j, "TWO=two", 0) >= 0);
 
+        assert_se(sd_journal_add_conjunction(j) >= 0);
+
+        assert_se(sd_journal_add_match(j, "L4_1=yes", 0) >= 0);
+        assert_se(sd_journal_add_match(j, "L4_1=ok", 0) >= 0);
+        assert_se(sd_journal_add_match(j, "L4_2=yes", 0) >= 0);
+        assert_se(sd_journal_add_match(j, "L4_2=ok", 0) >= 0);
+
+        assert_se(sd_journal_add_disjunction(j) >= 0);
+
+        assert_se(sd_journal_add_match(j, "L3=yes", 0) >= 0);
+        assert_se(sd_journal_add_match(j, "L3=ok", 0) >= 0);
+
         assert_se(t = journal_make_match_string(j));
 
-        assert_se(streq(t, "((TWO=two AND (ONE=two OR ONE=one)) OR (PIFF=paff AND (QUUX=yyyyy OR QUUX=xxxxx OR QUUX=mmmm) AND (HALLO= OR HALLO=WALDO)))"));
-
         printf("resulting match expression is: %s\n", t);
-        free(t);
 
-        sd_journal_close(j);
+        assert_se(streq(t, "(((L3=ok OR L3=yes) OR ((L4_2=ok OR L4_2=yes) AND (L4_1=ok OR L4_1=yes))) AND ((TWO=two AND (ONE=two OR ONE=one)) OR (PIFF=paff AND (QUUX=yyyyy OR QUUX=xxxxx OR QUUX=mmmm) AND (HALLO= OR HALLO=WALDO))))"));
 
         return 0;
 }

@@ -88,7 +88,7 @@ static int apply_sysctl(const char *property, const char *value) {
                 }
         }
 
-        k = write_one_line_file(p, value);
+        k = write_string_file(p, value);
         if (k < 0) {
                 log_full(k == -ENOENT ? LOG_DEBUG : LOG_WARNING,
                          "Failed to write '%s' to '%s': %s", value, p, strerror(-k));
@@ -125,7 +125,7 @@ static int parse_file(Hashmap *sysctl_options, const char *path, bool ignore_eno
 
         r = search_and_fopen_nulstr(path, "re", conf_file_dirs, &f);
         if (r < 0) {
-                if (ignore_enoent && errno == -ENOENT)
+                if (ignore_enoent && r == -ENOENT)
                         return 0;
 
                 log_error("Failed to open file '%s', ignoring: %s", path, strerror(-r));
@@ -149,7 +149,7 @@ static int parse_file(Hashmap *sysctl_options, const char *path, bool ignore_eno
                 if (!*p)
                         continue;
 
-                if (strchr(COMMENTS, *p))
+                if (strchr(COMMENTS "\n", *p))
                         continue;
 
                 value = strchr(p, '=');

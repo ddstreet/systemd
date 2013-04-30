@@ -1,26 +1,30 @@
-From cde8454c3235e4e2fb1d11aa7d92ec215d595822 Mon Sep 17 00:00:00 2001
+From 501f3e31f7e36689fb9c6f48a3202d2658f619f6 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
-Date: Fri, 8 Mar 2013 01:01:24 +0100
-Subject: [PATCH 09/15] Revert "service: ignore dependencies on $syslog and
+Date: Thu, 28 Mar 2013 03:17:59 +0100
+Subject: [PATCH 09/10] Revert "service: ignore dependencies on $syslog and
  $local_fs in LSB scripts"
 
 This reverts commit 5d4caf565471ff3401bd9b53aa814c8545a18a93.
+
+Conflicts:
+	man/systemd.special.xml
+	src/core/special.h
 ---
  Makefile.am                   |    1 +
- man/systemd.special.xml       |   23 +++++++++++++++++++++++
+ man/systemd.special.xml       |   35 +++++++++++++++++++++++++++++++++++
  src/core/service.c            |   16 +++++++++-------
  src/core/special.h            |    3 ++-
  units/syslog.socket           |    5 ++++-
  units/syslog.target           |   19 +++++++++++++++++++
  units/systemd-journald.socket |    2 +-
- 7 files changed, 59 insertions(+), 10 deletions(-)
+ 7 files changed, 71 insertions(+), 10 deletions(-)
  create mode 100644 units/syslog.target
 
 diff --git a/Makefile.am b/Makefile.am
-index 05bf582..8c7242f 100644
+index d594a3d..ed20b57 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -379,6 +379,7 @@ dist_systemunit_DATA = \
+@@ -401,6 +401,7 @@ dist_systemunit_DATA = \
  	units/quotaon.service \
  	units/systemd-ask-password-wall.path \
  	units/systemd-ask-password-console.path \
@@ -29,21 +33,21 @@ index 05bf582..8c7242f 100644
  	units/systemd-udevd-kernel.socket \
  	units/system-update.target \
 diff --git a/man/systemd.special.xml b/man/systemd.special.xml
-index 0d1df84..aef1fca 100644
+index 61d45ff..b23a3ea 100644
 --- a/man/systemd.special.xml
 +++ b/man/systemd.special.xml
-@@ -93,6 +93,7 @@
+@@ -97,6 +97,7 @@
                  <filename>swap.target</filename>,
                  <filename>sysinit.target</filename>,
                  <filename>syslog.socket</filename>,
 +                <filename>syslog.target</filename>,
                  <filename>system-update.target</filename>,
                  <filename>time-sync.target</filename>,
-                 <filename>umount.target</filename></para>
-@@ -334,6 +335,15 @@
-                                         <option>auto</option> and
-                                         <option>comment=systemd.mount</option>
-                                         mount options set.</para>
+                 <filename>timers.target</filename>,
+@@ -363,6 +364,27 @@
+                                         that have the
+                                         <option>auto</option> mount
+                                         option set.</para>
 +
 +                                        <para>systemd automatically
 +                                        adds dependencies of type
@@ -53,10 +57,22 @@ index 0d1df84..aef1fca 100644
 +                                        referring to the
 +                                        <literal>$local_fs</literal>
 +                                        facility.</para>
++                                </listitem>
++                        </varlistentry>
++                        <varlistentry>
++                                <term><filename>local-fs-pre.target</filename></term>
++                                <listitem>
++                                        <para>This target unit is
++                                        automatically ordered before
++                                        all local mount points marked
++                                        with <option>auto</option>
++                                        (see above). It can be used to
++                                        execute certain units before
++                                        all local mounts.</para>
                                  </listitem>
                          </varlistentry>
                          <varlistentry>
-@@ -660,6 +670,19 @@
+@@ -671,6 +693,19 @@
                                  </listitem>
                          </varlistentry>
                          <varlistentry>
@@ -77,7 +93,7 @@ index 0d1df84..aef1fca 100644
                                  <listitem>
                                          <para>A special target unit
 diff --git a/src/core/service.c b/src/core/service.c
-index c160d94..2d322bf 100644
+index 6e1072a..0d96ea4 100644
 --- a/src/core/service.c
 +++ b/src/core/service.c
 @@ -330,8 +330,7 @@ static void service_done(Unit *u) {
@@ -90,7 +106,7 @@ index c160d94..2d322bf 100644
                  return NULL;
  
          if (endswith(name, ".sh"))
-@@ -357,12 +356,16 @@ static int sysv_translate_facility(const char *name, const char *filename, char
+@@ -354,12 +353,16 @@ static int sysv_translate_facility(const char *name, const char *filename, char
  
          static const char * const table[] = {
                  /* LSB defined facilities */
@@ -109,7 +125,7 @@ index c160d94..2d322bf 100644
                  "time",                 SPECIAL_TIME_SYNC_TARGET,
          };
  
-@@ -383,9 +386,8 @@ static int sysv_translate_facility(const char *name, const char *filename, char
+@@ -380,9 +383,8 @@ static int sysv_translate_facility(const char *name, const char *filename, char
                  if (!table[i+1])
                          return 0;
  
@@ -122,19 +138,19 @@ index c160d94..2d322bf 100644
                  goto finish;
          }
 diff --git a/src/core/special.h b/src/core/special.h
-index e71eaa7..cb037eb 100644
+index 99d933c..7132a35 100644
 --- a/src/core/special.h
 +++ b/src/core/special.h
-@@ -46,7 +46,7 @@
- /* Early boot targets */
- #define SPECIAL_SYSINIT_TARGET "sysinit.target"
+@@ -48,7 +48,7 @@
  #define SPECIAL_SOCKETS_TARGET "sockets.target"
+ #define SPECIAL_TIMERS_TARGET "timers.target"
+ #define SPECIAL_PATHS_TARGET "paths.target"
 -#define SPECIAL_LOCAL_FS_TARGET "local-fs.target"
 +#define SPECIAL_LOCAL_FS_TARGET "local-fs.target"         /* LSB's $local_fs */
  #define SPECIAL_LOCAL_FS_PRE_TARGET "local-fs-pre.target"
- #define SPECIAL_REMOTE_FS_TARGET "remote-fs.target"       /* LSB's $remote_fs */
- #define SPECIAL_REMOTE_FS_PRE_TARGET "remote-fs-pre.target"
-@@ -57,6 +57,7 @@
+ #define SPECIAL_INITRD_FS_TARGET "initrd-fs.target"
+ #define SPECIAL_INITRD_ROOT_FS_TARGET "initrd-root-fs.target"
+@@ -62,6 +62,7 @@
  #define SPECIAL_NETWORK_TARGET "network.target"           /* LSB's $network */
  #define SPECIAL_NSS_LOOKUP_TARGET "nss-lookup.target"     /* LSB's $named */
  #define SPECIAL_RPCBIND_SERVICE "rpcbind.service"         /* LSB's $portmap */

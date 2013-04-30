@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="machine-id"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>machine-id — Local machine ID configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1"><a name="idp3965184"></a><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="machine-id"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>machine-id — Local machine ID configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1"><a name="idp195440"></a><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
                 contains the unique machine id of the local system
                 that is set during installation. The machine ID is a
                 single newline-terminated, hexadecimal, lowercase 32
@@ -15,7 +15,7 @@
                 boot if it is found to be empty.</p><p>The machine ID does not change based on user
                 configuration, or when hardware is replaced.</p><p>This machine ID adheres to the same format and
                 logic as the D-Bus machine ID.</p><p>Programs may use this ID to identify the host
-                with a globally unique ID in the network, that does
+                with a globally unique ID in the network, which does
                 not change even if the local network configuration
                 changes. Due to this and its greater length it is
                 a more useful replacement for the
@@ -23,7 +23,7 @@
                 call POSIX specifies.</p><p>The
                 <a href="systemd-machine-id-setup.html"><span class="citerefentry"><span class="refentrytitle">systemd-machine-id-setup</span>(1)</span></a>
                 tool may be used by installer tools to initialize the
-                machine ID at install time.</p></div><div class="refsect1"><a name="idp3972192"></a><h2>Relation to OSF UUIDs</h2><p>Note that the machine ID historically is not an
+                machine ID at install time.</p></div><div class="refsect1"><a name="idp3966592"></a><h2>Relation to OSF UUIDs</h2><p>Note that the machine ID historically is not an
                 OSF UUID as defined by <a class="ulink" href="http://tools.ietf.org/html/rfc4122" target="_top">RFC
                 4122</a>, nor a Microsoft GUID. Starting with
                 systemd v30 newly generated machine IDs however do
@@ -38,12 +38,12 @@ id[6] = (id[6] &amp; 0x0F) | 0x40;
 id[8] = (id[8] &amp; 0x3F) | 0x80;</pre><p>(This code is inspired by
                 <code class="literal">generate_random_uuid()</code> of
                 <code class="filename">drivers/char/random.c</code> from the
-                kernel sources.)</p></div><div class="refsect1"><a name="idp3978368"></a><h2>History</h2><p>The simple configuration file format of
+                kernel sources.)</p></div><div class="refsect1"><a name="idp3972768"></a><h2>History</h2><p>The simple configuration file format of
                 <code class="filename">/etc/machine-id</code> originates in the
                 <code class="filename">/var/lib/dbus/machine-id</code> file
                 introduced by D-Bus. In fact this latter file might be a
                 symlink to
-                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1"><a name="idp25008"></a><h2>See Also</h2><p>
+                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1"><a name="idp3975952"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemd-machine-id-setup.html"><span class="citerefentry"><span class="refentrytitle">systemd-machine-id-setup</span>(1)</span></a>,
                           <a href="gethostid.html"><span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span></a>,

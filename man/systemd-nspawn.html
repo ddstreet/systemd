@@ -2,9 +2,9 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd-nspawn"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-nspawn — Spawn a namespace container for debugging, testing and building</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-nspawn</code>  [OPTIONS...] [<em class="replaceable"><code>COMMAND</code></em>
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd-nspawn"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-nspawn — Spawn a namespace container for debugging, testing and building</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-nspawn</code>  [OPTIONS...] [<em class="replaceable"><code>COMMAND</code></em>
                          [ARGS...]
-                        ]</p></div><div class="cmdsynopsis"><p><code class="command">systemd-nspawn</code>   -b  [OPTIONS...] [ARGS...]</p></div></div><div class="refsect1"><a name="idp3968208"></a><h2>Description</h2><p><span class="command"><strong>systemd-nspawn</strong></span> may be used to
+                        ]</p></div><div class="cmdsynopsis"><p><code class="command">systemd-nspawn</code>   -b  [OPTIONS...] [ARGS...]</p></div></div><div class="refsect1"><a name="idp2168096"></a><h2>Description</h2><p><span class="command"><strong>systemd-nspawn</strong></span> may be used to
                 run a command or OS in a light-weight namespace
                 container. In many ways it is similar to
                 <a href="chroot.html"><span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span></a>,
@@ -55,7 +55,7 @@
                 <a class="link" href="#example-nsenter" title="Example 4">Example 4</a> below.
                 </p><p><span class="command"><strong>systemd-nspawn</strong></span> implements the
                 <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/ContainerInterface" target="_top">Container
-                Interface</a> specification.</p></div><div class="refsect1"><a name="idp34592"></a><h2>Options</h2><p>If option <code class="option">-b</code> is specified, the
+                Interface</a> specification.</p></div><div class="refsect1"><a name="idp3664240"></a><h2>Options</h2><p>If option <code class="option">-b</code> is specified, the
                 arguments are used as arguments for the init
                 binary. Otherwise, <em class="replaceable"><code>COMMAND</code></em>
                 specifies the program to launch in the container, and
@@ -80,7 +80,15 @@
                                 of systemd-nspawn, this is not
                                 the security feature and limits
                                 against accidental changes only.
-                                </p></dd><dt><span class="term"><code class="option">--uuid=</code></span></dt><dd><p>Set the specified uuid
+                                </p></dd><dt><span class="term"><code class="option">-M</code>, </span><span class="term"><code class="option">--machine=</code></span></dt><dd><p>Sets the machine name
+                                for this container. This name may be
+                                used to identify this container on the
+                                host, and is used to initialize the
+                                container's hostname (which the
+                                container can choose to override,
+                                however). If not specified the last
+                                component of the root directory of the
+                                container is used.</p></dd><dt><span class="term"><code class="option">--uuid=</code></span></dt><dd><p>Set the specified uuid
                                 for the container. The init system
                                 will initialize
                                 <code class="filename">/etc/machine-id</code>
@@ -163,27 +171,27 @@
                                 destination in the container. The
                                 <code class="option">--bind-ro=</code> option
                                 creates read-only bind
-                                mount.</p></dd></dl></div></div><div class="refsect1"><a name="idp5062448"></a><h2>Example 1</h2><pre class="programlisting"># yum -y --releasever=19 --nogpg --installroot=/srv/mycontainer --disablerepo='*' --enablerepo=fedora install systemd passwd yum fedora-release vim-minimal
+                                mount.</p></dd></dl></div></div><div class="refsect1"><a name="idp49648"></a><h2>Example 1</h2><pre class="programlisting"># yum -y --releasever=19 --nogpg --installroot=/srv/mycontainer --disablerepo='*' --enablerepo=fedora install systemd passwd yum fedora-release vim-minimal
 # systemd-nspawn -bD /srv/mycontainer</pre><p>This installs a minimal Fedora distribution into
                 the directory <code class="filename">/srv/mycontainer/</code> and
                 then boots an OS in a namespace container in
-                it.</p></div><div class="refsect1"><a name="idp5065056"></a><h2>Example 2</h2><pre class="programlisting"># debootstrap --arch=amd64 unstable ~/debian-tree/
+                it.</p></div><div class="refsect1"><a name="idp52384"></a><h2>Example 2</h2><pre class="programlisting"># debootstrap --arch=amd64 unstable ~/debian-tree/
 # systemd-nspawn -D ~/debian-tree/</pre><p>This installs a minimal Debian unstable
                 distribution into the directory
                 <code class="filename">~/debian-tree/</code> and then spawns a
-                shell in a namespace container in it.</p></div><div class="refsect1"><a name="idp5067776"></a><h2>Example 3</h2><pre class="programlisting"># pacstrap -c -d ~/arch-tree/ base
+                shell in a namespace container in it.</p></div><div class="refsect1"><a name="idp55040"></a><h2>Example 3</h2><pre class="programlisting"># pacstrap -c -d ~/arch-tree/ base
 # systemd-nspawn -bD ~/arch-tree/</pre><p>This installs a mimimal Arch Linux distribution into
                 the directory <code class="filename">~/arch-tree/</code> and then
                 boots an OS in a namespace container in it.</p></div><div class="refsect1"><a name="example-nsenter"></a><h2>Example 4</h2><p>To enter the container, PID of one of the
                 processes sharing the new namespaces must be used.
                 <span class="command"><strong>systemd-nspawn</strong></span> prints the PID
                 (as viewed from the outside) of the launched process,
-                and it can be used to enter the container.</p><pre class="programlisting"># nsenter -muinpt $PID</pre><p><a href="nsenter.html"><span class="citerefentry"><span class="refentrytitle">nsenter</span>(1)</span></a>
+                and it can be used to enter the container.</p><pre class="programlisting"># nsenter -m -u -i -n -p -t $PID</pre><p><a href="nsenter.html"><span class="citerefentry"><span class="refentrytitle">nsenter</span>(1)</span></a>
                 is part of
                 <a class="ulink" href="https://github.com/karelzak/util-linux" target="_top">util-linux</a>.
                 Kernel support for entering namespaces was added in
-                Linux 3.8.</p></div><div class="refsect1"><a name="idp5074976"></a><h2>Exit status</h2><p>The exit code of the program executed in the
-                container is returned.</p></div><div class="refsect1"><a name="idp5076224"></a><h2>See Also</h2><p>
+                Linux 3.8.</p></div><div class="refsect1"><a name="idp62720"></a><h2>Exit status</h2><p>The exit code of the program executed in the
+                container is returned.</p></div><div class="refsect1"><a name="idp64000"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="chroot.html"><span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span></a>,
                         <a href="unshare.html"><span class="citerefentry"><span class="refentrytitle">unshare</span>(1)</span></a>,

@@ -37,6 +37,7 @@
 #include "pager.h"
 #include "set.h"
 #include "path-util.h"
+#include "utf8.h"
 
 static bool arg_no_pager = false;
 static enum transport {
@@ -158,7 +159,7 @@ static int show_status(DBusConnection *bus, char **args, unsigned n) {
         const char *interface = "";
         int r;
         DBusMessageIter iter, sub, sub2, sub3;
-        StatusInfo info;
+        StatusInfo info = {};
 
         assert(args);
 
@@ -182,7 +183,6 @@ static int show_status(DBusConnection *bus, char **args, unsigned n) {
                 return -EIO;
         }
 
-        zero(info);
         dbus_message_iter_recurse(&iter, &sub);
 
         while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
@@ -360,6 +360,9 @@ static int add_locales_from_archive(Set *locales) {
                 if (e[i].locrec_offset == 0)
                         continue;
 
+                if (!utf8_is_valid((char*) p + e[i].name_offset))
+                        continue;
+
                 z = strdup((char*) p + e[i].name_offset);
                 if (!z) {
                         r = log_oom();
@@ -384,7 +387,7 @@ static int add_locales_from_archive(Set *locales) {
 }
 
 static int add_locales_from_libdir (Set *locales) {
-        DIR _cleanup_closedir_ *dir;
+        _cleanup_closedir_ DIR *dir;
         struct dirent *entry;
         int r;
 
@@ -421,7 +424,7 @@ static int add_locales_from_libdir (Set *locales) {
                 errno = 0;
         }
 
-        if (errno != 0) {
+        if (errno > 0) {
                 log_error("Failed to read locale directory: %m");
                 return -errno;
         }
@@ -536,7 +539,7 @@ static int nftw_cb(
 }
 
 static int list_vconsole_keymaps(DBusConnection *bus, char **args, unsigned n) {
-        char _cleanup_strv_free_ **l = NULL;
+        _cleanup_strv_free_ char **l = NULL;
 
         keymaps = set_new(string_hash_func, string_compare_func);
         if (!keymaps)
@@ -606,24 +609,132 @@ static int set_x11_keymap(DBusConnection *bus, char **args, unsigned n) {
                         DBUS_TYPE_INVALID);
 }
 
+static int list_x11_keymaps(DBusConnection *bus, char **args, unsigned n) {
+        _cleanup_fclose_ FILE *f = NULL;
+        _cleanup_strv_free_ char **list = NULL;
+        char line[LINE_MAX];
+        enum {
+                NONE,
+                MODELS,
+                LAYOUTS,
+                VARIANTS,
+                OPTIONS
+        } state = NONE, look_for;
+        int r;
+
+        if (n > 2) {
+                log_error("Too many arguments.");
+                return -EINVAL;
+        }
+
+        f = fopen("/usr/share/X11/xkb/rules/base.lst", "re");
+        if (!f) {
+                log_error("Failed to open keyboard mapping list. %m");
+                return -errno;
+        }
+
+        if (streq(args[0], "list-x11-keymap-models"))
+                look_for = MODELS;
+        else if (streq(args[0], "list-x11-keymap-layouts"))
+                look_for = LAYOUTS;
+        else if (streq(args[0], "list-x11-keymap-variants"))
+                look_for = VARIANTS;
+        else if (streq(args[0], "list-x11-keymap-options"))
+                look_for = OPTIONS;
+        else
+                assert_not_reached("Wrong parameter");
+
+        FOREACH_LINE(line, f, break) {
+                char *l, *w;
+
+                l = strstrip(line);
+
+                if (isempty(l))
+                        continue;
+
+                if (l[0] == '!') {
+                        if (startswith(l, "! model"))
+                                state = MODELS;
+                        else if (startswith(l, "! layout"))
+                                state = LAYOUTS;
+                        else if (startswith(l, "! variant"))
+                                state = VARIANTS;
+                        else if (startswith(l, "! option"))
+                                state = OPTIONS;
+                        else
+                                state = NONE;
+
+                        continue;
+                }
+
+                if (state != look_for)
+                        continue;
+
+                w = l + strcspn(l, WHITESPACE);
+
+                if (n > 1) {
+                        char *e;
+
+                        if (*w == 0)
+                                continue;
+
+                        *w = 0;
+                        w++;
+                        w += strspn(w, WHITESPACE);
+
+                        e = strchr(w, ':');
+                        if (!e)
+                                continue;
+
+                        *e = 0;
+
+                        if (!streq(w, args[1]))
+                                continue;
+                } else
+                        *w = 0;
+
+                 r = strv_extend(&list, l);
+                 if (r < 0)
+                         return log_oom();
+        }
+
+        if (strv_isempty(list)) {
+                log_error("Couldn't find any entries.");
+                return -ENOENT;
+        }
+
+        strv_sort(list);
+        strv_uniq(list);
+
+        pager_open_if_enabled();
+
+        strv_print(list);
+        return 0;
+}
+
 static int help(void) {
 
         printf("%s [OPTIONS...] COMMAND ...\n\n"
                "Query or change system locale and keyboard settings.\n\n"
-               "  -h --help              Show this help\n"
-               "     --version           Show package version\n"
-               "     --no-convert        Don't convert keyboard mappings\n"
-               "     --no-pager          Do not pipe output into a pager\n"
-               "     --no-ask-password   Do not prompt for password\n"
-               "  -H --host=[USER@]HOST  Operate on remote host\n\n"
+               "  -h --help                Show this help\n"
+               "     --version             Show package version\n"
+               "     --no-convert          Don't convert keyboard mappings\n"
+               "     --no-pager            Do not pipe output into a pager\n"
+               "     --no-ask-password     Do not prompt for password\n"
+               "  -H --host=[USER@]HOST    Operate on remote host\n\n"
                "Commands:\n"
-               "  status                 Show current locale settings\n"
-               "  set-locale LOCALE...   Set system locale\n"
-               "  list-locales           Show known locales\n"
-               "  set-keymap MAP [MAP]   Set virtual console keyboard mapping\n"
-               "  list-keymaps           Show known virtual console keyboard mappings\n"
+               "  status                   Show current locale settings\n"
+               "  set-locale LOCALE...     Set system locale\n"
+               "  list-locales             Show known locales\n"
+               "  set-keymap MAP [MAP]     Set virtual console keyboard mapping\n"
+               "  list-keymaps             Show known virtual console keyboard mappings\n"
                "  set-x11-keymap LAYOUT [MODEL] [VARIANT] [OPTIONS]\n"
-               "                         Set X11 keyboard mapping\n",
+               "                           Set X11 keyboard mapping\n"
+               "  list-x11-keymap-models   Show known X11 keyboard mapping models\n"
+               "  list-x11-keymap-layouts  Show known X11 keyboard mapping layouts\n"
+               "  list-x11-keymap-variants [LAYOUT]\n"
+               "                           Show known X11 keyboard mapping variants\n"
+               "  list-x11-keymap-options  Show known X11 keyboard mapping options\n",
                program_invocation_short_name);
 
         return 0;
@@ -708,12 +819,16 @@ static int localectl_main(DBusConnection *bus, int argc, char *argv[], DBusError
                 const int argc;
                 int (* const dispatch)(DBusConnection *bus, char **args, unsigned n);
         } verbs[] = {
-                { "status",         LESS,   1, show_status           },
-                { "set-locale",     MORE,   2, set_locale            },
-                { "list-locales",   EQUAL,  1, list_locales          },
-                { "set-keymap",     MORE,   2, set_vconsole_keymap   },
-                { "list-keymaps",   EQUAL,  1, list_vconsole_keymaps },
-                { "set-x11-keymap", MORE,   2, set_x11_keymap        },
+                { "status",                   LESS,   1, show_status           },
+                { "set-locale",               MORE,   2, set_locale            },
+                { "list-locales",             EQUAL,  1, list_locales          },
+                { "set-keymap",               MORE,   2, set_vconsole_keymap   },
+                { "list-keymaps",             EQUAL,  1, list_vconsole_keymaps },
+                { "set-x11-keymap",           MORE,   2, set_x11_keymap        },
+                { "list-x11-keymap-models",   EQUAL,  1, list_x11_keymaps      },
+                { "list-x11-keymap-layouts",  EQUAL,  1, list_x11_keymaps      },
+                { "list-x11-keymap-variants", LESS,   2, list_x11_keymaps      },
+                { "list-x11-keymap-options",  EQUAL,  1, list_x11_keymaps      },
         };
 
         int left;

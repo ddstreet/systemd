@@ -436,15 +436,14 @@ static int session_create_one_group(Session *s, const char *controller, const ch
         int r;
 
         assert(s);
-        assert(controller);
         assert(path);
 
         if (s->leader > 0) {
                 r = cg_create_and_attach(controller, path, s->leader);
                 if (r < 0)
-                        r = cg_create(controller, path);
+                        r = cg_create(controller, path, NULL);
         } else
-                r = cg_create(controller, path);
+                r = cg_create(controller, path, NULL);
 
         if (r < 0)
                 return r;
@@ -710,6 +709,8 @@ int session_stop(Session *s) {
         if (s->started)
                 session_send_signal(s, false);
 
+        s->started = false;
+
         if (s->seat) {
                 if (s->seat->active == s)
                         seat_set_active(s->seat, NULL);
@@ -720,8 +721,6 @@ int session_stop(Session *s) {
 
         user_send_changed(s->user, "Sessions\0");
         user_save(s->user);
-
-        s->started = false;
 
         return r;
 }
@@ -898,7 +897,7 @@ int session_create_fifo(Session *s) {
 
         /* Open reading side */
         if (s->fifo_fd < 0) {
-                struct epoll_event ev;
+                struct epoll_event ev = {};
 
                 s->fifo_fd = open(s->fifo_path, O_RDONLY|O_CLOEXEC|O_NDELAY);
                 if (s->fifo_fd < 0)
@@ -908,7 +907,6 @@ int session_create_fifo(Session *s) {
                 if (r < 0)
                         return r;
 
-                zero(ev);
                 ev.events = 0;
                 ev.data.u32 = FD_OTHER_BASE + s->fifo_fd;
 
@@ -1057,7 +1055,8 @@ DEFINE_STRING_TABLE_LOOKUP(session_type, SessionType);
 static const char* const session_class_table[_SESSION_CLASS_MAX] = {
         [SESSION_USER] = "user",
         [SESSION_GREETER] = "greeter",
-        [SESSION_LOCK_SCREEN] = "lock-screen"
+        [SESSION_LOCK_SCREEN] = "lock-screen",
+        [SESSION_BACKGROUND] = "background"
 };
 
 DEFINE_STRING_TABLE_LOOKUP(session_class, SessionClass);
