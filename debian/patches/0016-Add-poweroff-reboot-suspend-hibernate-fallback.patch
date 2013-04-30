@@ -10,11 +10,11 @@ pm-suspend quirks.
  src/login/logind-dbus.c | 45 +++++++++++++++++++++++++++++++++++++++++++--
  1 file changed, 43 insertions(+), 2 deletions(-)
 
-Index: b/src/login/logind-dbus.c
+Index: systemd/src/login/logind-dbus.c
 ===================================================================
---- a/src/login/logind-dbus.c
-+++ b/src/login/logind-dbus.c
-@@ -1043,6 +1043,33 @@
+--- systemd.orig/src/login/logind-dbus.c	2013-04-29 14:43:15.732833538 -0700
++++ systemd/src/login/logind-dbus.c	2013-04-29 14:43:15.724833538 -0700
+@@ -1055,6 +1055,33 @@
                            q, NULL);
  }
  
@@ -48,7 +48,7 @@ Index: b/src/login/logind-dbus.c
  static int execute_shutdown_or_sleep(
                  Manager *m,
                  InhibitWhat w,
-@@ -1072,8 +1099,23 @@
+@@ -1084,8 +1111,23 @@
                          DBUS_TYPE_STRING, &unit_name,
                          DBUS_TYPE_STRING, &mode,
                          DBUS_TYPE_INVALID);

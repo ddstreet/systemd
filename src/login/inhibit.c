@@ -42,7 +42,7 @@ static enum {
 } arg_action = ACTION_INHIBIT;
 
 static int inhibit(DBusConnection *bus, DBusError *error) {
-        DBusMessage *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         int r;
 
         r = bus_method_call_with_reply(
@@ -64,15 +64,13 @@ static int inhibit(DBusConnection *bus, DBusError *error) {
         if (!dbus_message_get_args(reply, error,
                                    DBUS_TYPE_UNIX_FD, &r,
                                    DBUS_TYPE_INVALID))
-                r = -EIO;
-
-        dbus_message_unref(reply);
+                return -EIO;
 
         return r;
 }
 
 static int print_inhibitors(DBusConnection *bus, DBusError *error) {
-        DBusMessage *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         unsigned n = 0;
         DBusMessageIter iter, sub, sub2;
         int r;
@@ -87,27 +85,21 @@ static int print_inhibitors(DBusConnection *bus, DBusError *error) {
                         NULL,
                         DBUS_TYPE_INVALID);
         if (r < 0)
-                goto finish;
+                return r;
 
-        if (!dbus_message_iter_init(reply, &iter)) {
-                r = -ENOMEM;
-                goto finish;
-        }
+        if (!dbus_message_iter_init(reply, &iter))
+                return -ENOMEM;
 
-        if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY) {
-                r = -EIO;
-                goto finish;
-        }
+        if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY)
+                return -EIO;
 
         dbus_message_iter_recurse(&iter, &sub);
         while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
                 const char *what, *who, *why, *mode;
                 dbus_uint32_t uid, pid;
 
-                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRUCT) {
-                        r = -EIO;
-                        goto finish;
-                }
+                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRUCT)
+                        return -EIO;
 
                 dbus_message_iter_recurse(&sub, &sub2);
 
@@ -116,10 +108,8 @@ static int print_inhibitors(DBusConnection *bus, DBusError *error) {
                     bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &why, true) < 0 ||
                     bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &mode, true) < 0 ||
                     bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_UINT32, &uid, true) < 0 ||
-                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_UINT32, &pid, false) < 0) {
-                        r = -EIO;
-                        goto finish;
-                }
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_UINT32, &pid, false) < 0)
+                        return -EIO;
 
                 printf("     Who: %s (UID %lu, PID %lu)\n"
                        "    What: %s\n"
@@ -136,13 +126,7 @@ static int print_inhibitors(DBusConnection *bus, DBusError *error) {
         }
 
         printf("%u inhibitors listed.\n", n);
-        r = 0;
-
-finish:
-        if (reply)
-                dbus_message_unref(reply);
-
-        return r;
+        return 0;
 }
 
 static int help(void) {
@@ -245,7 +229,7 @@ int main(int argc, char *argv[]) {
         int r, exit_code = 0;
         DBusConnection *bus = NULL;
         DBusError error;
-        int fd = -1;
+        _cleanup_close_ int fd = -1;
 
         dbus_error_init(&error);
 
@@ -267,7 +251,7 @@ int main(int argc, char *argv[]) {
 
                 r = print_inhibitors(bus, &error);
                 if (r < 0) {
-                        log_error("Failed to list inhibitors: %s", bus_error_message_or_strerror(&error, -r));
+                        log_error("Failed to list inhibitors: %s", bus_error(&error, r));
                         goto finish;
                 }
 
@@ -282,7 +266,7 @@ int main(int argc, char *argv[]) {
                 free(w);
 
                 if (fd < 0) {
-                        log_error("Failed to inhibit: %s", bus_error_message_or_strerror(&error, -r));
+                        log_error("Failed to inhibit: %s", bus_error(&error, r));
                         r = fd;
                         goto finish;
                 }
@@ -317,9 +301,6 @@ finish:
         }
 
         dbus_error_free(&error);
-
-        if (fd >= 0)
-                close_nointr_nofail(fd);
 
         return r < 0 ? EXIT_FAILURE : exit_code;
 }

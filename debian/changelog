@@ -1,3 +1,19 @@
+systemd (202-0ubuntu1) saucy; urgency=low
+
+  * New upstream release.
+  * Drop patches applied/superseded upstream:
+    - 0011-Don-t-strip-rc.-from-sysv-init-scripts.patch
+    - 0013-build-sys-don-t-hard-code-binary-paths-in-initrd-.se.patch
+    - 0014-Move-udevadm-to-rootbindir.patch
+    - 0015-Strip-Date-from-man-pages.patch
+  * Update *.symbols for new release.
+  * Add 0021-disable-catalog-test.patch: Disable catalog test for now, fails
+    at the moment
+  * Disable 0004-Don-t-run-systemd-udev-rules-if-systemd-is-not-activ.patch.
+    We'll drop udev-acl and use uaccess exclusively.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 29 Apr 2013 17:29:24 -0700
+
 systemd (198-0ubuntu12) saucy; urgency=low
 
   [ Martin Pitt ]

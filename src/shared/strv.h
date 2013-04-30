@@ -30,14 +30,20 @@ char *strv_find(char **l, const char *name);
 char *strv_find_prefix(char **l, const char *name);
 
 void strv_free(char **l);
-void strv_freep(char ***l);
-char **strv_copy(char **l) _malloc_;
-unsigned strv_length(char **l);
+static inline void strv_freep(char ***l) {
+        strv_free(*l);
+}
+
+#define _cleanup_strv_free_ _cleanup_(strv_freep)
+
+char **strv_copy(char * const *l) _malloc_;
+unsigned strv_length(char * const *l);
 
 char **strv_merge(char **a, char **b);
 char **strv_merge_concat(char **a, char **b, const char *suffix);
 char **strv_append(char **l, const char *s);
 int strv_extend(char ***l, const char *value);
+int strv_push(char ***l, char *value);
 
 char **strv_remove(char **l, const char *s);
 char **strv_remove_prefix(char **l, const char *s);
@@ -52,7 +58,7 @@ static inline const char* STRV_IFNOTNULL(const char *x) {
         return x ? x : (const char *) -1;
 }
 
-static inline bool strv_isempty(char **l) {
+static inline bool strv_isempty(char * const *l) {
         return !l || !*l;
 }
 
@@ -74,7 +80,7 @@ bool strv_overlap(char **a, char **b);
         for (; (l) && ((s) >= (l)); (s)--)
 
 #define STRV_FOREACH_PAIR(x, y, l)               \
-        for ((x) = (l), (y) = (x+1); (x) && *(x) && *(y); (x) += 2)
+        for ((x) = (l), (y) = (x+1); (x) && *(x) && *(y); (x) += 2, (y) = (x + 1))
 
 
 char **strv_sort(char **l);

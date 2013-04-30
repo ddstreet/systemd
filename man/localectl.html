@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="localectl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>localectl — Control the system locale and keyboard layout settings</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">localectl [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idp3875568"></a><h2>Description</h2><p><span class="command"><strong>localectl</strong></span> may be used to
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="localectl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>localectl — Control the system locale and keyboard layout settings</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">localectl [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idp169184"></a><h2>Description</h2><p><span class="command"><strong>localectl</strong></span> may be used to
                 query and change the system locale and keyboard layout
                 settings.</p><p>The system locale controls the language settings
                 of system services and of the UI before the user logs
@@ -11,7 +11,7 @@
                 layout used on the text console and of the graphical
                 UI before the user logs in, such as the display
                 manager, as well as the default for users after
-                login.</p></div><div class="refsect1"><a name="idp124176"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                login.</p></div><div class="refsect1"><a name="idp172336"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output into a
                                 pager.</p></dd><dt><span class="term"><code class="option">--no-ask-password</code></span></dt><dd><p>Don't query the user
@@ -70,13 +70,22 @@
                                 applied to the system console keyboard
                                 mapping, after converting it to the
                                 closest matching console keyboard
-                                mapping.</p></dd></dl></div></div><div class="refsect1"><a name="idm38448"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1"><a name="idm37264"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
+                                mapping.</p></dd><dt><span class="term"><span class="command"><strong>list-x11-keymap-models</strong></span>, </span><span class="term"><span class="command"><strong>list-x11-keymap-layouts</strong></span>, </span><span class="term"><span class="command"><strong>list-x11-keymap-variants [LAYOUT]</strong></span>, </span><span class="term"><span class="command"><strong>list-x11-keymap-options</strong></span></span></dt><dd><p>List available X11
+                                keymap models, layouts, variants and
+                                options, useful for configuration with
+                                <span class="command"><strong>set-keymap</strong></span>. The
+                                command
+                                <span class="command"><strong>list-x11-keymap-variants</strong></span>
+                                optionally takes a layout parameter to
+                                limit the output to the variants
+                                suitable for the specific
+                                layout.</p></dd></dl></div></div><div class="refsect1"><a name="idm35568"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idm34384"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
                                 <code class="option">--no-pager</code> is not given;
                                 overrides <code class="varname">$PAGER</code>.  Setting
                                 this to an empty string or the value
                                 <code class="literal">cat</code> is equivalent to passing
-                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp48384"></a><h2>See Also</h2><p>
+                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp5039136"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="locale.html"><span class="citerefentry"><span class="refentrytitle">locale</span>(7)</span></a>,
                         <a href="locale.conf.html"><span class="citerefentry"><span class="refentrytitle">locale.conf</span>(5)</span></a>,

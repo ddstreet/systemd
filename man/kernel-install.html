@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="kernel-install"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>kernel-install — Add and remove kernel and initramfs images to and from /boot</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">kernel-install</code>  {COMMAND} {KERNEL VERSION} {KERNEL IMAGE}</p></div></div><div class="refsect1"><a name="idp3909984"></a><h2>Description</h2><p>
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="kernel-install"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>kernel-install — Add and remove kernel and initramfs images to and from /boot</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">kernel-install</code>  {COMMAND} {KERNEL VERSION} {KERNEL IMAGE}</p></div></div><div class="refsect1"><a name="idp3914272"></a><h2>Description</h2><p>
       <span class="command"><strong>kernel-install</strong></span> is used to install and remove kernel and
       initramfs images to and from <code class="filename">/boot</code>.
     </p><p>kernel-install will execute the files located in the directory <code class="filename">/usr/lib/kernel/install.d/</code>
@@ -14,7 +14,7 @@
     executables with a local file if needed; a symbolic link in <code class="filename">/etc/kernel/install.d/</code>
     with the same name as an executable in <code class="filename">/usr/lib/kernel/install.d/</code>,
     pointing to /dev/null, disables the executable entirely. Executables must have the
-    extension .install; other extensions are ignored.</p></div><div class="refsect1"><a name="idp3917632"></a><h2>Commands</h2><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">add &lt;KERNEL VERSION&gt; &lt;KERNEL IMAGE&gt;</span></dt><dd><p>calls every executable <code class="filename">/usr/lib/kernel/install.d/*.install</code>
+    extension .install; other extensions are ignored.</p></div><div class="refsect1"><a name="idp3921872"></a><h2>Commands</h2><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">add &lt;KERNEL VERSION&gt; &lt;KERNEL IMAGE&gt;</span></dt><dd><p>calls every executable <code class="filename">/usr/lib/kernel/install.d/*.install</code>
           and <code class="filename">/etc/kernel/install.d/*.install</code> with the arguments
           "add &lt;KERNEL VERSION&gt; <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/</code>"</p><p>kernel-install copies &lt;KERNEL IMAGE&gt; to
           <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/linux</code>.</p><p>kernel-install also creates a boot loader entry according to the boot loader specification
@@ -24,18 +24,18 @@
         and <code class="filename">/etc/kernel/install.d/*.install</code> with the arguments:
         "remove &lt;KERNEL VERSION&gt; <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/</code>"
         </p><p>kernel-install removes the entire directory <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/</code>
-        and the file <code class="filename">/boot/loader/entries/&lt;MACHINE-ID&gt;-&lt;KERNEL VERSION&gt;.conf</code></p></dd></dl></div></div><div class="refsect1"><a name="idp33632"></a><h2>Exit status</h2><p>If every executable returns with 0, 0 is returned, a non-zero failure code otherwise.</p></div><div class="refsect1"><a name="idp34816"></a><h2>Files</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+        and the file <code class="filename">/boot/loader/entries/&lt;MACHINE-ID&gt;-&lt;KERNEL VERSION&gt;.conf</code></p></dd></dl></div></div><div class="refsect1"><a name="idp34272"></a><h2>Exit status</h2><p>If every executable returns with 0, 0 is returned, a non-zero failure code otherwise.</p></div><div class="refsect1"><a name="idp35456"></a><h2>Files</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term">
           <code class="filename">/usr/lib/kernel/install.d/*.install</code>
           <code class="filename">/etc/kernel/install.d/*.install</code>
         </span></dt><dd><p>Drop-in files, which are executed by kernel-install.</p></dd><dt><span class="term">
           <code class="filename">/etc/kernel/cmdline</code>
           <code class="filename">/proc/cmdline</code>
-        </span></dt><dd><p>The contents of the file <code class="filename">/etc/kernel/cmdline</code> specifies the kernel command line to use.
+        </span></dt><dd><p>The content of the file <code class="filename">/etc/kernel/cmdline</code> specifies the kernel command line to use.
             If that file does not exist, <code class="filename">/proc/cmdline</code> is used.</p></dd><dt><span class="term">
           <code class="filename">/etc/machine-id</code>
-        </span></dt><dd><p>The contents of the file specifies the machine identifaction &lt;MACHINE-ID&gt;.</p></dd><dt><span class="term">
+        </span></dt><dd><p>The content of the file specifies the machine identification &lt;MACHINE-ID&gt;.</p></dd><dt><span class="term">
           <code class="filename">/etc/os-release</code>
-        </span></dt><dd><p>The contents of the file specifies the the operating system id &lt;OS-ID&gt;.</p></dd></dl></div></div><div class="refsect1"><a name="idp55104"></a><h2>See Also</h2><p>
+        </span></dt><dd><p>The content of the file specifies the operating system id &lt;OS-ID&gt;.</p></dd></dl></div></div><div class="refsect1"><a name="idp55984"></a><h2>See Also</h2><p>
       <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a>,
       <a href="os-release.html"><span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span></a>,
       <a class="ulink" href="http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec" target="_top">Boot loader specification</a>

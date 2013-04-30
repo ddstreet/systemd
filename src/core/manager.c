@@ -93,11 +93,14 @@ static int manager_setup_notify(Manager *m) {
         union {
                 struct sockaddr sa;
                 struct sockaddr_un un;
-        } sa;
-        struct epoll_event ev;
-        int one = 1;
-
-        assert(m);
+        } sa = {
+                .sa.sa_family = AF_UNIX,
+        };
+        struct epoll_event ev = {
+                .events = EPOLLIN,
+                .data.ptr = &m->notify_watch,
+        };
+        int one = 1, r;
 
         m->notify_watch.type = WATCH_NOTIFY;
         m->notify_watch.fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
@@ -106,9 +109,6 @@ static int manager_setup_notify(Manager *m) {
                 return -errno;
         }
 
-        zero(sa);
-        sa.sa.sa_family = AF_UNIX;
-
         if (getpid() != 1 || detect_container(NULL) > 0)
                 snprintf(sa.un.sun_path, sizeof(sa.un.sun_path), NOTIFY_SOCKET "/%llu", random_ull());
         else
@@ -116,21 +116,21 @@ static int manager_setup_notify(Manager *m) {
 
         sa.un.sun_path[0] = 0;
 
-        if (bind(m->notify_watch.fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + 1 + strlen(sa.un.sun_path+1)) < 0) {
+        r = bind(m->notify_watch.fd, &sa.sa,
+                 offsetof(struct sockaddr_un, sun_path) + 1 + strlen(sa.un.sun_path+1));
+        if (r < 0) {
                 log_error("bind() failed: %m");
                 return -errno;
         }
 
-        if (setsockopt(m->notify_watch.fd, SOL_SOCKET, SO_PASSCRED, &one, sizeof(one)) < 0) {
+        r = setsockopt(m->notify_watch.fd, SOL_SOCKET, SO_PASSCRED, &one, sizeof(one));
+        if (r < 0) {
                 log_error("SO_PASSCRED failed: %m");
                 return -errno;
         }
 
-        zero(ev);
-        ev.events = EPOLLIN;
-        ev.data.ptr = &m->notify_watch;
-
-        if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->notify_watch.fd, &ev) < 0) {
+        r = epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->notify_watch.fd, &ev);
+        if (r < 0) {
                 log_error("Failed to add notification socket fd to epoll: %m");
                 return -errno;
         }
@@ -146,12 +146,13 @@ static int manager_setup_notify(Manager *m) {
 }
 
 static int manager_jobs_in_progress_mod_timer(Manager *m) {
-        struct itimerspec its;
+        struct itimerspec its = {
+                .it_value.tv_sec = JOBS_IN_PROGRESS_WAIT_SEC,
+                .it_interval.tv_sec = JOBS_IN_PROGRESS_PERIOD_SEC,
+        };
 
-        zero(its);
-
-        its.it_value.tv_sec = JOBS_IN_PROGRESS_WAIT_SEC;
-        its.it_interval.tv_sec = JOBS_IN_PROGRESS_PERIOD_SEC;
+        if (m->jobs_in_progress_watch.type != WATCH_JOBS_IN_PROGRESS)
+                return 0;
 
         if (timerfd_settime(m->jobs_in_progress_watch.fd, 0, &its, NULL) < 0)
                 return -errno;
@@ -160,10 +161,11 @@ static int manager_jobs_in_progress_mod_timer(Manager *m) {
 }
 
 static int manager_watch_jobs_in_progress(Manager *m) {
-        struct epoll_event ev;
+        struct epoll_event ev = {
+                .events = EPOLLIN,
+                .data.ptr = &m->jobs_in_progress_watch,
+        };
         int r;
-
-        assert(m);
 
         if (m->jobs_in_progress_watch.type != WATCH_INVALID)
                 return 0;
@@ -181,10 +183,6 @@ static int manager_watch_jobs_in_progress(Manager *m) {
                 log_error("Failed to set up timer for jobs progress watch: %s", strerror(-r));
                 goto err;
         }
-
-        zero(ev);
-        ev.events = EPOLLIN;
-        ev.data.ptr = &m->jobs_in_progress_watch;
 
         if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->jobs_in_progress_watch.fd, &ev) < 0) {
                 log_error("Failed to add jobs progress timer fd to epoll: %m");
@@ -223,36 +221,26 @@ static void draw_cylon(char buffer[], size_t buflen, unsigned width, unsigned po
         assert(pos <= width+1); /* 0 or width+1 mean that the center light is behind the corner */
 
         if (pos > 1) {
-                if (pos > 2) {
-                        memset(p, ' ', pos-2);
-                        p += pos-2;
-                }
-                memcpy(p, ANSI_RED_ON, strlen(ANSI_RED_ON));
-                p += strlen(ANSI_RED_ON);
+                if (pos > 2)
+                        p = mempset(p, ' ', pos-2);
+                p = stpcpy(p, ANSI_RED_ON);
                 *p++ = '*';
         }
 
         if (pos > 0 && pos <= width) {
-                memcpy(p, ANSI_HIGHLIGHT_RED_ON, strlen(ANSI_HIGHLIGHT_RED_ON));
-                p += strlen(ANSI_HIGHLIGHT_RED_ON);
+                p = stpcpy(p, ANSI_HIGHLIGHT_RED_ON);
                 *p++ = '*';
         }
 
-        memcpy(p, ANSI_HIGHLIGHT_OFF, strlen(ANSI_HIGHLIGHT_OFF));
-        p += strlen(ANSI_HIGHLIGHT_OFF);
+        p = stpcpy(p, ANSI_HIGHLIGHT_OFF);
 
         if (pos < width) {
-                memcpy(p, ANSI_RED_ON, strlen(ANSI_RED_ON));
-                p += strlen(ANSI_RED_ON);
+                p = stpcpy(p, ANSI_RED_ON);
                 *p++ = '*';
-                if (pos < width-1) {
-                        memset(p, ' ', width-1-pos);
-                        p += width-1-pos;
-                }
-                memcpy(p, ANSI_HIGHLIGHT_OFF, strlen(ANSI_HIGHLIGHT_OFF));
-                p += strlen(ANSI_HIGHLIGHT_OFF);
+                if (pos < width-1)
+                        p = mempset(p, ' ', width-1-pos);
+                p = stpcpy(p, ANSI_HIGHLIGHT_OFF);
         }
-        *p = 0;
 }
 
 static void manager_print_jobs_in_progress(Manager *m) {
@@ -290,10 +278,18 @@ static void manager_print_jobs_in_progress(Manager *m) {
 }
 
 static int manager_setup_time_change(Manager *m) {
-        struct epoll_event ev;
-        struct itimerspec its;
+        struct epoll_event ev = {
+                .events = EPOLLIN,
+                .data.ptr = &m->time_change_watch,
+        };
 
-        assert(m);
+        /* We only care for the cancellation event, hence we set the
+         * timeout to the latest possible value. */
+        struct itimerspec its = {
+                .it_value.tv_sec = TIME_T_MAX,
+        };
+        assert_cc(sizeof(time_t) == sizeof(TIME_T_MAX));
+
         assert(m->time_change_watch.type == WATCH_INVALID);
 
         /* Uses TFD_TIMER_CANCEL_ON_SET to get notifications whenever
@@ -306,23 +302,12 @@ static int manager_setup_time_change(Manager *m) {
                 return -errno;
         }
 
-        zero(its);
-
-        /* We only care for the cancellation event, hence we set the
-         * timeout to the latest possible value. */
-        assert_cc(sizeof(time_t) == sizeof(TIME_T_MAX));
-        its.it_value.tv_sec = TIME_T_MAX;
-
         if (timerfd_settime(m->time_change_watch.fd, TFD_TIMER_ABSTIME|TFD_TIMER_CANCEL_ON_SET, &its, NULL) < 0) {
                 log_debug("Failed to set up TFD_TIMER_CANCEL_ON_SET, ignoring: %m");
                 close_nointr_nofail(m->time_change_watch.fd);
                 watch_init(&m->time_change_watch);
                 return 0;
         }
-
-        zero(ev);
-        ev.events = EPOLLIN;
-        ev.data.ptr = &m->time_change_watch;
 
         if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->time_change_watch.fd, &ev) < 0) {
                 log_error("Failed to add timer change fd to epoll: %m");
@@ -363,15 +348,18 @@ static int enable_special_signals(Manager *m) {
 
 static int manager_setup_signals(Manager *m) {
         sigset_t mask;
-        struct epoll_event ev;
-        struct sigaction sa;
+        struct epoll_event ev = {
+                .events = EPOLLIN,
+                .data.ptr = &m->signal_watch,
+        };
+        struct sigaction sa = {
+                .sa_handler = SIG_DFL,
+                .sa_flags = SA_NOCLDSTOP|SA_RESTART,
+        };
 
         assert(m);
 
         /* We are not interested in SIGSTOP and friends. */
-        zero(sa);
-        sa.sa_handler = SIG_DFL;
-        sa.sa_flags = SA_NOCLDSTOP|SA_RESTART;
         assert_se(sigaction(SIGCHLD, &sa, NULL) == 0);
 
         assert_se(sigemptyset(&mask) == 0);
@@ -413,10 +401,6 @@ static int manager_setup_signals(Manager *m) {
         if (m->signal_watch.fd < 0)
                 return -errno;
 
-        zero(ev);
-        ev.events = EPOLLIN;
-        ev.data.ptr = &m->signal_watch;
-
         if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->signal_watch.fd, &ev) < 0)
                 return -errno;
 
@@ -457,10 +441,12 @@ int manager_new(SystemdRunningAs running_as, Manager **_m) {
                 return -ENOMEM;
 
         dual_timestamp_get(&m->userspace_timestamp);
-        dual_timestamp_from_monotonic(&m->kernel_timestamp, 0);
+        if (detect_container(NULL) <= 0) {
+                dual_timestamp_from_monotonic(&m->kernel_timestamp, 0);
 #ifdef ENABLE_EFI
-        efi_get_boot_timestamps(&m->userspace_timestamp, &m->firmware_timestamp, &m->loader_timestamp);
+                efi_get_boot_timestamps(&m->userspace_timestamp, &m->firmware_timestamp, &m->loader_timestamp);
 #endif
+        }
 
         m->running_as = running_as;
         m->name_data_slot = m->conn_data_slot = m->subscribed_data_slot = -1;
@@ -782,7 +768,7 @@ int manager_coldplug(Manager *m) {
 
 static void manager_build_unit_path_cache(Manager *m) {
         char **i;
-        DIR _cleanup_free_ *d = NULL;
+        _cleanup_free_ DIR *d = NULL;
         int r;
 
         assert(m);
@@ -1228,30 +1214,29 @@ static int manager_process_notify_fd(Manager *m) {
 
         for (;;) {
                 char buf[4096];
-                struct msghdr msghdr;
-                struct iovec iovec;
-                struct ucred *ucred;
+                struct iovec iovec = {
+                        .iov_base = buf,
+                        .iov_len = sizeof(buf)-1,
+                };
+
                 union {
                         struct cmsghdr cmsghdr;
                         uint8_t buf[CMSG_SPACE(sizeof(struct ucred))];
-                } control;
+                } control = {};
+
+                struct msghdr msghdr = {
+                        .msg_iov = &iovec,
+                        .msg_iovlen = 1,
+                        .msg_control = &control,
+                        .msg_controllen = sizeof(control),
+                };
+                struct ucred *ucred;
                 Unit *u;
-                char **tags;
-
-                zero(iovec);
-                iovec.iov_base = buf;
-                iovec.iov_len = sizeof(buf)-1;
-
-                zero(control);
-                zero(msghdr);
-                msghdr.msg_iov = &iovec;
-                msghdr.msg_iovlen = 1;
-                msghdr.msg_control = &control;
-                msghdr.msg_controllen = sizeof(control);
+                _cleanup_strv_free_ char **tags = NULL;
 
                 n = recvmsg(m->notify_watch.fd, &msghdr, MSG_DONTWAIT);
                 if (n <= 0) {
-                        if (n >= 0)
+                        if (n == 0)
                                 return -EIO;
 
                         if (errno == EAGAIN || errno == EINTR)
@@ -1289,8 +1274,6 @@ static int manager_process_notify_fd(Manager *m) {
 
                 if (UNIT_VTABLE(u)->notify_message)
                         UNIT_VTABLE(u)->notify_message(u, ucred->pid, tags);
-
-                strv_free(tags);
         }
 
         return 0;
@@ -1300,11 +1283,9 @@ static int manager_dispatch_sigchld(Manager *m) {
         assert(m);
 
         for (;;) {
-                siginfo_t si;
+                siginfo_t si = {};
                 Unit *u;
                 int r;
-
-                zero(si);
 
                 /* First we call waitd() for a PID and do not reap the
                  * zombie. That way we can still access /proc/$PID for
@@ -1324,7 +1305,7 @@ static int manager_dispatch_sigchld(Manager *m) {
                         break;
 
                 if (si.si_code == CLD_EXITED || si.si_code == CLD_KILLED || si.si_code == CLD_DUMPED) {
-                        char _cleanup_free_ *name = NULL;
+                        _cleanup_free_ char *name = NULL;
 
                         get_process_comm(si.si_pid, &name);
                         log_debug("Got SIGCHLD for process %lu (%s)", (unsigned long) si.si_pid, strna(name));
@@ -1946,7 +1927,8 @@ void manager_send_unit_plymouth(Manager *m, Unit *u) {
 
         /* We set SOCK_NONBLOCK here so that we rather drop the
          * message then wait for plymouth */
-        if ((fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0)) < 0) {
+        fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
+        if (fd < 0) {
                 log_error("socket() failed: %m");
                 return;
         }
@@ -2029,7 +2011,6 @@ void manager_dispatch_bus_query_pid_done(
 
 int manager_open_serialization(Manager *m, FILE **_f) {
         char *path = NULL;
-        mode_t saved_umask;
         int fd;
         FILE *f;
 
@@ -2043,9 +2024,9 @@ int manager_open_serialization(Manager *m, FILE **_f) {
         if (!path)
                 return -ENOMEM;
 
-        saved_umask = umask(0077);
-        fd = mkostemp(path, O_RDWR|O_CLOEXEC);
-        umask(saved_umask);
+        RUN_WITH_UMASK(0077) {
+                fd = mkostemp(path, O_RDWR|O_CLOEXEC);
+        }
 
         if (fd < 0) {
                 free(path);
@@ -2066,7 +2047,7 @@ int manager_open_serialization(Manager *m, FILE **_f) {
         return 0;
 }
 
-int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool serialize_jobs) {
+int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool switching_root) {
         Iterator i;
         Unit *u;
         const char *t;
@@ -2094,12 +2075,14 @@ int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool serialize_jobs) {
                 dual_timestamp_serialize(f, "finish-timestamp", &m->finish_timestamp);
         }
 
-        STRV_FOREACH(e, m->environment) {
-                _cleanup_free_ char *ce;
+        if (!switching_root) {
+                STRV_FOREACH(e, m->environment) {
+                        _cleanup_free_ char *ce;
 
-                ce = cescape(*e);
-                if (ce)
-                        fprintf(f, "env=%s\n", *e);
+                        ce = cescape(*e);
+                        if (ce)
+                                fprintf(f, "env=%s\n", *e);
+                }
         }
 
         fputc('\n', f);
@@ -2115,7 +2098,7 @@ int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool serialize_jobs) {
                 fputs(u->id, f);
                 fputc('\n', f);
 
-                if ((r = unit_serialize(u, f, fds, serialize_jobs)) < 0) {
+                if ((r = unit_serialize(u, f, fds, !switching_root)) < 0) {
                         m->n_reloading --;
                         return r;
                 }
@@ -2303,7 +2286,7 @@ int manager_reload(Manager *m) {
                 goto finish;
         }
 
-        r = manager_serialize(m, f, fds, true);
+        r = manager_serialize(m, f, fds, false);
         if (r < 0) {
                 m->n_reloading --;
                 goto finish;
@@ -2381,6 +2364,12 @@ static bool manager_is_booting_or_shutting_down(Manager *m) {
         return false;
 }
 
+bool manager_is_reloading_or_reexecuting(Manager *m) {
+        assert(m);
+
+        return m->n_reloading != 0;
+}
+
 void manager_reset_failed(Manager *m) {
         Unit *u;
         Iterator i;
@@ -2414,8 +2403,10 @@ void manager_check_finished(Manager *m) {
         if (m->n_running_jobs == 0)
                 manager_unwatch_jobs_in_progress(m);
 
-        if (hashmap_size(m->jobs) > 0)
+        if (hashmap_size(m->jobs) > 0) {
+                manager_jobs_in_progress_mod_timer(m);
                 return;
+        }
 
         /* Notify Type=idle units that we are done now */
         close_pipe(m->idle_pipe);
@@ -2452,10 +2443,10 @@ void manager_check_finished(Manager *m) {
                                            "INITRD_USEC=%llu", (unsigned long long) initrd_usec,
                                            "USERSPACE_USEC=%llu", (unsigned long long) userspace_usec,
                                            "MESSAGE=Startup finished in %s (kernel) + %s (initrd) + %s (userspace) = %s.",
-                                           format_timespan(kernel, sizeof(kernel), kernel_usec),
-                                           format_timespan(initrd, sizeof(initrd), initrd_usec),
-                                           format_timespan(userspace, sizeof(userspace), userspace_usec),
-                                           format_timespan(sum, sizeof(sum), total_usec),
+                                           format_timespan(kernel, sizeof(kernel), kernel_usec, USEC_PER_MSEC),
+                                           format_timespan(initrd, sizeof(initrd), initrd_usec, USEC_PER_MSEC),
+                                           format_timespan(userspace, sizeof(userspace), userspace_usec, USEC_PER_MSEC),
+                                           format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC),
                                            NULL);
                 } else {
                         kernel_usec = m->userspace_timestamp.monotonic - m->kernel_timestamp.monotonic;
@@ -2467,9 +2458,9 @@ void manager_check_finished(Manager *m) {
                                            "KERNEL_USEC=%llu", (unsigned long long) kernel_usec,
                                            "USERSPACE_USEC=%llu", (unsigned long long) userspace_usec,
                                            "MESSAGE=Startup finished in %s (kernel) + %s (userspace) = %s.",
-                                           format_timespan(kernel, sizeof(kernel), kernel_usec),
-                                           format_timespan(userspace, sizeof(userspace), userspace_usec),
-                                           format_timespan(sum, sizeof(sum), total_usec),
+                                           format_timespan(kernel, sizeof(kernel), kernel_usec, USEC_PER_MSEC),
+                                           format_timespan(userspace, sizeof(userspace), userspace_usec, USEC_PER_MSEC),
+                                           format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC),
                                            NULL);
                 }
         } else {
@@ -2481,7 +2472,7 @@ void manager_check_finished(Manager *m) {
                                    MESSAGE_ID(SD_MESSAGE_STARTUP_FINISHED),
                                    "USERSPACE_USEC=%llu", (unsigned long long) userspace_usec,
                                    "MESSAGE=Startup finished in %s.",
-                                   format_timespan(sum, sizeof(sum), total_usec),
+                                   format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC),
                                    NULL);
         }
 
@@ -2489,7 +2480,7 @@ void manager_check_finished(Manager *m) {
 
         sd_notifyf(false,
                    "READY=1\nSTATUS=Startup finished in %s.",
-                   format_timespan(sum, sizeof(sum), total_usec));
+                   format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC));
 }
 
 static int create_generator_dir(Manager *m, char **generator, const char *name) {
@@ -2552,7 +2543,6 @@ void manager_run_generators(Manager *m) {
         DIR *d = NULL;
         const char *generator_path;
         const char *argv[5];
-        mode_t u;
         int r;
 
         assert(m);
@@ -2586,9 +2576,9 @@ void manager_run_generators(Manager *m) {
         argv[3] = m->generator_unit_path_late;
         argv[4] = NULL;
 
-        u = umask(0022);
-        execute_directory(generator_path, d, (char**) argv);
-        umask(u);
+        RUN_WITH_UMASK(0022) {
+                execute_directory(generator_path, d, (char**) argv);
+        }
 
         trim_generator_dir(m, &m->generator_unit_path);
         trim_generator_dir(m, &m->generator_unit_path_early);

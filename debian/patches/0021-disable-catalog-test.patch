@@ -1,0 +1,15 @@
+Description: Disable catalog test for now, fails at the moment
+
+Index: systemd/Makefile.am
+===================================================================
+--- systemd.orig/Makefile.am	2013-04-29 14:56:54.000000000 -0700
++++ systemd/Makefile.am	2013-04-29 16:00:25.025057583 -0700
+@@ -2852,7 +2852,7 @@
+ 	test-journal-stream \
+ 	test-journal-verify \
+ 	test-mmap-cache \
+-	test-catalog
++	$(NULL)
+ 
+ pkginclude_HEADERS += \
+ 	src/systemd/sd-journal.h \

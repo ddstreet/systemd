@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="journalctl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>journalctl — Query the systemd journal</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">journalctl [OPTIONS...]  [MATCHES...]</code> </p></div></div><div class="refsect1"><a name="idp3908976"></a><h2>Description</h2><p><span class="command"><strong>journalctl</strong></span> may be used to
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="journalctl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>journalctl — Query the systemd journal</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">journalctl</code>  [OPTIONS...] [MATCHES...]</p></div></div><div class="refsect1"><a name="idp2958400"></a><h2>Description</h2><p><span class="command"><strong>journalctl</strong></span> may be used to
                 query the contents of the
                 <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>
                 journal as written by
@@ -40,7 +40,7 @@
                 per-user journals. However, by default only root and
                 users who are members of the <code class="literal">adm</code>
                 group get access to the system journal and the
-                journals of other users.</p></div><div class="refsect1"><a name="idp3921440"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                journals of other users.</p></div><div class="refsect1"><a name="idp2187152"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output into a
                                 pager.</p></dd><dt><span class="term"><code class="option">--full</code></span></dt><dd><p>Show all (printable) fields in
@@ -55,7 +55,7 @@
                                 implied pager tool. This implies
                                 <code class="option">-n1000</code> to guarantee
                                 that the pager won't buffer logs of
-                                unbounded size. This may be overriden
+                                unbounded size. This may be overridden
                                 with an explicit <code class="option">-n</code>
                                 with some other numeric value on the
                                 command line. Note that this option is
@@ -142,16 +142,22 @@
                                 current boot. This will add a match
                                 for <code class="literal">_BOOT_ID=</code> for
                                 the current boot ID of the
-                                kernel.</p></dd><dt><span class="term"><code class="option">-u</code>, </span><span class="term"><code class="option">--unit=</code></span></dt><dd><p>Show data only of the
-                                specified unit. This will add a match
-                                for <code class="literal">_SYSTEMD_UNIT=</code>
-                                for the specified
-                                unit.</p></dd><dt><span class="term"><code class="option">--user-unit=</code></span></dt><dd><p>Show data only of the
+                                kernel.</p></dd><dt><span class="term"><code class="option">-u</code>, </span><span class="term"><code class="option">--unit=</code></span></dt><dd><p>Show messages for the
+                                specified systemd unit. This will add
+                                a match for messages from the unit
+                                (<code class="literal">_SYSTEMD_UNIT=</code>)
+                                and additional matches for messages
+                                from systemd and messages about
+                                coredumps for the specified unit.</p><p>This parameter can be specified multiple times.
+                                </p></dd><dt><span class="term"><code class="option">--user-unit=</code></span></dt><dd><p>Show messages for the
                                 specified user session unit. This will
-                                add a match for
-                                <code class="literal">_SYSTEMD_USER_UNIT=</code>
-                                for the specified
-                                unit.</p></dd><dt><span class="term"><code class="option">-p</code>, </span><span class="term"><code class="option">--priority=</code></span></dt><dd><p>Filter output by
+                                add a match for messages from the unit
+                                (<code class="literal">_SYSTEMD_USER_UNIT=</code>
+                                and <code class="literal">_UID=</code>) and
+                                additional matches for messages from
+                                session systemd and messages about
+                                coredumps for the specified unit.</p><p>This parameter can be specified multiple times.
+                                </p></dd><dt><span class="term"><code class="option">-p</code>, </span><span class="term"><code class="option">--priority=</code></span></dt><dd><p>Filter output by
                                 message priorities or priority
                                 ranges. Takes either a single numeric
                                 or textual log level (i.e. between
@@ -208,12 +214,20 @@
                                 time, respectively.</p></dd><dt><span class="term"><code class="option">-F</code>, </span><span class="term"><code class="option">--field=</code></span></dt><dd><p>Print all possible
                                 data values the specified field can
                                 take in all entries of the
-                                journal.</p></dd><dt><span class="term"><code class="option">-D</code>, </span><span class="term"><code class="option">--directory=</code></span></dt><dd><p>Takes an absolute
+                                journal.</p></dd><dt><span class="term"><code class="option">-D</code>, </span><span class="term"><code class="option">--directory=</code></span></dt><dd><p>Takes a
                                 directory path as argument. If
                                 specified journalctl will operate on the
                                 specified journal directory instead of
                                 the default runtime and system journal
-                                paths.</p></dd><dt><span class="term"><code class="option">--new-id128</code></span></dt><dd><p>Instead of showing
+                                paths.</p></dd><dt><span class="term"><code class="option">--root=<em class="replaceable"><code>ROOT</code></em></code></span></dt><dd><p>Takes a directory path
+                                as argument. If specified journalctl
+                                will operate on catalog file hierarchy
+                                underneath the specified directory
+                                instead of the root directory
+                                (e.g. <code class="option">--update-catalog</code>
+                                will create
+                                <code class="filename"><em class="replaceable"><code>ROOT</code></em>/var/lib/systemd/catalog/database</code>).
+                                </p></dd><dt><span class="term"><code class="option">--new-id128</code></span></dt><dd><p>Instead of showing
                                 journal contents generate a new 128
                                 bit ID suitable for identifying
                                 messages. This is intended for usage
@@ -228,10 +242,25 @@
                                 information of the journal fields
                                 accessed.</p></dd><dt><span class="term"><code class="option">--disk-usage</code></span></dt><dd><p>Shows the current disk
                                 usage of all
-                                journal files.</p></dd><dt><span class="term"><code class="option">--list-catalog</code></span></dt><dd><p>List the contents of
+                                journal files.</p></dd><dt><span class="term"><code class="option">--list-catalog
+                                [<span class="optional"><em class="replaceable"><code>ID128...</code></em></span>]
+                                </code></span></dt><dd><p>List the contents of
                                 the message catalog, as table of
                                 message IDs plus their short
-                                description strings.</p></dd><dt><span class="term"><code class="option">--update-catalog</code></span></dt><dd><p>Update the message
+                                description strings.</p><p>If any
+                                <em class="replaceable"><code>ID128</code></em>s are
+                                specified, only those entries are shown.
+                                </p></dd><dt><span class="term"><code class="option">--dump-catalog
+                                [<span class="optional"><em class="replaceable"><code>ID128...</code></em></span>]
+                                </code></span></dt><dd><p>Show the contents of
+                                the message catalog, with entries
+                                separated by a line consisting of two
+                                dashes and the id (the format is the
+                                same as <code class="filename">.catalog</code>
+                                files.</p><p>If any
+                                <em class="replaceable"><code>ID128</code></em>s are
+                                specified, only those entries are shown.
+                                </p></dd><dt><span class="term"><code class="option">--update-catalog</code></span></dt><dd><p>Update the message
                                 catalog index. This command needs to
                                 be executed each time new catalog
                                 files are installed, removed or
@@ -262,19 +291,19 @@
                                 verified.</p></dd><dt><span class="term"><code class="option">--verify-key=</code></span></dt><dd><p>Specifies the FSS
                                 verification key to use for the
                                 <code class="option">--verify</code>
-                                operation.</p></dd></dl></div></div><div class="refsect1"><a name="idp5040960"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1"><a name="idp5042112"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
+                                operation.</p></dd></dl></div></div><div class="refsect1"><a name="idp50784"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idp52064"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
                                 <code class="option">--no-pager</code> is not given;
                                 overrides <code class="varname">$PAGER</code>.  Setting
                                 this to an empty string or the value
                                 <code class="literal">cat</code> is equivalent to passing
-                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp5046816"></a><h2>Examples</h2><p>Without arguments all collected logs are shown
+                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp56880"></a><h2>Examples</h2><p>Without arguments all collected logs are shown
                 unfiltered:</p><pre class="programlisting">journalctl</pre><p>With one match specified all entries with a field matching the expression are shown:</p><pre class="programlisting">journalctl _SYSTEMD_UNIT=avahi-daemon.service</pre><p>If two different fields are matched only entries matching both expressions at the same time are shown:</p><pre class="programlisting">journalctl _SYSTEMD_UNIT=avahi-daemon.service _PID=28097</pre><p>If two matches refer to the same field all entries matching either expression are shown:</p><pre class="programlisting">journalctl _SYSTEMD_UNIT=avahi-daemon.service _SYSTEMD_UNIT=dbus.service</pre><p>If the separator "<code class="literal">+</code>" is used
                 two expressions may be combined in a logical OR. The
                 following will show all messages from the Avahi
                 service process with the PID 28097 plus all messages
                 from the D-Bus service (from any of its
-                processes):</p><pre class="programlisting">journalctl _SYSTEMD_UNIT=avahi-daemon.service _PID=28097 + _SYSTEMD_UNIT=dbus.service</pre><p>Show all logs generated by the D-Bus executable:</p><pre class="programlisting">journalctl /usr/bin/dbus-daemon</pre><p>Show all logs of the kernel device node <code class="filename">/dev/sda</code>:</p><pre class="programlisting">journalctl /dev/sda</pre></div><div class="refsect1"><a name="idp5056880"></a><h2>See Also</h2><p>
+                processes):</p><pre class="programlisting">journalctl _SYSTEMD_UNIT=avahi-daemon.service _PID=28097 + _SYSTEMD_UNIT=dbus.service</pre><p>Show all logs generated by the D-Bus executable:</p><pre class="programlisting">journalctl /usr/bin/dbus-daemon</pre><p>Show all logs of the kernel device node <code class="filename">/dev/sda</code>:</p><pre class="programlisting">journalctl /dev/sda</pre></div><div class="refsect1"><a name="idp67312"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="systemd-journald.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-journald.service</span>(8)</span></a>,
                         <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>,

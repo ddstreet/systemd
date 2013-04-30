@@ -198,7 +198,7 @@ static int remove_marked_symlinks_fd(
                 char** files) {
 
         int r = 0;
-        DIR _cleanup_closedir_ *d = NULL;
+        _cleanup_closedir_ DIR *d = NULL;
 
         assert(remove_symlinks_to);
         assert(fd >= 0);
@@ -235,7 +235,7 @@ static int remove_marked_symlinks_fd(
 
                 if (de->d_type == DT_DIR) {
                         int nfd, q;
-                        char _cleanup_free_ *p = NULL;
+                        _cleanup_free_ char *p = NULL;
 
                         nfd = openat(fd, de->d_name, O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW);
                         if (nfd < 0) {
@@ -260,7 +260,7 @@ static int remove_marked_symlinks_fd(
                                 r = q;
 
                 } else if (de->d_type == DT_LNK) {
-                        char _cleanup_free_ *p = NULL, *dest = NULL;
+                        _cleanup_free_ char *p = NULL, *dest = NULL;
                         int q;
                         bool found;
 
@@ -362,7 +362,7 @@ static int find_symlinks_fd(
                 bool *same_name_link) {
 
         int r = 0;
-        DIR _cleanup_closedir_ *d = NULL;
+        _cleanup_closedir_ DIR *d = NULL;
 
         assert(name);
         assert(fd >= 0);
@@ -395,7 +395,7 @@ static int find_symlinks_fd(
 
                 if (de->d_type == DT_DIR) {
                         int nfd, q;
-                        char _cleanup_free_ *p = NULL;
+                        _cleanup_free_ char *p = NULL;
 
                         nfd = openat(fd, de->d_name, O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW);
                         if (nfd < 0) {
@@ -423,7 +423,7 @@ static int find_symlinks_fd(
                                 r = q;
 
                 } else if (de->d_type == DT_LNK) {
-                        char _cleanup_free_ *p = NULL, *dest = NULL;
+                        _cleanup_free_ char *p = NULL, *dest = NULL;
                         bool found_path, found_dest, b = false;
                         int q;
 
@@ -458,7 +458,7 @@ static int find_symlinks_fd(
                                 found_dest = streq(path_get_file_name(dest), name);
 
                         if (found_path && found_dest) {
-                                char _cleanup_free_ *t = NULL;
+                                _cleanup_free_ char *t = NULL;
 
                                 /* Filter out same name links in the main
                                  * config path */
@@ -508,7 +508,7 @@ static int find_symlinks_in_scope(
                 UnitFileState *state) {
 
         int r;
-        char _cleanup_free_ *path = NULL;
+        _cleanup_free_ char *path = NULL;
         bool same_name_link_runtime = false, same_name_link = false;
 
         assert(scope >= 0);
@@ -567,7 +567,7 @@ int unit_file_mask(
                 unsigned *n_changes) {
 
         char **i;
-        char _cleanup_free_ *prefix;
+        _cleanup_free_ char *prefix;
         int r;
 
         assert(scope >= 0);
@@ -578,7 +578,7 @@ int unit_file_mask(
                 return r;
 
         STRV_FOREACH(i, files) {
-                char _cleanup_free_ *path = NULL;
+                _cleanup_free_ char *path = NULL;
 
                 if (!unit_name_is_valid(*i, true)) {
                         if (r == 0)
@@ -700,9 +700,9 @@ int unit_file_link(
                 UnitFileChange **changes,
                 unsigned *n_changes) {
 
-        LookupPaths _cleanup_lookup_paths_free_ paths = {NULL};
+        _cleanup_lookup_paths_free_ LookupPaths paths = {};
         char **i;
-        char _cleanup_free_ *config_path = NULL;
+        _cleanup_free_ char *config_path = NULL;
         int r, q;
 
         assert(scope >= 0);
@@ -717,7 +717,7 @@ int unit_file_link(
                 return r;
 
         STRV_FOREACH(i, files) {
-                char _cleanup_free_ *path = NULL;
+                _cleanup_free_ char *path = NULL;
                 char *fn;
                 struct stat st;
 
@@ -758,7 +758,7 @@ int unit_file_link(
                 }
 
                 if (errno == EEXIST) {
-                        char _cleanup_free_ *dest = NULL;
+                        _cleanup_free_ char *dest = NULL;
 
                         q = readlink_and_make_absolute(path, &dest);
 
@@ -921,15 +921,15 @@ static int install_info_add_auto(
                 return install_info_add(c, name_or_path, NULL);
 }
 
-static int config_parse_also(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
+static int config_parse_also(const char *unit,
+                             const char *filename,
+                             unsigned line,
+                             const char *section,
+                             const char *lvalue,
+                             int ltype,
+                             const char *rvalue,
+                             void *data,
+                             void *userdata) {
 
         char *w;
         size_t l;
@@ -941,7 +941,7 @@ static int config_parse_also(
         assert(rvalue);
 
         FOREACH_WORD_QUOTED(w, l, rvalue, state) {
-                char _cleanup_free_ *n;
+                _cleanup_free_ char *n;
                 int r;
 
                 n = strndup(w, l);
@@ -956,15 +956,15 @@ static int config_parse_also(
         return 0;
 }
 
-static int config_parse_user(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
+static int config_parse_user(const char *unit,
+                             const char *filename,
+                             unsigned line,
+                             const char *section,
+                             const char *lvalue,
+                             int ltype,
+                             const char *rvalue,
+                             void *data,
+                             void *userdata) {
 
         InstallInfo *i = data;
         char* printed;
@@ -999,7 +999,7 @@ static int unit_file_load(
         };
 
         int fd;
-        FILE _cleanup_fclose_ *f = NULL;
+        _cleanup_fclose_ FILE *f = NULL;
         int r;
 
         assert(c);
@@ -1016,7 +1016,8 @@ static int unit_file_load(
                 return -ENOMEM;
         }
 
-        r = config_parse(path, f, NULL, config_item_table_lookup, (void*) items, true, info);
+        r = config_parse(NULL, path, f, NULL,
+                         config_item_table_lookup, (void*) items, true, info);
         if (r < 0)
                 return r;
 
@@ -1116,7 +1117,7 @@ static int unit_file_can_install(
                 const char *name,
                 bool allow_symlink) {
 
-        InstallContext _cleanup_install_context_done_ c = {NULL};
+        _cleanup_install_context_done_ InstallContext c = {};
         InstallInfo *i;
         int r;
 
@@ -1147,7 +1148,7 @@ static int create_symlink(
                 UnitFileChange **changes,
                 unsigned *n_changes) {
 
-        char _cleanup_free_ *dest = NULL;
+        _cleanup_free_ char *dest = NULL;
         int r;
 
         assert(old_path);
@@ -1198,7 +1199,7 @@ static int install_info_symlink_alias(
         assert(config_path);
 
         STRV_FOREACH(s, i->aliases) {
-                char _cleanup_free_ *alias_path = NULL, *dst = NULL;
+                _cleanup_free_ char *alias_path = NULL, *dst = NULL;
 
                 dst = install_full_printf(i, *s);
                 if (!dst)
@@ -1230,7 +1231,7 @@ static int install_info_symlink_wants(
         assert(config_path);
 
         STRV_FOREACH(s, i->wanted_by) {
-                char _cleanup_free_ *path = NULL, *dst = NULL;
+                _cleanup_free_ char *path = NULL, *dst = NULL;
 
                 dst = install_full_printf(i, *s);
                 if (!dst)
@@ -1267,7 +1268,7 @@ static int install_info_symlink_requires(
         assert(config_path);
 
         STRV_FOREACH(s, i->required_by) {
-                char _cleanup_free_ *path = NULL, *dst = NULL;
+                _cleanup_free_ char *path = NULL, *dst = NULL;
 
                 dst = install_full_printf(i, *s);
                 if (!dst)
@@ -1299,7 +1300,7 @@ static int install_info_symlink_link(
                 unsigned *n_changes) {
 
         int r;
-        char _cleanup_free_ *path = NULL;
+        _cleanup_free_ char *path = NULL;
 
         assert(i);
         assert(paths);
@@ -1452,10 +1453,10 @@ int unit_file_enable(
                 UnitFileChange **changes,
                 unsigned *n_changes) {
 
-        LookupPaths _cleanup_lookup_paths_free_ paths = {NULL};
-        InstallContext _cleanup_install_context_done_ c = {NULL};
+        _cleanup_lookup_paths_free_ LookupPaths paths = {};
+        _cleanup_install_context_done_ InstallContext c = {};
         char **i;
-        char _cleanup_free_ *config_path = NULL;
+        _cleanup_free_ char *config_path = NULL;
         int r;
 
         assert(scope >= 0);
@@ -1491,11 +1492,11 @@ int unit_file_disable(
                 UnitFileChange **changes,
                 unsigned *n_changes) {
 
-        LookupPaths _cleanup_lookup_paths_free_ paths = {NULL};
-        InstallContext _cleanup_install_context_done_ c = {NULL};
+        _cleanup_lookup_paths_free_ LookupPaths paths = {};
+        _cleanup_install_context_done_ InstallContext c = {};
         char **i;
-        char _cleanup_free_ *config_path = NULL;
-        Set _cleanup_set_free_free_ *remove_symlinks_to = NULL;
+        _cleanup_free_ char *config_path = NULL;
+        _cleanup_set_free_free_ Set *remove_symlinks_to = NULL;
         int r, q;
 
         assert(scope >= 0);
@@ -1533,11 +1534,11 @@ int unit_file_reenable(
                 UnitFileChange **changes,
                 unsigned *n_changes) {
 
-        LookupPaths _cleanup_lookup_paths_free_ paths = {NULL};
-        InstallContext _cleanup_install_context_done_ c = {NULL};
+        _cleanup_lookup_paths_free_ LookupPaths paths = {};
+        _cleanup_install_context_done_ InstallContext c = {};
         char **i;
-        char _cleanup_free_ *config_path = NULL;
-        Set _cleanup_set_free_free_ *remove_symlinks_to = NULL;
+        _cleanup_free_ char *config_path = NULL;
+        _cleanup_set_free_free_ Set *remove_symlinks_to = NULL;
         int r, q;
 
         assert(scope >= 0);
@@ -1576,10 +1577,10 @@ UnitFileState unit_file_get_state(
                 const char *root_dir,
                 const char *name) {
 
-        LookupPaths _cleanup_lookup_paths_free_ paths = {NULL};
+        _cleanup_lookup_paths_free_ LookupPaths paths = {};
         UnitFileState state = _UNIT_FILE_STATE_INVALID;
         char **i;
-        char _cleanup_free_ *path = NULL;
+        _cleanup_free_ char *path = NULL;
         int r;
 
         assert(scope >= 0);
@@ -1637,7 +1638,7 @@ UnitFileState unit_file_get_state(
                         return state;
 
                 r = unit_file_can_install(&paths, root_dir, path, true);
-                if (r < 0 && errno != -ENOENT)
+                if (r < 0 && errno != ENOENT)
                         return r;
                 else if (r > 0)
                         return UNIT_FILE_DISABLED;
@@ -1649,7 +1650,7 @@ UnitFileState unit_file_get_state(
 }
 
 int unit_file_query_preset(UnitFileScope scope, const char *name) {
-        char _cleanup_strv_free_ **files = NULL;
+        _cleanup_strv_free_ char **files = NULL;
         char **i;
         int r;
 
@@ -1679,7 +1680,7 @@ int unit_file_query_preset(UnitFileScope scope, const char *name) {
                 return r;
 
         STRV_FOREACH(i, files) {
-                FILE _cleanup_fclose_ *f;
+                _cleanup_fclose_ FILE *f;
 
                 f = fopen(*i, "re");
                 if (!f) {
@@ -1699,7 +1700,7 @@ int unit_file_query_preset(UnitFileScope scope, const char *name) {
                         if (!*l)
                                 continue;
 
-                        if (strchr(COMMENTS, *l))
+                        if (strchr(COMMENTS "\n", *l))
                                 continue;
 
                         if (first_word(l, "enable")) {
@@ -1734,11 +1735,11 @@ int unit_file_preset(
                 UnitFileChange **changes,
                 unsigned *n_changes) {
 
-        LookupPaths _cleanup_lookup_paths_free_ paths = {NULL};
-        InstallContext _cleanup_install_context_done_ plus = {NULL}, minus = {NULL};
+        _cleanup_lookup_paths_free_ LookupPaths paths = {};
+        _cleanup_install_context_done_ InstallContext plus = {}, minus = {};
         char **i;
-        char _cleanup_free_ *config_path = NULL;
-        Set _cleanup_set_free_free_ *remove_symlinks_to = NULL;
+        _cleanup_free_ char *config_path = NULL;
+        _cleanup_set_free_free_ Set *remove_symlinks_to = NULL;
         int r, q;
 
         assert(scope >= 0);
@@ -1800,10 +1801,10 @@ int unit_file_get_list(
                 const char *root_dir,
                 Hashmap *h) {
 
-        LookupPaths _cleanup_lookup_paths_free_ paths = {NULL};
+        _cleanup_lookup_paths_free_ LookupPaths paths = {};
         char **i;
-        char _cleanup_free_ *buf = NULL;
-        DIR _cleanup_closedir_ *d = NULL;
+        _cleanup_free_ char *buf = NULL;
+        _cleanup_closedir_ DIR *d = NULL;
         int r;
 
         assert(scope >= 0);

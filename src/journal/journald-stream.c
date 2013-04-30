@@ -175,7 +175,7 @@ static int stdout_stream_line(StdoutStream *s, char *p) {
 
         case STDOUT_STREAM_PRIORITY:
                 r = safe_atoi(p, &s->priority);
-                if (r < 0 || s->priority <= 0 || s->priority >= 999) {
+                if (r < 0 || s->priority < 0 || s->priority > 999) {
                         log_warning("Failed to parse log priority line.");
                         return -EINVAL;
                 }
@@ -412,23 +412,22 @@ fail:
 }
 
 int server_open_stdout_socket(Server *s) {
-        union sockaddr_union sa;
         int r;
         struct epoll_event ev;
 
         assert(s);
 
         if (s->stdout_fd < 0) {
+                union sockaddr_union sa = {
+                        .un.sun_family = AF_UNIX,
+                        .un.sun_path = "/run/systemd/journal/stdout",
+                };
 
                 s->stdout_fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
                 if (s->stdout_fd < 0) {
                         log_error("socket() failed: %m");
                         return -errno;
                 }
-
-                zero(sa);
-                sa.un.sun_family = AF_UNIX;
-                strncpy(sa.un.sun_path, "/run/systemd/journal/stdout", sizeof(sa.un.sun_path));
 
                 unlink(sa.un.sun_path);
 

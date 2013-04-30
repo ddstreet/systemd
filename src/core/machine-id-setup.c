@@ -151,62 +151,53 @@ static int generate(char id[34]) {
 }
 
 int machine_id_setup(void) {
-        int fd, r;
+        _cleanup_close_ int fd = -1;
+        int r;
         bool writable;
         struct stat st;
         char id[34]; /* 32 + \n + \0 */
-        mode_t m;
 
-        m = umask(0000);
+        RUN_WITH_UMASK(0000) {
+                /* We create this 0444, to indicate that this isn't really
+                 * something you should ever modify. Of course, since the file
+                 * will be owned by root it doesn't matter much, but maybe
+                 * people look. */
 
-        /* We create this 0444, to indicate that this isn't really
-         * something you should ever modify. Of course, since the file
-         * will be owned by root it doesn't matter much, but maybe
-         * people look. */
+                fd = open("/etc/machine-id", O_RDWR|O_CREAT|O_CLOEXEC|O_NOCTTY, 0444);
+                if (fd >= 0)
+                        writable = true;
+                else {
+                        fd = open("/etc/machine-id", O_RDONLY|O_CLOEXEC|O_NOCTTY);
+                        if (fd < 0) {
+                                log_error("Cannot open /etc/machine-id: %m");
+                                return -errno;
+                        }
 
-        fd = open("/etc/machine-id", O_RDWR|O_CREAT|O_CLOEXEC|O_NOCTTY, 0444);
-        if (fd >= 0)
-                writable = true;
-        else {
-                fd = open("/etc/machine-id", O_RDONLY|O_CLOEXEC|O_NOCTTY);
-                if (fd < 0) {
-                        umask(m);
-                        log_error("Cannot open /etc/machine-id: %m");
-                        return -errno;
+                        writable = false;
                 }
-
-                writable = false;
         }
-
-        umask(m);
 
         if (fstat(fd, &st) < 0) {
                 log_error("fstat() failed: %m");
-                r = -errno;
-                goto finish;
+                return -errno;
         }
 
-        if (S_ISREG(st.st_mode)) {
-                if (loop_read(fd, id, 32, false) >= 32) {
-                        r = 0;
-                        goto finish;
-                }
-        }
+        if (S_ISREG(st.st_mode))
+                if (loop_read(fd, id, 32, false) >= 32)
+                        return 0;
 
         /* Hmm, so, the id currently stored is not useful, then let's
          * generate one */
 
         r = generate(id);
         if (r < 0)
-                goto finish;
+                return r;
 
         if (S_ISREG(st.st_mode) && writable) {
                 lseek(fd, 0, SEEK_SET);
 
-                if (loop_write(fd, id, 33, false) == 33) {
-                        r = 0;
-                        goto finish;
-                }
+                if (loop_write(fd, id, 33, false) == 33)
+                        return 0;
         }
 
         close_nointr_nofail(fd);
@@ -215,33 +206,28 @@ int machine_id_setup(void) {
         /* Hmm, we couldn't write it? So let's write it to
          * /run/machine-id as a replacement */
 
-        m = umask(0022);
-        r = write_one_line_file("/run/machine-id", id);
-        umask(m);
-
+        RUN_WITH_UMASK(0022) {
+                r = write_string_file("/run/machine-id", id);
+        }
         if (r < 0) {
                 log_error("Cannot write /run/machine-id: %s", strerror(-r));
-
                 unlink("/run/machine-id");
-                goto finish;
+                return r;
         }
 
         /* And now, let's mount it over */
-        r = mount("/run/machine-id", "/etc/machine-id", NULL, MS_BIND, NULL) < 0 ? -errno : 0;
+        r = mount("/run/machine-id", "/etc/machine-id", NULL, MS_BIND, NULL);
         if (r < 0) {
-                unlink("/run/machine-id");
-                log_error("Failed to mount /etc/machine-id: %s", strerror(-r));
-        } else {
-                log_info("Installed transient /etc/machine-id file.");
-
-                /* Mark the mount read-only */
-                mount(NULL, "/etc/machine-id", NULL, MS_BIND|MS_RDONLY|MS_REMOUNT, NULL);
+                log_error("Failed to mount /etc/machine-id: %m");
+                unlink_noerrno("/run/machine-id");
+                return -errno;
         }
 
-finish:
+        log_info("Installed transient /etc/machine-id file.");
 
-        if (fd >= 0)
-                close_nointr_nofail(fd);
+        /* Mark the mount read-only */
+        if (mount(NULL, "/etc/machine-id", NULL, MS_BIND|MS_RDONLY|MS_REMOUNT, NULL) < 0)
+                log_warning("Failed to make transient /etc/machine-id read-only: %m");
 
-        return r;
+        return 0;
 }

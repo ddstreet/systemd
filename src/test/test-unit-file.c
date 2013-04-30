@@ -85,13 +85,13 @@ static void test_config_parse_exec(void) {
         ExecCommand *c = NULL, *c1;
 
         /* basic test */
-        r = config_parse_exec("fake", 1, "section",
+        r = config_parse_exec(NULL, "fake", 1, "section",
                               "LValue", 0, "/RValue r1",
                               &c, NULL);
         assert_se(r >= 0);
         check_execcommand(c, "/RValue", "/RValue", "r1", false);
 
-        r = config_parse_exec("fake", 2, "section",
+        r = config_parse_exec(NULL, "fake", 2, "section",
                               "LValue", 0, "/RValue///slashes/// r1",
                               &c, NULL);
        /* test slashes */
@@ -101,7 +101,7 @@ static void test_config_parse_exec(void) {
                           "r1", false);
 
         /* honour_argv0 */
-        r = config_parse_exec("fake", 3, "section",
+        r = config_parse_exec(NULL, "fake", 3, "section",
                               "LValue", 0, "@/RValue///slashes2/// argv0 r1",
                               &c, NULL);
         assert_se(r >= 0);
@@ -109,7 +109,7 @@ static void test_config_parse_exec(void) {
         check_execcommand(c1, "/RValue/slashes2", "argv0", "r1", false);
 
         /* ignore && honour_argv0 */
-        r = config_parse_exec("fake", 4, "section",
+        r = config_parse_exec(NULL, "fake", 4, "section",
                               "LValue", 0, "-@/RValue///slashes3/// argv0a r1",
                               &c, NULL);
         assert_se(r >= 0);
@@ -118,7 +118,7 @@ static void test_config_parse_exec(void) {
                           "/RValue/slashes3", "argv0a", "r1", true);
 
         /* ignore && honour_argv0 */
-        r = config_parse_exec("fake", 4, "section",
+        r = config_parse_exec(NULL, "fake", 4, "section",
                               "LValue", 0, "@-/RValue///slashes4/// argv0b r1",
                               &c, NULL);
         assert_se(r >= 0);
@@ -127,21 +127,21 @@ static void test_config_parse_exec(void) {
                           "/RValue/slashes4", "argv0b", "r1", true);
 
         /* ignore && ignore */
-        r = config_parse_exec("fake", 4, "section",
+        r = config_parse_exec(NULL, "fake", 4, "section",
                               "LValue", 0, "--/RValue argv0 r1",
                               &c, NULL);
         assert_se(r == 0);
         assert_se(c1->command_next == NULL);
 
         /* ignore && ignore */
-        r = config_parse_exec("fake", 4, "section",
+        r = config_parse_exec(NULL, "fake", 4, "section",
                               "LValue", 0, "-@-/RValue argv0 r1",
                               &c, NULL);
         assert_se(r == 0);
         assert_se(c1->command_next == NULL);
 
         /* semicolon */
-        r = config_parse_exec("fake", 5, "section",
+        r = config_parse_exec(NULL, "fake", 5, "section",
                               "LValue", 0,
                               "-@/RValue argv0 r1 ; "
                               "/goo/goo boo",
@@ -156,7 +156,7 @@ static void test_config_parse_exec(void) {
                           "/goo/goo", "/goo/goo", "boo", false);
 
         /* trailing semicolon */
-        r = config_parse_exec("fake", 5, "section",
+        r = config_parse_exec(NULL, "fake", 5, "section",
                               "LValue", 0,
                               "-@/RValue argv0 r1 ; ",
                               &c, NULL);
@@ -168,7 +168,7 @@ static void test_config_parse_exec(void) {
         assert_se(c1->command_next == NULL);
 
         /* escaped semicolon */
-        r = config_parse_exec("fake", 5, "section",
+        r = config_parse_exec(NULL, "fake", 5, "section",
                               "LValue", 0,
                               "/usr/bin/find \\;",
                               &c, NULL);
@@ -180,101 +180,131 @@ static void test_config_parse_exec(void) {
         exec_command_free_list(c);
 }
 
-#define env_file_1 \
-        "a\n"      \
-        "b\\\n"    \
-        "c\n"      \
-        "d\\\n"    \
-        "e\\\n"    \
-        "f\n"      \
-        "g\\ \n"   \
-        "h\n"      \
-        "i\\"
+#define env_file_1                              \
+        "a=a\n"                                 \
+        "b=b\\\n"                               \
+        "c\n"                                   \
+        "d=d\\\n"                               \
+        "e\\\n"                                 \
+        "f\n"                                   \
+        "g=g\\ \n"                              \
+        "h=h\n"                                 \
+        "i=i\\"
 
-#define env_file_2 \
-        "a\\\n"
+#define env_file_2                              \
+        "a=a\\\n"
 
 #define env_file_3 \
         "#SPAMD_ARGS=\"-d --socketpath=/var/lib/bulwark/spamd \\\n" \
         "#--nouser-config                                     \\\n" \
         "normal=line"
 
+#define env_file_4 \
+       "# Generated\n" \
+       "\n" \
+       "HWMON_MODULES=\"coretemp f71882fg\"\n" \
+       "\n" \
+       "# For compatibility reasons\n" \
+       "\n" \
+       "MODULE_0=coretemp\n" \
+       "MODULE_1=f71882fg"
+
+
 static void test_load_env_file_1(void) {
-        char _cleanup_strv_free_ **data = NULL;
+        _cleanup_strv_free_ char **data = NULL;
         int r;
 
         char name[] = "/tmp/test-load-env-file.XXXXXX";
-        int _cleanup_close_ fd = mkstemp(name);
+        _cleanup_close_ int fd = mkstemp(name);
         assert(fd >= 0);
         assert_se(write(fd, env_file_1, sizeof(env_file_1)) == sizeof(env_file_1));
 
-        r = load_env_file(name, &data);
+        r = load_env_file(name, NULL, &data);
         assert(r == 0);
-        assert(streq(data[0], "a"));
-        assert(streq(data[1], "bc"));
-        assert(streq(data[2], "def"));
-        assert(streq(data[3], "g\\"));
-        assert(streq(data[4], "h"));
-        assert(streq(data[5], "i\\"));
+        assert(streq(data[0], "a=a"));
+        assert(streq(data[1], "b=bc"));
+        assert(streq(data[2], "d=def"));
+        assert(streq(data[3], "g=g "));
+        assert(streq(data[4], "h=h"));
+        assert(streq(data[5], "i=i"));
         assert(data[6] == NULL);
         unlink(name);
 }
 
 static void test_load_env_file_2(void) {
-        char _cleanup_strv_free_ **data = NULL;
+        _cleanup_strv_free_ char **data = NULL;
         int r;
 
         char name[] = "/tmp/test-load-env-file.XXXXXX";
-        int _cleanup_close_ fd = mkstemp(name);
+        _cleanup_close_ int fd = mkstemp(name);
         assert(fd >= 0);
         assert_se(write(fd, env_file_2, sizeof(env_file_2)) == sizeof(env_file_2));
 
-        r = load_env_file(name, &data);
+        r = load_env_file(name, NULL, &data);
         assert(r == 0);
-        assert(streq(data[0], "a"));
+        assert(streq(data[0], "a=a"));
         assert(data[1] == NULL);
         unlink(name);
 }
 
 static void test_load_env_file_3(void) {
-        char _cleanup_strv_free_ **data = NULL;
+        _cleanup_strv_free_ char **data = NULL;
         int r;
 
         char name[] = "/tmp/test-load-env-file.XXXXXX";
-        int _cleanup_close_ fd = mkstemp(name);
+        _cleanup_close_ int fd = mkstemp(name);
         assert(fd >= 0);
         assert_se(write(fd, env_file_3, sizeof(env_file_3)) == sizeof(env_file_3));
 
-        r = load_env_file(name, &data);
+        r = load_env_file(name, NULL, &data);
         assert(r == 0);
         assert(data == NULL);
         unlink(name);
 }
+
+static void test_load_env_file_4(void) {
+        _cleanup_strv_free_ char **data = NULL;
+        int r;
+
+        char name[] = "/tmp/test-load-env-file.XXXXXX";
+        _cleanup_close_ int fd = mkstemp(name);
+        assert(fd >= 0);
+        assert_se(write(fd, env_file_4, sizeof(env_file_4)) == sizeof(env_file_4));
+
+        r = load_env_file(name, NULL, &data);
+        assert(r == 0);
+        assert(streq(data[0], "HWMON_MODULES=coretemp f71882fg"));
+        assert(streq(data[1], "MODULE_0=coretemp"));
+        assert(streq(data[2], "MODULE_1=f71882fg"));
+        assert(data[3] == NULL);
+        unlink(name);
+}
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnonnull"
 
 static void test_install_printf(void) {
         char    name[] = "name.service",
-                path[] = "/run/systemd/systemd/name.service",
+                path[] = "/run/systemd/system/name.service",
                 user[] = "xxxx-no-such-user";
         InstallInfo i = {name, path, user};
         InstallInfo i2 = {name, path, NULL};
         char    name3[] = "name@inst.service",
-                path3[] = "/run/systemd/systemd/name.service";
+                path3[] = "/run/systemd/system/name.service";
         InstallInfo i3 = {name3, path3, user};
         InstallInfo i4 = {name3, path3, NULL};
 
-        char _cleanup_free_ *mid, *bid, *host;
+        _cleanup_free_ char *mid, *bid, *host;
 
         assert_se((mid = specifier_machine_id('m', NULL, NULL)));
         assert_se((bid = specifier_boot_id('b', NULL, NULL)));
         assert_se((host = gethostname_malloc()));
 
 #define expect(src, pattern, result)                                    \
-        {                                                               \
-                char _cleanup_free_ *t = install_full_printf(&src, pattern); \
-                char _cleanup_free_                                     \
+        do {                                                            \
+                _cleanup_free_ char *t = install_full_printf(&src, pattern); \
+                _cleanup_free_ char                                     \
                         *d1 = strdup(i.name),                           \
                         *d2 = strdup(i.path),                           \
                         *d3 = strdup(i.user);                           \
@@ -289,7 +319,7 @@ static void test_install_printf(void) {
                 strcpy(i.name, d1);                                     \
                 strcpy(i.path, d2);                                     \
                 strcpy(i.user, d3);                                     \
-        }
+        } while(false)
 
         assert_se(setenv("USER", "root", 1) == 0);
 
@@ -322,11 +352,15 @@ static void test_install_printf(void) {
 
 int main(int argc, char *argv[]) {
 
+        log_parse_environment();
+        log_open();
+
         test_unit_file_get_set();
         test_config_parse_exec();
         test_load_env_file_1();
         test_load_env_file_2();
         test_load_env_file_3();
+        test_load_env_file_4();
         test_install_printf();
 
         return 0;

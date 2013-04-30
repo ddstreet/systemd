@@ -38,6 +38,7 @@
 static char** arg_listen = NULL;
 static bool arg_accept = false;
 static char** arg_args = NULL;
+static char** arg_environ = NULL;
 
 static int add_epoll(int epoll_fd, int fd) {
         int r;
@@ -136,6 +137,11 @@ static int open_sockets(int *epoll_fd, bool accept) {
                 count ++;
         }
 
+        /** Note: we leak some fd's on error here. I doesn't matter
+         *  much, since the program will exit immediately anyway, but
+         *  would be a pain to fix.
+         */
+
         STRV_FOREACH(address, arg_listen) {
                 log_info("Opening address %s", *address);
 
@@ -163,15 +169,33 @@ static int open_sockets(int *epoll_fd, bool accept) {
         return count;
 }
 
-static int launch(char* name, char **argv, char **environ, int fds) {
-        unsigned n_env = 0;
-        char* envp[7] = {NULL}; /* PATH, TERM, HOME, USER, LISTEN_FDS, LISTEN_PID */
+static int launch(char* name, char **argv, char **env, int fds) {
+        unsigned n_env = 0, length;
+        _cleanup_strv_free_ char **envp = NULL;
+        char **s;
         static const char* tocopy[] = {"TERM=", "PATH=", "USER=", "HOME="};
-        char _cleanup_free_ *tmp = NULL;
+        _cleanup_free_ char *tmp = NULL;
         unsigned i;
 
+        length = strv_length(arg_environ);
+        /* PATH, TERM, HOME, USER, LISTEN_FDS, LISTEN_PID, NULL */
+        envp = new(char *, length + 7);
+
+        STRV_FOREACH(s, arg_environ) {
+                if (strchr(*s, '='))
+                        envp[n_env++] = *s;
+                else {
+                        _cleanup_free_ char *p = strappend(*s, "=");
+                        if (!p)
+                                return log_oom();
+                        envp[n_env] = strv_find_prefix(env, p);
+                        if (envp[n_env])
+                                n_env ++;
+                }
+        }
+
         for (i = 0; i < ELEMENTSOF(tocopy); i++) {
-                envp[n_env] = strv_find_prefix(environ, tocopy[i]);
+                envp[n_env] = strv_find_prefix(env, tocopy[i]);
                 if (envp[n_env])
                         n_env ++;
         }
@@ -190,11 +214,11 @@ static int launch(char* name, char **argv, char **environ, int fds) {
         return -errno;
 }
 
-static int launch1(const char* child, char** argv, char **environ, int fd) {
+static int launch1(const char* child, char** argv, char **env, int fd) {
         pid_t parent_pid, child_pid;
         int r;
 
-        char _cleanup_free_ *tmp = NULL;
+        _cleanup_free_ char *tmp = NULL;
         tmp = strv_join(argv, " ");
         if (!tmp)
                 return log_oom();
@@ -312,6 +336,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "version",      no_argument,       NULL, ARG_VERSION   },
                 { "listen",       required_argument, NULL, 'l'           },
                 { "accept",       no_argument,       NULL, 'a'           },
+                { "environment",  required_argument, NULL, 'E'           },
                 { NULL,           0,                 NULL, 0             }
         };
 
@@ -320,7 +345,7 @@ static int parse_argv(int argc, char *argv[]) {
         assert(argc >= 0);
         assert(argv);
 
-        while ((c = getopt_long(argc, argv, "+hl:sa", options, NULL)) >= 0)
+        while ((c = getopt_long(argc, argv, "+hl:saE:", options, NULL)) >= 0)
                 switch(c) {
                 case 'h':
                         help();
@@ -342,6 +367,14 @@ static int parse_argv(int argc, char *argv[]) {
                 case 'a':
                         arg_accept = true;
                         break;
+
+                case 'E': {
+                        int r = strv_extend(&arg_environ, optarg);
+                        if (r < 0)
+                                return r;
+
+                        break;
+                }
 
                 case '?':
                         return -EINVAL;

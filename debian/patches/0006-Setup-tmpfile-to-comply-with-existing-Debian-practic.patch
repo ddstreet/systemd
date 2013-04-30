@@ -1,7 +1,7 @@
-From 61ee9bfe85244b6c1fb7335a470370568c8e0bc3 Mon Sep 17 00:00:00 2001
+From 517eae6d3485cfe0bfaa40825a62979c5cd1fdc5 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Tue, 5 Mar 2013 04:32:30 +0100
-Subject: [PATCH 06/15] Setup tmpfile to comply with existing Debian practice
+Subject: [PATCH 06/10] Setup tmpfile to comply with existing Debian practice
 
 - Clean /tmp on boot but not for files older then 10 days
 - Do *not* clean /var/tmp regularly
@@ -34,7 +34,7 @@ index 3fff347..7f3206c 100644
  # /forcefsck, /fastboot and /forcequotecheck are deprecated in favor of the
  # kernel command line options 'fsck.mode=force', 'fsck.mode=skip' and
 diff --git a/tmpfiles.d/tmp.conf b/tmpfiles.d/tmp.conf
-index ef5a9f0..2866f45 100644
+index 3b534a1..74bc677 100644
 --- a/tmpfiles.d/tmp.conf
 +++ b/tmpfiles.d/tmp.conf
 @@ -8,8 +8,8 @@
@@ -47,7 +47,7 @@ index ef5a9f0..2866f45 100644
 +#d /var/tmp 1777 root root 30d
  
  # Exclude namespace mountpoints created with PrivateTmp=yes
- X /tmp/systemd-private-*
+ x /tmp/systemd-private-*
 -- 
 1.7.10.4
 

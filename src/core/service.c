@@ -36,7 +36,7 @@
 #include "unit-printf.h"
 #include "dbus-service.h"
 #include "special.h"
-#include "bus-errors.h"
+#include "dbus-common.h"
 #include "exit-status.h"
 #include "def.h"
 #include "path-util.h"
@@ -289,7 +289,7 @@ static void service_done(Unit *u) {
         free(s->status_text);
         s->status_text = NULL;
 
-        exec_context_done(&s->exec_context);
+        exec_context_done(&s->exec_context, manager_is_reloading_or_reexecuting(u->manager));
         exec_command_free_array(s->exec_command, _SERVICE_EXEC_COMMAND_MAX);
         s->control_command = NULL;
         s->main_command = NULL;
@@ -770,7 +770,7 @@ static int service_load_sysv_path(Service *s, const char *path) {
                                                 continue;
 
                                         if (unit_name_to_type(m) == UNIT_SERVICE)
-                                                r = unit_add_name(u, m);
+                                                r = unit_merge_by_name(u, m);
                                         else
                                                 /* NB: SysV targets
                                                  * which are provided
@@ -996,7 +996,7 @@ static int service_load_sysv_name(Service *s, const char *name) {
         assert(s);
         assert(name);
 
-        /* For SysV services we strip the *.sh suffixes. */
+	/* For SysV services we strip the *.sh suffixes. */
         if (endswith(name, ".sh.service"))
                 return -ENOENT;
 
@@ -1163,6 +1163,16 @@ static int service_add_default_dependencies(Service *s) {
                                                       SPECIAL_SOCKETS_TARGET, NULL, true);
                 if (r < 0)
                         return r;
+
+                r = unit_add_two_dependencies_by_name(UNIT(s), UNIT_AFTER, UNIT_REQUIRES,
+                                                      SPECIAL_TIMERS_TARGET, NULL, true);
+                if (r < 0)
+                        return r;
+
+                r = unit_add_two_dependencies_by_name(UNIT(s), UNIT_AFTER, UNIT_REQUIRES,
+                                                      SPECIAL_PATHS_TARGET, NULL, true);
+                if (r < 0)
+                        return r;
         }
 
         /* Second, activate normal shutdown */
@@ -1280,7 +1290,7 @@ static void service_dump(Unit *u, FILE *f, const char *prefix) {
         ServiceExecCommand c;
         Service *s = SERVICE(u);
         const char *prefix2;
-        char _cleanup_free_ *p2 = NULL;
+        _cleanup_free_ char *p2 = NULL;
 
         assert(s);
 
@@ -1378,7 +1388,7 @@ static void service_dump(Unit *u, FILE *f, const char *prefix) {
 }
 
 static int service_load_pid_file(Service *s, bool may_warn) {
-        char _cleanup_free_ *k = NULL;
+        _cleanup_free_ char *k = NULL;
         int r;
         pid_t pid;
 
@@ -1745,9 +1755,9 @@ static int service_spawn(
         pid_t pid;
         int r;
         int *fds = NULL;
-        int _cleanup_free_ *fdsbuf = NULL;
+        _cleanup_free_ int *fdsbuf = NULL;
         unsigned n_fds = 0, n_env = 0;
-        char _cleanup_strv_free_
+        _cleanup_strv_free_ char
                 **argv = NULL, **final_env = NULL, **our_env = NULL;
 
         assert(s);
@@ -1928,6 +1938,9 @@ static void service_enter_dead(Service *s, ServiceResult f, bool allow_restart) 
         }
 
         s->forbid_restart = false;
+
+        /* we want fresh tmpdirs in case service is started again immediately */
+        exec_context_tmp_dirs_done(&s->exec_context);
 
         return;
 
@@ -2635,6 +2648,12 @@ static int service_serialize(Unit *u, FILE *f, FDSet *fds) {
                 dual_timestamp_serialize(f, "watchdog-timestamp",
                                          &s->watchdog_timestamp);
 
+        if (s->exec_context.tmp_dir)
+                unit_serialize_item(u, f, "tmp-dir", s->exec_context.tmp_dir);
+
+        if (s->exec_context.var_tmp_dir)
+                unit_serialize_item(u, f, "var-tmp-dir", s->exec_context.var_tmp_dir);
+
         return 0;
 }
 
@@ -2753,7 +2772,23 @@ static int service_deserialize_item(Unit *u, const char *key, const char *value,
                 dual_timestamp_deserialize(value, &s->main_exec_status.exit_timestamp);
         else if (streq(key, "watchdog-timestamp"))
                 dual_timestamp_deserialize(value, &s->watchdog_timestamp);
-        else
+        else if (streq(key, "tmp-dir")) {
+                char *t;
+
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                s->exec_context.tmp_dir = t;
+        } else if (streq(key, "var-tmp-dir")) {
+                char *t;
+
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                s->exec_context.var_tmp_dir = t;
+        } else
                 log_debug_unit(u->id, "Unknown serialization key '%s'", key);
 
         return 0;
@@ -3424,10 +3459,10 @@ static void service_notify_message(Unit *u, pid_t pid, char **tags) {
 static int service_enumerate(Manager *m) {
         char **p;
         unsigned i;
-        DIR _cleanup_closedir_ *d = NULL;
-        char _cleanup_free_ *path = NULL, *fpath = NULL, *name = NULL;
-        Set *runlevel_services[ELEMENTSOF(rcnd_table)];
-        Set _cleanup_set_free_ *shutdown_services = NULL;
+        _cleanup_closedir_ DIR *d = NULL;
+        _cleanup_free_ char *path = NULL, *fpath = NULL, *name = NULL;
+        Set *runlevel_services[ELEMENTSOF(rcnd_table)] = {};
+        _cleanup_set_free_ Set *shutdown_services = NULL;
         Unit *service;
         Iterator j;
         int r;
@@ -3436,8 +3471,6 @@ static int service_enumerate(Manager *m) {
 
         if (m->running_as != SYSTEMD_SYSTEM)
                 return 0;
-
-        zero(runlevel_services);
 
         STRV_FOREACH(p, m->lookup_paths.sysvrcnd_path)
                 for (i = 0; i < ELEMENTSOF(rcnd_table); i ++) {
@@ -3709,65 +3742,7 @@ static void service_reset_failed(Unit *u) {
 
 static int service_kill(Unit *u, KillWho who, int signo, DBusError *error) {
         Service *s = SERVICE(u);
-        int r = 0;
-        Set *pid_set = NULL;
-
-        assert(s);
-
-        if (s->main_pid <= 0 && who == KILL_MAIN) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No main process to kill");
-                return -ESRCH;
-        }
-
-        if (s->control_pid <= 0 && who == KILL_CONTROL) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No control process to kill");
-                return -ESRCH;
-        }
-
-        if (who == KILL_CONTROL || who == KILL_ALL)
-                if (s->control_pid > 0)
-                        if (kill(s->control_pid, signo) < 0)
-                                r = -errno;
-
-        if (who == KILL_MAIN || who == KILL_ALL)
-                if (s->main_pid > 0)
-                        if (kill(s->main_pid, signo) < 0)
-                                r = -errno;
-
-        if (who == KILL_ALL) {
-                int q;
-
-                pid_set = set_new(trivial_hash_func, trivial_compare_func);
-                if (!pid_set)
-                        return -ENOMEM;
-
-                /* Exclude the control/main pid from being killed via the cgroup */
-                if (s->control_pid > 0) {
-                        q = set_put(pid_set, LONG_TO_PTR(s->control_pid));
-                        if (q < 0) {
-                                r = q;
-                                goto finish;
-                        }
-                }
-
-                if (s->main_pid > 0) {
-                        q = set_put(pid_set, LONG_TO_PTR(s->main_pid));
-                        if (q < 0) {
-                                r = q;
-                                goto finish;
-                        }
-                }
-
-                q = cgroup_bonding_kill_list(UNIT(s)->cgroup_bondings, signo, false, false, pid_set, NULL);
-                if (q < 0 && q != -EAGAIN && q != -ESRCH && q != -ENOENT)
-                        r = q;
-        }
-
-finish:
-        if (pid_set)
-                set_free(pid_set);
-
-        return r;
+        return unit_kill_common(u, who, signo, s->main_pid, s->control_pid, error);
 }
 
 static const char* const service_state_table[_SERVICE_STATE_MAX] = {

@@ -2,6 +2,7 @@ libudev.so.1 libudev1 #MINVER#
  LIBUDEV_183@LIBUDEV_183 183
  LIBUDEV_189@LIBUDEV_189 189
  LIBUDEV_196@LIBUDEV_196 196
+ LIBUDEV_199@LIBUDEV_199 199
  udev_device_get_action@LIBUDEV_183 183
  udev_device_get_devlinks_list_entry@LIBUDEV_183 183
  udev_device_get_devnode@LIBUDEV_183 183
@@ -31,6 +32,7 @@ libudev.so.1 libudev1 #MINVER#
  udev_device_new_from_subsystem_sysname@LIBUDEV_183 183
  udev_device_new_from_syspath@LIBUDEV_183 183
  udev_device_ref@LIBUDEV_183 183
+ udev_device_set_sysattr_value@LIBUDEV_199 199
  udev_device_unref@LIBUDEV_183 183
  udev_enumerate_add_match_is_initialized@LIBUDEV_183 183
  udev_enumerate_add_match_parent@LIBUDEV_183 183

@@ -68,7 +68,7 @@ int socket_address_parse(SocketAddress *a, const char *s) {
                 errno = 0;
                 if (inet_pton(AF_INET6, n, &a->sockaddr.in6.sin6_addr) <= 0) {
                         free(n);
-                        return errno != 0 ? -errno : -EINVAL;
+                        return errno > 0 ? -errno : -EINVAL;
                 }
 
                 free(n);
@@ -204,7 +204,7 @@ int socket_address_parse_netlink(SocketAddress *a, const char *s) {
 
         errno = 0;
         if (sscanf(s, "%ms %u", &sfamily, &group) < 1)
-                return errno ? -errno : -EINVAL;
+                return errno > 0 ? -errno : -EINVAL;
 
         family = netlink_family_from_string(sfamily);
         if (family < 0)
@@ -364,7 +364,7 @@ int socket_address_print(const SocketAddress *a, char **p) {
         }
 
         case AF_NETLINK: {
-                char _cleanup_free_ *sfamily = NULL;
+                _cleanup_free_ char *sfamily = NULL;
 
                 r = netlink_family_to_string_alloc(a->protocol, &sfamily);
                 if (r < 0)
@@ -568,7 +568,7 @@ bool socket_address_matches_fd(const SocketAddress *a, int fd) {
 int make_socket_fd(const char* address, int flags) {
         SocketAddress a;
         int fd, r;
-        char _cleanup_free_ *p = NULL;
+        _cleanup_free_ char *p = NULL;
 
         r = socket_address_parse(&a, address);
         if (r < 0) {

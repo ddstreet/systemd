@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="modules-load.d"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>modules-load.d — Configure kernel modules to load at boot</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/modules-load.d/*.conf</code></p><p><code class="filename">/run/modules-load.d/*.conf</code></p><p><code class="filename">/usr/lib/modules-load.d/*.conf</code></p></div><div class="refsect1"><a name="idp4046416"></a><h2>Description</h2><p><a href="systemd-modules-load.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-modules-load.service</span>(8)</span></a>
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="modules-load.d"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>modules-load.d — Configure kernel modules to load at boot</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/modules-load.d/*.conf</code></p><p><code class="filename">/run/modules-load.d/*.conf</code></p><p><code class="filename">/usr/lib/modules-load.d/*.conf</code></p></div><div class="refsect1"><a name="idp86480"></a><h2>Description</h2><p><a href="systemd-modules-load.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-modules-load.service</span>(8)</span></a>
                 reads files from the above directories which contain
                 kernel modules to load during boot in a static list.
                 Each configuration file is named in the style of
@@ -12,7 +12,7 @@
                 or similar triggers encoded in the kernel modules
                 themselves instead of static configuration like
                 this. In fact, most modern kernel modules are prepared
-                for automatic loading already.</p></div><div class="refsect1"><a name="idp151776"></a><h2>Configuration Format</h2><p>The configuration files should simply contain a
+                for automatic loading already.</p></div><div class="refsect1"><a name="idp90128"></a><h2>Configuration Format</h2><p>The configuration files should simply contain a
                 list of kernel module names to load, separated by
                 newlines. Empty lines and lines whose first
                 non-whitespace character is # or ; are ignored.</p><p>Each configuration file shall be named in the
@@ -32,8 +32,8 @@
                 recommended way is to place a symlink to
                 <code class="filename">/dev/null</code> in
                 <code class="filename">/etc/modules-load.d/</code> bearing the
-                same file name.</p></div><div class="refsect1"><a name="idp3915008"></a><h2>Example</h2><div class="example"><a name="idp3915680"></a><p class="title"><b>Example 1. /etc/modules-load.d/virtio-net.conf example:</b></p><div class="example-contents"><pre class="programlisting"># Load virtio-net.ko at boot
-virtio-net</pre></div></div><br class="example-break"></div><div class="refsect1"><a name="idp3917280"></a><h2>See Also</h2><p>
+                same file name.</p></div><div class="refsect1"><a name="idp23744"></a><h2>Example</h2><div class="example"><a name="idp24416"></a><p class="title"><b>Example 1. /etc/modules-load.d/virtio-net.conf example:</b></p><div class="example-contents"><pre class="programlisting"># Load virtio-net.ko at boot
+virtio-net</pre></div></div><br class="example-break"></div><div class="refsect1"><a name="idp26016"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="systemd-modules-load.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-modules-load.service</span>(8)</span></a>,
                         <a href="systemd-delta.html"><span class="citerefentry"><span class="refentrytitle">systemd-delta</span>(1)</span></a>,

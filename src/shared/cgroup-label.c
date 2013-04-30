@@ -36,47 +36,42 @@
 #include "util.h"
 #include "mkdir.h"
 
-int cg_create(const char *controller, const char *path) {
-        char *fs;
+int cg_create(const char *controller, const char *path, const char *suffix) {
+        _cleanup_free_ char *fs = NULL;
         int r;
 
-        assert(controller);
-        assert(path);
-
-        r = cg_get_path_and_check(controller, path, NULL, &fs);
+        r = cg_get_path_and_check(controller, path, suffix, &fs);
         if (r < 0)
                 return r;
 
         r = mkdir_parents_label(fs, 0755);
+        if (r < 0)
+                return r;
 
-        if (r >= 0) {
-                if (mkdir(fs, 0755) >= 0)
-                        r = 1;
-                else if (errno == EEXIST)
-                        r = 0;
-                else
-                        r = -errno;
+        if (mkdir(fs, 0755) < 0) {
+
+                if (errno == EEXIST)
+                        return 0;
+
+                return -errno;
         }
 
-        free(fs);
-
-        return r;
+        return 1;
 }
 
 int cg_create_and_attach(const char *controller, const char *path, pid_t pid) {
         int r, q;
 
-        assert(controller);
-        assert(path);
         assert(pid >= 0);
 
-        if ((r = cg_create(controller, path)) < 0)
+        r = cg_create(controller, path, NULL);
+        if (r < 0)
                 return r;
 
-        if ((q = cg_attach(controller, path, pid)) < 0)
+        q = cg_attach(controller, path, pid);
+        if (q < 0)
                 return q;
 
         /* This does not remove the cgroup on failure */
-
         return r;
 }

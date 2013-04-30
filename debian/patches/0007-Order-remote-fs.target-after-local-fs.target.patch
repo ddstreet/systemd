@@ -1,22 +1,23 @@
-From 00dcf39f262c3764e2f130d5e9ba58597ac9d097 Mon Sep 17 00:00:00 2001
+From 55d7e211a378fa9aad20f804335de32292107dd6 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Tue, 5 Mar 2013 04:34:15 +0100
-Subject: [PATCH 07/15] Order remote-fs.target after local-fs.target
+Subject: [PATCH 07/10] Order remote-fs.target after local-fs.target
 
 In Debian the LSB remote_fs facility implies local_fs.
 ---
- units/remote-fs.target |    1 +
- 1 file changed, 1 insertion(+)
+ units/remote-fs.target |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/units/remote-fs.target b/units/remote-fs.target
-index 9e68878..301d0e0 100644
+index 09213e8..a050e4d 100644
 --- a/units/remote-fs.target
 +++ b/units/remote-fs.target
-@@ -8,6 +8,7 @@
+@@ -8,7 +8,7 @@
  [Unit]
  Description=Remote File Systems
  Documentation=man:systemd.special(7)
-+After=local-fs.target
+-After=remote-fs-pre.target
++After=remote-fs-pre.target local-fs.target
  
  [Install]
  WantedBy=multi-user.target
