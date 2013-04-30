@@ -1088,7 +1088,6 @@ tests += \
 	test-strv \
 	test-path-util \
 	test-strxcpyx \
-	test-unit-name \
 	test-unit-file \
 	test-util \
 	test-date \
@@ -1097,7 +1096,6 @@ tests += \
 	test-sched-prio \
 	test-calendarspec \
 	test-strip-tab-ansi \
-	test-cgroup-util \
 	test-prioq \
 	test-fileio \
 	test-time
@@ -2853,7 +2851,7 @@ tests += \
 	test-journal-stream \
 	test-journal-verify \
 	test-mmap-cache \
-	test-catalog
+	$(NULL)
 
 pkginclude_HEADERS += \
 	src/systemd/sd-journal.h \
