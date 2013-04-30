@@ -118,21 +118,7 @@ static const char * const names[_PROP_MAX] = {
         [PROP_LC_IDENTIFICATION] = "LC_IDENTIFICATION"
 };
 
-static char *data[_PROP_MAX] = {
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL
-};
+static char *data[_PROP_MAX] = {};
 
 typedef struct State {
         char *x11_layout, *x11_model, *x11_variant, *x11_options;
@@ -215,24 +201,6 @@ static int read_data_locale(void) {
                            "LC_MEASUREMENT",    &data[PROP_LC_MEASUREMENT],
                            "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
                            NULL);
-
-        if (r == -ENOENT)
-                r = parse_env_file("/etc/default/locale", NEWLINE,
-                                   "LANG",              &data[PROP_LANG],
-                                   "LANGUAGE",          &data[PROP_LANGUAGE],
-                                   "LC_CTYPE",          &data[PROP_LC_CTYPE],
-                                   "LC_NUMERIC",        &data[PROP_LC_NUMERIC],
-                                   "LC_TIME",           &data[PROP_LC_TIME],
-                                   "LC_COLLATE",        &data[PROP_LC_COLLATE],
-                                   "LC_MONETARY",       &data[PROP_LC_MONETARY],
-                                   "LC_MESSAGES",       &data[PROP_LC_MESSAGES],
-                                   "LC_PAPER",          &data[PROP_LC_PAPER],
-                                   "LC_NAME",           &data[PROP_LC_NAME],
-                                   "LC_ADDRESS",        &data[PROP_LC_ADDRESS],
-                                   "LC_TELEPHONE",      &data[PROP_LC_TELEPHONE],
-                                   "LC_MEASUREMENT",    &data[PROP_LC_MEASUREMENT],
-                                   "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
-                                   NULL);
 
         if (r == -ENOENT) {
                 int p;
@@ -372,13 +340,8 @@ static int read_data(void) {
 static int write_data_locale(void) {
         int r, p;
         char **l = NULL;
-        const char *path = "/etc/locale.conf";
 
-        r = load_env_file(path, &l);
-        if (r < 0 && r == -ENOENT) {
-                path = "/etc/default/locale";
-                r = load_env_file(path, &l);
-        }
+        r = load_env_file("/etc/locale.conf", NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -410,13 +373,13 @@ static int write_data_locale(void) {
         if (strv_isempty(l)) {
                 strv_free(l);
 
-                if (unlink(path) < 0)
+                if (unlink("/etc/locale.conf") < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
 
-        r = write_env_file_label(path, l);
+        r = write_env_file_label("/etc/locale.conf", l);
         strv_free(l);
 
         return r;
@@ -517,7 +480,7 @@ static int write_data_vconsole(void) {
         int r;
         char **l = NULL;
 
-        r = load_env_file("/etc/vconsole.conf", &l);
+        r = load_env_file("/etc/vconsole.conf", NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -1034,7 +997,7 @@ static DBusHandlerResult locale_message_handler(
                 dbus_bool_t interactive;
                 DBusMessageIter iter;
                 bool modified = false;
-                bool passed[_PROP_MAX];
+                bool passed[_PROP_MAX] = {};
                 int p;
 
                 if (!dbus_message_iter_init(message, &iter))
@@ -1055,8 +1018,6 @@ static DBusHandlerResult locale_message_handler(
                 }
 
                 dbus_message_iter_get_basic(&iter, &interactive);
-
-                zero(passed);
 
                 /* Check whether a variable changed and if so valid */
                 STRV_FOREACH(i, l) {
@@ -1300,7 +1261,7 @@ static DBusHandlerResult locale_message_handler(
         if (!(reply = dbus_message_new_method_return(message)))
                 goto oom;
 
-        if (!dbus_connection_send(connection, reply, NULL))
+        if (!bus_maybe_send_reply(connection, message, reply))
                 goto oom;
 
         dbus_message_unref(reply);

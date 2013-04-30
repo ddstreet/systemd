@@ -3,9 +3,9 @@ Author: Martin Pitt <martin.pitt@ubuntu.com>
 
 Index: systemd/src/login/73-seat-late.rules.in
 ===================================================================
---- systemd.orig/src/login/73-seat-late.rules.in	2012-04-12 00:24:39.564670081 +0200
-+++ systemd/src/login/73-seat-late.rules.in	2013-03-15 19:13:13.548735264 +0100
-@@ -12,6 +12,6 @@
+--- systemd.orig/src/login/73-seat-late.rules.in	2013-04-29 14:43:42.680834843 -0700
++++ systemd/src/login/73-seat-late.rules.in	2013-04-29 14:43:42.676834843 -0700
+@@ -13,6 +13,6 @@
  
  ENV{ID_SEAT}!="", TAG+="$env{ID_SEAT}"
  

@@ -46,7 +46,7 @@
 #include "dbus-socket.h"
 #include "missing.h"
 #include "special.h"
-#include "bus-errors.h"
+#include "dbus-common.h"
 #include "label.h"
 #include "exit-status.h"
 #include "def.h"
@@ -127,7 +127,7 @@ static void socket_done(Unit *u) {
 
         socket_free_ports(s);
 
-        exec_context_done(&s->exec_context);
+        exec_context_done(&s->exec_context, manager_is_reloading_or_reexecuting(u->manager));
         exec_command_free_array(s->exec_command, _SOCKET_EXEC_COMMAND_MAX);
         s->control_command = NULL;
 
@@ -331,11 +331,13 @@ static int socket_add_default_dependencies(Socket *s) {
         int r;
         assert(s);
 
-        if (UNIT(s)->manager->running_as == SYSTEMD_SYSTEM) {
-                if ((r = unit_add_dependency_by_name(UNIT(s), UNIT_BEFORE, SPECIAL_SOCKETS_TARGET, NULL, true)) < 0)
-                        return r;
+        r = unit_add_dependency_by_name(UNIT(s), UNIT_BEFORE, SPECIAL_SOCKETS_TARGET, NULL, true);
+        if (r < 0)
+                return r;
 
-                if ((r = unit_add_two_dependencies_by_name(UNIT(s), UNIT_AFTER, UNIT_REQUIRES, SPECIAL_SYSINIT_TARGET, NULL, true)) < 0)
+        if (UNIT(s)->manager->running_as == SYSTEMD_SYSTEM) {
+                r = unit_add_two_dependencies_by_name(UNIT(s), UNIT_AFTER, UNIT_REQUIRES, SPECIAL_SYSINIT_TARGET, NULL, true);
+                if (r < 0)
                         return r;
         }
 
@@ -1253,6 +1255,7 @@ static void socket_enter_dead(Socket *s, SocketResult f) {
         if (f != SOCKET_SUCCESS)
                 s->result = f;
 
+        exec_context_tmp_dirs_done(&s->exec_context);
         socket_set_state(s, s->result != SOCKET_SUCCESS ? SOCKET_FAILED : SOCKET_DEAD);
 }
 
@@ -1631,7 +1634,7 @@ static int socket_start(Unit *u) {
                 service = SERVICE(UNIT_DEREF(s->service));
 
                 if (UNIT(service)->load_state != UNIT_LOADED) {
-                        log_error_unit(UNIT(service)->id,
+                        log_error_unit(u->id,
                                        "Socket service %s not loaded, refusing.",
                                        UNIT(service)->id);
                         return -ENOENT;
@@ -1642,7 +1645,7 @@ static int socket_start(Unit *u) {
                 if (service->state != SERVICE_DEAD &&
                     service->state != SERVICE_FAILED &&
                     service->state != SERVICE_AUTO_RESTART) {
-                        log_error_unit(UNIT(service)->id,
+                        log_error_unit(u->id,
                                        "Socket service %s already active, refusing.",
                                        UNIT(service)->id);
                         return -EBUSY;
@@ -1650,7 +1653,7 @@ static int socket_start(Unit *u) {
 
 #ifdef HAVE_SYSV_COMPAT
                 if (service->is_sysv) {
-                        log_error_unit(UNIT(s)->id,
+                        log_error_unit(u->id,
                                        "Using SysV services for socket activation is not supported. Refusing.");
                         return -ENOENT;
                 }
@@ -1741,6 +1744,8 @@ static int socket_serialize(Unit *u, FILE *f, FDSet *fds) {
                         unit_serialize_item_format(u, f, "fifo", "%i %s", copy, p->path);
                 }
         }
+
+        exec_context_serialize(&s->exec_context, UNIT(s), f);
 
         return 0;
 }
@@ -1901,7 +1906,22 @@ static int socket_deserialize_item(Unit *u, const char *key, const char *value, 
                                 p->fd = fdset_remove(fds, fd);
                         }
                 }
+        } else if (streq(key, "tmp-dir")) {
+                char *t;
 
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                s->exec_context.tmp_dir = t;
+        } else if (streq(key, "var-tmp-dir")) {
+                char *t;
+
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                s->exec_context.var_tmp_dir = t;
         } else
                 log_debug_unit(UNIT(s)->id,
                                "Unknown serialization key '%s'", key);
@@ -1947,6 +1967,28 @@ static const char *socket_sub_state_to_string(Unit *u) {
         assert(u);
 
         return socket_state_to_string(SOCKET(u)->state);
+}
+
+const char* socket_port_type_to_string(SocketPort *p) {
+
+        assert(p);
+
+        switch (p->type) {
+                case SOCKET_SOCKET:
+                        switch (p->address.type) {
+                                case SOCK_STREAM: return "Stream";
+                                case SOCK_DGRAM: return "Datagram";
+                                case SOCK_SEQPACKET: return "SequentialPacket";
+                                case SOCK_RAW:
+                                        if (socket_address_family(&p->address) == AF_NETLINK)
+                                                return "Netlink";
+                                default: return "Invalid";
+                        }
+                case SOCKET_SPECIAL: return "Special";
+                case SOCKET_MQUEUE: return "MessageQueue";
+                case SOCKET_FIFO: return "FIFO";
+                default: return NULL;
+        }
 }
 
 static bool socket_check_gc(Unit *u) {
@@ -2265,53 +2307,7 @@ static void socket_reset_failed(Unit *u) {
 }
 
 static int socket_kill(Unit *u, KillWho who, int signo, DBusError *error) {
-        Socket *s = SOCKET(u);
-        int r = 0;
-        Set *pid_set = NULL;
-
-        assert(s);
-
-        if (who == KILL_MAIN) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "Socket units have no main processes");
-                return -ESRCH;
-        }
-
-        if (s->control_pid <= 0 && who == KILL_CONTROL) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No control process to kill");
-                return -ESRCH;
-        }
-
-        if (who == KILL_CONTROL || who == KILL_ALL)
-                if (s->control_pid > 0)
-                        if (kill(s->control_pid, signo) < 0)
-                                r = -errno;
-
-        if (who == KILL_ALL) {
-                int q;
-
-                pid_set = set_new(trivial_hash_func, trivial_compare_func);
-                if (!pid_set)
-                        return -ENOMEM;
-
-                /* Exclude the control pid from being killed via the cgroup */
-                if (s->control_pid > 0) {
-                        q = set_put(pid_set, LONG_TO_PTR(s->control_pid));
-                        if (q < 0) {
-                                r = q;
-                                goto finish;
-                        }
-                }
-
-                q = cgroup_bonding_kill_list(UNIT(s)->cgroup_bondings, signo, false, false, pid_set, NULL);
-                if (q < 0 && q != -EAGAIN && q != -ESRCH && q != -ENOENT)
-                        r = q;
-        }
-
-finish:
-        if (pid_set)
-                set_free(pid_set);
-
-        return r;
+        return unit_kill_common(u, who, signo, -1, SOCKET(u)->control_pid, error);
 }
 
 static const char* const socket_state_table[_SOCKET_STATE_MAX] = {

@@ -36,6 +36,7 @@
 #include <dirent.h>
 #include <sys/resource.h>
 #include <stddef.h>
+#include <unistd.h>
 
 #include "macro.h"
 #include "time-util.h"
@@ -50,7 +51,7 @@ union dirent_storage {
 #define WHITESPACE " \t\n\r"
 #define NEWLINE "\n\r"
 #define QUOTES "\"\'"
-#define COMMENTS "#;\n"
+#define COMMENTS "#;"
 
 #define FORMAT_BYTES_MAX 8
 
@@ -328,6 +329,7 @@ ssize_t loop_write(int fd, const void *buf, size_t nbytes, bool do_poll);
 bool is_device_path(const char *path);
 
 int dir_is_empty(const char *path);
+char* dirname_malloc(const char *path);
 
 void rename_process(const char name[8]);
 
@@ -428,9 +430,11 @@ int socket_from_display(const char *display, char **path);
 int get_user_creds(const char **username, uid_t *uid, gid_t *gid, const char **home, const char **shell);
 int get_group_creds(const char **groupname, gid_t *gid);
 
+int in_gid(gid_t gid);
 int in_group(const char *name);
 
 char* uid_to_name(uid_t uid);
+char* gid_to_name(gid_t gid);
 
 int glob_exists(const char *path);
 
@@ -516,15 +520,43 @@ bool in_initrd(void);
 
 void warn_melody(void);
 
-int get_shell(char **ret);
 int get_home_dir(char **ret);
 
-void freep(void *p);
-void fclosep(FILE **f);
-void pclosep(FILE **f);
-void closep(int *fd);
-void closedirp(DIR **d);
-void umaskp(mode_t *u);
+static inline void freep(void *p) {
+        free(*(void**) p);
+}
+
+static inline void fclosep(FILE **f) {
+        if (*f)
+                fclose(*f);
+}
+
+static inline void pclosep(FILE **f) {
+        if (*f)
+                pclose(*f);
+}
+
+static inline void closep(int *fd) {
+        if (*fd >= 0)
+                close_nointr_nofail(*fd);
+}
+
+static inline void closedirp(DIR **d) {
+        if (*d)
+                closedir(*d);
+}
+
+static inline void umaskp(mode_t *u) {
+        umask(*u);
+}
+
+#define _cleanup_free_ _cleanup_(freep)
+#define _cleanup_fclose_ _cleanup_(fclosep)
+#define _cleanup_pclose_ _cleanup_(pclosep)
+#define _cleanup_close_ _cleanup_(closep)
+#define _cleanup_closedir_ _cleanup_(closedirp)
+#define _cleanup_umask_ _cleanup_(umaskp)
+#define _cleanup_globfree_ _cleanup_(globfree)
 
 _malloc_  static inline void *malloc_multiply(size_t a, size_t b) {
         if (_unlikely_(b == 0 || a > ((size_t) -1) / b))
@@ -569,6 +601,7 @@ int on_ac_power(void);
 
 int search_and_fopen(const char *path, const char *mode, const char **search, FILE **_f);
 int search_and_fopen_nulstr(const char *path, const char *mode, const char *search, FILE **_f);
+int create_tmp_dir(char template[], char** dir_name);
 
 #define FOREACH_LINE(line, f, on_error)                         \
         for (;;)                                                \
@@ -582,10 +615,84 @@ int search_and_fopen_nulstr(const char *path, const char *mode, const char *sear
 #define FOREACH_DIRENT(de, d, on_error)                                 \
         for (errno = 0, de = readdir(d);; errno = 0, de = readdir(d))   \
                 if (!de) {                                              \
-                        if (errno != 0) {                               \
+                        if (errno > 0) {                                \
                                 on_error;                               \
                         }                                               \
                         break;                                          \
                 } else if (ignore_file((de)->d_name))                   \
                         continue;                                       \
                 else
+
+static inline void *mempset(void *s, int c, size_t n) {
+        memset(s, c, n);
+        return (uint8_t*)s + n;
+}
+
+char *hexmem(const void *p, size_t l);
+void *unhexmem(const char *p, size_t l);
+
+char *strextend(char **x, ...);
+char *strrep(const char *s, unsigned n);
+
+void* greedy_realloc(void **p, size_t *allocated, size_t need);
+#define GREEDY_REALLOC(array, allocated, need) \
+        greedy_realloc((void**) &(array), &(allocated), sizeof((array)[0]) * (need))
+
+static inline void _reset_errno_(int *saved_errno) {
+        errno = *saved_errno;
+}
+
+#define PROTECT_ERRNO __attribute__((cleanup(_reset_errno_))) int _saved_errno_ = errno
+
+struct umask_struct {
+        mode_t mask;
+        bool quit;
+};
+
+static inline void _reset_umask_(struct umask_struct *s) {
+        umask(s->mask);
+};
+
+#define RUN_WITH_UMASK(mask)                                            \
+        for (__attribute__((cleanup(_reset_umask_))) struct umask_struct _saved_umask_ = { umask(mask), false }; \
+             !_saved_umask_.quit ;                                      \
+             _saved_umask_.quit = true)
+
+static inline unsigned u64log2(uint64_t n) {
+        return (n > 1) ? __builtin_clzll(n) ^ 63U : 0;
+}
+
+static inline bool logind_running(void) {
+        return access("/run/systemd/seats/", F_OK) >= 0;
+}
+
+#define DECIMAL_STR_WIDTH(x)                            \
+        ({                                              \
+                typeof(x) _x_ = (x);                    \
+                unsigned ans = 1;                       \
+                while (_x_ /= 10)                       \
+                        ans++;                          \
+                ans;                                    \
+        })
+
+int unlink_noerrno(const char *path);
+
+#define alloca0(n)                                      \
+        ({                                              \
+                char *_new_;                            \
+                size_t _len_ = n;                       \
+                _new_ = alloca(_len_);                  \
+                (void *) memset(_new_, 0, _len_);       \
+        })
+
+#define strappenda(a, b)                                \
+        ({                                              \
+                const char *_a_ = (a), *_b_ = (b);      \
+                char *_c_;                              \
+                size_t _x_, _y_;                        \
+                _x_ = strlen(_a_);                      \
+                _y_ = strlen(_b_);                      \
+                _c_ = alloca(_x_ + _y_ + 1);            \
+                strcpy(stpcpy(_c_, _a_), _b_);          \
+                _c_;                                    \
+        })

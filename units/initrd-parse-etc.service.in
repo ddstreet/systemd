@@ -8,13 +8,14 @@
 [Unit]
 Description=Reload Configuration from the Real Root
 DefaultDependencies=no
-Requires=local-fs.target swap.target
-After=local-fs.target swap.target
+Requires=initrd-root-fs.target
+After=initrd-root-fs.target
 OnFailure=emergency.target
 ConditionPathExists=/etc/initrd-release
 
 [Service]
 Type=oneshot
 ExecStartPre=@rootbindir@/systemctl daemon-reload
-ExecStart=@rootbindir@/systemctl start local-fs.target
+# we have to retrigger initrd-fs.target after daemon-reload
+ExecStart=-@rootbindir@/systemctl --no-block start initrd-fs.target
 ExecStart=@rootbindir@/systemctl --no-block start initrd-cleanup.service

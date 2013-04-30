@@ -33,7 +33,7 @@
 #include "utmp-wtmp.h"
 
 int utmp_get_runlevel(int *runlevel, int *previous) {
-        struct utmpx lookup, *found;
+        struct utmpx *found, lookup = { .ut_type = RUN_LVL };
         int r;
         const char *e;
 
@@ -66,9 +66,6 @@ int utmp_get_runlevel(int *runlevel, int *previous) {
 
         setutxent();
 
-        zero(lookup);
-        lookup.ut_type = RUN_LVL;
-
         if (!(found = getutxid(&lookup)))
                 r = -errno;
         else {
@@ -77,15 +74,11 @@ int utmp_get_runlevel(int *runlevel, int *previous) {
                 a = found->ut_pid & 0xFF;
                 b = (found->ut_pid >> 8) & 0xFF;
 
-                if (a < 0 || b < 0)
-                        r = -EIO;
-                else {
-                        *runlevel = a;
+                *runlevel = a;
+                if (previous)
+                        *previous = b;
 
-                        if (previous)
-                                *previous = b;
-                        r = 0;
-                }
+                r = 0;
         }
 
         endutxent();
@@ -106,13 +99,11 @@ static void init_timestamp(struct utmpx *store, usec_t t) {
 }
 
 static void init_entry(struct utmpx *store, usec_t t) {
-        struct utsname uts;
+        struct utsname uts = {};
 
         assert(store);
 
         init_timestamp(store, t);
-
-        zero(uts);
 
         if (uname(&uts) >= 0)
                 strncpy(store->ut_host, uts.release, sizeof(store->ut_host));
@@ -296,7 +287,7 @@ int utmp_put_runlevel(int runlevel, int previous) {
 #define TIMEOUT_MSEC 50
 
 static int write_to_terminal(const char *tty, const char *message) {
-        int fd, r;
+        _cleanup_close_ int fd = -1;
         const char *p;
         size_t left;
         usec_t end;
@@ -304,13 +295,9 @@ static int write_to_terminal(const char *tty, const char *message) {
         assert(tty);
         assert(message);
 
-        if ((fd = open(tty, O_WRONLY|O_NDELAY|O_NOCTTY|O_CLOEXEC)) < 0)
+        fd = open(tty, O_WRONLY|O_NDELAY|O_NOCTTY|O_CLOEXEC);
+        if (fd < 0 || !isatty(fd))
                 return -errno;
-
-        if (!isatty(fd)) {
-                r = -errno;
-                goto finish;
-        }
 
         p = message;
         left = strlen(message);
@@ -319,36 +306,31 @@ static int write_to_terminal(const char *tty, const char *message) {
 
         while (left > 0) {
                 ssize_t n;
-                struct pollfd pollfd;
+                struct pollfd pollfd = {
+                        .fd = fd,
+                        .events = POLLOUT,
+                };
                 usec_t t;
                 int k;
 
                 t = now(CLOCK_MONOTONIC);
 
-                if (t >= end) {
-                        r = -ETIME;
-                        goto finish;
-                }
+                if (t >= end)
+                        return -ETIME;
 
-                zero(pollfd);
-                pollfd.fd = fd;
-                pollfd.events = POLLOUT;
-
-                if ((k = poll(&pollfd, 1, (end - t) / USEC_PER_MSEC)) < 0)
+                k = poll(&pollfd, 1, (end - t) / USEC_PER_MSEC);
+                if (k < 0)
                         return -errno;
 
-                if (k <= 0) {
-                        r = -ETIME;
-                        goto finish;
-                }
+                if (k == 0)
+                        return -ETIME;
 
-                if ((n = write(fd, p, left)) < 0) {
-
+                n = write(fd, p, left);
+                if (n < 0) {
                         if (errno == EAGAIN)
                                 continue;
 
-                        r = -errno;
-                        goto finish;
+                        return -errno;
                 }
 
                 assert((size_t) n <= left);
@@ -357,12 +339,7 @@ static int write_to_terminal(const char *tty, const char *message) {
                 left -= n;
         }
 
-        r = 0;
-
-finish:
-        close_nointr_nofail(fd);
-
-        return r;
+        return 0;
 }
 
 int utmp_wall(const char *message, bool (*match_tty)(const char *tty)) {
@@ -403,10 +380,12 @@ int utmp_wall(const char *message, bool (*match_tty)(const char *tty)) {
                 if (u->ut_type != USER_PROCESS || u->ut_user[0] == 0)
                         continue;
 
+                /* this access is fine, because strlen("/dev/") << 32 (UT_LINESIZE) */
                 if (path_startswith(u->ut_line, "/dev/"))
                         path = u->ut_line;
                 else {
-                        if (asprintf(&buf, "/dev/%s", u->ut_line) < 0) {
+                        if (asprintf(&buf, "/dev/%.*s",
+                                     (int) sizeof(u->ut_line), u->ut_line) < 0) {
                                 r = -ENOMEM;
                                 goto finish;
                         }

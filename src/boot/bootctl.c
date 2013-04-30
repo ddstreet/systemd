@@ -38,7 +38,7 @@ static int help(void) {
                "  -h --help              Show this help\n"
                "     --version           Show package version\n"
                "Commands:\n"
-               "  status                 Show current time settings\n",
+               "  status                 Show current boot settings\n",
                program_invocation_short_name);
 
         return 0;
@@ -143,33 +143,48 @@ static int show_status(char **args, unsigned n) {
 
         err = boot_info_query(info);
 
-        printf("    Machine ID: %s\n", sd_id128_to_string(info->machine_id, buf));
-        printf("       Boot ID: %s\n", sd_id128_to_string(info->boot_id, buf));
+        printf("System:\n");
+        printf("   Machine ID: %s\n", sd_id128_to_string(info->machine_id, buf));
+        printf("      Boot ID: %s\n", sd_id128_to_string(info->boot_id, buf));
         if (info->fw_type)
-                printf("      Firmware: %s (%s)\n", info->fw_type, strna(info->fw_info));
+                printf("     Firmware: %s (%s)\n", info->fw_type, strna(info->fw_info));
+        if (info->fw_secure_boot >= 0)
+                printf("  Secure Boot: %s\n", info->fw_secure_boot ? "enabled" : "disabled");
+        if (info->fw_secure_boot_setup_mode >= 0)
+                printf("   Setup Mode: %s\n", info->fw_secure_boot_setup_mode ? "setup" : "user");
+        printf("\n");
 
         if (info->fw_entry_active >= 0) {
-                printf("Firmware entry: %s\n", strna(info->fw_entries[info->fw_entry_active].title));
-                if (info->fw_entries[info->fw_entry_active].path)
-                        printf("                %s\n", info->fw_entries[info->fw_entry_active].path);
+                printf("Selected Firmware Entry:\n");
+                printf("        Title: %s\n", strna(info->fw_entries[info->fw_entry_active].title));
                 if (!sd_id128_equal(info->fw_entries[info->fw_entry_active].part_uuid, SD_ID128_NULL))
-                        printf("                /dev/disk/by-partuuid/%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
+                        printf("    Partition: /dev/disk/by-partuuid/%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
                                SD_ID128_FORMAT_VAL(info->fw_entries[info->fw_entry_active].part_uuid));
+                else
+                        printf("    Partition: n/a\n");
+                if (info->fw_entries[info->fw_entry_active].path)
+                        printf("         File: %s%s\n", draw_special_char(DRAW_TREE_RIGHT), info->fw_entries[info->fw_entry_active].path);
         }
+        printf("\n");
 
         if (info->loader) {
-                printf("        Loader: %s\n", info->loader);
-                printf("                %s\n", strna(info->loader_image_path));
+                printf("Boot Loader:\n");
+                printf("      Product: %s\n", info->loader);
                 if (!sd_id128_equal(info->loader_part_uuid, SD_ID128_NULL))
-                        printf("                /dev/disk/by-partuuid/%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
+                        printf("    Partition: /dev/disk/by-partuuid/%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
                                SD_ID128_FORMAT_VAL(info->loader_part_uuid));
+                        else
+                                printf("    Partition: n/a\n");
+                printf("         File: %s%s\n", draw_special_char(DRAW_TREE_RIGHT), strna(info->loader_image_path));
+                printf("\n");
 
                 if (info->loader_entry_active >= 0) {
-                        printf("  Loader entry: %s\n", strna(info->loader_entries[info->loader_entry_active].title));
-                        printf("                %s\n", info->loader_entries[info->loader_entry_active].path);
+                        printf("Selected Boot Loader Entry:\n");
+                        printf("        Title: %s\n", strna(info->loader_entries[info->loader_entry_active].title));
+                        printf("         File: %s\n", info->loader_entries[info->loader_entry_active].path);
+                        if (info->loader_options_added)
+                                printf("      Options: %s\n", info->loader_options_added);
                 }
-
-                printf("Loader options: %s\n", strna(info->loader_options_added));
         } else
                 printf("No suitable data is provided by the boot manager. See:\n"
                        "  http://www.freedesktop.org/wiki/Software/systemd/BootLoaderInterface\n"

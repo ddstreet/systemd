@@ -92,21 +92,22 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
         <term><option>--type=</option></term>
 
         <listitem>
-          <para>The argument should be a unit type name such as
-          <option>service</option> and <option>socket</option>, or a
-          unit load state such as <option>loaded</option> and
-          <option>masked</option>.
-          </para>
+          <para>The argument should be a comma separated list of unit
+          types such as <option>service</option> and
+          <option>socket</option>, or unit load states such as
+          <option>loaded</option> and <option>masked</option>
+          (types and states can be mixed).</para>
 
-          <para>If the argument is a unit type, when listing units,
-          limit display to certain unit types. If not specified units
+          <para>If one of the arguments is a unit type, when listing
+          units, limit display to certain unit types. Otherwise units
           of all types will be shown.</para>
 
-          <para>If the argument is a unit load state, when listing
-          units, limit display to certain unit types. If not specified
-          units of in all load states will be shown.</para>
+          <para>If one of the arguments is a unit load state, when
+          listing units, limit display to certain unit
+          types. Otherwise units of in all load states will be
+          shown.</para>
 
-          <para>As a special case, if the argument is
+          <para>As a special case, if one of the arguments is
           <option>help</option>, a list of allowed values will be
           printed and the program will exit.</para>
         </listitem>
@@ -132,10 +133,12 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
         <term><option>--all</option></term>
 
         <listitem>
-          <para>When listing units, show all units, regardless of
-          their state, including inactive units. When showing
+          <para>When listing units, show all loaded units, regardless
+          of their state, including inactive units. When showing
           unit/job/manager properties, show all properties regardless
           whether they are set or not.</para>
+          <para>To list all units installed on the system, use the
+          <command>list-unit-files</command> command instead.</para>
         </listitem>
       </varlistentry>
 
@@ -168,6 +171,14 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           the requested operation will replace the pending job, if
           necessary. Do not confuse with
           <option>--failed</option>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--show-types</option></term>
+
+        <listitem>
+          <para>When showing sockets, show the type of the socket.</para>
         </listitem>
       </varlistentry>
 
@@ -478,6 +489,31 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           <para>This is the default command.</para>
         </listitem>
       </varlistentry>
+
+      <varlistentry>
+        <term><command>list-sockets</command></term>
+
+        <listitem>
+          <para>List socket units ordered by the listening address. Produces output
+          similar to
+          <programlisting>
+LISTEN           UNIT                        ACTIVATES
+/dev/initctl     systemd-initctl.socket      systemd-initctl.service
+...
+[::]:22          sshd.socket                 sshd.service
+kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
+
+5 sockets listed.
+          </programlisting>
+          Note: because the addresses might contains spaces, this output
+          is not suitable for programatic consumption.
+          </para>
+
+          <para>See also the options <option>--show-types</option>,
+          <option>--all</option>, and <option>--failed</option>.</para>
+        </listitem>
+      </varlistentry>
+
       <varlistentry>
         <term><command>start <replaceable>NAME</replaceable>...</command></term>
 
@@ -721,7 +757,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
         unit name, plus a control group specification in the syntax
         <replaceable>CONTROLLER</replaceable>:<replaceable>PATH</replaceable>
         or <replaceable>CONTROLLER</replaceable>. In the latter syntax
-        (where the path is ommitted) the default unit control group
+        (where the path is omitted) the default unit control group
         path is implied. Examples: <literal>cpu</literal> or
         <literal>cpu:/foo/bar</literal>. If a unit is removed from a
         control group hierarchy all its processes will be moved to the

@@ -85,6 +85,7 @@ struct Watch {
 #include "set.h"
 #include "dbus.h"
 #include "path-lookup.h"
+#include "execute.h"
 
 struct Manager {
         /* Note that the set of units we know of is allowed to be
@@ -277,11 +278,13 @@ void manager_dispatch_bus_query_pid_done(Manager *m, const char *name, pid_t pid
 
 int manager_open_serialization(Manager *m, FILE **_f);
 
-int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool serialize_jobs);
+int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool switching_root);
 int manager_deserialize(Manager *m, FILE *f, FDSet *fds);
 int manager_distribute_fds(Manager *m, FDSet *fds);
 
 int manager_reload(Manager *m);
+
+bool manager_is_reloading_or_reexecuting(Manager *m);
 
 void manager_reset_failed(Manager *m);
 

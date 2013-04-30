@@ -2,22 +2,21 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="sd_booted"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_booted — Test whether the system is running the systemd init system</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-daemon.h&gt;</pre><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_booted</b>(</code></td><td>void<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1"><a name="idp3967296"></a><h2>Description</h2><p><code class="function">sd_booted()</code> checks whether
-                the system was booted up using the systemd init system.</p></div><div class="refsect1"><a name="idp3969040"></a><h2>Return Value</h2><p>On failure, this call returns a negative
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="sd_booted"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_booted — Test whether the system is running the systemd init system</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-daemon.h&gt;</pre><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_booted</b>(</code></td><td>void<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1"><a name="idp194000"></a><h2>Description</h2><p><code class="function">sd_booted()</code> checks whether
+                the system was booted up using the systemd init system.</p></div><div class="refsect1"><a name="idp196672"></a><h2>Return Value</h2><p>On failure, this call returns a negative
                 errno-style error code. If the system was booted up
                 with systemd as init system, this call returns a
-                positive return value, zero otherwise.</p></div><div class="refsect1"><a name="idp3970464"></a><h2>Notes</h2><p>This function is provided by the reference
+                positive return value, zero otherwise.</p></div><div class="refsect1"><a name="idp124960"></a><h2>Notes</h2><p>This function is provided by the reference
                 implementation of APIs for new-style daemons and
                 distributed with the systemd package. The algorithm it
                 implements is simple, and can easily be reimplemented
                 in daemons if it is important to support this
                 interface without using the reference
                 implementation.</p><p>Internally, this function checks whether the
-                <code class="filename">/sys/fs/cgroup/systemd</code> virtual file
-                system is mounted, by comparing the st_dev value of
-                the <code class="function">stat()</code> data of
-                <code class="filename">/sys/fs/cgroup</code> and
-                <code class="filename">/sys/fs/cgroup/systemd</code>.</p><p>For details about the algorithm check the
+                directory <code class="filename">/run/systemd/system/</code>
+                exists. A simple check like this can also be
+                implemented trivially in shell or any other
+                language.</p><p>For details about the algorithm check the
                 liberally licensed reference implementation sources:
                 <a class="ulink" href="http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c" target="_top">http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c</a>
                 and <a class="ulink" href="http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h" target="_top">http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h</a></p><p><code class="function">sd_booted()</code> is implemented
@@ -35,7 +34,7 @@
                 <a href="sd-daemon.html"><span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(3)</span></a>.</p><p>If the reference implementation is used as
                 drop-in files and -DDISABLE_SYSTEMD is set during
                 compilation this function will always return 0 and
-                otherwise become a NOP.</p></div><div class="refsect1"><a name="idp26128"></a><h2>See Also</h2><p>
+                otherwise become a NOP.</p></div><div class="refsect1"><a name="idp3971152"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="sd-daemon.html"><span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(3)</span></a>
                 </p></div></div></body></html>

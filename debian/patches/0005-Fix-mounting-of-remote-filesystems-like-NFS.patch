@@ -1,7 +1,7 @@
-From 0ea9a8ee91f66336ec58f67e8d321fd236c1cfb1 Mon Sep 17 00:00:00 2001
+From 8ccf29f8e6dd1c026e1cdff5a9b2e9d08984b9f5 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Sat, 9 Feb 2013 15:55:43 +0100
-Subject: [PATCH 05/15] Fix mounting of remote filesystems, like NFS
+Subject: [PATCH 05/10] Fix mounting of remote filesystems, like NFS
 
 Mounting remote filesystems, like NFS, via /etc/fstab using _netdev is
 currently broken for two reasons:
@@ -34,10 +34,10 @@ Bug-Debian: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=673309
  3 files changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/src/core/service.c b/src/core/service.c
-index 3fbb0a1..c126f2d 100644
+index cf0bbe0..197771e 100644
 --- a/src/core/service.c
 +++ b/src/core/service.c
-@@ -354,7 +354,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char
+@@ -351,7 +351,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char
                  "local_fs",             NULL,
                  "network",              SPECIAL_NETWORK_TARGET,
                  "named",                SPECIAL_NSS_LOOKUP_TARGET,
@@ -47,10 +47,10 @@ index 3fbb0a1..c126f2d 100644
                  "syslog",               NULL,
                  "time",                 SPECIAL_TIME_SYNC_TARGET,
 diff --git a/src/core/special.h b/src/core/special.h
-index 99c0e12..e71eaa7 100644
+index a9b50bc..99d933c 100644
 --- a/src/core/special.h
 +++ b/src/core/special.h
-@@ -56,7 +56,7 @@
+@@ -61,7 +61,7 @@
  /* LSB compatibility */
  #define SPECIAL_NETWORK_TARGET "network.target"           /* LSB's $network */
  #define SPECIAL_NSS_LOOKUP_TARGET "nss-lookup.target"     /* LSB's $named */
@@ -60,19 +60,19 @@ index 99c0e12..e71eaa7 100644
  
  /*
 diff --git a/src/fstab-generator/fstab-generator.c b/src/fstab-generator/fstab-generator.c
-index 910bbc1..e4f8067 100644
+index c17299f..ef83e28 100644
 --- a/src/fstab-generator/fstab-generator.c
 +++ b/src/fstab-generator/fstab-generator.c
-@@ -298,7 +298,8 @@ static int add_mount(const char *what, const char *where, const char *type, cons
-                 return -errno;
+@@ -315,7 +315,8 @@ static int add_mount(
          }
  
--        if (!noauto) {
-+        // don't start network mounts automatically, we do that via ifupdown hooks for now
-+        if (!noauto && !isnetwork) {
-                 lnk = strjoin(arg_dest, "/", post, nofail || automount ? ".wants/" : ".requires/", name, NULL);
-                 if (!lnk)
-                         return log_oom();
+         if (!noauto) {
+-                if (post) {
++                // don't start network mounts automatically, we do that via ifupdown hooks for now
++                if (post && !streq(post, SPECIAL_REMOTE_FS_TARGET)) {
+                         lnk = strjoin(arg_dest, "/", post, nofail || automount ? ".wants/" : ".requires/", name, NULL);
+                         if (!lnk)
+                                 return log_oom();
 -- 
 1.7.10.4
 

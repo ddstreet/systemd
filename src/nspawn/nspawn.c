@@ -75,6 +75,7 @@ static char *arg_directory = NULL;
 static char *arg_user = NULL;
 static char **arg_controllers = NULL;
 static char *arg_uuid = NULL;
+static char *arg_machine = NULL;
 static bool arg_private_network = false;
 static bool arg_read_only = false;
 static bool arg_boot = false;
@@ -113,13 +114,14 @@ static int help(void) {
         printf("%s [OPTIONS...] [PATH] [ARGUMENTS...]\n\n"
                "Spawn a minimal namespace container for debugging, testing and building.\n\n"
                "  -h --help                Show this help\n"
-               "  --version                Print version string\n"
+               "     --version             Print version string\n"
                "  -D --directory=NAME      Root directory for the container\n"
                "  -b --boot                Boot up full system (i.e. invoke init)\n"
                "  -u --user=USER           Run the command under specified user or uid\n"
                "  -C --controllers=LIST    Put the container in specified comma-separated\n"
                "                           cgroup hierarchies\n"
                "     --uuid=UUID           Set a specific machine UUID for the container\n"
+               "  -M --machine=NAME        Set the machine name for the container\n"
                "     --private-network     Disable network in container\n"
                "     --read-only           Mount the root directory read-only\n"
                "     --capability=CAP      In addition to the default, retain specified\n"
@@ -161,6 +163,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "link-journal",    required_argument, NULL, ARG_LINK_JOURNAL    },
                 { "bind",            required_argument, NULL, ARG_BIND            },
                 { "bind-ro",         required_argument, NULL, ARG_BIND_RO         },
+                { "machine",         required_argument, NULL, 'M'                 },
                 { NULL,              0,                 NULL, 0                   }
         };
 
@@ -194,22 +197,19 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case 'u':
                         free(arg_user);
-                        if (!(arg_user = strdup(optarg))) {
-                                log_error("Failed to duplicate user name.");
-                                return -ENOMEM;
-                        }
+                        arg_user = strdup(optarg);
+                        if (!arg_user)
+                                return log_oom();
 
                         break;
 
                 case 'C':
                         strv_free(arg_controllers);
                         arg_controllers = strv_split(optarg, ",");
-                        if (!arg_controllers) {
-                                log_error("Failed to split controllers list.");
-                                return -ENOMEM;
-                        }
-                        strv_uniq(arg_controllers);
+                        if (!arg_controllers)
+                                return log_oom();
 
+                        cg_shorten_controllers(arg_controllers);
                         break;
 
                 case ARG_PRIVATE_NETWORK:
@@ -222,6 +222,19 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case ARG_UUID:
                         arg_uuid = optarg;
+                        break;
+
+                case 'M':
+                        if (!hostname_is_valid(optarg)) {
+                                log_error("Invalid machine name: %s", optarg);
+                                return -EINVAL;
+                        }
+
+                        free(arg_machine);
+                        arg_machine = strdup(optarg);
+                        if (!arg_machine)
+                                return log_oom();
+
                         break;
 
                 case ARG_READ_ONLY:
@@ -352,7 +365,7 @@ static int mount_all(const char *dest) {
         int r = 0;
 
         for (k = 0; k < ELEMENTSOF(mount_table); k++) {
-                char _cleanup_free_ *where = NULL;
+                _cleanup_free_ char *where = NULL;
                 int t;
 
                 where = strjoin(dest, "/", mount_table[k].where, NULL);
@@ -502,7 +515,7 @@ static int setup_resolv_conf(const char *dest) {
 }
 
 static int setup_boot_id(const char *dest) {
-        char _cleanup_free_ *from = NULL, *to = NULL;
+        _cleanup_free_ char *from = NULL, *to = NULL;
         sd_id128_t rnd;
         char as_uuid[37];
         int r;
@@ -528,7 +541,7 @@ static int setup_boot_id(const char *dest) {
                  SD_ID128_FORMAT_VAL(rnd));
         char_array_0(as_uuid);
 
-        r = write_one_line_file(from, as_uuid);
+        r = write_string_file(from, as_uuid);
         if (r < 0) {
                 log_error("Failed to write boot id: %s", strerror(-r));
                 return r;
@@ -537,8 +550,8 @@ static int setup_boot_id(const char *dest) {
         if (mount(from, to, "bind", MS_BIND, NULL) < 0) {
                 log_error("Failed to bind mount boot id: %m");
                 r = -errno;
-        } else
-                mount(from, to, "bind", MS_BIND|MS_REMOUNT|MS_RDONLY, NULL);
+        } else if (mount(from, to, "bind", MS_BIND|MS_REMOUNT|MS_RDONLY, NULL))
+                log_warning("Failed to make boot id read-only: %m");
 
         unlink(from);
         return r;
@@ -556,7 +569,7 @@ static int copy_devnodes(const char *dest) {
 
         const char *d;
         int r = 0;
-        mode_t _cleanup_umask_ u;
+        _cleanup_umask_ mode_t u;
 
         assert(dest);
 
@@ -564,7 +577,7 @@ static int copy_devnodes(const char *dest) {
 
         NULSTR_FOREACH(d, devnodes) {
                 struct stat st;
-                char _cleanup_free_ *from = NULL, *to = NULL;
+                _cleanup_free_ char *from = NULL, *to = NULL;
 
                 asprintf(&from, "/dev/%s", d);
                 asprintf(&to, "%s/dev/%s", dest, d);
@@ -620,9 +633,9 @@ static int setup_ptmx(const char *dest) {
 
 static int setup_dev_console(const char *dest, const char *console) {
         struct stat st;
-        char _cleanup_free_ *to = NULL;
+        _cleanup_free_ char *to = NULL;
         int r;
-        mode_t _cleanup_umask_ u;
+        _cleanup_umask_ mode_t u;
 
         assert(dest);
         assert(console);
@@ -668,14 +681,17 @@ static int setup_dev_console(const char *dest, const char *console) {
 }
 
 static int setup_kmsg(const char *dest, int kmsg_socket) {
-        char _cleanup_free_ *from = NULL, *to = NULL;
+        _cleanup_free_ char *from = NULL, *to = NULL;
         int r, fd, k;
-        mode_t _cleanup_umask_ u;
+        _cleanup_umask_ mode_t u;
         union {
                 struct cmsghdr cmsghdr;
                 uint8_t buf[CMSG_SPACE(sizeof(int))];
-        } control;
-        struct msghdr mh;
+        } control = {};
+        struct msghdr mh = {
+                .msg_control = &control,
+                .msg_controllen = sizeof(control),
+        };
         struct cmsghdr *cmsg;
 
         assert(dest);
@@ -716,12 +732,6 @@ static int setup_kmsg(const char *dest, int kmsg_socket) {
                 return -errno;
         }
 
-        zero(mh);
-        zero(control);
-
-        mh.msg_control = &control;
-        mh.msg_controllen = sizeof(control);
-
         cmsg = CMSG_FIRSTHDR(&mh);
         cmsg->cmsg_level = SOL_SOCKET;
         cmsg->cmsg_type = SCM_RIGHTS;
@@ -746,30 +756,16 @@ static int setup_kmsg(const char *dest, int kmsg_socket) {
 }
 
 static int setup_hostname(void) {
-        char *hn;
-        int r = 0;
 
-        hn = path_get_file_name(arg_directory);
-        if (hn) {
-                hn = strdup(hn);
-                if (!hn)
-                        return -ENOMEM;
+        if (sethostname(arg_machine, strlen(arg_machine)) < 0)
+                return -errno;
 
-                hostname_cleanup(hn);
-
-                if (!isempty(hn))
-                        if (sethostname(hn, strlen(hn)) < 0)
-                                r = -errno;
-
-                free(hn);
-        }
-
-        return r;
+        return 0;
 }
 
 static int setup_journal(const char *directory) {
         sd_id128_t machine_id;
-        char _cleanup_free_ *p = NULL, *b = NULL, *q = NULL, *d = NULL;
+        _cleanup_free_ char *p = NULL, *b = NULL, *q = NULL, *d = NULL;
         char *id;
         int r;
 
@@ -899,22 +895,27 @@ static int setup_journal(const char *directory) {
         return 0;
 }
 
-static int drop_capabilities(void) {
-        return capability_bounding_set_drop(~arg_retain, false);
+static int setup_cgroup(const char *path) {
+        char **c;
+        int r;
+
+        r = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, path, 1);
+        if (r < 0) {
+                log_error("Failed to create cgroup: %s", strerror(-r));
+                return r;
+        }
+
+        STRV_FOREACH(c, arg_controllers) {
+                r = cg_create_and_attach(*c, path, 1);
+                if (r < 0)
+                        log_warning("Failed to create cgroup in controller %s: %s", *c, strerror(-r));
+        }
+
+        return 0;
 }
 
-static int is_os_tree(const char *path) {
-        int r;
-        char *p;
-        /* We use /bin/sh as flag file if something is an OS */
-
-        if (asprintf(&p, "%s/bin/sh", path) < 0)
-                return -ENOMEM;
-
-        r = access(p, F_OK);
-        free(p);
-
-        return r < 0 ? 0 : 1;
+static int drop_capabilities(void) {
+        return capability_bounding_set_drop(~arg_retain, false);
 }
 
 static int process_pty(int master, pid_t pid, sigset_t *mask) {
@@ -1162,9 +1163,9 @@ finish:
 int main(int argc, char *argv[]) {
         pid_t pid = 0;
         int r = EXIT_FAILURE, k;
-        char *oldcg = NULL, *newcg = NULL;
-        char **controller = NULL;
-        int master = -1, n_fd_passed;
+        _cleanup_free_ char *machine_root = NULL, *newcg = NULL;
+        _cleanup_close_ int master = -1;
+        int n_fd_passed;
         const char *console = NULL;
         struct termios saved_attr, raw_attr;
         sigset_t mask;
@@ -1196,6 +1197,20 @@ int main(int argc, char *argv[]) {
 
         path_kill_slashes(arg_directory);
 
+        if (!arg_machine) {
+                arg_machine = strdup(path_get_file_name(arg_directory));
+                if (!arg_machine) {
+                        log_oom();
+                        goto finish;
+                }
+
+                hostname_cleanup(arg_machine);
+                if (isempty(arg_machine)) {
+                        log_error("Failed to determine machine name automatically, please use -M.");
+                        goto finish;
+                }
+        }
+
         if (geteuid() != 0) {
                 log_error("Need to be root.");
                 goto finish;
@@ -1211,7 +1226,7 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
-        if (is_os_tree(arg_directory) <= 0) {
+        if (path_is_os_tree(arg_directory) <= 0) {
                 log_error("Directory %s doesn't look like an OS root directory. Refusing.", arg_directory);
                 goto finish;
         }
@@ -1228,27 +1243,26 @@ int main(int argc, char *argv[]) {
         fdset_close_others(fds);
         log_open();
 
-        k = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 0, &oldcg);
+        k = cg_get_machine_path(&machine_root);
         if (k < 0) {
-                log_error("Failed to determine current cgroup: %s", strerror(-k));
+                log_error("Failed to determine machine cgroup path: %s", strerror(-k));
                 goto finish;
         }
 
-        if (asprintf(&newcg, "%s/nspawn-%lu", oldcg, (unsigned long) getpid()) < 0) {
+        newcg = strjoin(machine_root, "/", arg_machine, NULL);
+        if (!newcg) {
                 log_error("Failed to allocate cgroup path.");
                 goto finish;
         }
 
-        k = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, newcg, 0);
-        if (k < 0)  {
-                log_error("Failed to create cgroup: %s", strerror(-k));
-                goto finish;
-        }
+        r = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, newcg, false);
+        if (r <= 0 && r != -ENOENT) {
+                log_error("Container already running.");
 
-        STRV_FOREACH(controller, arg_controllers) {
-                k = cg_create_and_attach(*controller, newcg, 0);
-                if (k < 0)
-                        log_warning("Failed to create cgroup in controller %s: %s", *controller, strerror(-k));
+                free(newcg);
+                newcg = NULL;
+
+                goto finish;
         }
 
         master = posix_openpt(O_RDWR|O_NOCTTY|O_CLOEXEC|O_NDELAY);
@@ -1282,7 +1296,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (socketpair(AF_UNIX, SOCK_DGRAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 0, kmsg_socket_pair) < 0) {
-                log_error("Failed to create kmsg socket pair");
+                log_error("Failed to create kmsg socket pair.");
                 goto finish;
         }
 
@@ -1384,6 +1398,9 @@ int main(int argc, char *argv[]) {
                                 log_error("PR_SET_PDEATHSIG failed: %m");
                                 goto child_fail;
                         }
+
+                        if (setup_cgroup(newcg) < 0)
+                                goto child_fail;
 
                         /* Mark everything as slave, so that we still
                          * receive mounts from the real root, but don't
@@ -1550,7 +1567,7 @@ int main(int argc, char *argv[]) {
                                 }
 
                                 if ((asprintf((char **)(envp + n_env++), "LISTEN_FDS=%u", n_fd_passed) < 0) ||
-                                    (asprintf((char **)(envp + n_env++), "LISTEN_PID=%lu", (unsigned long) getpid()) < 0)) {
+                                    (asprintf((char **)(envp + n_env++), "LISTEN_PID=%lu", (unsigned long) 1) < 0)) {
                                         log_oom();
                                         goto child_fail;
                                 }
@@ -1589,7 +1606,7 @@ int main(int argc, char *argv[]) {
                         _exit(EXIT_FAILURE);
                 }
 
-                log_info("Init process in the container running as PID %d", pid);
+                log_info("Init process in the container running as PID %lu.", (unsigned long) pid);
                 close_nointr_nofail(pipefd[0]);
                 close_nointr_nofail(pipefd[1]);
 
@@ -1643,21 +1660,14 @@ finish:
         if (saved_attr_valid)
                 tcsetattr(STDIN_FILENO, TCSANOW, &saved_attr);
 
-        if (master >= 0)
-                close_nointr_nofail(master);
-
         close_pipe(kmsg_socket_pair);
-
-        if (oldcg)
-                cg_attach(SYSTEMD_CGROUP_CONTROLLER, oldcg, 0);
 
         if (newcg)
                 cg_kill_recursive_and_wait(SYSTEMD_CGROUP_CONTROLLER, newcg, true);
 
         free(arg_directory);
+        free(arg_machine);
         strv_free(arg_controllers);
-        free(oldcg);
-        free(newcg);
 
         fdset_free(fds);
 

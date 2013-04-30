@@ -66,7 +66,7 @@
         "  <method name=\"CreateSession\">\n"                           \
         "   <arg name=\"uid\" type=\"u\" direction=\"in\"/>\n"          \
         "   <arg name=\"leader\" type=\"u\" direction=\"in\"/>\n"       \
-        "   <arg name=\"sevice\" type=\"s\" direction=\"in\"/>\n"       \
+        "   <arg name=\"service\" type=\"s\" direction=\"in\"/>\n"      \
         "   <arg name=\"type\" type=\"s\" direction=\"in\"/>\n"         \
         "   <arg name=\"class\" type=\"s\" direction=\"in\"/>\n"        \
         "   <arg name=\"seat\" type=\"s\" direction=\"in\"/>\n"         \
@@ -319,7 +319,7 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
         int r;
         uint32_t vtnr = 0;
         _cleanup_close_ int fifo_fd = -1;
-        DBusMessage *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         Session *session = NULL;
         User *user = NULL;
         Seat *seat = NULL;
@@ -353,21 +353,28 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
                 return -EINVAL;
 
         dbus_message_iter_get_basic(&iter, &type);
-        t = session_type_from_string(type);
+        if (isempty(type))
+                t = _SESSION_TYPE_INVALID;
+        else {
+                t = session_type_from_string(type);
+                if (t < 0)
+                        return -EINVAL;
+        }
 
-        if (t < 0 ||
-            !dbus_message_iter_next(&iter) ||
+        if (!dbus_message_iter_next(&iter) ||
             dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
                 return -EINVAL;
 
         dbus_message_iter_get_basic(&iter, &class);
         if (isempty(class))
-                c = SESSION_USER;
-        else
+                c = _SESSION_CLASS_INVALID;
+        else {
                 c = session_class_from_string(class);
+                if (c < 0)
+                        return -EINVAL;
+        }
 
-        if (c < 0 ||
-            !dbus_message_iter_next(&iter) ||
+        if (!dbus_message_iter_next(&iter) ||
             dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
                 return -EINVAL;
 
@@ -441,6 +448,22 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
             dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_BOOLEAN)
                 return -EINVAL;
 
+        if (t == _SESSION_TYPE_INVALID) {
+                if (!isempty(display))
+                        t = SESSION_X11;
+                else if (!isempty(tty))
+                        t = SESSION_TTY;
+                else
+                        t = SESSION_UNSPECIFIED;
+        }
+
+        if (c == _SESSION_CLASS_INVALID) {
+                if (!isempty(display) || !isempty(tty))
+                        c = SESSION_USER;
+                else
+                        c = SESSION_BACKGROUND;
+        }
+
         dbus_message_iter_get_basic(&iter, &remote);
 
         if (!dbus_message_iter_next(&iter) ||
@@ -464,8 +487,7 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
         if (r < 0)
                 return -EINVAL;
 
-        if (strv_contains(controllers, "systemd") ||
-            !dbus_message_iter_next(&iter) ||
+        if (!dbus_message_iter_next(&iter) ||
             dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY ||
             dbus_message_iter_get_element_type(&iter) != DBUS_TYPE_STRING) {
                 r = -EINVAL;
@@ -476,8 +498,7 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
         if (r < 0)
                 goto fail;
 
-        if (strv_contains(reset_controllers, "systemd") ||
-            !dbus_message_iter_next(&iter) ||
+        if (!dbus_message_iter_next(&iter) ||
             dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_BOOLEAN) {
                 r = -EINVAL;
                 goto fail;
@@ -485,7 +506,7 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
 
         dbus_message_iter_get_basic(&iter, &kill_processes);
 
-        r = cg_pid_get_cgroup(leader, NULL, &cgroup);
+        r = cg_pid_get_path(SYSTEMD_CGROUP_CONTROLLER, leader, &cgroup);
         if (r < 0)
                 goto fail;
 
@@ -536,6 +557,7 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
                 }
 
                 *_reply = reply;
+                reply = NULL;
 
                 return 0;
         }
@@ -587,11 +609,11 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
         session->type = t;
         session->class = c;
         session->remote = remote;
-        session->controllers = controllers;
-        session->reset_controllers = reset_controllers;
         session->kill_processes = kill_processes;
         session->vtnr = vtnr;
 
+        session->controllers = cg_shorten_controllers(controllers);
+        session->reset_controllers = cg_shorten_controllers(reset_controllers);
         controllers = reset_controllers = NULL;
 
         if (!isempty(tty)) {
@@ -681,6 +703,7 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message, DBusMess
         }
 
         *_reply = reply;
+        reply = NULL;
 
         return 0;
 
@@ -690,9 +713,6 @@ fail:
 
         if (user)
                 user_add_to_gc_queue(user);
-
-        if (reply)
-                dbus_message_unref(reply);
 
         return r;
 }
@@ -712,7 +732,7 @@ static int bus_manager_inhibit(
         InhibitMode mm;
         unsigned long ul;
         int r, fifo_fd = -1;
-        DBusMessage *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
 
         assert(m);
         assert(connection);
@@ -833,6 +853,7 @@ static int bus_manager_inhibit(
 
         close_nointr_nofail(fifo_fd);
         *_reply = reply;
+        reply = NULL;
 
         inhibitor_start(i);
 
@@ -844,9 +865,6 @@ fail:
 
         if (fifo_fd >= 0)
                 close_nointr_nofail(fifo_fd);
-
-        if (reply)
-                dbus_message_unref(reply);
 
         return r;
 }
@@ -889,7 +907,7 @@ static int trigger_device(Manager *m, struct udev_device *d) {
                         goto finish;
                 }
 
-                write_one_line_file(t, "change");
+                write_string_file(t, "change");
                 free(t);
         }
 
@@ -904,7 +922,7 @@ finish:
 
 static int attach_device(Manager *m, const char *seat, const char *sysfs) {
         struct udev_device *d;
-        char *rule = NULL, *file = NULL;
+        _cleanup_free_ char *rule = NULL, *file = NULL;
         const char *id_for_seat;
         int r;
 
@@ -939,16 +957,13 @@ static int attach_device(Manager *m, const char *seat, const char *sysfs) {
 
         mkdir_p_label("/etc/udev/rules.d", 0755);
         label_init("/etc");
-        r = write_one_line_file_atomic_label(file, rule);
+        r = write_string_file_atomic_label(file, rule);
         if (r < 0)
                 goto finish;
 
         r = trigger_device(m, d);
 
 finish:
-        free(rule);
-        free(file);
-
         if (d)
                 udev_device_unref(d);
 
@@ -956,7 +971,7 @@ finish:
 }
 
 static int flush_devices(Manager *m) {
-        DIR *d;
+        _cleanup_closedir_ DIR *d;
 
         assert(m);
 
@@ -981,8 +996,6 @@ static int flush_devices(Manager *m) {
                         if (unlinkat(dirfd(d), de->d_name, 0) < 0)
                                 log_warning("Failed to unlink %s: %m", de->d_name);
                 }
-
-                closedir(d);
         }
 
         return trigger_device(m, NULL);
@@ -1001,7 +1014,6 @@ static int have_multiple_sessions(
          * count, and non-login sessions do not count either. */
         HASHMAP_FOREACH(session, m->sessions, i)
                 if (session->class == SESSION_USER &&
-                    (session->type == SESSION_TTY || session->type == SESSION_X11) &&
                     session->user->uid != uid)
                         return true;
 
@@ -1168,7 +1180,7 @@ static int bus_manager_can_shutdown_or_sleep(
 
         bool multiple_sessions, challenge, blocked, b;
         const char *result;
-        DBusMessage *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         int r;
         unsigned long ul;
 
@@ -1267,12 +1279,11 @@ finish:
                         reply,
                         DBUS_TYPE_STRING, &result,
                         DBUS_TYPE_INVALID);
-        if (!b) {
-                dbus_message_unref(reply);
+        if (!b)
                 return -ENOMEM;
-        }
 
         *_reply = reply;
+        reply = NULL;
         return 0;
 }
 
@@ -1472,7 +1483,7 @@ static DBusHandlerResult manager_message_handler(
         Manager *m = userdata;
 
         DBusError error;
-        DBusMessage *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         int r;
 
         assert(connection);
@@ -2380,16 +2391,11 @@ static DBusHandlerResult manager_message_handler(
         if (reply) {
                 if (!bus_maybe_send_reply(connection, message, reply))
                                 goto oom;
-
-                dbus_message_unref(reply);
         }
 
         return DBUS_HANDLER_RESULT_HANDLED;
 
 oom:
-        if (reply)
-                dbus_message_unref(reply);
-
         dbus_error_free(&error);
 
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
@@ -2455,25 +2461,20 @@ DBusHandlerResult bus_message_filter(
 }
 
 int manager_send_changed(Manager *manager, const char *properties) {
-        DBusMessage *m;
-        int r = -ENOMEM;
+        _cleanup_dbus_message_unref_ DBusMessage *m = NULL;
 
         assert(manager);
 
-        m = bus_properties_changed_new("/org/freedesktop/login1", "org.freedesktop.login1.Manager", properties);
+        m = bus_properties_changed_new("/org/freedesktop/login1",
+                                       "org.freedesktop.login1.Manager",
+                                       properties);
         if (!m)
-                goto finish;
+                return -ENOMEM;
 
         if (!dbus_connection_send(manager->bus, m, NULL))
-                goto finish;
+                return -ENOMEM;
 
-        r = 0;
-
-finish:
-        if (m)
-                dbus_message_unref(m);
-
-        return r;
+        return 0;
 }
 
 int manager_dispatch_delayed(Manager *manager) {
@@ -2498,7 +2499,7 @@ int manager_dispatch_delayed(Manager *manager) {
         dbus_error_init(&error);
         r = execute_shutdown_or_sleep(manager, manager->action_what, manager->action_unit, &error);
         if (r < 0) {
-                log_warning("Failed to send delayed message: %s", bus_error_message_or_strerror(&error, -r));
+                log_warning("Failed to send delayed message: %s", bus_error(&error, r));
                 dbus_error_free(&error);
 
                 manager->action_unit = NULL;

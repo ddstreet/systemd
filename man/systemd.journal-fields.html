@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd.journal-fields"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.journal-fields — Special journal fields</p></div><div class="refsect1"><a name="idp125200"></a><h2>Description</h2><p>Entries in the journal resemble an environment
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.journal-fields"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.journal-fields — Special journal fields</p></div><div class="refsect1"><a name="idp3742144"></a><h2>Description</h2><p>Entries in the journal resemble an environment
                 block in their syntax, however with fields that can
                 include binary data. Primarily, fields are formatted
                 UTF-8 text strings, and binary formatting is used only
@@ -11,7 +11,7 @@
                 applications, but a few fields have special
                 meaning. All fields with special meanings are
                 optional. In some cases fields may appear more than
-                once per entry.</p></div><div class="refsect1"><a name="idp3964352"></a><h2>User Journal Fields</h2><p>User fields are fields that are directly passed
+                once per entry.</p></div><div class="refsect1"><a name="idp3492592"></a><h2>User Journal Fields</h2><p>User fields are fields that are directly passed
                 from clients and stored in the journal.</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">MESSAGE=</code></span></dt><dd><p>The human readable
                                         message string for this
                                         entry. This is supposed to be
@@ -57,7 +57,7 @@
                                         (formatted as decimal string),
                                         the identifier string
                                         (i.e. "tag"), and the client
-                                        PID.</p></dd></dl></div></div><div class="refsect1"><a name="idp64640"></a><h2>Trusted Journal Fields</h2><p>Fields prefixed with an underscore are trusted
+                                        PID.</p></dd></dl></div></div><div class="refsect1"><a name="idp222512"></a><h2>Trusted Journal Fields</h2><p>Fields prefixed with an underscore are trusted
                 fields, i.e. fields that are implicitly added by the
                 journal and cannot be altered by client code.</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">_PID=</code>, </span><span class="term"><code class="varname">_UID=</code>, </span><span class="term"><code class="varname">_GID=</code></span></dt><dd><p>The process, user and
                                         group ID of the process the
@@ -114,7 +114,7 @@
                                         standard output or error
                                         output, or for those read
                                         from the kernel, respectively.
-                                        </p></dd></dl></div></div><div class="refsect1"><a name="idp5040864"></a><h2>Kernel Journal Fields</h2><p>Kernel fields are fields that are used by
+                                        </p></dd></dl></div></div><div class="refsect1"><a name="idp67584"></a><h2>Kernel Journal Fields</h2><p>Kernel fields are fields that are used by
                 messages originating in the kernel and stored in the
                 journal.</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">_KERNEL_DEVICE=</code></span></dt><dd><p>The kernel device
                                         name. If the entry is
@@ -138,14 +138,14 @@
                                         pointing to the device node in
                                         <code class="filename">/dev</code>. This
                                         field is frequently set more
-                                        than once per entry.</p></dd></dl></div></div><div class="refsect1"><a name="idp5054528"></a><h2>Special Journal Fields</h2><p>Fields used by the <span class="command"><strong>systemd-coredump</strong></span>
+                                        than once per entry.</p></dd></dl></div></div><div class="refsect1"><a name="idp4762720"></a><h2>Special Journal Fields</h2><p>Fields used by the <span class="command"><strong>systemd-coredump</strong></span>
                 coredump kernel helper.
                 </p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">COREDUMP_UNIT=</code>, </span><span class="term"><code class="varname">COREDUMP_USER_UNIT=</code></span></dt><dd><p>Used to annotate
                                         messages containing coredumps from
                                         system and session units.
                                         See
                                         <a href="systemd-coredumpctl.html"><span class="citerefentry"><span class="refentrytitle">systemd-coredumpctl</span>(1)</span></a>.
-                                        </p></dd></dl></div></div><div class="refsect1"><a name="idp5060128"></a><h2>Address Fields</h2><p>During serialization into external formats, such
+                                        </p></dd></dl></div></div><div class="refsect1"><a name="idp4768320"></a><h2>Address Fields</h2><p>During serialization into external formats, such
                 as the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/export" target="_top">Journal
                 Export Format</a> or the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/json" target="_top">Journal
                 JSON Format</a>, the addresses of journal entries
@@ -182,7 +182,7 @@
                                         address for the entry this
                                         should be combined with with
                                         boot ID in
-                                        <code class="literal">_BOOT_ID=</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp5073504"></a><h2>See Also</h2><p>
+                                        <code class="literal">_BOOT_ID=</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp4781696"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>,
                           <a href="journald.conf.html"><span class="citerefentry"><span class="refentrytitle">journald.conf</span>(5)</span></a>,

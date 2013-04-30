@@ -46,11 +46,16 @@
 /* Early boot targets */
 #define SPECIAL_SYSINIT_TARGET "sysinit.target"
 #define SPECIAL_SOCKETS_TARGET "sockets.target"
+#define SPECIAL_TIMERS_TARGET "timers.target"
+#define SPECIAL_PATHS_TARGET "paths.target"
 #define SPECIAL_LOCAL_FS_TARGET "local-fs.target"         /* LSB's $local_fs */
 #define SPECIAL_LOCAL_FS_PRE_TARGET "local-fs-pre.target"
+#define SPECIAL_INITRD_FS_TARGET "initrd-fs.target"
+#define SPECIAL_INITRD_ROOT_FS_TARGET "initrd-root-fs.target"
 #define SPECIAL_REMOTE_FS_TARGET "remote-fs.target"       /* LSB's $remote_fs */
 #define SPECIAL_REMOTE_FS_PRE_TARGET "remote-fs-pre.target"
 #define SPECIAL_SWAP_TARGET "swap.target"
+#define SPECIAL_NETWORK_ONLINE_TARGET "network-online.target"
 #define SPECIAL_BASIC_TARGET "basic.target"
 
 /* LSB compatibility */
