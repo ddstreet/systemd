@@ -1,3 +1,11 @@
+systemd (202-0ubuntu4) saucy; urgency=low
+
+  * 0010-Add-back-support-for-Debian-specific-config-files.patch: Re-apply
+    parts that use /etc/default/locale, which accidentally got dropped in
+    202-0ubuntu1. (LP: #1175065)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 01 May 2013 11:35:55 -0700
+
 systemd (202-0ubuntu3) saucy; urgency=low
 
   * Disable journal-stream test case, which fails on powerpc.
