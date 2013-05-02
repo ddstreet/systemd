@@ -95,6 +95,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          udev (>= 175-0ubuntu23),
          dbus
+Recommends: systemd | systemd-shim (>= 3)
 Replaces: systemd (<< 198-1), logind, ubuntu-system-service
 Breaks: systemd (<< 198-1)
 Conflicts: logind
