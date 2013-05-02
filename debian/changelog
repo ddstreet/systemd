@@ -1,3 +1,12 @@
+systemd (202-0ubuntu5) saucy; urgency=low
+
+  * Drop 0016-Add-poweroff-reboot-suspend-hibernate-fallback.patch.
+    systemd-shim 3 has a much better implementation of pm-utils fallback.
+    Recommend systemd or systemd-shim >= 3 for that.
+  * Ship 70-power-switch.rules. (LP: #1160995)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 02 May 2013 11:19:42 -0700
+
 systemd (202-0ubuntu4) saucy; urgency=low
 
   * 0010-Add-back-support-for-Debian-specific-config-files.patch: Re-apply
