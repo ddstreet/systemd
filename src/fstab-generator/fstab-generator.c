@@ -298,7 +298,8 @@ static int add_mount(const char *what, const char *where, const char *type, cons
                 return -errno;
         }
 
-        if (!noauto) {
+        // don't start network mounts automatically, we do that via ifupdown hooks for now
+        if (!noauto && !isnetwork) {
                 lnk = strjoin(arg_dest, "/", post, nofail || automount ? ".wants/" : ".requires/", name, NULL);
                 if (!lnk)
                         return log_oom();
