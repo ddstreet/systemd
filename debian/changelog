@@ -1,3 +1,17 @@
+systemd (198-0ubuntu11.1) raring-proposed; urgency=low
+
+  [ Iain Lane ]
+  * Use the shutdown fallback for "poweroff.target" too; this is invoked by
+    org.freedesktop.login1.Manager.PowerOff. (LP: #1171504)
+
+  [ Martin Pitt ]
+  * debian/rules: Don't build ddebs for blacklisted binary packages, to avoid
+    confusing Launchpad.
+  * Ship 70-power-switch.rules, to make suspend on lid close work with GNOME
+    3.8, and fix shutdown with the power button in a VT. (LP: #1160995)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 10 May 2013 07:35:15 +0200
+
 systemd (198-0ubuntu11) raring; urgency=low
 
   * debian/libpam-systemd.systemd-logind.upstart: Don't start if

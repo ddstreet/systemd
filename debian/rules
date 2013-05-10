@@ -191,5 +191,8 @@ else
 	dh_gencontrol $(BINARY_BLACKLIST)
 endif
 
+override_dh_strip:
+	dh_strip $(BINARY_BLACKLIST)
+
 override_dh_builddeb:
 	dh_builddeb $(BINARY_BLACKLIST)
