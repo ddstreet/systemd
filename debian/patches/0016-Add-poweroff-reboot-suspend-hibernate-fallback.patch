@@ -10,11 +10,11 @@ pm-suspend quirks.
  src/login/logind-dbus.c | 45 +++++++++++++++++++++++++++++++++++++++++++--
  1 file changed, 43 insertions(+), 2 deletions(-)
 
-diff --git a/src/login/logind-dbus.c b/src/login/logind-dbus.c
-index 4ae8362..2105e6f 100644
+Index: b/src/login/logind-dbus.c
+===================================================================
 --- a/src/login/logind-dbus.c
 +++ b/src/login/logind-dbus.c
-@@ -1035,6 +1035,32 @@ static int bus_manager_log_shutdown(
+@@ -1043,6 +1043,33 @@
                            q, NULL);
  }
  
@@ -31,7 +31,8 @@ index 4ae8362..2105e6f 100644
 +            cmd = "/usr/sbin/pm-hibernate";
 +    else if (streq(unit_name, "reboot.target"))
 +            cmd = "/sbin/reboot";
-+    else if (streq(unit_name, "shutdown.target"))
++    else if (streq(unit_name, "shutdown.target") ||
++             streq(unit_name, "poweroff.target"))
 +            cmd = "/sbin/poweroff";
 +    else {
 +            log_error("execute_shutdown_or_sleep_fallback: unknown unit name %s", unit_name);
@@ -47,7 +48,7 @@ index 4ae8362..2105e6f 100644
  static int execute_shutdown_or_sleep(
                  Manager *m,
                  InhibitWhat w,
-@@ -1064,8 +1090,23 @@ static int execute_shutdown_or_sleep(
+@@ -1072,8 +1099,23 @@
                          DBUS_TYPE_STRING, &unit_name,
                          DBUS_TYPE_STRING, &mode,
                          DBUS_TYPE_INVALID);
@@ -73,6 +74,3 @@ index 4ae8362..2105e6f 100644
  
          if (!dbus_message_get_args(
                              reply,
--- 
-1.8.1.2
-
