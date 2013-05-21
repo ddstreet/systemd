@@ -1089,11 +1089,9 @@ tests += \
 	test-path-util \
 	test-strxcpyx \
 	test-unit-file \
-	test-util \
 	test-date \
 	test-sleep \
 	test-replace-var \
-	test-sched-prio \
 	test-calendarspec \
 	test-strip-tab-ansi \
 	test-prioq \
