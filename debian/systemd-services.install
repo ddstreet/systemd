@@ -4,7 +4,6 @@ etc/dbus-1/system.d/org.freedesktop.hostname1.conf
 etc/dbus-1/system.d/org.freedesktop.locale1.conf
 etc/dbus-1/system.d/org.freedesktop.timedate1.conf
 etc/systemd/logind.conf
-lib/udev/rules.d/70-power-switch.rules
 lib/udev/rules.d/70-uaccess.rules
 lib/udev/rules.d/73-seat-late.rules
 lib/udev/rules.d/71-seat.rules
