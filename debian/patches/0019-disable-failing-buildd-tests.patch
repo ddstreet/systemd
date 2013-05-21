@@ -3,25 +3,26 @@ Author: Martin Pitt <martin.pitt@ubuntu.com>
 
 Index: systemd/Makefile.am
 ===================================================================
---- systemd.orig/Makefile.am	2013-04-30 09:22:12.060888151 -0700
-+++ systemd/Makefile.am	2013-04-30 09:22:33.288889179 -0700
-@@ -1088,7 +1088,6 @@
+--- systemd.orig/Makefile.am	2013-05-13 09:16:03.109475363 +0200
++++ systemd/Makefile.am	2013-05-13 09:17:18.477479011 +0200
+@@ -1088,16 +1088,12 @@
  	test-strv \
  	test-path-util \
  	test-strxcpyx \
 -	test-unit-name \
  	test-unit-file \
- 	test-util \
+-	test-util \
  	test-date \
-@@ -1097,7 +1096,6 @@
- 	test-sched-prio \
+ 	test-sleep \
+ 	test-replace-var \
+-	test-sched-prio \
  	test-calendarspec \
  	test-strip-tab-ansi \
 -	test-cgroup-util \
  	test-prioq \
  	test-fileio \
  	test-time
-@@ -2850,10 +2848,9 @@
+@@ -2850,10 +2846,9 @@
  	test-journal-send \
  	test-journal-syslog \
  	test-journal-match \

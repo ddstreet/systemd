@@ -1,3 +1,43 @@
+systemd (202-0ubuntu6) saucy; urgency=low
+
+  * Build udev from this source package:
+    - Unblacklist udev and udev-udeb packages.
+    - Drop 70-power-switch.rules from systemd-services (shipped in udev).
+    - Port patches from old udev source package which are still relevant:
+      + 0021-block-polling.patch
+      + 0022-fix-race-condition-of-serio-driver-module-not-loading.patch
+      + 0023-load-fbcon.patch
+      + 0024-avoid-exit-deadlock-for-dm_cookie.patch
+      + 75-persistent-net-generator.rules: Do not create persistent net rules
+        for Ravello Systems MAC addresses. Now apply inline in
+        debian/extra/rules, as upstream dropped these. (LP #1099278)
+    - Add debian/extra/rules/78-graphics-card.rules (taken from old udev
+      package)
+    - Add debian/*.upstart from old udev package, and adjust dh_installinit
+      calls accordingly.
+    - Add Apport package hook.
+    - Add READMEs for /lib/udev/rules.d/ and /etc/udev/rules.d/.
+    - Add debian/udev.postinst for restarting udev and rebuilding initramfs.
+    - Drop 0020-uaccess-rule-with-old-udev.patch, not necessary any more with
+      current udev.
+  * debian/extra/initramfs.hook: Adjust for changed paths and rules files.
+  * debian/extra/initramfs.bottom: Replace undefined "nuke" with "rm -rf".
+  * Install udev rules into udev-udeb.
+  * Ship README.keymap.txt in udev, not in systemd.
+  * Copy persistent net/cd rules generator scripts from udev 175 to
+    debian/extra/, and adjust for dropped "udevadm info --run". We continue to
+    use the old naming schema for the time being,  Don't install
+    80-net-name-slot.rules for now.
+  * debian/extra/initramfs.bottom: Ignore timeout errors from udevadm we
+    expect (and indeed requested) in certain failure modes.  If we do not we
+    will bail out early and not transfer /dev into /root which is always fatal
+    leading to unbootable machines. (Taken from old udev package) (LP #818177)
+  * Configure with correct --with-firmware-path.
+  * Show test logs if running the test suite fails.
+  * Disable test-sched-prio and test-util, they don't work in PPA buildds.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 21 May 2013 08:11:30 +0200
+
 systemd (202-0ubuntu5) saucy; urgency=low
 
   * Drop 0016-Add-poweroff-reboot-suspend-hibernate-fallback.patch.

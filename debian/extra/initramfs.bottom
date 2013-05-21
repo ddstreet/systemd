@@ -12,7 +12,8 @@ case "$1" in
 esac
 
 # Stop udevd, we'll miss a few events while we run init, but we catch up
-udevadm control --exit
+udevadm control --timeout=121 --exit || \
+            echo "udev exit failed -- rc=$?"
 
 udev_root="/dev"
 if [ -e /etc/udev/udev.conf ]; then
@@ -23,6 +24,6 @@ fi
 mount -n -o move /dev ${rootmnt}${udev_root}
 
 # create a temporary symlink to the final /dev for other initramfs scripts
-nuke /dev
+rm -rf /dev
 ln -s ${rootmnt}${udev_root} /dev
 

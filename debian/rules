@@ -19,6 +19,7 @@ CONFFLAGS = \
 	--libexecdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) \
 	--with-rootprefix= \
 	--with-rootlibdir=/lib/$(DEB_HOST_MULTIARCH) \
+	--with-firmware-path=/lib/firmware \
 	--with-sysvinit-path=/etc/init.d \
 	--with-sysvrcnd-path=/etc \
 	--enable-libcryptsetup \
@@ -56,7 +57,7 @@ CONFFLAGS_udeb = \
 # Ubuntu: udev transition to current version postponed to next release
 # Ubuntu: systemd{,-sysv} not yet approved for universe
 ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo ubuntu),ubuntu)
-BINARY_BLACKLIST = -Nudev -Nudev-udeb -Nsystemd -Nsystemd-sysv
+BINARY_BLACKLIST = -Nsystemd -Nsystemd-sysv
 endif
 
 override_dh_auto_configure: $(FLAVORS:%=debian/stamps/configure-%)
@@ -120,6 +121,14 @@ endif
 		debian/udev/usr/share/initramfs-tools/scripts/init-top/udev
 	install -D --mode=755 debian/extra/initramfs.bottom \
 		debian/udev/usr/share/initramfs-tools/scripts/init-bottom/udev
+	# documentation
+	install -D --mode=644 debian/systemd/usr/share/doc/systemd/README.keymap.txt \
+		debian/udev/usr/share/doc/udev/README.keymap.txt
+	install -m 644 -o root -g root debian/extra/README-etc-rules.d \
+		debian/udev/etc/udev/rules.d/README
+	install -m 644 -o root -g root debian/extra/README-lib-rules.d \
+		debian/udev/lib/udev/rules.d/README
+
 	# TODO: use a script to find duplicates and remove them automatically
 	# files shipped by systemd-sysv / sysvinit
 	rm debian/systemd/usr/share/man/man1/init.1
@@ -137,6 +146,7 @@ endif
 	rm debian/systemd/lib/systemd/systemd-udevd
 	rm debian/systemd/usr/share/man/man7/udev.7
 	rm debian/systemd/usr/share/man/man8/*udev*.8
+	rm debian/systemd/usr/share/doc/systemd/README.keymap.txt
 	# files systemd by cryptsetup
 	rm debian/systemd/usr/share/man/man5/crypttab.5
 	# files shipped by systemd-services
@@ -156,13 +166,20 @@ endif
 	# files shipped by systemd
 	rm debian/udev/lib/udev/rules.d/99-systemd.rules
 
+	# we continue to use the old net iface naming schema for the time being
+	rm debian/udev/lib/udev/rules.d/80-net-name-slot.rules
+	rm debian/udev-udeb/lib/udev/rules.d/80-net-name-slot.rules
+
 override_dh_makeshlibs:
 	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb
 	dh_makeshlibs --remaining-packages
 
 override_dh_installinit:
-	dh_installinit --no-start -- start 03 S .
-	dh_installinit --no-start --name=udev-mtab -- start 36 S .
+	dh_installinit --upstart-only --no-start
+	dh_installinit --upstart-only --name=udev-finish --no-start
+	dh_installinit --upstart-only --name=udevtrigger --no-start
+	dh_installinit --upstart-only --name=udevmonitor --no-start
+	dh_installinit --upstart-only --name=udev-fallback-graphics --no-start
 	dh_installinit --name systemd-logind --upstart-only
 
 autoreconf:
@@ -177,7 +194,10 @@ override_dh_auto_test:
 	# some tests hang under fakeroot, so disable fakeroot
 	echo "01234567890123456789012345678901" > debian/build/machine-id
 	env -u LD_PRELOAD SYSTEMD_MACHINE_ID_PATH=$(CURDIR)/debian/build/machine-id \
-		make -C debian/build/deb check
+		make -C debian/build/deb check || ( \
+		cd debian/build/deb; \
+		for f in test-*.log; do echo "==== $$f ===="; cat $$f; done; \
+		exit 1; )
 
 %:
 	dh $@ --with autoreconf,gir,python2
