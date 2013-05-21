@@ -14,3 +14,11 @@ usr/share/pkgconfig/udev.pc
 
 # installed via debian/rules
 #debian/extra/initramfs-tools/* usr/share/initramfs-tools/
+
+../../extra/write_net_rules lib/udev/
+../../extra/rule_generator.functions lib/udev/
+../../extra/rules/75-persistent-net-generator.rules lib/udev/rules.d/
+
+# Ubuntu
+../../extra/rules/78-graphics-card.rules lib/udev/rules.d/
+../../extra/udev.py usr/share/apport/package-hooks
