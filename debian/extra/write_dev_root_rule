@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-RUNDIR=$(udevadm info --run || exit 0)
+RUNDIR=/run/udev
 
 [ -d $RUNDIR ] || exit 0
 mkdir -p $RUNDIR/rules.d/
