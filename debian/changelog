@@ -1,3 +1,19 @@
+systemd (202-0ubuntu7) saucy; urgency=low
+
+  [ Martin Pitt ]
+  * debian/*: Replace remaining "udevadm info --run" invocations with
+    /run/udev/. (LP: #1182788)
+  * Add 0020-persistent-storage-rule-mmc-partname.patch: Create disk/by-name
+    links for mmcblk partitions if they have a PARTNAME property. Patch by
+    Ricardo Salveti de Araujo, taken from udev 175-0ubuntu29.
+
+  [ Andy Whitcroft ]
+  * debian/extra/rules/78-graphics-card.rules -- demote efifb to a secondary
+    display adaptor as in the majority of cases this will be replaced by
+    a DRM driver.  (LP: #1100386)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 22 May 2013 12:09:59 +0200
+
 systemd (202-0ubuntu6) saucy; urgency=low
 
   * Build udev from this source package:

@@ -54,7 +54,6 @@ CONFFLAGS_udeb = \
 	--disable-manpages \
 	--without-python
 
-# Ubuntu: udev transition to current version postponed to next release
 # Ubuntu: systemd{,-sysv} not yet approved for universe
 ifeq ($(shell dpkg-vendor --derives-from Ubuntu && echo ubuntu),ubuntu)
 BINARY_BLACKLIST = -Nsystemd -Nsystemd-sysv
