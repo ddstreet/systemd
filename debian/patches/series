@@ -12,6 +12,7 @@
 0017-Clean-up-empty-sessions-when-not-running-under-syste.patch
 0018-Add-env-variable-for-machine-ID-path.patch
 0019-disable-failing-buildd-tests.patch
+0020-persistent-storage-rule-mmc-partname.patch
 0021-block-polling.patch
 0022-fix-race-condition-of-serio-driver-module-not-loading.patch
 0023-load-fbcon.patch
