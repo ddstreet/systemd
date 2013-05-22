@@ -20,6 +20,7 @@ SUBSYSTEM!="graphics", GOTO="graphics_end"
 DRIVERS=="i915", GOTO="graphics_end"
 DRIVERS=="radeon", GOTO="graphics_end"
 DRIVERS=="nouveau", GOTO="graphics_end"
+DRIVERS=="efifb", GOTO="graphics_end"
 
 KERNEL=="fb[0-9]*", ENV{PRIMARY_DEVICE_FOR_DISPLAY}="1"
 
