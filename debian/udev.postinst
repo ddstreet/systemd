@@ -1,10 +1,21 @@
 #!/bin/sh
 set -e
 
+# Enable udevadm again
+enable_udevadm()
+{
+    if [ -e /bin/udevadm.upgrade ]; then
+	    rm -f /bin/udevadm
+	    dpkg-divert --package fake-udev --rename --divert /bin/udevadm.upgrade \
+			--remove /bin/udevadm
+    fi
+}
+
 
 case "$1" in
     configure)
 	invoke-rc.d udev restart
+	enable_udevadm
 	update-initramfs -u
 	;;
 
