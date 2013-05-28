@@ -1,3 +1,13 @@
+systemd (202-0ubuntu8) saucy; urgency=low
+
+  * debian/udev.{preinst,postinst,postrm}: Disable udevadm trigger during
+    upgrades, to cause installation failures of packages which call udevadm
+    trigger without depending on udev. (LP: #1182948)
+  * debian/extra/initramfs.hook: Copy /sbin/udevadm compatibility symlink into
+    initramfs. (LP: #1184066)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 28 May 2013 13:13:42 +0200
+
 systemd (202-0ubuntu7) saucy; urgency=low
 
   [ Martin Pitt ]
