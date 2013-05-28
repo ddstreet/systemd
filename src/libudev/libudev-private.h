@@ -87,6 +87,7 @@ int udev_device_get_ifindex(struct udev_device *udev_device);
 void udev_device_set_info_loaded(struct udev_device *device);
 bool udev_device_get_db_persist(struct udev_device *udev_device);
 void udev_device_set_db_persist(struct udev_device *udev_device);
+bool udev_device_get_dm_cookie_set(struct udev_device *udev_device);
 
 /* libudev-device-private.c */
 int udev_device_update_db(struct udev_device *udev_device);
