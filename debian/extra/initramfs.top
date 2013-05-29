@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-PREREQS=""
+PREREQS="all_generic_ide blacklist"
 
 prereqs() { echo "$PREREQS"; }
 
@@ -13,16 +13,9 @@ esac
 
 echo > /sys/kernel/uevent_helper
 
-UDEV_ROOT=/dev \
 /lib/systemd/systemd-udevd --daemon --resolve-names=never
 
 udevadm trigger --action=add
-udevadm settle || true
-
-if [ -d /sys/bus/scsi ]; then
-	modprobe -q scsi_wait_scan && modprobe -r scsi_wait_scan || true
-	udevadm settle || true
-fi
 
 # If the rootdelay parameter has been set, we wait a bit for devices
 # like usb/firewire disks to settle.

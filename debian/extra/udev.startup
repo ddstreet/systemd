@@ -10,9 +10,6 @@ fi
 
 udevadm trigger --action=add
 
-mkdir -p /dev/pts
-mount -t devpts devpts /dev/pts
-
 udevadm settle || true
 
 exit 0
