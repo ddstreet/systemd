@@ -1,3 +1,26 @@
+systemd (202-0ubuntu10) saucy; urgency=low
+
+  * debian/extra/initramfs.bottom: Drop reading of /etc/udev/udev.conf, the
+    location of /dev hasn't been configurable for ages.
+  * debian/extra/initramfs.top: Drop obsolete "scsi_wait_scan" modprobing here
+    as well.
+  * all_generic_ide blacklist: Depend on "all_generic_ide blacklist", as in
+    previous udev.
+  * debian/extra/initramfs.top: Drop unnecessary "udevadm settle".
+  * debian/extra/initramfs.hook: Put back ata_id and scsi_id, these were
+    overzealously removed with the bits that are built in now (like blkid and
+    usb_id). LP: #1185060
+  * debian/extra/udev.startup: Drop devpts mounting again, already done by
+    /usr/share/initramfs-tools/init.
+  * debian/extra/initramfs.hook: Install udevadm.upgrade when updating the
+    initramfs while udev is unconfigured.
+  * debian/extra/initramfs.hook: Remove duplicate copying of
+    70-persistent-net.rules.
+  * debian/extra/initramfs.hook: Don't install the dmsetup and md rules. This
+    is already done by dmsetup's and mdadm's initramfs hooks.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 29 May 2013 08:12:35 +0200
+
 systemd (202-0ubuntu9) saucy; urgency=low
 
   * debian/udev-udeb.links: Add /sbin/udevadm backwards compat symlink, too.
