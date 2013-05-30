@@ -1,3 +1,12 @@
+systemd (202-0ubuntu11) saucy; urgency=low
+
+  * Drop 0010-Add-back-support-for-Debian-specific-config-files.patch in
+    favor of 0025-Adjust-localed-to-use-the-Debian-locations-of-etc-de.patch,
+    the more complete fix for Debian/Ubuntu configuration paths that was
+    silently dropped from the Ubuntu package when updating to 198.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 30 May 2013 13:56:41 -0700
+
 systemd (202-0ubuntu10) saucy; urgency=low
 
   * debian/extra/initramfs.bottom: Drop reading of /etc/udev/udev.conf, the
