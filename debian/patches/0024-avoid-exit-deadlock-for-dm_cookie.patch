@@ -4,8 +4,8 @@ Ubuntu-Bug: https://bugs.launchpad.net/ubuntu/+source/lvm2/+bug/802626
 
 Index: systemd/src/libudev/libudev-device.c
 ===================================================================
---- systemd.orig/src/libudev/libudev-device.c	2013-05-10 17:54:18.260318658 +0200
-+++ systemd/src/libudev/libudev-device.c	2013-05-10 17:54:18.252318658 +0200
+--- systemd.orig/src/libudev/libudev-device.c	2013-06-03 07:29:46.756161337 +0200
++++ systemd/src/libudev/libudev-device.c	2013-06-03 07:29:46.748161337 +0200
 @@ -97,6 +97,7 @@
          bool is_initialized;
          bool sysattr_list_read;
@@ -54,8 +54,8 @@ Index: systemd/src/libudev/libudev-device.c
          }
 Index: systemd/src/libudev/libudev-private.h
 ===================================================================
---- systemd.orig/src/libudev/libudev-private.h	2013-05-10 17:54:18.260318658 +0200
-+++ systemd/src/libudev/libudev-private.h	2013-05-10 17:54:18.252318658 +0200
+--- systemd.orig/src/libudev/libudev-private.h	2013-06-03 07:29:46.756161337 +0200
++++ systemd/src/libudev/libudev-private.h	2013-06-03 07:29:46.748161337 +0200
 @@ -87,6 +87,7 @@
  void udev_device_set_info_loaded(struct udev_device *device);
  bool udev_device_get_db_persist(struct udev_device *udev_device);
@@ -66,8 +66,8 @@ Index: systemd/src/libudev/libudev-private.h
  int udev_device_update_db(struct udev_device *udev_device);
 Index: systemd/src/udev/udevd.c
 ===================================================================
---- systemd.orig/src/udev/udevd.c	2013-05-10 17:54:18.260318658 +0200
-+++ systemd/src/udev/udevd.c	2013-05-10 17:54:43.872318835 +0200
+--- systemd.orig/src/udev/udevd.c	2013-06-03 07:29:46.756161337 +0200
++++ systemd/src/udev/udevd.c	2013-06-03 07:47:15.308212084 +0200
 @@ -108,7 +108,17 @@
          return container_of(node, struct event, node);
  }
@@ -87,7 +87,30 @@ Index: systemd/src/udev/udevd.c
  
  enum worker_state {
          WORKER_UNDEF,
-@@ -555,6 +565,7 @@
+@@ -197,8 +207,10 @@
+         if (worker_monitor == NULL)
+                 return;
+         /* allow the main daemon netlink address to send devices to the worker */
+-        udev_monitor_allow_unicast_sender(worker_monitor, monitor);
+-        udev_monitor_enable_receiving(worker_monitor);
++        if (monitor != NULL) {
++                udev_monitor_allow_unicast_sender(worker_monitor, monitor);
++                udev_monitor_enable_receiving(worker_monitor);
++        }
+ 
+         worker = calloc(1, sizeof(struct worker));
+         if (worker == NULL) {
+@@ -226,7 +238,8 @@
+                 worker_list_cleanup(udev);
+                 event_queue_cleanup(udev, EVENT_UNDEF);
+                 udev_queue_export_unref(udev_queue_export);
+-                udev_monitor_unref(monitor);
++                if (monitor != NULL)
++                        udev_monitor_unref(monitor);
+                 udev_ctrl_unref(udev_ctrl);
+                 close(fd_signal);
+                 close(fd_ep);
+@@ -555,6 +568,7 @@
  static void event_queue_start(struct udev *udev)
  {
          struct udev_list_node *loop;
@@ -95,7 +118,7 @@ Index: systemd/src/udev/udevd.c
  
          udev_list_node_foreach(loop, &event_list) {
                  struct event *event = node_to_event(loop);
-@@ -562,6 +573,12 @@
+@@ -562,6 +576,12 @@
                  if (event->state != EVENT_QUEUED)
                          continue;
  
@@ -108,7 +131,7 @@ Index: systemd/src/udev/udevd.c
                  /* do not start event if parent or child event is still running */
                  if (is_devpath_busy(event))
                          continue;
-@@ -570,7 +587,7 @@
+@@ -570,7 +590,7 @@
          }
  }
  
@@ -117,7 +140,7 @@ Index: systemd/src/udev/udevd.c
  {
          struct udev_list_node *loop, *tmp;
  
-@@ -580,6 +597,11 @@
+@@ -580,6 +600,11 @@
                  if (match_type != EVENT_UNDEF && match_type != event->state)
                          continue;
  
@@ -129,7 +152,7 @@ Index: systemd/src/udev/udevd.c
                  event_queue_delete(event, false);
          }
  }
-@@ -1300,7 +1322,7 @@
+@@ -1300,7 +1325,7 @@
                          }
  
                          /* discard queued events and kill workers */
@@ -138,7 +161,7 @@ Index: systemd/src/udev/udevd.c
                          worker_kill(udev);
  
                          /* exit after all has cleaned up */
-@@ -1406,14 +1428,19 @@
+@@ -1406,14 +1431,19 @@
  
                          dev = udev_monitor_receive_device(monitor);
                          if (dev != NULL) {
