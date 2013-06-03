@@ -108,17 +108,7 @@ static inline struct event *node_to_event(struct udev_list_node *node)
         return container_of(node, struct event, node);
 }
 
-static void __event_queue_cleanup(struct udev *udev, enum event_state type, bool must_keep);
-
-static void event_queue_cleanup(struct udev *udev, enum event_state match_type)
-{
-       __event_queue_cleanup(udev, match_type, false);
-}
-
-static void event_queue_cleanup_onexit(struct udev *udev, enum event_state match_type)
-{
-       __event_queue_cleanup(udev, match_type, true);
-}
+static void event_queue_cleanup(struct udev *udev, enum event_state type);
 
 enum worker_state {
         WORKER_UNDEF,
@@ -565,18 +555,11 @@ static bool is_devpath_busy(struct event *event)
 static void event_queue_start(struct udev *udev)
 {
         struct udev_list_node *loop;
-        bool force;
 
         udev_list_node_foreach(loop, &event_list) {
                 struct event *event = node_to_event(loop);
 
                 if (event->state != EVENT_QUEUED)
-                        continue;
-
-                /* do not schedule any more events if we are exiting,
-                   but we must process any remaining DM_COOKIE events */
-                force = udev_device_get_dm_cookie_set(event->dev);
-                if (udev_exit && !force)
                         continue;
 
                 /* do not start event if parent or child event is still running */
@@ -587,7 +570,7 @@ static void event_queue_start(struct udev *udev)
         }
 }
 
-static void __event_queue_cleanup(struct udev *udev, enum event_state match_type, bool must_keep)
+static void event_queue_cleanup(struct udev *udev, enum event_state match_type)
 {
         struct udev_list_node *loop, *tmp;
 
@@ -595,11 +578,6 @@ static void __event_queue_cleanup(struct udev *udev, enum event_state match_type
                 struct event *event = node_to_event(loop);
 
                 if (match_type != EVENT_UNDEF && match_type != event->state)
-                        continue;
-
-                /* Events with DM_COOKIE set must be kept and processed to
-                 * avoid potential lvm tools deadlock on udev_exit */
-                if (must_keep && udev_device_get_dm_cookie_set(event->dev))
                         continue;
 
                 event_queue_delete(event, false);
@@ -1322,7 +1300,7 @@ int main(int argc, char *argv[])
                         }
 
                         /* discard queued events and kill workers */
-                        event_queue_cleanup_onexit(udev, EVENT_QUEUED);
+                        event_queue_cleanup(udev, EVENT_QUEUED);
                         worker_kill(udev);
 
                         /* exit after all has cleaned up */
@@ -1428,19 +1406,14 @@ int main(int argc, char *argv[])
 
                         dev = udev_monitor_receive_device(monitor);
                         if (dev != NULL) {
-                                /* If we are exiting then only schedule critical
-                                 * events (with DM_COOKIE set). */
-                                if (!udev_exit || udev_device_get_dm_cookie_set(dev)) {
-                                        udev_device_set_usec_initialized(dev, now(CLOCK_MONOTONIC));
-                                        if (event_queue_insert(dev) < 0)
-                                                udev_device_unref(dev);
-                                } else
+                                udev_device_set_usec_initialized(dev, now(CLOCK_MONOTONIC));
+                                if (event_queue_insert(dev) < 0)
                                         udev_device_unref(dev);
                         }
                 }
 
                 /* start new events */
-                if (!udev_list_node_is_empty(&event_list) && !stop_exec_queue) {
+                if (!udev_list_node_is_empty(&event_list) && !udev_exit && !stop_exec_queue) {
                         udev_builtin_init(udev);
                         if (rules == NULL)
                                 rules = udev_rules_new(udev, resolve_names);

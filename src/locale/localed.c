@@ -185,7 +185,7 @@ static int read_data_locale(void) {
 
         free_data_locale();
 
-        r = parse_env_file("/etc/default/locale", NEWLINE,
+        r = parse_env_file("/etc/locale.conf", NEWLINE,
                            "LANG",              &data[PROP_LANG],
                            "LANGUAGE",          &data[PROP_LANGUAGE],
                            "LC_CTYPE",          &data[PROP_LC_CTYPE],
@@ -201,6 +201,24 @@ static int read_data_locale(void) {
                            "LC_MEASUREMENT",    &data[PROP_LC_MEASUREMENT],
                            "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
                            NULL);
+
+        if (r == -ENOENT)
+                r = parse_env_file("/etc/default/locale", NEWLINE,
+                                   "LANG",              &data[PROP_LANG],
+                                   "LANGUAGE",          &data[PROP_LANGUAGE],
+                                   "LC_CTYPE",          &data[PROP_LC_CTYPE],
+                                   "LC_NUMERIC",        &data[PROP_LC_NUMERIC],
+                                   "LC_TIME",           &data[PROP_LC_TIME],
+                                   "LC_COLLATE",        &data[PROP_LC_COLLATE],
+                                   "LC_MONETARY",       &data[PROP_LC_MONETARY],
+                                   "LC_MESSAGES",       &data[PROP_LC_MESSAGES],
+                                   "LC_PAPER",          &data[PROP_LC_PAPER],
+                                   "LC_NAME",           &data[PROP_LC_NAME],
+                                   "LC_ADDRESS",        &data[PROP_LC_ADDRESS],
+                                   "LC_TELEPHONE",      &data[PROP_LC_TELEPHONE],
+                                   "LC_MEASUREMENT",    &data[PROP_LC_MEASUREMENT],
+                                   "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
+                                   NULL);
 
         if (r == -ENOENT) {
                 int p;
@@ -281,8 +299,13 @@ static int read_data(void) {
 static int write_data_locale(void) {
         int r, p;
         char **l = NULL;
+        const char *path = "/etc/locale.conf";
 
-        r = load_env_file("/etc/default/locale", NULL, &l);
+        r = load_env_file(path, NULL, &l);
+        if (r < 0 && r == -ENOENT) {
+                path = "/etc/default/locale";
+                r = load_env_file(path, NULL, &l);
+        }
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -314,13 +337,13 @@ static int write_data_locale(void) {
         if (strv_isempty(l)) {
                 strv_free(l);
 
-                if (unlink("/etc/default/locale") < 0)
+                if (unlink(path) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
 
-        r = write_env_file_label("/etc/default/locale", l);
+        r = write_env_file_label(path, l);
         strv_free(l);
 
         return r;

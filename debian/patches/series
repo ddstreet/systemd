@@ -7,6 +7,7 @@
 0007-Order-remote-fs.target-after-local-fs.target.patch
 0008-Revert-service-drop-support-for-SysV-scripts-for-the.patch
 0009-Revert-service-ignore-dependencies-on-syslog-and-loc.patch
+0010-Add-back-support-for-Debian-specific-config-files.patch
 0012-Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
 0017-Clean-up-empty-sessions-when-not-running-under-syste.patch
 0018-Add-env-variable-for-machine-ID-path.patch
@@ -15,6 +16,4 @@
 0021-block-polling.patch
 0022-fix-race-condition-of-serio-driver-module-not-loading.patch
 0023-load-fbcon.patch
-0024-avoid-exit-deadlock-for-dm_cookie.patch
-0025-Adjust-localed-to-use-the-Debian-locations-of-etc-de.patch 
-
+#0024-avoid-exit-deadlock-for-dm_cookie.patch
