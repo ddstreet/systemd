@@ -1,3 +1,3 @@
-Tests: timedated hostnamed localed logind
+Tests: timedated hostnamed localed-locale localed-x11-keymap logind
 Depends: systemd-services, libpam-systemd, acl
 Restrictions: needs-root

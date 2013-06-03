@@ -1,3 +1,21 @@
+systemd (202-0ubuntu12) saucy; urgency=low
+
+  * Rename debian/tests/localed to locale-locale, as we are going to add more
+    tests for localed.
+  * Add debian/tests/localed-x11-keymap: Test "localectl set-x11-keymap".
+  * Put back 0010-Add-back-support-for-Debian-specific-config-files.patch to
+    re-fix timedated, and add Steve's fix for /etc/default/keymap. Re-drop
+    0025-Adjust-localed-to-use-the-Debian-locations-of-etc-de.patch.
+  * debian/extra/initramfs.bottom: We cannot properly synthesize LVM LV change
+    events with udevadm trigger during boot, so if we use LVM, we need to let
+    udev finish all the pending events in the initramfs. The
+    0024-avoid-exit-deadlock-for-dm_cookie.patch approach was
+    inherently racy, as it still left vgchange subprocesses running from
+    watershed (which then run into a non-existing /dev), so disable that
+    patch. (LP: #1185394)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 03 Jun 2013 14:41:20 +0200
+
 systemd (202-0ubuntu11) saucy; urgency=low
 
   * Drop 0010-Add-back-support-for-Debian-specific-config-files.patch in
