@@ -97,7 +97,6 @@ struct udev_device {
         bool is_initialized;
         bool sysattr_list_read;
         bool db_persist;
-        bool dm_cookie_set;
 };
 
 /**
@@ -360,27 +359,6 @@ static int udev_device_set_devnode_gid(struct udev_device *udev_device, gid_t gi
         return 0;
 }
 
-/**
- * udev_device_get_dm_cookie_set:
- * @udev_device: udev device
- *
- * Retrieve the status of DM_COOKIE available for this udev device.
- *
- * Returns: true if DM_COOKIE was set for this device, false otherwise
- **/
-bool udev_device_get_dm_cookie_set(struct udev_device *udev_device)
-{
-       if (udev_device == NULL)
-               return NULL;
-       return udev_device->dm_cookie_set;
-}
-
-static int udev_device_set_dm_cookie_set(struct udev_device *udev_device)
-{
-       udev_device->dm_cookie_set = true;
-       return 0;
-}
-
 struct udev_list_entry *udev_device_add_property(struct udev_device *udev_device, const char *key, const char *value)
 {
         udev_device->envp_uptodate = false;
@@ -492,9 +470,6 @@ void udev_device_add_property_from_string_parse(struct udev_device *udev_device,
                 udev_device_set_devnode_uid(udev_device, strtoul(&property[7], NULL, 10));
         } else if (startswith(property, "DEVGID=")) {
                 udev_device_set_devnode_gid(udev_device, strtoul(&property[7], NULL, 10));
-        } else if (startswith(property, "DM_COOKIE=")) {
-                udev_device_set_dm_cookie_set(udev_device);
-                udev_device_add_property_from_string(udev_device, property);
         } else {
                 udev_device_add_property_from_string(udev_device, property);
         }
