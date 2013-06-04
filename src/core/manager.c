@@ -70,7 +70,6 @@
 #include "cgroup-util.h"
 #include "path-util.h"
 #include "audit-fd.h"
-#include "efivars.h"
 #include "env-util.h"
 
 /* As soon as 16 units are in our GC queue, make sure to run a gc sweep */
@@ -440,14 +439,6 @@ int manager_new(SystemdRunningAs running_as, Manager **_m) {
         if (!m)
                 return -ENOMEM;
 
-        dual_timestamp_get(&m->userspace_timestamp);
-        if (detect_container(NULL) <= 0) {
-                dual_timestamp_from_monotonic(&m->kernel_timestamp, 0);
-#ifdef ENABLE_EFI
-                efi_get_boot_timestamps(&m->userspace_timestamp, &m->firmware_timestamp, &m->loader_timestamp);
-#endif
-        }
-
         m->running_as = running_as;
         m->name_data_slot = m->conn_data_slot = m->subscribed_data_slot = -1;
         m->exit_code = _MANAGER_EXIT_CODE_INVALID;
@@ -806,11 +797,9 @@ static void manager_build_unit_path_cache(Manager *m) {
                                 goto fail;
                         }
 
-                        r = set_put(m->unit_path_cache, p);
-                        if (r < 0) {
-                                free(p);
+                        r = set_consume(m->unit_path_cache, p);
+                        if (r < 0)
                                 goto fail;
-                        }
                 }
 
                 closedir(d);
@@ -2380,7 +2369,7 @@ void manager_reset_failed(Manager *m) {
                 unit_reset_failed(u);
 }
 
-bool manager_unit_pending_inactive(Manager *m, const char *name) {
+bool manager_unit_inactive_or_pending(Manager *m, const char *name) {
         Unit *u;
 
         assert(m);
@@ -2391,7 +2380,7 @@ bool manager_unit_pending_inactive(Manager *m, const char *name) {
         if (!u)
                 return true;
 
-        return unit_pending_inactive(u);
+        return unit_inactive_or_pending(u);
 }
 
 void manager_check_finished(Manager *m) {

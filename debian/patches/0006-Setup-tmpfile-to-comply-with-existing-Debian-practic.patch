@@ -1,4 +1,4 @@
-From 517eae6d3485cfe0bfaa40825a62979c5cd1fdc5 Mon Sep 17 00:00:00 2001
+From a83165bc06dfa86d0b52c7cb1d93afa69baad0f7 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Tue, 5 Mar 2013 04:32:30 +0100
 Subject: [PATCH 06/10] Setup tmpfile to comply with existing Debian practice

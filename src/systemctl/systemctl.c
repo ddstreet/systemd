@@ -72,6 +72,12 @@ static char **arg_types = NULL;
 static char **arg_load_states = NULL;
 static char **arg_properties = NULL;
 static bool arg_all = false;
+static enum dependency {
+        DEPENDENCY_FORWARD,
+        DEPENDENCY_REVERSE,
+        DEPENDENCY_AFTER,
+        DEPENDENCY_BEFORE,
+} arg_dependency = DEPENDENCY_FORWARD;
 static const char *arg_job_mode = "replace";
 static UnitFileScope arg_scope = UNIT_FILE_SYSTEM;
 static bool arg_no_block = false;
@@ -126,6 +132,7 @@ static enum transport {
 static const char *arg_host = NULL;
 static unsigned arg_lines = 10;
 static OutputMode arg_output = OUTPUT_SHORT;
+static bool arg_plain = false;
 
 static bool private_bus = false;
 
@@ -950,20 +957,22 @@ static int list_dependencies_print(const char *name, int level, unsigned int bra
         size_t len = 0;
         size_t max_len = MAX(columns(),20u);
 
-        for (i = level - 1; i >= 0; i--) {
+        if (!arg_plain) {
+                for (i = level - 1; i >= 0; i--) {
+                        len += 2;
+                        if(len > max_len - 3 && !arg_full) {
+                                printf("%s...\n",max_len % 2 ? "" : " ");
+                                return 0;
+                        }
+                        printf("%s", draw_special_char(branches & (1 << i) ? DRAW_TREE_VERT : DRAW_TREE_SPACE));
+                }
                 len += 2;
                 if(len > max_len - 3 && !arg_full) {
                         printf("%s...\n",max_len % 2 ? "" : " ");
                         return 0;
                 }
-                printf("%s", draw_special_char(branches & (1 << i) ? DRAW_TREE_VERT : DRAW_TREE_SPACE));
+                printf("%s", draw_special_char(last ? DRAW_TREE_RIGHT : DRAW_TREE_BRANCH));
         }
-        len += 2;
-        if(len > max_len - 3 && !arg_full) {
-                printf("%s...\n",max_len % 2 ? "" : " ");
-                return 0;
-        }
-        printf("%s", draw_special_char(last ? DRAW_TREE_RIGHT : DRAW_TREE_BRANCH));
 
         if(arg_full){
                 printf("%s\n", name);
@@ -979,12 +988,19 @@ static int list_dependencies_print(const char *name, int level, unsigned int bra
 }
 
 static int list_dependencies_get_dependencies(DBusConnection *bus, const char *name, char ***deps) {
-        static const char dependencies[] =
-                "Requires\0"
-                "RequiresOverridable\0"
-                "Requisite\0"
-                "RequisiteOverridable\0"
-                "Wants\0";
+        static const char *dependencies[] = {
+                [DEPENDENCY_FORWARD] = "Requires\0"
+                                       "RequiresOverridable\0"
+                                       "Requisite\0"
+                                       "RequisiteOverridable\0"
+                                       "Wants\0",
+                [DEPENDENCY_REVERSE] = "RequiredBy\0"
+                                       "RequiredByOverridable\0"
+                                       "WantedBy\0"
+                                       "PartOf\0",
+                [DEPENDENCY_AFTER]   = "After\0",
+                [DEPENDENCY_BEFORE]  = "Before\0",
+        };
 
         _cleanup_free_ char *path;
         const char *interface = "org.freedesktop.systemd1.Unit";
@@ -1049,7 +1065,8 @@ static int list_dependencies_get_dependencies(DBusConnection *bus, const char *n
                 dbus_message_iter_recurse(&sub2, &sub3);
                 dbus_message_iter_next(&sub);
 
-                if (!nulstr_contains(dependencies, prop))
+                assert(arg_dependency < ELEMENTSOF(dependencies));
+                if (!nulstr_contains(dependencies[arg_dependency], prop))
                         continue;
 
                 if (dbus_message_iter_get_arg_type(&sub3) == DBUS_TYPE_ARRAY) {
@@ -1091,12 +1108,12 @@ static int list_dependencies_compare(const void *_a, const void *_b) {
         return strcasecmp(*a, *b);
 }
 
-static int list_dependencies_one(DBusConnection *bus, const char *name, int level, char **units, unsigned int branches) {
+static int list_dependencies_one(DBusConnection *bus, const char *name, int level, char ***units, unsigned int branches) {
         _cleanup_strv_free_ char **deps = NULL, **u;
         char **c;
         int r = 0;
 
-        u = strv_append(units, name);
+        u = strv_append(*units, name);
         if (!u)
                 return log_oom();
 
@@ -1108,9 +1125,11 @@ static int list_dependencies_one(DBusConnection *bus, const char *name, int leve
 
         STRV_FOREACH(c, deps) {
                 if (strv_contains(u, *c)) {
-                        r = list_dependencies_print("...", level + 1, (branches << 1) | (c[1] == NULL ? 0 : 1), 1);
-                        if (r < 0)
-                                return r;
+                        if (!arg_plain) {
+                                r = list_dependencies_print("...", level + 1, (branches << 1) | (c[1] == NULL ? 0 : 1), 1);
+                                if (r < 0)
+                                        return r;
+                        }
                         continue;
                 }
 
@@ -1119,17 +1138,22 @@ static int list_dependencies_one(DBusConnection *bus, const char *name, int leve
                         return r;
 
                 if (arg_all || unit_name_to_type(*c) == UNIT_TARGET) {
-                       r = list_dependencies_one(bus, *c, level + 1, u, (branches << 1) | (c[1] == NULL ? 0 : 1));
+                       r = list_dependencies_one(bus, *c, level + 1, &u, (branches << 1) | (c[1] == NULL ? 0 : 1));
                        if(r < 0)
                                return r;
                 }
         }
-
+        if (arg_plain) {
+                strv_free(*units);
+                *units = u;
+                u = NULL;
+        }
         return 0;
 }
 
 static int list_dependencies(DBusConnection *bus, char **args) {
         _cleanup_free_ char *unit = NULL;
+        _cleanup_strv_free_ char **units = NULL;
         const char *u;
 
         assert(bus);
@@ -1146,7 +1170,7 @@ static int list_dependencies(DBusConnection *bus, char **args) {
 
         puts(u);
 
-        return list_dependencies_one(bus, u, 0, NULL, 0);
+        return list_dependencies_one(bus, u, 0, &units, 0);
 }
 
 struct job_info {
@@ -1271,8 +1295,7 @@ static int list_jobs(DBusConnection *bus, char **args) {
                         goto finish;
                 }
 
-                if (!greedy_realloc((void**) &jobs, &size,
-                                    sizeof(struct job_info) * (used + 1))) {
+                if (!GREEDY_REALLOC(jobs, size, used + 1)) {
                         r = log_oom();
                         goto finish;
                 }
@@ -1843,9 +1866,8 @@ static int start_unit_one(
                 if (!p)
                         return log_oom();
 
-                r = set_put(s, p);
+                r = set_consume(s, p);
                 if (r < 0) {
-                        free(p);
                         log_error("Failed to add path to set.");
                         return r;
                 }
@@ -4480,6 +4502,7 @@ static int systemctl_help(void) {
                "  -a --all            Show all loaded units/properties, including dead/empty\n"
                "                      ones. To list all units installed on the system, use\n"
                "                      the 'list-unit-files' command instead.\n"
+               "     --reverse        Show reverse dependencies with 'list-dependencies'\n"
                "     --failed         Show only failed units\n"
                "     --full           Don't ellipsize unit names on output\n"
                "     --fail           When queueing a new job, fail if conflicting jobs are\n"
@@ -4545,7 +4568,8 @@ static int systemctl_help(void) {
                "  unset-cgroup [NAME] [CGROUP...] Remove unit from a control group\n"
                "  load [NAME...]                  Load one or more units\n"
                "  list-dependencies [NAME]        Recursively show units which are required\n"
-               "                                  or wanted by this unit\n\n"
+               "                                  or wanted by this unit or by which this\n"
+               "                                  unit is required or wanted\n\n"
                "Unit File Commands:\n"
                "  list-unit-files                 List installed unit files\n"
                "  enable [NAME...]                Enable one or more unit files\n"
@@ -4681,6 +4705,9 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
 
         enum {
                 ARG_FAIL = 0x100,
+                ARG_REVERSE,
+                ARG_AFTER,
+                ARG_BEFORE,
                 ARG_SHOW_TYPES,
                 ARG_IRREVERSIBLE,
                 ARG_IGNORE_DEPENDENCIES,
@@ -4699,7 +4726,8 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                 ARG_NO_ASK_PASSWORD,
                 ARG_FAILED,
                 ARG_RUNTIME,
-                ARG_FORCE
+                ARG_FORCE,
+                ARG_PLAIN
         };
 
         static const struct option options[] = {
@@ -4708,6 +4736,9 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                 { "type",      required_argument, NULL, 't'           },
                 { "property",  required_argument, NULL, 'p'           },
                 { "all",       no_argument,       NULL, 'a'           },
+                { "reverse",   no_argument,       NULL, ARG_REVERSE   },
+                { "after",     no_argument,       NULL, ARG_AFTER     },
+                { "before",    no_argument,       NULL, ARG_BEFORE    },
                 { "show-types", no_argument,      NULL, ARG_SHOW_TYPES },
                 { "failed",    no_argument,       NULL, ARG_FAILED    },
                 { "full",      no_argument,       NULL, ARG_FULL      },
@@ -4734,6 +4765,7 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                 { "runtime",   no_argument,       NULL, ARG_RUNTIME   },
                 { "lines",     required_argument, NULL, 'n'           },
                 { "output",    required_argument, NULL, 'o'           },
+                { "plain",     no_argument,       NULL, ARG_PLAIN     },
                 { NULL,        0,                 NULL, 0             }
         };
 
@@ -4828,6 +4860,18 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
 
                 case 'a':
                         arg_all = true;
+                        break;
+
+                case ARG_REVERSE:
+                        arg_dependency = DEPENDENCY_REVERSE;
+                        break;
+
+                case ARG_AFTER:
+                        arg_dependency = DEPENDENCY_AFTER;
+                        break;
+
+                case ARG_BEFORE:
+                        arg_dependency = DEPENDENCY_BEFORE;
                         break;
 
                 case ARG_SHOW_TYPES:
@@ -4947,6 +4991,10 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
 
                 case 'i':
                         arg_ignore_inhibitors = true;
+                        break;
+
+                case ARG_PLAIN:
+                        arg_plain = true;
                         break;
 
                 case '?':
@@ -5381,7 +5429,7 @@ static int parse_argv(int argc, char *argv[]) {
         return systemctl_parse_argv(argc, argv);
 }
 
-static int action_to_runlevel(void) {
+_pure_ static int action_to_runlevel(void) {
 
         static const char table[_ACTION_MAX] = {
                 [ACTION_HALT] =      '0',

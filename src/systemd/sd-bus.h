@@ -32,6 +32,14 @@
 extern "C" {
 #endif
 
+#ifndef _sd_printf_attr_
+#  if __GNUC__ >= 4
+#    define _sd_printf_attr_(a,b) __attribute__ ((format (printf, a, b)))
+#  else
+#    define _sd_printf_attr_(a,b)
+#  endif
+#endif
+
 /* TODO:
  * - add page donation logic
  * - api for appending/reading fixed arrays
@@ -40,6 +48,8 @@ extern "C" {
  *
  * - enforce alignment of pointers passed in
  * - negotiation for attach attributes
+ *
+ * - for kernel and unix transports allow setting the unix user/access mode for the node
  */
 
 typedef struct sd_bus sd_bus;
@@ -139,6 +149,10 @@ int sd_bus_message_get_cmdline(sd_bus_message *m, char ***cmdline);
 int sd_bus_message_get_unit(sd_bus_message *m, const char **unit);
 int sd_bus_message_get_user_unit(sd_bus_message *m, const char **unit);
 int sd_bus_message_get_session(sd_bus_message *m, const char **session);
+int sd_bus_message_get_owner_uid(sd_bus_message *m, uid_t *uid);
+int sd_bus_message_get_audit_sessionid(sd_bus_message *m, uint32_t *sessionid);
+int sd_bus_message_get_audit_loginuid(sd_bus_message *m, uid_t *loginuid);
+int sd_bus_message_has_effective_cap(sd_bus_message *m, int capability);
 
 int sd_bus_message_is_signal(sd_bus_message *m, const char *interface, const char *member);
 int sd_bus_message_is_method_call(sd_bus_message *m, const char *interface, const char *member);
@@ -175,6 +189,7 @@ int sd_bus_list_names(sd_bus *bus, char ***l);
 int sd_bus_get_owner(sd_bus *bus, const char *name, char **owner);
 int sd_bus_get_owner_uid(sd_bus *bus, const char *name, uid_t *uid);
 int sd_bus_get_owner_pid(sd_bus *bus, const char *name, pid_t *pid);
+int sd_bus_get_owner_machine_id(sd_bus *bus, const char *name, sd_id128_t *machine);
 
 /* Error structures */
 
@@ -182,7 +197,7 @@ int sd_bus_get_owner_pid(sd_bus *bus, const char *name, pid_t *pid);
 #define SD_BUS_ERROR_MAKE(name, message) ((sd_bus_error) {(name), (message), 0})
 
 void sd_bus_error_free(sd_bus_error *e);
-int sd_bus_error_set(sd_bus_error *e, const char *name, const char *format, ...);
+int sd_bus_error_set(sd_bus_error *e, const char *name, const char *format, ...)  _sd_printf_attr_(3, 0);
 void sd_bus_error_set_const(sd_bus_error *e, const char *name, const char *message);
 int sd_bus_error_copy(sd_bus_error *dest, const sd_bus_error *e);
 int sd_bus_error_is_set(const sd_bus_error *e);

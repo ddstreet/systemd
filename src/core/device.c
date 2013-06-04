@@ -124,13 +124,13 @@ static void device_dump(Unit *u, FILE *f, const char *prefix) {
                 prefix, strna(d->sysfs));
 }
 
-static UnitActiveState device_active_state(Unit *u) {
+_pure_ static UnitActiveState device_active_state(Unit *u) {
         assert(u);
 
         return state_translation_table[DEVICE(u)->state];
 }
 
-static const char *device_sub_state_to_string(Unit *u) {
+_pure_ static const char *device_sub_state_to_string(Unit *u) {
         assert(u);
 
         return device_state_to_string(DEVICE(u)->state);
@@ -281,16 +281,22 @@ static int device_update_unit(Manager *m, struct udev_device *dev, const char *p
                         size_t l;
 
                         FOREACH_WORD_QUOTED(w, l, wants, state) {
-                                char *e;
+                                char *e, *n;
 
                                 e = strndup(w, l);
                                 if (!e) {
                                         r = -ENOMEM;
                                         goto fail;
                                 }
-
-                                r = unit_add_dependency_by_name(u, UNIT_WANTS, e, NULL, true);
+                                n = unit_name_mangle(e);
+                                if (!n) {
+                                        r = -ENOMEM;
+                                        goto fail;
+                                }
                                 free(e);
+
+                                r = unit_add_dependency_by_name(u, UNIT_WANTS, n, NULL, true);
+                                free(n);
                                 if (r < 0)
                                         goto fail;
                         }

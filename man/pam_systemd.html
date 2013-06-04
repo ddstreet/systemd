@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>pam_systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>pam_systemd</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="pam_systemd"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>pam_systemd — Register user sessions in the systemd login manager</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">pam_systemd.so</code></p></div><div class="refsect1"><a name="idp2280240"></a><h2>Description</h2><p><span class="command"><strong>pam_systemd</strong></span> registers user
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="pam_systemd"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>pam_systemd — Register user sessions in the systemd login manager</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">pam_systemd.so</code></p></div><div class="refsect1"><a name="idm259767374112"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p><span class="command"><strong>pam_systemd</strong></span> registers user
                 sessions in the systemd login manager
                 <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>,
                 and hence the systemd control group hierarchy.</p><p>On login, this module ensures the following:</p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>If it does not exist yet, the
@@ -35,12 +52,12 @@
                         and all its contents are
                         removed, too.</p></li></ol></div><p>If the system was not booted up with systemd as
                 init system, this module does nothing and immediately
-                returns PAM_SUCCESS.</p></div><div class="refsect1"><a name="idp4431568"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">kill-session-processes=</code></span></dt><dd><p>Takes a boolean
+                returns PAM_SUCCESS.</p></div><div class="refsect1"><a name="idm259766054704"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt id="kill-session-processes="><span class="term"><code class="option">kill-session-processes=</code></span><a class="headerlink" title="Permalink to this term" href="#kill-session-processes=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true, all processes
                                 created by the user during his session
                                 and from his session will be
                                 terminated when he logs out from his
-                                session.</p></dd><dt><span class="term"><code class="option">kill-only-users=</code></span></dt><dd><p>Takes a comma
+                                session.</p></dd><dt id="kill-only-users="><span class="term"><code class="option">kill-only-users=</code></span><a class="headerlink" title="Permalink to this term" href="#kill-only-users=">¶</a></dt><dd><p>Takes a comma
                                 separated list of user names or
                                 numeric user ids as argument. If this
                                 option is used the effect of the
@@ -52,7 +69,7 @@
                                 <code class="option">kill-exclude-users=</code>
                                 takes precedence over this list and is
                                 hence subtracted from the list
-                                specified here.</p></dd><dt><span class="term"><code class="option">kill-exclude-users=</code></span></dt><dd><p>Takes a comma
+                                specified here.</p></dd><dt id="kill-exclude-users="><span class="term"><code class="option">kill-exclude-users=</code></span><a class="headerlink" title="Permalink to this term" href="#kill-exclude-users=">¶</a></dt><dd><p>Takes a comma
                                 separated list of user names or
                                 numeric user ids as argument. Users
                                 listed in this argument will not be
@@ -66,7 +83,7 @@
                                 is guaranteed to never be killed by
                                 this PAM module, independent of any
                                 other configuration
-                                setting.</p></dd><dt><span class="term"><code class="option">controllers=</code></span></dt><dd><p>Takes a comma
+                                setting.</p></dd><dt id="controllers="><span class="term"><code class="option">controllers=</code></span><a class="headerlink" title="Permalink to this term" href="#controllers=">¶</a></dt><dd><p>Takes a comma
                                 separated list of control group
                                 controllers in which hierarchies a
                                 user/session control group will be
@@ -74,15 +91,15 @@
                                 logging in, in addition to the control
                                 group in the named 'name=systemd'
                                 hierarchy. If omitted, defaults to an
-                                empty list.</p></dd><dt><span class="term"><code class="option">reset-controllers=</code></span></dt><dd><p>Takes a comma
+                                empty list.</p></dd><dt id="reset-controllers="><span class="term"><code class="option">reset-controllers=</code></span><a class="headerlink" title="Permalink to this term" href="#reset-controllers=">¶</a></dt><dd><p>Takes a comma
                                 separated list of control group
                                 controllers in which hierarchies the
                                 logged in processes will be reset to
                                 the root control
-                                group.</p></dd><dt><span class="term"><code class="option">class=</code></span></dt><dd><p>Takes a string
+                                group.</p></dd><dt id="class="><span class="term"><code class="option">class=</code></span><a class="headerlink" title="Permalink to this term" href="#class=">¶</a></dt><dd><p>Takes a string
                                 argument which sets the session class.
                                 The XDG_SESSION_CLASS environmental variable
-                                takes precedence.</p></dd><dt><span class="term"><code class="option">debug=</code></span></dt><dd><p>Takes a boolean
+                                takes precedence.</p></dd><dt id="debug="><span class="term"><code class="option">debug=</code></span><a class="headerlink" title="Permalink to this term" href="#debug=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If yes, the module will log
                                 debugging information as it
                                 operates.</p></dd></dl></div><p>Note that setting
@@ -102,7 +119,7 @@
                 <code class="option">kill-exclude-users=</code>,
                 <code class="option">controllers=</code>,
                 <code class="option">reset-controllers=</code>,
-                <code class="option">debug=no</code>.</p></div><div class="refsect1"><a name="idp4843840"></a><h2>Module Types Provided</h2><p>Only <code class="option">session</code> is provided.</p></div><div class="refsect1"><a name="idp4218816"></a><h2>Environment</h2><p>The following environment variables are set for the processes of the user's session:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$XDG_SESSION_ID</code></span></dt><dd><p>A session identifier,
+                <code class="option">debug=no</code>.</p></div><div class="refsect1"><a name="idm259769926800"></a><h2 id="Module Types Provided">Module Types Provided<a class="headerlink" title="Permalink to this headline" href="#Module%20Types%20Provided">¶</a></h2><p>Only <code class="option">session</code> is provided.</p></div><div class="refsect1"><a name="idm259769925136"></a><h2 id="Environment">Environment<a class="headerlink" title="Permalink to this headline" href="#Environment">¶</a></h2><p>The following environment variables are set for the processes of the user's session:</p><div class="variablelist"><dl class="variablelist"><dt id="$XDG_SESSION_ID"><span class="term"><code class="varname">$XDG_SESSION_ID</code></span><a class="headerlink" title="Permalink to this term" href="#%24XDG_SESSION_ID">¶</a></dt><dd><p>A session identifier,
                                 suitable to be used in file names. The
                                 string itself should be considered
                                 opaque, although often it is just the
@@ -112,7 +129,7 @@
                                 machine uptime. It may hence be used
                                 to uniquely label files or other
                                 resources of this
-                                session.</p></dd><dt><span class="term"><code class="varname">$XDG_RUNTIME_DIR</code></span></dt><dd><p>Path to a user-private
+                                session.</p></dd><dt id="$XDG_RUNTIME_DIR"><span class="term"><code class="varname">$XDG_RUNTIME_DIR</code></span><a class="headerlink" title="Permalink to this term" href="#%24XDG_RUNTIME_DIR">¶</a></dt><dd><p>Path to a user-private
                                 user-writable directory that is bound
                                 to the user login time on the
                                 machine. It is automatically created
@@ -138,14 +155,14 @@
                                 local and offers the greatest possible
                                 file system feature set the
                                 operating system
-                                provides.</p></dd></dl></div></div><div class="refsect1"><a name="idp4030976"></a><h2>Example</h2><pre class="programlisting">#%PAM-1.0
+                                provides.</p></dd></dl></div></div><div class="refsect1"><a name="idm259769916496"></a><h2 id="Example">Example<a class="headerlink" title="Permalink to this headline" href="#Example">¶</a></h2><pre class="programlisting">#%PAM-1.0
 auth       required     pam_unix.so
 auth       required     pam_nologin.so
 account    required     pam_unix.so
 password   required     pam_unix.so
 session    required     pam_unix.so
 session    required     pam_loginuid.so
-session    required     pam_systemd.so kill-session-processes=1</pre></div><div class="refsect1"><a name="idp4543200"></a><h2>See Also</h2><p>
+session    required     pam_systemd.so kill-session-processes=1</pre></div><div class="refsect1"><a name="idm259769914720"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>,
                         <a href="logind.conf.html"><span class="citerefentry"><span class="refentrytitle">logind.conf</span>(5)</span></a>,

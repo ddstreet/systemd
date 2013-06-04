@@ -1481,6 +1481,9 @@ static int service_search_main_pid(Service *s) {
         r = unit_watch_pid(UNIT(s), pid);
         if (r < 0)
                 /* FIXME: we need to do something here */
+                log_warning_unit(UNIT(s)->id,
+                                 "Failed to watch PID %lu from service %s",
+                                 (unsigned long) pid, UNIT(s)->id);
                 return r;
 
         return 0;
@@ -1890,7 +1893,7 @@ static int main_pid_good(Service *s) {
         return -EAGAIN;
 }
 
-static int control_pid_good(Service *s) {
+_pure_ static int control_pid_good(Service *s) {
         assert(s);
 
         return s->control_pid > 0;
@@ -2582,7 +2585,7 @@ static int service_reload(Unit *u) {
         return 0;
 }
 
-static bool service_can_reload(Unit *u) {
+_pure_ static bool service_can_reload(Unit *u) {
         Service *s = SERVICE(u);
 
         assert(s);
@@ -2794,7 +2797,7 @@ static int service_deserialize_item(Unit *u, const char *key, const char *value,
         return 0;
 }
 
-static UnitActiveState service_active_state(Unit *u) {
+_pure_ static UnitActiveState service_active_state(Unit *u) {
         const UnitActiveState *table;
 
         assert(u);
@@ -2830,7 +2833,7 @@ static bool service_check_gc(Unit *u) {
         return false;
 }
 
-static bool service_check_snapshot(Unit *u) {
+_pure_ static bool service_check_snapshot(Unit *u) {
         Service *s = SERVICE(u);
 
         assert(s);

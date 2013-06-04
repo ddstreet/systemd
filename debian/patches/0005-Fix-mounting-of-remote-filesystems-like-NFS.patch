@@ -1,4 +1,4 @@
-From 8ccf29f8e6dd1c026e1cdff5a9b2e9d08984b9f5 Mon Sep 17 00:00:00 2001
+From 811be15c70cd3ec4346634a3dc33680c0a78286d Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Sat, 9 Feb 2013 15:55:43 +0100
 Subject: [PATCH 05/10] Fix mounting of remote filesystems, like NFS
@@ -34,7 +34,7 @@ Bug-Debian: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=673309
  3 files changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/src/core/service.c b/src/core/service.c
-index cf0bbe0..197771e 100644
+index 3617c24..e4d5f1d 100644
 --- a/src/core/service.c
 +++ b/src/core/service.c
 @@ -351,7 +351,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char

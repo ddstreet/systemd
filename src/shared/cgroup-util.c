@@ -510,6 +510,9 @@ int cg_get_path(const char *controller, const char *path, const char *suffix, ch
 
         assert(fs);
 
+        if (controller && !cg_controller_is_valid(controller, true))
+                return -EINVAL;
+
         if (_unlikely_(!good)) {
                 int r;
 
@@ -546,7 +549,7 @@ int cg_get_path_and_check(const char *controller, const char *path, const char *
 
         assert(fs);
 
-        if (isempty(controller))
+        if (!cg_controller_is_valid(controller, true))
                 return -EINVAL;
 
         /* Normalize the controller syntax */
@@ -733,21 +736,27 @@ int cg_set_task_access(
 }
 
 int cg_pid_get_path(const char *controller, pid_t pid, char **path) {
-        char fs[sizeof("/proc/") - 1 + DECIMAL_STR_MAX(pid_t) + sizeof("/cgroup")];
         _cleanup_fclose_ FILE *f = NULL;
         char line[LINE_MAX];
+        const char *fs;
         size_t cs;
 
         assert(path);
         assert(pid >= 0);
 
-        if (!controller)
+        if (controller) {
+                if (!cg_controller_is_valid(controller, true))
+                        return -EINVAL;
+
+                controller = normalize_controller(controller);
+        } else
                 controller = SYSTEMD_CGROUP_CONTROLLER;
 
         if (pid == 0)
-                pid = getpid();
+                fs = "/proc/self/cgroup";
+        else
+                fs = procfs_file_alloca(pid, "cgroup");
 
-        sprintf(fs, "/proc/%lu/cgroup", (unsigned long) pid);
         f = fopen(fs, "re");
         if (!f)
                 return errno == ENOENT ? -ESRCH : -errno;
@@ -755,7 +764,10 @@ int cg_pid_get_path(const char *controller, pid_t pid, char **path) {
         cs = strlen(controller);
 
         FOREACH_LINE(line, f, return -errno) {
-                char *l, *p;
+                char *l, *p, *w, *e;
+                size_t k;
+                char *state;
+                bool found = false;
 
                 truncate_nl(line);
 
@@ -764,13 +776,31 @@ int cg_pid_get_path(const char *controller, pid_t pid, char **path) {
                         continue;
 
                 l++;
-                if (!strneq(l, controller, cs))
+                e = strchr(l, ':');
+                if (!e)
                         continue;
 
-                if (l[cs] != ':')
+                *e = 0;
+
+                FOREACH_WORD_SEPARATOR(w, k, l, ",", state) {
+
+                        if (k == cs && memcmp(w, controller, cs) == 0) {
+                                found = true;
+                                break;
+                        }
+
+                        if (k == 5 + cs &&
+                            memcmp(w, "name=", 5) == 0 &&
+                            memcmp(w+5, controller, cs) == 0) {
+                                found = true;
+                                break;
+                        }
+                }
+
+                if (!found)
                         continue;
 
-                p = strdup(l + cs + 1);
+                p = strdup(e + 1);
                 if (!p)
                         return -ENOMEM;
 
@@ -910,6 +940,7 @@ int cg_is_empty_recursive(const char *controller, const char *path, bool ignore_
 int cg_split_spec(const char *spec, char **controller, char **path) {
         const char *e;
         char *t = NULL, *u = NULL;
+        _cleanup_free_ char *v = NULL;
 
         assert(spec);
 
@@ -922,6 +953,7 @@ int cg_split_spec(const char *spec, char **controller, char **path) {
                         if (!t)
                                 return -ENOMEM;
 
+                        path_kill_slashes(t);
                         *path = t;
                 }
 
@@ -933,11 +965,11 @@ int cg_split_spec(const char *spec, char **controller, char **path) {
 
         e = strchr(spec, ':');
         if (!e) {
-                if (!filename_is_safe(spec))
+                if (!cg_controller_is_valid(spec, true))
                         return -EINVAL;
 
                 if (controller) {
-                        t = strdup(spec);
+                        t = strdup(normalize_controller(spec));
                         if (!t)
                                 return -ENOMEM;
 
@@ -950,10 +982,13 @@ int cg_split_spec(const char *spec, char **controller, char **path) {
                 return 0;
         }
 
-        t = strndup(spec, e-spec);
+        v = strndup(spec, e-spec);
+        if (!v)
+                return -ENOMEM;
+        t = strdup(normalize_controller(v));
         if (!t)
                 return -ENOMEM;
-        if (!filename_is_safe(t)) {
+        if (!cg_controller_is_valid(t, true)) {
                 free(t);
                 return -EINVAL;
         }
@@ -963,11 +998,14 @@ int cg_split_spec(const char *spec, char **controller, char **path) {
                 free(t);
                 return -ENOMEM;
         }
-        if (!path_is_safe(u)) {
+        if (!path_is_safe(u) ||
+            !path_is_absolute(u)) {
                 free(t);
                 free(u);
                 return -EINVAL;
         }
+
+        path_kill_slashes(u);
 
         if (controller)
                 *controller = t;
@@ -989,26 +1027,29 @@ int cg_join_spec(const char *controller, const char *path, char **spec) {
 
         if (!controller)
                 controller = "systemd";
-        else if (controller[0] == 0 ||
-                 strchr(controller, ':') ||
-                 strchr(controller, '/'))
-                return -EINVAL;
+        else {
+                if (!cg_controller_is_valid(controller, true))
+                        return -EINVAL;
+
+                controller = normalize_controller(controller);
+        }
 
         if (!path_is_absolute(path))
                 return -EINVAL;
 
-        controller = normalize_controller(controller);
-
         s = strjoin(controller, ":", path, NULL);
         if (!s)
                 return -ENOMEM;
+
+        path_kill_slashes(s + strlen(controller) + 1);
 
         *spec = s;
         return 0;
 }
 
 int cg_mangle_path(const char *path, char **result) {
-        char *t, *c, *p;
+        _cleanup_free_ char *c = NULL, *p = NULL;
+        char *t;
         int r;
 
         assert(path);
@@ -1021,6 +1062,7 @@ int cg_mangle_path(const char *path, char **result) {
                 if (!t)
                         return -ENOMEM;
 
+                path_kill_slashes(t);
                 *result = t;
                 return 0;
         }
@@ -1030,11 +1072,7 @@ int cg_mangle_path(const char *path, char **result) {
         if (r < 0)
                 return r;
 
-        r = cg_get_path(c ? c : SYSTEMD_CGROUP_CONTROLLER, p ? p : "/", NULL, result);
-        free(c);
-        free(p);
-
-        return r;
+        return cg_get_path(c ? c : SYSTEMD_CGROUP_CONTROLLER, p ? p : "/", NULL, result);
 }
 
 int cg_get_system_path(char **path) {
@@ -1108,17 +1146,22 @@ int cg_get_user_path(char **path) {
         return 0;
 }
 
-int cg_get_machine_path(char **path) {
-        _cleanup_free_ char *root = NULL;
+int cg_get_machine_path(const char *machine, char **path) {
+        _cleanup_free_ char *root = NULL, *escaped = NULL;
         char *p;
 
         assert(path);
 
-        if (cg_get_root_path(&root) < 0 || streq(root, "/"))
-                p = strdup("/machine");
-        else
-                p = strappend(root, "/machine");
+        if (machine) {
+                const char *name = strappenda(machine, ".nspawn");
 
+                escaped = cg_escape(name);
+                if (!escaped)
+                        return -ENOMEM;
+        }
+
+        p = strjoin(cg_get_root_path(&root) >= 0 && !streq(root, "/") ? root : "",
+                    "/machine", machine ? "/" : "", machine ? escaped : "", NULL);
         if (!p)
                 return -ENOMEM;
 
@@ -1138,14 +1181,20 @@ char **cg_shorten_controllers(char **controllers) {
 
                 p = normalize_controller(*f);
 
-                if (streq(*f, "systemd")) {
+                if (streq(p, "systemd")) {
+                        free(*f);
+                        continue;
+                }
+
+                if (!cg_controller_is_valid(p, true)) {
+                        log_warning("Controller %s is not valid, removing from controllers list.", p);
                         free(*f);
                         continue;
                 }
 
                 r = check_hierarchy(p);
                 if (r < 0) {
-                        log_debug("Controller %s is not available, removing from controllers list.", *f);
+                        log_debug("Controller %s is not available, removing from controllers list.", p);
                         free(*f);
                         continue;
                 }
@@ -1197,7 +1246,6 @@ int cg_pid_get_path_shifted(pid_t pid, char **root, char **cgroup) {
         return 0;
 }
 
-/* non-static only for testing purposes */
 int cg_path_decode_unit(const char *cgroup, char **unit){
         char *p, *e, *c, *s, *k;
 
@@ -1206,6 +1254,7 @@ int cg_path_decode_unit(const char *cgroup, char **unit){
 
         e = strchrnul(cgroup, '/');
         c = strndupa(cgroup, e - cgroup);
+        c = cg_unescape(c);
 
         /* Could this be a valid unit name? */
         if (!unit_name_is_valid(c, true))
@@ -1218,15 +1267,15 @@ int cg_path_decode_unit(const char *cgroup, char **unit){
                         return -EINVAL;
 
                 e += strspn(e, "/");
-                p = strchrnul(e, '/');
 
-                /* Don't allow empty instance strings */
-                if (p == e)
+                p = strchrnul(e, '/');
+                k = strndupa(e, p - e);
+                k = cg_unescape(k);
+
+                if (!unit_name_is_valid(k, false))
                         return -EINVAL;
 
-                k = strndupa(e, p - e);
-
-                s = unit_name_replace_instance(c, k);
+                s = strdup(k);
         }
 
         if (!s)
@@ -1262,7 +1311,7 @@ int cg_pid_get_unit(pid_t pid, char **unit) {
         return cg_path_get_unit(cgroup, unit);
 }
 
-static const char *skip_label(const char *e) {
+_pure_ static const char *skip_label(const char *e) {
         assert(e);
 
         e = strchr(e, '/');
@@ -1320,7 +1369,7 @@ int cg_pid_get_user_unit(pid_t pid, char **unit) {
 
 int cg_path_get_machine_name(const char *path, char **machine) {
         const char *e, *n;
-        char *s;
+        char *s, *r;
 
         assert(path);
         assert(machine);
@@ -1333,11 +1382,13 @@ int cg_path_get_machine_name(const char *path, char **machine) {
         if (e == n)
                 return -ENOENT;
 
-        s = strndup(e, n - e);
-        if (!s)
+        s = strndupa(e, n - e);
+
+        r = strdup(cg_unescape(s));
+        if (!r)
                 return -ENOMEM;
 
-        *machine = s;
+        *machine = r;
         return 0;
 }
 
@@ -1371,13 +1422,12 @@ int cg_path_get_session(const char *path, char **session) {
                 return -ENOENT;
 
         n = strchrnul(e, '/');
-        if (e == n)
+        if (n - e < 8)
+                return -ENOENT;
+        if (memcmp(n - 8, ".session", 8) != 0)
                 return -ENOENT;
 
-        if (n - e == 6 && memcmp(e, "shared", 6) == 0)
-                return -ENOENT;
-
-        s = strndup(e, n - e);
+        s = strndup(e, n - e - 8);
         if (!s)
                 return -ENOMEM;
 
@@ -1396,6 +1446,43 @@ int cg_pid_get_session(pid_t pid, char **session) {
                 return r;
 
         return cg_path_get_session(cgroup, session);
+}
+
+int cg_path_get_owner_uid(const char *path, uid_t *uid) {
+        const char *e, *n;
+        char *s;
+
+        assert(path);
+        assert(uid);
+
+        e = path_startswith(path, "/user/");
+        if (!e)
+                return -ENOENT;
+
+        n = strchrnul(e, '/');
+        if (n - e < 5)
+                return -ENOENT;
+        if (memcmp(n - 5, ".user", 5) != 0)
+                return -ENOENT;
+
+        s = strndupa(e, n - e - 5);
+        if (!s)
+                return -ENOMEM;
+
+        return parse_uid(s, uid);
+}
+
+int cg_pid_get_owner_uid(pid_t pid, uid_t *uid) {
+        _cleanup_free_ char *cgroup = NULL;
+        int r;
+
+        assert(uid);
+
+        r = cg_pid_get_path_shifted(pid, NULL, &cgroup);
+        if (r < 0)
+                return r;
+
+        return cg_path_get_owner_uid(cgroup, uid);
 }
 
 int cg_controller_from_attr(const char *attr, char **controller) {
@@ -1418,11 +1505,99 @@ int cg_controller_from_attr(const char *attr, char **controller) {
         if (!c)
                 return -ENOMEM;
 
-        if (!filename_is_safe(c)) {
+        if (!cg_controller_is_valid(c, false)) {
                 free(c);
                 return -EINVAL;
         }
 
         *controller = c;
         return 1;
+}
+
+char *cg_escape(const char *p) {
+        bool need_prefix = false;
+
+        /* This implements very minimal escaping for names to be used
+         * as file names in the cgroup tree: any name which might
+         * conflict with a kernel name or is prefixed with '_' is
+         * prefixed with a '_'. That way, when reading cgroup names it
+         * is sufficient to remove a single prefixing underscore if
+         * there is one. */
+
+        /* The return value of this function (unlike cg_unescape())
+         * needs free()! */
+
+        if (p[0] == 0 ||
+            p[0] == '_' ||
+            p[0] == '.' ||
+            streq(p, "notify_on_release") ||
+            streq(p, "release_agent") ||
+            streq(p, "tasks"))
+                need_prefix = true;
+        else {
+                const char *dot;
+
+                dot = strrchr(p, '.');
+                if (dot) {
+
+                        if (dot - p == 6 && memcmp(p, "cgroup", 6) == 0)
+                                need_prefix = true;
+                        else {
+                                char *n;
+
+                                n = strndupa(p, dot - p);
+
+                                if (check_hierarchy(n) >= 0)
+                                        need_prefix = true;
+                        }
+                }
+        }
+
+        if (need_prefix)
+                return strappend("_", p);
+        else
+                return strdup(p);
+}
+
+char *cg_unescape(const char *p) {
+        assert(p);
+
+        /* The return value of this function (unlike cg_escape())
+         * doesn't need free()! */
+
+        if (p[0] == '_')
+                return (char*) p+1;
+
+        return (char*) p;
+}
+
+#define CONTROLLER_VALID                        \
+        "0123456789"                            \
+        "abcdefghijklmnopqrstuvwxyz"            \
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"            \
+        "_"
+
+bool cg_controller_is_valid(const char *p, bool allow_named) {
+        const char *t, *s;
+
+        if (!p)
+                return false;
+
+        if (allow_named) {
+                s = startswith(p, "name=");
+                if (s)
+                        p = s;
+        }
+
+        if (*p == 0 || *p == '_')
+                return false;
+
+        for (t = p; *t; t++)
+                if (!strchr(CONTROLLER_VALID, *t))
+                        return false;
+
+        if (t - p > FILENAME_MAX)
+                return false;
+
+        return true;
 }
