@@ -80,15 +80,6 @@ char **saved_argv = NULL;
 static volatile unsigned cached_columns = 0;
 static volatile unsigned cached_lines = 0;
 
-#define procfs_file_alloca(pid, field)                                  \
-        ({                                                              \
-                pid_t _pid_ = (pid);                                    \
-                char *_r_;                                              \
-                _r_ = alloca(sizeof("/proc/") -1 + DECIMAL_STR_MAX(pid_t) + 1 + sizeof(field)); \
-                sprintf(_r_, "/proc/%lu/" field, (unsigned long) _pid_); \
-                _r_;                                                    \
-        })
-
 size_t page_size(void) {
         static __thread size_t pgsz = 0;
         long r;
@@ -381,8 +372,10 @@ int safe_atod(const char *s, double *ret_d) {
         assert(s);
         assert(ret_d);
 
-        errno = 0;
-        d = strtod(s, &x);
+        RUN_WITH_LOCALE(LC_NUMERIC_MASK, "C") {
+                errno = 0;
+                d = strtod(s, &x);
+        }
 
         if (!x || x == s || *x || errno)
                 return errno ? -errno : -EINVAL;
@@ -1456,7 +1449,7 @@ char *ascii_strlower(char *t) {
         return t;
 }
 
-static bool ignore_file_allow_backup(const char *filename) {
+_pure_ static bool ignore_file_allow_backup(const char *filename) {
         assert(filename);
 
         return
@@ -1519,7 +1512,7 @@ int fd_cloexec(int fd, bool cloexec) {
         return 0;
 }
 
-static bool fd_in_set(int fd, const int fdset[], unsigned n_fdset) {
+_pure_ static bool fd_in_set(int fd, const int fdset[], unsigned n_fdset) {
         unsigned i;
 
         assert(n_fdset == 0 || fdset);
@@ -2777,10 +2770,11 @@ int rm_rf_children_dangerous(int fd, bool only_dirs, bool honour_sticky, struct 
         return ret;
 }
 
-static int is_temporary_fs(struct statfs *s) {
+_pure_ static int is_temporary_fs(struct statfs *s) {
         assert(s);
-        return s->f_type == (__SWORD_TYPE) TMPFS_MAGIC ||
-                s->f_type == (__SWORD_TYPE) RAMFS_MAGIC;
+        return
+                F_TYPE_CMP(s->f_type, TMPFS_MAGIC) ||
+                F_TYPE_CMP(s->f_type, RAMFS_MAGIC);
 }
 
 int rm_rf_children(int fd, bool only_dirs, bool honour_sticky, struct stat *root_dev) {
@@ -3844,24 +3838,29 @@ bool hostname_is_valid(const char *s) {
         return true;
 }
 
-char* hostname_cleanup(char *s) {
+char* hostname_cleanup(char *s, bool lowercase) {
         char *p, *d;
         bool dot;
 
         for (p = s, d = s, dot = true; *p; p++) {
                 if (*p == '.') {
-                        if (dot || p[1] == 0)
+                        if (dot)
                                 continue;
 
+                        *(d++) = '.';
                         dot = true;
-                } else
+                } else if (hostname_valid_char(*p)) {
+                        *(d++) = lowercase ? tolower(*p) : *p;
                         dot = false;
+                }
 
-                if (hostname_valid_char(*p))
-                        *(d++) = *p;
         }
 
-        *d = 0;
+        if (dot && d > s)
+                d[-1] = 0;
+        else
+                *d = 0;
+
         strshorten(s, HOST_NAME_MAX);
 
         return s;
@@ -5096,59 +5095,6 @@ int getenv_for_pid(pid_t pid, const char *field, char **_value) {
         return r;
 }
 
-int can_sleep(const char *type) {
-        char *w, *state;
-        size_t l, k;
-        int r;
-        _cleanup_free_ char *p = NULL;
-
-        assert(type);
-
-        /* If /sys is read-only we cannot sleep */
-        if (access("/sys/power/state", W_OK) < 0)
-                return false;
-
-        r = read_one_line_file("/sys/power/state", &p);
-        if (r < 0)
-                return false;
-
-        k = strlen(type);
-        FOREACH_WORD_SEPARATOR(w, l, p, WHITESPACE, state)
-                if (l == k && memcmp(w, type, l) == 0)
-                        return true;
-
-        return false;
-}
-
-int can_sleep_disk(const char *type) {
-        char *w, *state;
-        size_t l, k;
-        int r;
-        _cleanup_free_ char *p = NULL;
-
-        assert(type);
-
-        /* If /sys is read-only we cannot sleep */
-        if (access("/sys/power/state", W_OK) < 0 ||
-            access("/sys/power/disk", W_OK) < 0)
-                return false;
-
-        r = read_one_line_file("/sys/power/disk", &p);
-        if (r < 0)
-                return false;
-
-        k = strlen(type);
-        FOREACH_WORD_SEPARATOR(w, l, p, WHITESPACE, state) {
-                if (l == k && memcmp(w, type, l) == 0)
-                        return true;
-
-                if (l == k + 2 && w[0] == '[' && memcmp(w + 1, type, l - 2) == 0 && w[l-1] == ']')
-                        return true;
-        }
-
-        return false;
-}
-
 bool is_valid_documentation_url(const char *url) {
         assert(url);
 
@@ -5859,4 +5805,45 @@ void* greedy_realloc(void **p, size_t *allocated, size_t need) {
         *p = q;
         *allocated = a;
         return q;
+}
+
+bool id128_is_valid(const char *s) {
+        size_t i, l;
+
+        l = strlen(s);
+        if (l == 32) {
+
+                /* Simple formatted 128bit hex string */
+
+                for (i = 0; i < l; i++) {
+                        char c = s[i];
+
+                        if (!(c >= '0' && c <= '9') &&
+                            !(c >= 'a' && c <= 'z') &&
+                            !(c >= 'A' && c <= 'Z'))
+                                return false;
+                }
+
+        } else if (l == 36) {
+
+                /* Formatted UUID */
+
+                for (i = 0; i < l; i++) {
+                        char c = s[i];
+
+                        if ((i == 8 || i == 13 || i == 18 || i == 23)) {
+                                if (c != '-')
+                                        return false;
+                        } else {
+                                if (!(c >= '0' && c <= '9') &&
+                                    !(c >= 'a' && c <= 'z') &&
+                                    !(c >= 'A' && c <= 'Z'))
+                                        return false;
+                        }
+                }
+
+        } else
+                return false;
+
+        return true;
 }

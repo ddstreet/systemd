@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.mount</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.mount</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.mount"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.mount — Mount unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>mount</code></em>.mount</code></p></div><div class="refsect1"><a name="idp3778384"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="systemd.mount"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.mount — Mount unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>mount</code></em>.mount</code></p></div><div class="refsect1"><a name="idm259770088336"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p>A unit configuration file whose name ends in
                 <code class="filename">.mount</code> encodes information about
                 a file system mount point controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -49,7 +66,7 @@
                 userspace-to-userpace interfaces. Some of them may not
                 be changed via mount units, and cannot be disabled.
                 For a longer discussion see <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/APIFileSystems" target="_top">API
-                File Systems</a>.</p></div><div class="refsect1"><a name="idp221648"></a><h2><code class="filename">/etc/fstab</code></h2><p>Mount units may either be configured via unit
+                File Systems</a>.</p></div><div class="refsect1"><a name="idm259774020688"></a><h2 id="/etc/fstab"><code class="filename">/etc/fstab</code><a class="headerlink" title="Permalink to this headline" href="#/etc/fstab">¶</a></h2><p>Mount units may either be configured via unit
                 files, or via <code class="filename">/etc/fstab</code> (see
                 <a href="fstab.html"><span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span></a>
                 for details). Mounts listed in
@@ -88,7 +105,7 @@
                 this is superseded by the rule that configuration in
                 <code class="filename">/etc</code> will always take precedence
                 over configuration in
-                <code class="filename">/usr</code>.</p></div><div class="refsect1"><a name="idp37728"></a><h2>Options</h2><p>Mount files must include a [Mount] section,
+                <code class="filename">/usr</code>.</p></div><div class="refsect1"><a name="idm259773995008"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><p>Mount files must include a [Mount] section,
                 which carries information about the file system mount points it
                 supervises. A number of options that may be used in
                 this section are shared with other unit types. These
@@ -97,7 +114,7 @@
                 and
                 <a href="systemd.kill.html"><span class="citerefentry"><span class="refentrytitle">systemd.kill</span>(5)</span></a>. The
                 options specific to the [Mount] section of mount
-                units are the following:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">What=</code></span></dt><dd><p>Takes an absolute path
+                units are the following:</p><div class="variablelist"><dl class="variablelist"><dt id="What="><span class="term"><code class="varname">What=</code></span><a class="headerlink" title="Permalink to this term" href="#What=">¶</a></dt><dd><p>Takes an absolute path
                                 of a device node, file or other
                                 resource to mount. See
                                 <a href="mount.html"><span class="citerefentry"><span class="refentrytitle">mount</span>(8)</span></a>
@@ -107,27 +124,27 @@
                                 automatically created. (See
                                 <a href="systemd.device.html"><span class="citerefentry"><span class="refentrytitle">systemd.device</span>(5)</span></a> for more information.)
                                 This option is
-                                mandatory.</p></dd><dt><span class="term"><code class="varname">Where=</code></span></dt><dd><p>Takes an absolute path
+                                mandatory.</p></dd><dt id="Where="><span class="term"><code class="varname">Where=</code></span><a class="headerlink" title="Permalink to this term" href="#Where=">¶</a></dt><dd><p>Takes an absolute path
                                 of a directory of the mount point. If
                                 the mount point does not exist at the
                                 time of mounting, it is created. This
                                 string must be reflected in the unit
                                 file name. (See above.) This option is
-                                mandatory.</p></dd><dt><span class="term"><code class="varname">Type=</code></span></dt><dd><p>Takes a string for the
+                                mandatory.</p></dd><dt id="Type="><span class="term"><code class="varname">Type=</code></span><a class="headerlink" title="Permalink to this term" href="#Type=">¶</a></dt><dd><p>Takes a string for the
                                 filesystem type. See
                                 <a href="mount.html"><span class="citerefentry"><span class="refentrytitle">mount</span>(8)</span></a>
                                 for details. This setting is
-                                optional.</p></dd><dt><span class="term"><code class="varname">Options=</code></span></dt><dd><p>Mount options to use
+                                optional.</p></dd><dt id="Options="><span class="term"><code class="varname">Options=</code></span><a class="headerlink" title="Permalink to this term" href="#Options=">¶</a></dt><dd><p>Mount options to use
                                 when mounting. This takes a comma
                                 separated list of options. This
-                                setting is optional.</p></dd><dt><span class="term"><code class="varname">DirectoryMode=</code></span></dt><dd><p>Directories of mount
+                                setting is optional.</p></dd><dt id="DirectoryMode="><span class="term"><code class="varname">DirectoryMode=</code></span><a class="headerlink" title="Permalink to this term" href="#DirectoryMode=">¶</a></dt><dd><p>Directories of mount
                                 points (and any parent directories)
                                 are automatically created if
                                 needed. This option specifies the file
                                 system access mode used when creating
                                 these directories. Takes an access
                                 mode in octal notation. Defaults to
-                                0755.</p></dd><dt><span class="term"><code class="varname">TimeoutSec=</code></span></dt><dd><p>Configures the time to
+                                0755.</p></dd><dt id="TimeoutSec="><span class="term"><code class="varname">TimeoutSec=</code></span><a class="headerlink" title="Permalink to this term" href="#TimeoutSec=">¶</a></dt><dd><p>Configures the time to
                                 wait for the mount command to
                                 finish. If a command does not exit
                                 within the configured time the mount
@@ -146,15 +163,15 @@
                 <a href="systemd.exec.html"><span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span></a>
                 and
                 <a href="systemd.kill.html"><span class="citerefentry"><span class="refentrytitle">systemd.kill</span>(5)</span></a>
-                for more settings.</p></div><div class="refsect1"><a name="idp66288"></a><h2>Compatibility Options</h2><p>The following option is also available in the
+                for more settings.</p></div><div class="refsect1"><a name="idm259769011792"></a><h2 id="Compatibility Options">Compatibility Options<a class="headerlink" title="Permalink to this headline" href="#Compatibility%20Options">¶</a></h2><p>The following option is also available in the
                 <code class="literal">[Mount]</code> section, but exists purely
                 for compatibility reasons and should not be used in
-                newly written mount files.</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">FsckPassNo=</code></span></dt><dd><p>The pass number for
+                newly written mount files.</p><div class="variablelist"><dl class="variablelist"><dt id="FsckPassNo="><span class="term"><code class="varname">FsckPassNo=</code></span><a class="headerlink" title="Permalink to this term" href="#FsckPassNo=">¶</a></dt><dd><p>The pass number for
                                 the file system checking service for
                                 this mount. See
                                 <a href="systemd.service.html"><span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span></a>
                                 for more information on this setting.
-                                </p></dd></dl></div></div><div class="refsect1"><a name="idp4752496"></a><h2>See Also</h2><p>
+                                </p></dd></dl></div></div><div class="refsect1"><a name="idm259769006752"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                           <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,

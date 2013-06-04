@@ -179,7 +179,7 @@ static int create_disk(
 
                 mkdir_parents_label(to, 0755);
                 if (symlink(from, to) < 0) {
-                        log_error("Failed to create symlink '%s' to '%s': %m", from, to);
+                        log_error("Failed to create symlink %s: %m", to);
                         return -errno;
                 }
 
@@ -193,7 +193,7 @@ static int create_disk(
 
                 mkdir_parents_label(to, 0755);
                 if (symlink(from, to) < 0) {
-                        log_error("Failed to create symlink '%s' to '%s': %m", from, to);
+                        log_error("Failed to create symlink %s: %m", to);
                         return -errno;
                 }
         }
@@ -209,7 +209,7 @@ static int create_disk(
 
         mkdir_parents_label(to, 0755);
         if (symlink(from, to) < 0) {
-                log_error("Failed to create symlink '%s' to '%s': %m", from, to);
+                log_error("Failed to create symlink %s: %m", to);
                 return -errno;
         }
 
@@ -302,7 +302,7 @@ static int parse_proc_cmdline(char ***arg_proc_cmdline_disks, char **arg_proc_cm
 
                 } else if (startswith(word, "luks.key=")) {
                         *arg_proc_cmdline_keyfile = strdup(word + 9);
-                        if (! arg_proc_cmdline_keyfile)
+                        if (!*arg_proc_cmdline_keyfile)
                                 return log_oom();
 
                 } else if (startswith(word, "rd.luks.key=")) {
@@ -311,7 +311,7 @@ static int parse_proc_cmdline(char ***arg_proc_cmdline_disks, char **arg_proc_cm
                                 if (*arg_proc_cmdline_keyfile)
                                         free(*arg_proc_cmdline_keyfile);
                                 *arg_proc_cmdline_keyfile = strdup(word + 12);
-                                if (!arg_proc_cmdline_keyfile)
+                                if (!*arg_proc_cmdline_keyfile)
                                         return log_oom();
                         }
 
@@ -328,13 +328,13 @@ static int parse_proc_cmdline(char ***arg_proc_cmdline_disks, char **arg_proc_cm
 }
 
 int main(int argc, char *argv[]) {
+        _cleanup_strv_free_ char **arg_proc_cmdline_disks_done = NULL;
+        _cleanup_strv_free_ char **arg_proc_cmdline_disks = NULL;
+        _cleanup_free_ char *arg_proc_cmdline_keyfile = NULL;
         _cleanup_fclose_ FILE *f = NULL;
         unsigned n = 0;
         int r = EXIT_SUCCESS;
         char **i;
-        _cleanup_strv_free_ char **arg_proc_cmdline_disks_done = NULL;
-        _cleanup_strv_free_ char **arg_proc_cmdline_disks = NULL;
-        _cleanup_free_ char *arg_proc_cmdline_keyfile = NULL;
 
         if (argc > 1 && argc != 4) {
                 log_error("This program takes three or no arguments.");
@@ -357,8 +357,9 @@ int main(int argc, char *argv[]) {
                 return EXIT_SUCCESS;
 
         if (arg_read_crypttab) {
-                f = fopen("/etc/crypttab", "re");
+                struct stat st;
 
+                f = fopen("/etc/crypttab", "re");
                 if (!f) {
                         if (errno == ENOENT)
                                 r = EXIT_SUCCESS;
@@ -366,7 +367,24 @@ int main(int argc, char *argv[]) {
                                 r = EXIT_FAILURE;
                                 log_error("Failed to open /etc/crypttab: %m");
                         }
-                } else for (;;) {
+
+                        goto next;
+                }
+
+                if (fstat(fileno(f), &st) < 0) {
+                        log_error("Failed to stat /etc/crypttab: %m");
+                        r = EXIT_FAILURE;
+                        goto next;
+                }
+
+                /* If we readd support for specifying passphrases
+                 * directly in crypttabe we should upgrade the warning
+                 * below, though possibly only if a passphrase is
+                 * specified directly. */
+                if (st.st_mode & 0005)
+                        log_debug("/etc/crypttab is world-readable. This is usually not a good idea.");
+
+                for (;;) {
                         char line[LINE_MAX], *l;
                         _cleanup_free_ char *name = NULL, *device = NULL, *password = NULL, *options = NULL;
                         int k;
@@ -420,6 +438,7 @@ int main(int argc, char *argv[]) {
                 }
         }
 
+next:
         STRV_FOREACH(i, arg_proc_cmdline_disks) {
                 /*
                   Generate units for those UUIDs, which were specified

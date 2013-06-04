@@ -1,4 +1,4 @@
-From 5472beac5e141fac0fca3e57592e80a458acaa73 Mon Sep 17 00:00:00 2001
+From f644883ab4bdf69168835a03339099e47818ef49 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Tue, 5 Mar 2013 04:10:06 +0100
 Subject: [PATCH 10/10] Add back support for Debian specific config files

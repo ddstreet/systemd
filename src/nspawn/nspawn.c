@@ -42,6 +42,10 @@
 #include <sys/un.h>
 #include <sys/socket.h>
 
+#ifdef HAVE_XATTR
+#include <attr/xattr.h>
+#endif
+
 #include <systemd/sd-daemon.h>
 
 #include "log.h"
@@ -172,7 +176,7 @@ static int parse_argv(int argc, char *argv[]) {
         assert(argc >= 0);
         assert(argv);
 
-        while ((c = getopt_long(argc, argv, "+hD:u:C:bj", options, NULL)) >= 0) {
+        while ((c = getopt_long(argc, argv, "+hD:u:C:bM:j", options, NULL)) >= 0) {
 
                 switch (c) {
 
@@ -221,6 +225,11 @@ static int parse_argv(int argc, char *argv[]) {
                         break;
 
                 case ARG_UUID:
+                        if (!id128_is_valid(optarg)) {
+                                log_error("Invalid UUID: %s", optarg);
+                                return -EINVAL;
+                        }
+
                         arg_uuid = optarg;
                         break;
 
@@ -492,7 +501,8 @@ static int setup_timezone(const char *dest) {
 }
 
 static int setup_resolv_conf(const char *dest) {
-        char *where;
+        char _cleanup_free_ *where = NULL;
+        _cleanup_close_ int fd = -1;
 
         assert(dest);
 
@@ -504,12 +514,18 @@ static int setup_resolv_conf(const char *dest) {
         if (!where)
                 return log_oom();
 
+        fd = open(where, O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW, 0644);
+
         /* We don't really care for the results of this really. If it
          * fails, it fails, but meh... */
-        if (mount("/etc/resolv.conf", where, "bind", MS_BIND, NULL) >= 0)
-                mount("/etc/resolv.conf", where, "bind", MS_BIND|MS_REMOUNT|MS_RDONLY, NULL);
-
-        free(where);
+        if (mount("/etc/resolv.conf", where, "bind", MS_BIND, NULL) < 0)
+                log_warning("Failed to bind mount /etc/resolv.conf: %m");
+        else
+                if (mount("/etc/resolv.conf", where, "bind",
+                          MS_BIND|MS_REMOUNT|MS_RDONLY, NULL) < 0) {
+                        log_error("Failed to remount /etc/resolv.conf readonly: %m");
+                        return -errno;
+                }
 
         return 0;
 }
@@ -914,6 +930,49 @@ static int setup_cgroup(const char *path) {
         return 0;
 }
 
+static int save_attributes(const char *cgroup, pid_t pid, const char *uuid, const char *directory) {
+#ifdef HAVE_XATTR
+        _cleanup_free_ char *path = NULL;
+        char buf[DECIMAL_STR_MAX(pid_t)];
+        int r = 0, k;
+
+        assert(cgroup);
+        assert(pid >= 0);
+        assert(arg_directory);
+
+        assert_se(snprintf(buf, sizeof(buf), "%lu", (unsigned long) pid) < (int) sizeof(buf));
+
+        r = cg_get_path(SYSTEMD_CGROUP_CONTROLLER, cgroup, NULL, &path);
+        if (r < 0) {
+                log_error("Failed to get path: %s", strerror(-r));
+                return r;
+        }
+
+        r = setxattr(path, "trusted.init_pid", buf, strlen(buf), XATTR_CREATE);
+        if (r < 0)
+                log_warning("Failed to set %s attribute on %s: %m", "trusted.init_pid", path);
+
+        if (uuid) {
+                k = setxattr(path, "trusted.machine_id", uuid, strlen(uuid), XATTR_CREATE);
+                if (k < 0) {
+                        log_warning("Failed to set %s attribute on %s: %m", "trusted.machine_id", path);
+                        if (r == 0)
+                                r = k;
+                }
+        }
+
+        k = setxattr(path, "trusted.root_directory", directory, strlen(directory), XATTR_CREATE);
+        if (k < 0) {
+                log_warning("Failed to set %s attribute on %s: %m", "trusted.root_directory", path);
+                if (r == 0)
+                        r = k;
+        }
+        return r;
+#else
+        return 0;
+#endif
+}
+
 static int drop_capabilities(void) {
         return capability_bounding_set_drop(~arg_retain, false);
 }
@@ -1163,7 +1222,7 @@ finish:
 int main(int argc, char *argv[]) {
         pid_t pid = 0;
         int r = EXIT_FAILURE, k;
-        _cleanup_free_ char *machine_root = NULL, *newcg = NULL;
+        _cleanup_free_ char *newcg = NULL;
         _cleanup_close_ int master = -1;
         int n_fd_passed;
         const char *console = NULL;
@@ -1177,9 +1236,13 @@ int main(int argc, char *argv[]) {
         log_parse_environment();
         log_open();
 
-        r = parse_argv(argc, argv);
-        if (r <= 0)
+        k = parse_argv(argc, argv);
+        if (k < 0)
                 goto finish;
+        else if (k == 0) {
+                r = EXIT_SUCCESS;
+                goto finish;
+        }
 
         if (arg_directory) {
                 char *p;
@@ -1191,7 +1254,7 @@ int main(int argc, char *argv[]) {
                 arg_directory = get_current_dir_name();
 
         if (!arg_directory) {
-                log_error("Failed to determine path");
+                log_error("Failed to determine path, please use -D.");
                 goto finish;
         }
 
@@ -1204,7 +1267,7 @@ int main(int argc, char *argv[]) {
                         goto finish;
                 }
 
-                hostname_cleanup(arg_machine);
+                hostname_cleanup(arg_machine, false);
                 if (isempty(arg_machine)) {
                         log_error("Failed to determine machine name automatically, please use -M.");
                         goto finish;
@@ -1227,7 +1290,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (path_is_os_tree(arg_directory) <= 0) {
-                log_error("Directory %s doesn't look like an OS root directory. Refusing.", arg_directory);
+                log_error("Directory %s doesn't look like an OS root directory (/etc/os-release is missing). Refusing.", arg_directory);
                 goto finish;
         }
 
@@ -1243,20 +1306,14 @@ int main(int argc, char *argv[]) {
         fdset_close_others(fds);
         log_open();
 
-        k = cg_get_machine_path(&machine_root);
+        k = cg_get_machine_path(arg_machine, &newcg);
         if (k < 0) {
                 log_error("Failed to determine machine cgroup path: %s", strerror(-k));
                 goto finish;
         }
 
-        newcg = strjoin(machine_root, "/", arg_machine, NULL);
-        if (!newcg) {
-                log_error("Failed to allocate cgroup path.");
-                goto finish;
-        }
-
-        r = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, newcg, false);
-        if (r <= 0 && r != -ENOENT) {
+        k = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, newcg, true);
+        if (k <= 0 && k != -ENOENT) {
                 log_error("Container already running.");
 
                 free(newcg);
@@ -1300,16 +1357,24 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
+        sd_notify(0, "READY=1");
+
         assert_se(sigemptyset(&mask) == 0);
         sigset_add_many(&mask, SIGCHLD, SIGWINCH, SIGTERM, SIGINT, -1);
         assert_se(sigprocmask(SIG_BLOCK, &mask, NULL) == 0);
 
         for (;;) {
                 siginfo_t status;
-                int pipefd[2];
+                int pipefd[2], pipefd2[2];
 
                 if (pipe2(pipefd, O_NONBLOCK|O_CLOEXEC) < 0) {
                         log_error("pipe2(): %m");
+                        goto finish;
+                }
+
+                if (pipe2(pipefd2, O_NONBLOCK|O_CLOEXEC) < 0) {
+                        log_error("pipe2(): %m");
+                        close_pipe(pipefd);
                         goto finish;
                 }
 
@@ -1346,6 +1411,7 @@ int main(int argc, char *argv[]) {
                         if (envp[n_env])
                                 n_env ++;
 
+                        /* Wait for the parent process to log our PID */
                         close_nointr_nofail(pipefd[1]);
                         fd_wait_for_event(pipefd[0], POLLHUP, -1);
                         close_nointr_nofail(pipefd[0]);
@@ -1401,6 +1467,8 @@ int main(int argc, char *argv[]) {
 
                         if (setup_cgroup(newcg) < 0)
                                 goto child_fail;
+
+                        close_pipe(pipefd2);
 
                         /* Mark everything as slave, so that we still
                          * receive mounts from the real root, but don't
@@ -1610,6 +1678,13 @@ int main(int argc, char *argv[]) {
                 close_nointr_nofail(pipefd[0]);
                 close_nointr_nofail(pipefd[1]);
 
+                /* Wait for the child process to establish cgroup hierarchy */
+                close_nointr_nofail(pipefd2[1]);
+                fd_wait_for_event(pipefd2[0], POLLHUP, -1);
+                close_nointr_nofail(pipefd2[0]);
+
+                save_attributes(newcg, pid, arg_uuid, arg_directory);
+
                 fdset_free(fds);
                 fds = NULL;
 
@@ -1619,16 +1694,16 @@ int main(int argc, char *argv[]) {
                 if (saved_attr_valid)
                         tcsetattr(STDIN_FILENO, TCSANOW, &saved_attr);
 
-                r = wait_for_terminate(pid, &status);
-                if (r < 0) {
+                k = wait_for_terminate(pid, &status);
+                if (k < 0) {
                         r = EXIT_FAILURE;
                         break;
                 }
 
                 if (status.si_code == CLD_EXITED) {
+                        r = status.si_status;
                         if (status.si_status != 0) {
                                 log_error("Container failed with error code %i.", status.si_status);
-                                r = status.si_status;
                                 break;
                         }
 
