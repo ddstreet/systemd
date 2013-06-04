@@ -3,9 +3,9 @@ Author: Martin Pitt <martin.pitt@ubuntu.com>
 
 Index: systemd/Makefile.am
 ===================================================================
---- systemd.orig/Makefile.am	2013-05-13 09:16:03.109475363 +0200
-+++ systemd/Makefile.am	2013-05-13 09:17:18.477479011 +0200
-@@ -1088,16 +1088,12 @@
+--- systemd.orig/Makefile.am	2013-06-04 08:12:21.664343178 +0200
++++ systemd/Makefile.am	2013-06-04 08:12:21.660343178 +0200
+@@ -1095,16 +1095,12 @@
  	test-strv \
  	test-path-util \
  	test-strxcpyx \
@@ -21,8 +21,8 @@ Index: systemd/Makefile.am
 -	test-cgroup-util \
  	test-prioq \
  	test-fileio \
- 	test-time
-@@ -2850,10 +2846,9 @@
+ 	test-time \
+@@ -2864,10 +2860,9 @@
  	test-journal-send \
  	test-journal-syslog \
  	test-journal-match \

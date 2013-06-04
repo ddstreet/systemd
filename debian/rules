@@ -179,7 +179,7 @@ override_dh_installinit:
 	dh_installinit --upstart-only --name=udevtrigger --no-start
 	dh_installinit --upstart-only --name=udevmonitor --no-start
 	dh_installinit --upstart-only --name=udev-fallback-graphics --no-start
-	dh_installinit --name systemd-logind --upstart-only
+	dh_installinit --upstart-only --name systemd-logind --no-start
 
 autoreconf:
 	cp -f /usr/share/gtk-doc/data/gtk-doc.make docs/

@@ -949,7 +949,7 @@ bool unit_condition_test(Unit *u) {
         return u->condition_result;
 }
 
-static const char* unit_get_status_message_format(Unit *u, JobType t) {
+_pure_ static const char* unit_get_status_message_format(Unit *u, JobType t) {
         const UnitStatusMessageFormats *format_table;
 
         assert(u);
@@ -966,7 +966,7 @@ static const char* unit_get_status_message_format(Unit *u, JobType t) {
         return format_table->starting_stopping[t == JOB_STOP];
 }
 
-static const char *unit_get_status_message_format_try_harder(Unit *u, JobType t) {
+_pure_ static const char *unit_get_status_message_format_try_harder(Unit *u, JobType t) {
         const char *format;
 
         assert(u);
@@ -1206,19 +1206,19 @@ static void unit_check_unneeded(Unit *u) {
                 return;
 
         SET_FOREACH(other, u->dependencies[UNIT_REQUIRED_BY], i)
-                if (unit_pending_active(other))
+                if (unit_active_or_pending(other))
                         return;
 
         SET_FOREACH(other, u->dependencies[UNIT_REQUIRED_BY_OVERRIDABLE], i)
-                if (unit_pending_active(other))
+                if (unit_active_or_pending(other))
                         return;
 
         SET_FOREACH(other, u->dependencies[UNIT_WANTED_BY], i)
-                if (unit_pending_active(other))
+                if (unit_active_or_pending(other))
                         return;
 
         SET_FOREACH(other, u->dependencies[UNIT_BOUND_BY], i)
-                if (unit_pending_active(other))
+                if (unit_active_or_pending(other))
                         return;
 
         log_info_unit(u->id, "Service %s is not needed anymore. Stopping.", u->id);
@@ -1304,7 +1304,7 @@ static void check_unneeded_dependencies(Unit *u) {
                         unit_check_unneeded(other);
 }
 
-void unit_trigger_on_failure(Unit *u) {
+void unit_start_on_failure(Unit *u) {
         Unit *other;
         Iterator i;
 
@@ -1322,6 +1322,17 @@ void unit_trigger_on_failure(Unit *u) {
                 if (r < 0)
                         log_error_unit(u->id, "Failed to enqueue OnFailure= job: %s", strerror(-r));
         }
+}
+
+void unit_trigger_notify(Unit *u) {
+        Unit *other;
+        Iterator i;
+
+        assert(u);
+
+        SET_FOREACH(other, u->dependencies[UNIT_TRIGGERED_BY], i)
+                if (UNIT_VTABLE(other)->trigger_notify)
+                        UNIT_VTABLE(other)->trigger_notify(other, u);
 }
 
 void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success) {
@@ -1354,9 +1365,6 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                         u->active_enter_timestamp = ts;
                 else if (UNIT_IS_ACTIVE_OR_RELOADING(os) && !UNIT_IS_ACTIVE_OR_RELOADING(ns))
                         u->active_exit_timestamp = ts;
-
-                timer_unit_notify(u, ns);
-                path_unit_notify(u, ns);
         }
 
         if (UNIT_IS_INACTIVE_OR_FAILED(ns))
@@ -1460,8 +1468,8 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
 
                 if (ns != os && ns == UNIT_FAILED) {
                         log_notice_unit(u->id,
-                                        "MESSAGE=Unit %s entered failed state.", u->id);
-                        unit_trigger_on_failure(u);
+                                        "Unit %s entered failed state.", u->id);
+                        unit_start_on_failure(u);
                 }
         }
 
@@ -1512,6 +1520,7 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
         }
 
         manager_recheck_journal(m);
+        unit_trigger_notify(u);
 
         /* Maybe we finished startup and are now ready for being
          * stopped because unneeded? */
@@ -1810,14 +1819,13 @@ static const char *resolve_template(Unit *u, const char *name, const char*path, 
         if (u->instance)
                 s = unit_name_replace_instance(name, u->instance);
         else {
-                char *i;
+                _cleanup_free_ char *i = NULL;
 
                 i = unit_name_to_prefix(u->id);
                 if (!i)
                         return NULL;
 
                 s = unit_name_replace_instance(name, i);
-                free(i);
         }
 
         if (!s)
@@ -1930,7 +1938,7 @@ char *unit_dbus_path(Unit *u) {
         return unit_dbus_path_from_name(u->id);
 }
 
-int unit_add_cgroup(Unit *u, CGroupBonding *b) {
+static int unit_add_cgroup(Unit *u, CGroupBonding *b) {
         int r;
 
         assert(u);
@@ -1969,18 +1977,28 @@ int unit_add_cgroup(Unit *u, CGroupBonding *b) {
 }
 
 char *unit_default_cgroup_path(Unit *u) {
+        _cleanup_free_ char *escaped_instance = NULL;
+
         assert(u);
 
+        escaped_instance = cg_escape(u->id);
+        if (!escaped_instance)
+                return NULL;
+
         if (u->instance) {
-                _cleanup_free_ char *t = NULL;
+                _cleanup_free_ char *t = NULL, *escaped_template = NULL;
 
                 t = unit_name_template(u->id);
                 if (!t)
                         return NULL;
 
-                return strjoin(u->manager->cgroup_hierarchy, "/", t, "/", u->instance, NULL);
+                escaped_template = cg_escape(t);
+                if (!escaped_template)
+                        return NULL;
+
+                return strjoin(u->manager->cgroup_hierarchy, "/", escaped_template, "/", escaped_instance, NULL);
         } else
-                return strjoin(u->manager->cgroup_hierarchy, "/", u->id, NULL);
+                return strjoin(u->manager->cgroup_hierarchy, "/", escaped_instance, NULL);
 }
 
 int unit_add_cgroup_from_text(Unit *u, const char *name, bool overwrite, CGroupBonding **ret) {
@@ -2002,7 +2020,7 @@ int unit_add_cgroup_from_text(Unit *u, const char *name, bool overwrite, CGroupB
         }
 
         if (!controller) {
-                controller = strdup(SYSTEMD_CGROUP_CONTROLLER);
+                controller = strdup("systemd");
                 ours = true;
         }
 
@@ -2010,6 +2028,16 @@ int unit_add_cgroup_from_text(Unit *u, const char *name, bool overwrite, CGroupB
                 free(path);
                 free(controller);
                 return log_oom();
+        }
+
+        if (streq(controller, "systemd")) {
+                /* Within the systemd unit hierarchy we do not allow changes. */
+                if (path_startswith(path, "/system")) {
+                        log_warning_unit(u->id, "Manipulating the systemd:/system cgroup hierarchy is not permitted.");
+                        free(path);
+                        free(controller);
+                        return -EPERM;
+                }
         }
 
         b = cgroup_bonding_find_list(u->cgroup_bondings, controller);
@@ -2076,6 +2104,9 @@ static int unit_add_one_default_cgroup(Unit *u, const char *controller) {
         int r = -ENOMEM;
 
         assert(u);
+
+        if (controller && !cg_controller_is_valid(controller, true))
+                return -EINVAL;
 
         if (!controller)
                 controller = SYSTEMD_CGROUP_CONTROLLER;
@@ -2179,13 +2210,15 @@ int unit_add_cgroup_attribute(
                 controller = c;
         }
 
-        if (!controller || streq(controller, SYSTEMD_CGROUP_CONTROLLER))
+        if (!controller ||
+            streq(controller, SYSTEMD_CGROUP_CONTROLLER) ||
+            streq(controller, "systemd"))
                 return -EINVAL;
 
         if (!filename_is_safe(name))
                 return -EINVAL;
 
-        if (!filename_is_safe(controller))
+        if (!cg_controller_is_valid(controller, false))
                 return -EINVAL;
 
         /* Check if this attribute already exists. Note that we will
@@ -2253,42 +2286,39 @@ int unit_add_cgroup_attribute(
 }
 
 int unit_load_related_unit(Unit *u, const char *type, Unit **_found) {
-        char *t;
+        _cleanup_free_ char *t = NULL;
         int r;
 
         assert(u);
         assert(type);
         assert(_found);
 
-        if (!(t = unit_name_change_suffix(u->id, type)))
+        t = unit_name_change_suffix(u->id, type);
+        if (!t)
                 return -ENOMEM;
 
         assert(!unit_has_name(u, t));
 
         r = manager_load_unit(u->manager, t, NULL, NULL, _found);
-        free(t);
-
         assert(r < 0 || *_found != u);
-
         return r;
 }
 
 int unit_get_related_unit(Unit *u, const char *type, Unit **_found) {
+        _cleanup_free_ char *t = NULL;
         Unit *found;
-        char *t;
 
         assert(u);
         assert(type);
         assert(_found);
 
-        if (!(t = unit_name_change_suffix(u->id, type)))
+        t = unit_name_change_suffix(u->id, type);
+        if (!t)
                 return -ENOMEM;
 
         assert(!unit_has_name(u, t));
 
         found = manager_get_unit(u->manager, t);
-        free(t);
-
         if (!found)
                 return -ENOENT;
 
@@ -2551,9 +2581,12 @@ int unit_coldplug(Unit *u) {
         return 0;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
 void unit_status_printf(Unit *u, const char *status, const char *unit_status_msg_format) {
         manager_status_printf(u->manager, false, status, unit_status_msg_format, unit_description(u));
 }
+#pragma GCC diagnostic pop
 
 bool unit_need_daemon_reload(Unit *u) {
         _cleanup_strv_free_ char **t = NULL;
@@ -2626,7 +2659,19 @@ Unit *unit_following(Unit *u) {
         return NULL;
 }
 
-bool unit_pending_inactive(Unit *u) {
+bool unit_stop_pending(Unit *u) {
+        assert(u);
+
+        /* This call does check the current state of the unit. It's
+         * hence useful to be called from state change calls of the
+         * unit itself, where the state isn't updated yet. This is
+         * different from unit_inactive_or_pending() which checks both
+         * the current state and for a queued job. */
+
+        return u->job && u->job->type == JOB_STOP;
+}
+
+bool unit_inactive_or_pending(Unit *u) {
         assert(u);
 
         /* Returns true if the unit is inactive or going down */
@@ -2634,13 +2679,13 @@ bool unit_pending_inactive(Unit *u) {
         if (UNIT_IS_INACTIVE_OR_DEACTIVATING(unit_active_state(u)))
                 return true;
 
-        if (u->job && u->job->type == JOB_STOP)
+        if (unit_stop_pending(u))
                 return true;
 
         return false;
 }
 
-bool unit_pending_active(Unit *u) {
+bool unit_active_or_pending(Unit *u) {
         assert(u);
 
         /* Returns true if the unit is active or going up */

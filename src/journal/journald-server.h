@@ -130,20 +130,20 @@ typedef struct Server {
 #define N_IOVEC_UDEV_FIELDS 32
 
 void server_dispatch_message(Server *s, struct iovec *iovec, unsigned n, unsigned m, struct ucred *ucred, struct timeval *tv, const char *label, size_t label_len, const char *unit_id, int priority);
-void server_driver_message(Server *s, sd_id128_t message_id, const char *format, ...);
+void server_driver_message(Server *s, sd_id128_t message_id, const char *format, ...) _printf_attr_(3,4);
 
 /* gperf lookup function */
 const struct ConfigPerfItem* journald_gperf_lookup(const char *key, unsigned length);
 
 int config_parse_storage(const char *unit, const char *filename, unsigned line, const char *section, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 
-const char *storage_to_string(Storage s);
-Storage storage_from_string(const char *s);
+const char *storage_to_string(Storage s) _const_;
+Storage storage_from_string(const char *s) _pure_;
 
 int config_parse_split_mode(const char *unit, const char *filename, unsigned line, const char *section, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 
-const char *split_mode_to_string(SplitMode s);
-SplitMode split_mode_from_string(const char *s);
+const char *split_mode_to_string(SplitMode s) _const_;
+SplitMode split_mode_from_string(const char *s) _pure_;
 
 void server_fix_perms(Server *s, JournalFile *f, uid_t uid);
 bool shall_try_append_again(JournalFile *f, int r);

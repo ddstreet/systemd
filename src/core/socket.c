@@ -28,7 +28,7 @@
 #include <signal.h>
 #include <arpa/inet.h>
 #include <mqueue.h>
-#ifdef HAVE_ATTR_XATTR_H
+#ifdef HAVE_XATTR
 #include <attr/xattr.h>
 #endif
 
@@ -344,7 +344,7 @@ static int socket_add_default_dependencies(Socket *s) {
         return unit_add_two_dependencies_by_name(UNIT(s), UNIT_BEFORE, UNIT_CONFLICTS, SPECIAL_SHUTDOWN_TARGET, NULL, true);
 }
 
-static bool socket_has_exec(Socket *s) {
+_pure_ static bool socket_has_exec(Socket *s) {
         unsigned i;
         assert(s);
 
@@ -410,7 +410,7 @@ static int socket_load(Unit *u) {
         return socket_verify(s);
 }
 
-static const char* listen_lookup(int family, int type) {
+_const_ static const char* listen_lookup(int family, int type) {
 
         if (family == AF_NETLINK)
                 return "ListenNetlink";
@@ -788,7 +788,7 @@ static void socket_apply_socket_options(Socket *s, int fd) {
                 if (setsockopt(fd, SOL_TCP, TCP_CONGESTION, s->tcp_congestion, strlen(s->tcp_congestion)+1) < 0)
                         log_warning_unit(UNIT(s)->id, "TCP_CONGESTION failed: %m");
 
-#ifdef HAVE_ATTR_XATTR_H
+#ifdef HAVE_XATTR
         if (s->smack_ip_in)
                 if (fsetxattr(fd, "security.SMACK64IPIN", s->smack_ip_in, strlen(s->smack_ip_in), 0) < 0)
                         log_error_unit(UNIT(s)->id,
@@ -810,7 +810,7 @@ static void socket_apply_fifo_options(Socket *s, int fd) {
                         log_warning_unit(UNIT(s)->id,
                                          "F_SETPIPE_SZ: %m");
 
-#ifdef HAVE_ATTR_XATTR_H
+#ifdef HAVE_XATTR
         if (s->smack)
                 if (fsetxattr(fd, "security.SMACK64", s->smack, strlen(s->smack), 0) < 0)
                         log_error_unit(UNIT(s)->id,
@@ -1447,7 +1447,7 @@ static void socket_enter_running(Socket *s, int cfd) {
 
         /* We don't take connections anymore if we are supposed to
          * shut down anyway */
-        if (unit_pending_inactive(UNIT(s))) {
+        if (unit_stop_pending(UNIT(s))) {
                 log_debug_unit(UNIT(s)->id,
                                "Suppressing connection request on %s since unit stop is scheduled.",
                                UNIT(s)->id);
@@ -1478,7 +1478,7 @@ static void socket_enter_running(Socket *s, int cfd) {
                 /* If there's already a start pending don't bother to
                  * do anything */
                 SET_FOREACH(u, UNIT(s)->dependencies[UNIT_TRIGGERS], i)
-                        if (unit_pending_active(u)) {
+                        if (unit_active_or_pending(u)) {
                                 pending = true;
                                 break;
                         }
@@ -1957,13 +1957,13 @@ static int socket_distribute_fds(Unit *u, FDSet *fds) {
         return 0;
 }
 
-static UnitActiveState socket_active_state(Unit *u) {
+_pure_ static UnitActiveState socket_active_state(Unit *u) {
         assert(u);
 
         return state_translation_table[SOCKET(u)->state];
 }
 
-static const char *socket_sub_state_to_string(Unit *u) {
+_pure_ static const char *socket_sub_state_to_string(Unit *u) {
         assert(u);
 
         return socket_state_to_string(SOCKET(u)->state);
@@ -1991,7 +1991,7 @@ const char* socket_port_type_to_string(SocketPort *p) {
         }
 }
 
-static bool socket_check_gc(Unit *u) {
+_pure_ static bool socket_check_gc(Unit *u) {
         Socket *s = SOCKET(u);
 
         assert(u);

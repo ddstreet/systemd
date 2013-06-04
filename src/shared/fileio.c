@@ -24,16 +24,8 @@
 #include "util.h"
 #include "strv.h"
 
-int write_string_file(const char *fn, const char *line) {
-        _cleanup_fclose_ FILE *f = NULL;
 
-        assert(fn);
-        assert(line);
-
-        f = fopen(fn, "we");
-        if (!f)
-                return -errno;
-
+int write_string_to_file(FILE *f, const char *line) {
         errno = 0;
         fputs(line, f);
         if (!endswith(line, "\n"))
@@ -45,6 +37,19 @@ int write_string_file(const char *fn, const char *line) {
                 return errno ? -errno : -EIO;
 
         return 0;
+}
+
+int write_string_file(const char *fn, const char *line) {
+        _cleanup_fclose_ FILE *f = NULL;
+
+        assert(fn);
+        assert(line);
+
+        f = fopen(fn, "we");
+        if (!f)
+                return -errno;
+
+        return write_string_to_file(f, line);
 }
 
 int write_string_file_atomic(const char *fn, const char *line) {
@@ -177,7 +182,7 @@ static int parse_env_file_internal(
                 void *userdata) {
 
         _cleanup_free_ char *contents = NULL, *key = NULL;
-        size_t key_alloc = 0, n_key = 0, value_alloc = 0, n_value = 0, last_whitespace = (size_t) -1;
+        size_t key_alloc = 0, n_key = 0, value_alloc = 0, n_value = 0, last_value_whitespace = (size_t) -1, last_key_whitespace = (size_t) -1;
         char *p, *value = NULL;
         int r;
 
@@ -212,6 +217,8 @@ static int parse_env_file_internal(
                                 state = COMMENT;
                         else if (!strchr(WHITESPACE, c)) {
                                 state = KEY;
+                                last_key_whitespace = (size_t) -1;
+
                                 if (!greedy_realloc((void**) &key, &key_alloc, n_key+2)) {
                                         r = -ENOMEM;
                                         goto fail;
@@ -225,9 +232,15 @@ static int parse_env_file_internal(
                         if (strchr(newline, c)) {
                                 state = PRE_KEY;
                                 n_key = 0;
-                        } else if (c == '=')
+                        } else if (c == '=') {
                                 state = PRE_VALUE;
-                        else {
+                                last_value_whitespace = (size_t) -1;
+                        } else {
+                                if (!strchr(WHITESPACE, c))
+                                        last_key_whitespace = (size_t) -1;
+                                else if (last_key_whitespace == (size_t) -1)
+                                         last_key_whitespace = n_key;
+
                                 if (!greedy_realloc((void**) &key, &key_alloc, n_key+2)) {
                                         r = -ENOMEM;
                                         goto fail;
@@ -247,8 +260,8 @@ static int parse_env_file_internal(
                                         value[n_value] = 0;
 
                                 /* strip trailing whitespace from key */
-                                while(n_key && strchr(WHITESPACE, key[--n_key]))
-                                        key[n_key]=0;
+                                if (last_key_whitespace != (size_t) -1)
+                                        key[last_key_whitespace] = 0;
 
                                 r = push(key, value, userdata);
                                 if (r < 0)
@@ -257,6 +270,7 @@ static int parse_env_file_internal(
                                 n_key = 0;
                                 value = NULL;
                                 value_alloc = n_value = 0;
+
                         } else if (c == '\'')
                                 state = SINGLE_QUOTE_VALUE;
                         else if (c == '\"')
@@ -285,13 +299,13 @@ static int parse_env_file_internal(
                                 if (value)
                                         value[n_value] = 0;
 
-                                /* Chomp off trailing whitespace */
-                                if (last_whitespace != (size_t) -1)
-                                        value[last_whitespace] = 0;
+                                /* Chomp off trailing whitespace from value */
+                                if (last_value_whitespace != (size_t) -1)
+                                        value[last_value_whitespace] = 0;
 
                                 /* strip trailing whitespace from key */
-                                while(n_key && strchr(WHITESPACE, key[--n_key]))
-                                        key[n_key]=0;
+                                if (last_key_whitespace != (size_t) -1)
+                                        key[last_key_whitespace] = 0;
 
                                 r = push(key, value, userdata);
                                 if (r < 0)
@@ -300,14 +314,15 @@ static int parse_env_file_internal(
                                 n_key = 0;
                                 value = NULL;
                                 value_alloc = n_value = 0;
+
                         } else if (c == '\\') {
                                 state = VALUE_ESCAPE;
-                                last_whitespace = (size_t) -1;
+                                last_value_whitespace = (size_t) -1;
                         } else {
                                 if (!strchr(WHITESPACE, c))
-                                        last_whitespace = (size_t) -1;
-                                else if (last_whitespace == (size_t) -1)
-                                        last_whitespace = n_value;
+                                        last_value_whitespace = (size_t) -1;
+                                else if (last_value_whitespace == (size_t) -1)
+                                        last_value_whitespace = n_value;
 
                                 if (!greedy_realloc((void**) &value, &value_alloc, n_value+2)) {
                                         r = -ENOMEM;
@@ -417,9 +432,13 @@ static int parse_env_file_internal(
                 if (value)
                         value[n_value] = 0;
 
+                if (state == VALUE)
+                        if (last_value_whitespace != (size_t) -1)
+                                value[last_value_whitespace] = 0;
+
                 /* strip trailing whitespace from key */
-                while(n_key && strchr(WHITESPACE, key[--n_key]))
-                        key[n_key]=0;
+                if (last_key_whitespace != (size_t) -1)
+                        key[last_key_whitespace] = 0;
 
                 r = push(key, value, userdata);
                 if (r < 0)

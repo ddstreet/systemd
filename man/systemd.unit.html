@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.unit</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.unit</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.unit"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.unit — Unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="systemd.unit"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.unit — Unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
                 <code class="filename"><em class="replaceable"><code>socket</code></em>.socket</code>,
                 <code class="filename"><em class="replaceable"><code>device</code></em>.device</code>,
                 <code class="filename"><em class="replaceable"><code>mount</code></em>.mount</code>,
@@ -19,7 +36,7 @@
 <code class="filename">/run/systemd/user/*</code><br>
 <code class="filename">/usr/lib/systemd/user/*</code><br>
 <code class="filename">...</code><br>
-                </p></div></div><div class="refsect1"><a name="idp30352"></a><h2>Description</h2><p>A unit configuration file encodes information
+                </p></div></div><div class="refsect1"><a name="idm259770089184"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p>A unit configuration file encodes information
                 about a service, a socket, a device, a mount point, an
                 automount point, a swap file or partition, a start-up
                 target, a file system path, or a timer controlled and
@@ -147,39 +164,35 @@
                 fully disable a unit, making it impossible to start it
                 even manually.</p><p>The unit file format is covered by the
                 <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise" target="_top">Interface
-                Stability Promise</a>.</p></div><div class="refsect1"><a name="idp5024288"></a><h2>Unit load path</h2><p>Unit files are loaded from a set of paths
+                Stability Promise</a>.</p></div><div class="refsect1"><a name="idm259770239584"></a><h2 id="Unit Load Path">Unit Load Path<a class="headerlink" title="Permalink to this headline" href="#Unit%20Load%20Path">¶</a></h2><p>Unit files are loaded from a set of paths
                 determined during compilation, described in the two
                 tables below. Unit files found in directories higher
                 in the hierarchy override files with the same name
                 lower in the hierarchy, thus allowing overrides.
-                </p><p>When systemd is running in session mode
+                </p><p>When systemd is running in user mode
                 (<code class="option">--user</code>) and the variable
                 <code class="varname">$SYSTEMD_UNIT_PATH</code> is set, this
                 contents of this variable overrides the unit load
                 path.
-                </p><div class="table"><a name="idp5026928"></a><p class="title"><b>Table 1. 
+                </p><div class="table"><a name="idm259770236848"></a><p class="title"><b>Table 1. 
                     Load path when running in system mode (<code class="option">--system</code>).
                   </b></p><div class="table-contents"><table summary="
                     Load path when running in system mode (--system).
-                  " border="1"><colgroup><col class="path"><col class="expl"></colgroup><thead><tr><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code class="filename">/run/systemd/generator.early</code></td><td>Generated units</td></tr><tr><td><code class="filename">/etc/systemd/system</code></td><td rowspan="2">Local configuration</td></tr><tr><td><code class="filename">/etc/systemd/system</code></td></tr><tr><td><code class="filename">/run/systemd/systemd</code></td><td>Volatile units</td></tr><tr><td><code class="filename">/run/systemd/generator</code></td><td>Generated units</td></tr><tr><td><code class="filename">/usr/local/lib/systemd/system</code></td><td>Units for local packages</td></tr><tr><td><code class="filename">/usr/lib/systemd/system</code></td><td>Systemd package configuration</td></tr><tr><td><code class="filename">/usr/lib/systemd/system</code></td><td rowspan="2">Units for installed packages</td></tr><tr><td><code class="filename">/lib/systemd/system</code></td></tr><tr><td><code class="filename">/run/systemd/generator.late</code></td><td>Generated units</td></tr></tbody></table></div></div><br class="table-break"><div class="table"><a name="idp5047792"></a><p class="title"><b>Table 2. 
+                  " border="1"><colgroup><col class="path"><col class="expl"></colgroup><thead><tr><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code class="filename">/run/systemd/generator.early</code></td><td>Generated units (early)</td></tr><tr><td><code class="filename">/etc/systemd/system</code></td><td>Local configuration</td></tr><tr><td><code class="filename">/run/systemd/systemd</code></td><td>Volatile units</td></tr><tr><td><code class="filename">/run/systemd/generator</code></td><td>Generated units (middle)</td></tr><tr><td><code class="filename">/usr/local/lib/systemd/system</code></td><td>Units for local packages</td></tr><tr><td><code class="filename">/usr/lib/systemd/system</code></td><td>Units for installed packages</td></tr><tr><td><code class="filename">/run/systemd/generator.late</code></td><td>Generated units (late)</td></tr></tbody></table></div></div><br class="table-break"><div class="table"><a name="idm259770220320"></a><p class="title"><b>Table 2. 
                     Load path when running in session mode (<code class="option">--user</code>).
                   </b></p><div class="table-contents"><table summary="
                     Load path when running in session mode (--user).
-                  " border="1"><colgroup><col class="path"><col class="expl"></colgroup><thead><tr><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code class="filename">/tmp/systemd-generator.early.<em class="replaceable"><code>XXXXXX</code></em></code></td><td>Generated units</td></tr><tr><td><code class="filename">/etc/systemd/user</code></td><td rowspan="2">Local configuration</td></tr><tr><td><code class="filename">/etc/systemd/user</code></td></tr><tr><td><code class="filename">/run/systemd/user</code></td><td>Volatile units</td></tr><tr><td><code class="filename">/tmp/systemd-generator.<em class="replaceable"><code>XXXXXX</code></em></code></td><td>Generated units</td></tr><tr><td><code class="filename">/usr/local/lib/systemd/user</code></td><td rowspan="2">Units for local packages</td></tr><tr><td><code class="filename">/usr/local/share/systemd/user</code></td></tr><tr><td><code class="filename">/usr/lib/systemd/user</code></td><td>Systemd package configuration</td></tr><tr><td><code class="filename">/usr/lib/systemd/user</code></td><td rowspan="2">Units for installed packages</td></tr><tr><td><code class="filename">/usr/share/systemd/user</code></td></tr><tr><td><code class="filename">/tmp/systemd-generator.late.<em class="replaceable"><code>XXXXXX</code></em></code></td><td>Generated units</td></tr></tbody></table></div></div><br class="table-break"><p>Note: the paths listed above are set at
-                compilation time and differ between distributions. The
-                "authoritative" list is printed by
-                <span class="command"><strong>systemd</strong></span> at during start and daemon
-                reconfiguration.</p><p>Additional units might be loaded into systemd
+                  " border="1"><colgroup><col class="path"><col class="expl"></colgroup><thead><tr><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code class="filename">/tmp/systemd-generator.early.<em class="replaceable"><code>XXXXXX</code></em></code></td><td>Generated units (early)</td></tr><tr><td><code class="filename">/etc/systemd/user</code></td><td>Local configuration</td></tr><tr><td><code class="filename">/run/systemd/user</code></td><td>Volatile units</td></tr><tr><td><code class="filename">/tmp/systemd-generator.<em class="replaceable"><code>XXXXXX</code></em></code></td><td>Generated units (middle)</td></tr><tr><td><code class="filename">/usr/local/lib/systemd/user</code></td><td>Units for local packages</td></tr><tr><td><code class="filename">/usr/lib/systemd/user</code></td><td>Units for installed packages</td></tr><tr><td><code class="filename">/tmp/systemd-generator.late.<em class="replaceable"><code>XXXXXX</code></em></code></td><td>Generated units (late)</td></tr></tbody></table></div></div><br class="table-break"><p>Additional units might be loaded into systemd
                 ("linked") from directories not on the unit load
                 path. See the <span class="command"><strong>link</strong></span> command for
                 <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>.
-                </p></div><div class="refsect1"><a name="idp5073888"></a><h2>Options</h2><p>Unit file may include a [Unit] section, which
+                </p></div><div class="refsect1"><a name="idm259765544848"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><p>Unit file may include a [Unit] section, which
                 carries generic information about the unit that is not
-                dependent on the type of unit:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">Description=</code></span></dt><dd><p>A free-form string
+                dependent on the type of unit:</p><div class="variablelist"><dl class="variablelist"><dt id="Description="><span class="term"><code class="varname">Description=</code></span><a class="headerlink" title="Permalink to this term" href="#Description=">¶</a></dt><dd><p>A free-form string
                                 describing the unit. This is intended
                                 for use in UIs to show descriptive
                                 information along with the unit
-                                name.</p></dd><dt><span class="term"><code class="varname">Documentation=</code></span></dt><dd><p>A space separated list
+                                name.</p></dd><dt id="Documentation="><span class="term"><code class="varname">Documentation=</code></span><a class="headerlink" title="Permalink to this term" href="#Documentation=">¶</a></dt><dd><p>A space separated list
                                 of URIs referencing documentation for
                                 this unit or its
                                 configuration. Accepted are only URIs
@@ -204,7 +217,7 @@
                                 URIs is merged. If the empty string is
                                 assigned to this option the list is
                                 reset and all prior assignments will
-                                have no effect.</p></dd><dt><span class="term"><code class="varname">Requires=</code></span></dt><dd><p>Configures requirement
+                                have no effect.</p></dd><dt id="Requires="><span class="term"><code class="varname">Requires=</code></span><a class="headerlink" title="Permalink to this term" href="#Requires=">¶</a></dt><dd><p>Configures requirement
                                 dependencies on other units. If this
                                 unit gets activated, the units listed
                                 here will be activated as well. If one
@@ -244,7 +257,7 @@
                                 adding a symlink to a
                                 <code class="filename">.requires/</code> directory
                                 accompanying the unit file. For
-                                details see above.</p></dd><dt><span class="term"><code class="varname">RequiresOverridable=</code></span></dt><dd><p>Similar to
+                                details see above.</p></dd><dt id="RequiresOverridable="><span class="term"><code class="varname">RequiresOverridable=</code></span><a class="headerlink" title="Permalink to this term" href="#RequiresOverridable=">¶</a></dt><dd><p>Similar to
                                 <code class="varname">Requires=</code>.
                                 Dependencies listed in
                                 <code class="varname">RequiresOverridable=</code>
@@ -261,13 +274,13 @@
                                 that are normally honored unless the
                                 user explicitly starts up the unit, in
                                 which case whether they failed or not
-                                is irrelevant.</p></dd><dt><span class="term"><code class="varname">Requisite=</code>, </span><span class="term"><code class="varname">RequisiteOverridable=</code></span></dt><dd><p>Similar to
+                                is irrelevant.</p></dd><dt id="Requisite="><span class="term"><code class="varname">Requisite=</code>, </span><span class="term"><code class="varname">RequisiteOverridable=</code></span><a class="headerlink" title="Permalink to this term" href="#Requisite=">¶</a></dt><dd><p>Similar to
                                 <code class="varname">Requires=</code>
                                 and <code class="varname">RequiresOverridable=</code>, respectively. However,
                                 if a unit listed here is not started
                                 already it will not be started and the
                                 transaction fails
-                                immediately.</p></dd><dt><span class="term"><code class="varname">Wants=</code></span></dt><dd><p>A weaker version of
+                                immediately.</p></dd><dt id="Wants="><span class="term"><code class="varname">Wants=</code></span><a class="headerlink" title="Permalink to this term" href="#Wants=">¶</a></dt><dd><p>A weaker version of
                                 <code class="varname">Requires=</code>. A unit
                                 listed in this option will be started
                                 if the configuring unit is. However,
@@ -283,7 +296,7 @@
                                 adding a symlink to a
                                 <code class="filename">.wants/</code> directory
                                 accompanying the unit file. For
-                                details see above.</p></dd><dt><span class="term"><code class="varname">BindsTo=</code></span></dt><dd><p>Configures requirement
+                                details see above.</p></dd><dt id="BindsTo="><span class="term"><code class="varname">BindsTo=</code></span><a class="headerlink" title="Permalink to this term" href="#BindsTo=">¶</a></dt><dd><p>Configures requirement
                                 dependencies, very similar in style to
                                 <code class="varname">Requires=</code>, however
                                 in addition to this behavior it also
@@ -294,7 +307,7 @@
                                 terminates on its own choice, a device
                                 is unplugged or a mount point
                                 unmounted without involvement of
-                                systemd.</p></dd><dt><span class="term"><code class="varname">PartOf=</code></span></dt><dd><p>Configures dependencies
+                                systemd.</p></dd><dt id="PartOf="><span class="term"><code class="varname">PartOf=</code></span><a class="headerlink" title="Permalink to this term" href="#PartOf=">¶</a></dt><dd><p>Configures dependencies
                                 similar to <code class="varname">Requires=</code>,
                                 but limited to stopping and restarting
                                 of units. When systemd stops or restarts
@@ -303,7 +316,7 @@
                                 Note that this is a one way dependency -
                                 changes to this unit do not affect the
                                 listed units.
-                                </p></dd><dt><span class="term"><code class="varname">Conflicts=</code></span></dt><dd><p>Configures negative
+                                </p></dd><dt id="Conflicts="><span class="term"><code class="varname">Conflicts=</code></span><a class="headerlink" title="Permalink to this term" href="#Conflicts=">¶</a></dt><dd><p>Configures negative
                                 requirement dependencies. If a unit
                                 has a
                                 <code class="varname">Conflicts=</code> setting
@@ -326,7 +339,7 @@
                                 not required the unit that conflicts
                                 will be started and the unit that is
                                 conflicted is
-                                stopped.</p></dd><dt><span class="term"><code class="varname">Before=</code>, </span><span class="term"><code class="varname">After=</code></span></dt><dd><p>Configures ordering
+                                stopped.</p></dd><dt id="Before="><span class="term"><code class="varname">Before=</code>, </span><span class="term"><code class="varname">After=</code></span><a class="headerlink" title="Permalink to this term" href="#Before=">¶</a></dt><dd><p>Configures ordering
                                 dependencies between units. If a unit
                                 <code class="filename">foo.service</code>
                                 contains a setting
@@ -378,11 +391,11 @@
                                 between them they are shut down
                                 or started up simultaneously, and
                                 no ordering takes
-                                place. </p></dd><dt><span class="term"><code class="varname">OnFailure=</code></span></dt><dd><p>Lists one or more
+                                place. </p></dd><dt id="OnFailure="><span class="term"><code class="varname">OnFailure=</code></span><a class="headerlink" title="Permalink to this term" href="#OnFailure=">¶</a></dt><dd><p>Lists one or more
                                 units that are activated when this
                                 unit enters the
                                 '<code class="literal">failed</code>'
-                                state.</p></dd><dt><span class="term"><code class="varname">PropagatesReloadTo=</code>, </span><span class="term"><code class="varname">ReloadPropagatedFrom=</code></span></dt><dd><p>Lists one or more
+                                state.</p></dd><dt id="PropagatesReloadTo="><span class="term"><code class="varname">PropagatesReloadTo=</code>, </span><span class="term"><code class="varname">ReloadPropagatedFrom=</code></span><a class="headerlink" title="Permalink to this term" href="#PropagatesReloadTo=">¶</a></dt><dd><p>Lists one or more
                                 units where reload requests on the
                                 unit will be propagated to/on the
                                 other unit will be propagated
@@ -391,13 +404,13 @@
                                 reload request on all units that the
                                 reload request shall be propagated to
                                 via these two
-                                settings.</p></dd><dt><span class="term"><code class="varname">RequiresMountsFor=</code></span></dt><dd><p>Takes a space
+                                settings.</p></dd><dt id="RequiresMountsFor="><span class="term"><code class="varname">RequiresMountsFor=</code></span><a class="headerlink" title="Permalink to this term" href="#RequiresMountsFor=">¶</a></dt><dd><p>Takes a space
                                 separated list of absolute paths. Automatically
                                 adds dependencies of type
                                 <code class="varname">Requires=</code> and
                                 <code class="varname">After=</code> for all
                                 mount units required to access the
-                                specified path.</p></dd><dt><span class="term"><code class="varname">OnFailureIsolate=</code></span></dt><dd><p>Takes a boolean
+                                specified path.</p></dd><dt id="OnFailureIsolate="><span class="term"><code class="varname">OnFailureIsolate=</code></span><a class="headerlink" title="Permalink to this term" href="#OnFailureIsolate=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code> the
                                 unit listed in
                                 <code class="varname">OnFailure=</code> will be
@@ -407,17 +420,17 @@
                                 single unit may be listed in
                                 <code class="varname">OnFailure=</code>. Defaults
                                 to
-                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">IgnoreOnIsolate=</code></span></dt><dd><p>Takes a boolean
+                                <code class="option">false</code>.</p></dd><dt id="IgnoreOnIsolate="><span class="term"><code class="varname">IgnoreOnIsolate=</code></span><a class="headerlink" title="Permalink to this term" href="#IgnoreOnIsolate=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit will not be stopped when
                                 isolating another unit. Defaults to
-                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">IgnoreOnSnapshot=</code></span></dt><dd><p>Takes a boolean
+                                <code class="option">false</code>.</p></dd><dt id="IgnoreOnSnapshot="><span class="term"><code class="varname">IgnoreOnSnapshot=</code></span><a class="headerlink" title="Permalink to this term" href="#IgnoreOnSnapshot=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit will not be included in
                                 snapshots. Defaults to
                                 <code class="option">true</code> for device and
                                 snapshot units, <code class="option">false</code>
-                                for the others.</p></dd><dt><span class="term"><code class="varname">StopWhenUnneeded=</code></span></dt><dd><p>Takes a boolean
+                                for the others.</p></dd><dt id="StopWhenUnneeded="><span class="term"><code class="varname">StopWhenUnneeded=</code></span><a class="headerlink" title="Permalink to this term" href="#StopWhenUnneeded=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit will be stopped when it is
                                 no longer used. Note that in order to
@@ -429,7 +442,7 @@
                                 option is set, a unit will be
                                 automatically cleaned up if no other
                                 active unit requires it. Defaults to
-                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">RefuseManualStart=</code>, </span><span class="term"><code class="varname">RefuseManualStop=</code></span></dt><dd><p>Takes a boolean
+                                <code class="option">false</code>.</p></dd><dt id="RefuseManualStart="><span class="term"><code class="varname">RefuseManualStart=</code>, </span><span class="term"><code class="varname">RefuseManualStop=</code></span><a class="headerlink" title="Permalink to this term" href="#RefuseManualStart=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit can only be activated
                                 or deactivated indirectly. In
@@ -446,7 +459,7 @@
                                 accidentally deactivate units that are
                                 not intended to be deactivated.
                                 These options default to
-                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">AllowIsolate=</code></span></dt><dd><p>Takes a boolean
+                                <code class="option">false</code>.</p></dd><dt id="AllowIsolate="><span class="term"><code class="varname">AllowIsolate=</code></span><a class="headerlink" title="Permalink to this term" href="#AllowIsolate=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit may be used with the
                                 <span class="command"><strong>systemctl isolate</strong></span>
@@ -457,7 +470,7 @@
                                 runlevels in SysV init systems, just
                                 as a precaution to avoid unusable
                                 system states. This option defaults to
-                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">DefaultDependencies=</code></span></dt><dd><p>Takes a boolean
+                                <code class="option">false</code>.</p></dd><dt id="DefaultDependencies="><span class="term"><code class="varname">DefaultDependencies=</code></span><a class="headerlink" title="Permalink to this term" href="#DefaultDependencies=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 (the default), a few default
                                 dependencies will implicitly be
@@ -479,7 +492,7 @@
                                 <code class="option">false</code> this option
                                 does not disable all implicit
                                 dependencies, just non-essential
-                                ones.</p></dd><dt><span class="term"><code class="varname">JobTimeoutSec=</code></span></dt><dd><p>When clients are
+                                ones.</p></dd><dt id="JobTimeoutSec="><span class="term"><code class="varname">JobTimeoutSec=</code></span><a class="headerlink" title="Permalink to this term" href="#JobTimeoutSec=">¶</a></dt><dd><p>When clients are
                                 waiting for a job of this unit to
                                 complete, time out after the specified
                                 time. If this time limit is reached
@@ -501,7 +514,7 @@
                                 timeout set with this option however
                                 is useful to abort only the job
                                 waiting for the unit state to
-                                change.</p></dd><dt><span class="term"><code class="varname">ConditionPathExists=</code>, </span><span class="term"><code class="varname">ConditionPathExistsGlob=</code>, </span><span class="term"><code class="varname">ConditionPathIsDirectory=</code>, </span><span class="term"><code class="varname">ConditionPathIsSymbolicLink=</code>, </span><span class="term"><code class="varname">ConditionPathIsMountPoint=</code>, </span><span class="term"><code class="varname">ConditionPathIsReadWrite=</code>, </span><span class="term"><code class="varname">ConditionDirectoryNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionFileNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionFileIsExecutable=</code>, </span><span class="term"><code class="varname">ConditionKernelCommandLine=</code>, </span><span class="term"><code class="varname">ConditionVirtualization=</code>, </span><span class="term"><code class="varname">ConditionSecurity=</code>, </span><span class="term"><code class="varname">ConditionCapability=</code>, </span><span class="term"><code class="varname">ConditionHost=</code>, </span><span class="term"><code class="varname">ConditionACPower=</code>, </span><span class="term"><code class="varname">ConditionNull=</code></span></dt><dd><p>Before starting a unit
+                                change.</p></dd><dt id="ConditionPathExists="><span class="term"><code class="varname">ConditionPathExists=</code>, </span><span class="term"><code class="varname">ConditionPathExistsGlob=</code>, </span><span class="term"><code class="varname">ConditionPathIsDirectory=</code>, </span><span class="term"><code class="varname">ConditionPathIsSymbolicLink=</code>, </span><span class="term"><code class="varname">ConditionPathIsMountPoint=</code>, </span><span class="term"><code class="varname">ConditionPathIsReadWrite=</code>, </span><span class="term"><code class="varname">ConditionDirectoryNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionFileNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionFileIsExecutable=</code>, </span><span class="term"><code class="varname">ConditionKernelCommandLine=</code>, </span><span class="term"><code class="varname">ConditionVirtualization=</code>, </span><span class="term"><code class="varname">ConditionSecurity=</code>, </span><span class="term"><code class="varname">ConditionCapability=</code>, </span><span class="term"><code class="varname">ConditionHost=</code>, </span><span class="term"><code class="varname">ConditionACPower=</code>, </span><span class="term"><code class="varname">ConditionNull=</code></span><a class="headerlink" title="Permalink to this term" href="#ConditionPathExists=">¶</a></dt><dd><p>Before starting a unit
                                 verify that the specified condition is
                                 true. If it is not true the starting
                                 of the unit will be skipped, however
@@ -612,7 +625,9 @@
                                 may be used to check whether the given
                                 security module is enabled on the
                                 system.  Currently the only recognized
-                                value is <code class="varname">selinux</code>.
+                                values are <code class="varname">selinux</code>,
+                                <code class="varname">apparmor</code>, and
+                                <code class="varname">smack</code>.
                                 The test may be negated by prepending
                                 an exclamation
                                 mark.</p><p><code class="varname">ConditionCapability=</code>
@@ -682,7 +697,7 @@
                                 empty string the list of conditions is
                                 reset completely, all previous
                                 condition settings (of any kind) will
-                                have no effect.</p></dd><dt><span class="term"><code class="varname">SourcePath=</code></span></dt><dd><p>A path to a
+                                have no effect.</p></dd><dt id="SourcePath="><span class="term"><code class="varname">SourcePath=</code></span><a class="headerlink" title="Permalink to this term" href="#SourcePath=">¶</a></dt><dd><p>A path to a
                                 configuration file this unit has been
                                 generated from. This is primarily
                                 useful for implementation of generator
@@ -698,7 +713,7 @@
                 <span class="command"><strong>enable</strong></span> and
                 <span class="command"><strong>disable</strong></span> commands of the
                 <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>
-                tool during installation of a unit:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">Alias=</code></span></dt><dd><p>Additional names this
+                tool during installation of a unit:</p><div class="variablelist"><dl class="variablelist"><dt id="Alias="><span class="term"><code class="varname">Alias=</code></span><a class="headerlink" title="Permalink to this term" href="#Alias=">¶</a></dt><dd><p>Additional names this
                                 unit shall be installed under. The
                                 names listed here must have the same
                                 suffix (i.e. type) as the unit file
@@ -708,7 +723,7 @@
                                 time,
                                 <span class="command"><strong>systemctl enable</strong></span>
                                 will create symlinks from these names
-                                to the unit file name.</p></dd><dt><span class="term"><code class="varname">WantedBy=</code>, </span><span class="term"><code class="varname">RequiredBy=</code></span></dt><dd><p>Installs a symlink in
+                                to the unit file name.</p></dd><dt id="WantedBy="><span class="term"><code class="varname">WantedBy=</code>, </span><span class="term"><code class="varname">RequiredBy=</code></span><a class="headerlink" title="Permalink to this term" href="#WantedBy=">¶</a></dt><dd><p>Installs a symlink in
                                 the <code class="filename">.wants/</code>
                                 or <code class="filename">.requires/</code>
                                 subdirectory for a unit, respectively. This has the
@@ -720,29 +735,23 @@
                                 <code class="filename">bar.service</code> is
                                 mostly equivalent to
                                 <span class="command"><strong>Alias=foo.service.wants/bar.service</strong></span>
-                                in the same file.</p></dd><dt><span class="term"><code class="varname">Also=</code></span></dt><dd><p>Additional units to
-                                install when this unit is
-                                installed. If the user requests
-                                installation of a unit with this
-                                option configured,
+                                in the same file.</p></dd><dt id="Also="><span class="term"><code class="varname">Also=</code></span><a class="headerlink" title="Permalink to this term" href="#Also=">¶</a></dt><dd><p>Additional units to
+                                install/deinstall when this unit is
+                                installed/deinstalled. If the user
+                                requests installation/deinstallation
+                                of a unit with this option configured,
                                 <span class="command"><strong>systemctl enable</strong></span>
-                                will automatically install units
-                                listed in this option as
+                                and <span class="command"><strong>systemctl
+                                disable</strong></span> will automatically
+                                install/uninstall units listed in this option as
                                 well.</p></dd></dl></div><p>The following specifiers are interpreted in the
                 Install section: %n, %N, %p, %i, %U, %u, %m, %H, %b.
                 For their meaning see the next section.
-                </p></div><div class="refsect1"><a name="idp5229712"></a><h2>Specifiers</h2><p>Many settings resolve specifiers which may be
+                </p></div><div class="refsect1"><a name="idm259765388784"></a><h2 id="Specifiers">Specifiers<a class="headerlink" title="Permalink to this headline" href="#Specifiers">¶</a></h2><p>Many settings resolve specifiers which may be
                 used to write generic unit files referring to runtime
                 or unit parameters that are replaced when the unit
                 files are loaded. The following specifiers are
-                understood:</p><div class="table"><a name="idp5231024"></a><p class="title"><b>Table 3. Specifiers available in unit files</b></p><div class="table-contents"><table summary="Specifiers available in unit files" border="1"><colgroup><col align="left" class="spec"><col align="left" class="mean"><col align="left" class="detail"></colgroup><thead><tr><th align="left">Specifier</th><th align="left">Meaning</th><th align="left">Details</th></tr></thead><tbody><tr><td align="left"><code class="literal">%n</code></td><td align="left">Full unit name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%N</code></td><td align="left">Unescaped full unit name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%p</code></td><td align="left">Prefix name</td><td align="left">For instantiated units this refers to the string before the @. For non-instantiated units this refers to to the name of the unit with the type suffix removed.</td></tr><tr><td align="left"><code class="literal">%P</code></td><td align="left">Unescaped prefix name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%i</code></td><td align="left">Instance name</td><td align="left">For instantiated units: this is the string between the @ character and the suffix.</td></tr><tr><td align="left"><code class="literal">%I</code></td><td align="left">Unescaped instance name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%f</code></td><td align="left">Unescaped file name</td><td align="left">This is either the unescaped instance name (if applicable) with / prepended (if applicable), or the prefix name similarly prepended with /.</td></tr><tr><td align="left"><code class="literal">%c</code></td><td align="left">Control group path of the unit</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%r</code></td><td align="left">Root control group path of systemd</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%R</code></td><td align="left">Parent directory of the root control group path of systemd</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%t</code></td><td align="left">Runtime socket dir</td><td align="left">This is either <code class="filename">/run</code> (for the system manager) or <code class="literal">$XDG_RUNTIME_DIR</code> (for user managers).</td></tr><tr><td align="left"><code class="literal">%u</code></td><td align="left">User name</td><td align="left">This is the name of the configured user of the unit, or (if none is set) the user running the systemd instance.</td></tr><tr><td align="left"><code class="literal">%U</code></td><td align="left">User UID</td><td align="left">This is the UID of the configured user of the unit, or (if none is set) the user running the systemd instance.</td></tr><tr><td align="left"><code class="literal">%h</code></td><td align="left">User home directory</td><td align="left">This is the home directory of the configured user of the unit, or (if none is set) the user running the systemd instance.</td></tr><tr><td align="left"><code class="literal">%s</code></td><td align="left">User shell</td><td align="left">This is the shell of the configured
-                        user of the unit, or (if none is set) the user
-                        running the systemd instance.  If the user is
-                        <code class="literal">root</code> (UID equal to 0), the
-                        shell configured in account database is
-                        ignored and <code class="filename">/bin/sh</code> is
-                        always used.
-                        </td></tr><tr><td align="left"><code class="literal">%m</code></td><td align="left">Machine ID</td><td align="left">The machine ID of the running system, formatted as string. See <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a> for more information.</td></tr><tr><td align="left"><code class="literal">%b</code></td><td align="left">Boot ID</td><td align="left">The boot ID of the running system, formatted as string. See <a href="random.html"><span class="citerefentry"><span class="refentrytitle">random</span>(4)</span></a> for more information.</td></tr><tr><td align="left"><code class="literal">%H</code></td><td align="left">Host name</td><td align="left">The host name of the running system.</td></tr><tr><td align="left"><code class="literal">%%</code></td><td align="left">Escaped %</td><td align="left">Single percent sign.</td></tr></tbody></table></div></div><br class="table-break"></div><div class="refsect1"><a name="idp5277888"></a><h2>See Also</h2><p>
+                understood:</p><div class="table"><a name="idm259765387472"></a><p class="title"><b>Table 3. Specifiers available in unit files</b></p><div class="table-contents"><table summary="Specifiers available in unit files" border="1"><colgroup><col align="left" class="spec"><col align="left" class="mean"><col align="left" class="detail"></colgroup><thead><tr><th align="left">Specifier</th><th align="left">Meaning</th><th align="left">Details</th></tr></thead><tbody><tr><td align="left"><code class="literal">%n</code></td><td align="left">Full unit name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%N</code></td><td align="left">Unescaped full unit name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%p</code></td><td align="left">Prefix name</td><td align="left">For instantiated units this refers to the string before the @. For non-instantiated units this refers to to the name of the unit with the type suffix removed.</td></tr><tr><td align="left"><code class="literal">%P</code></td><td align="left">Unescaped prefix name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%i</code></td><td align="left">Instance name</td><td align="left">For instantiated units: this is the string between the @ character and the suffix.</td></tr><tr><td align="left"><code class="literal">%I</code></td><td align="left">Unescaped instance name</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%f</code></td><td align="left">Unescaped file name</td><td align="left">This is either the unescaped instance name (if applicable) with <code class="filename">/</code> prepended (if applicable), or the prefix name similarly prepended with <code class="filename">/</code>.</td></tr><tr><td align="left"><code class="literal">%c</code></td><td align="left">Control group path of the unit</td><td align="left"> </td></tr><tr><td align="left"><code class="literal">%r</code></td><td align="left">Root control group path where units are placed.</td><td align="left">For system instances this usually resolves to <code class="filename">/system</code>, except in containers, where the path might be prefixed with the container's root control group.</td></tr><tr><td align="left"><code class="literal">%R</code></td><td align="left">Parent directory of the control group path where units are placed.</td><td align="left">For system instances this usually resolves to <code class="filename">/</code>, except in containers, where this resolves to the container's root directory. This specifier is particularly useful in the <code class="varname">ControlGroup=</code> setting (see <a href="systemd.exec.html"><span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span></a>).</td></tr><tr><td align="left"><code class="literal">%t</code></td><td align="left">Runtime socket dir</td><td align="left">This is either <code class="filename">/run</code> (for the system manager) or <code class="literal">$XDG_RUNTIME_DIR</code> (for user managers).</td></tr><tr><td align="left"><code class="literal">%u</code></td><td align="left">User name</td><td align="left">This is the name of the configured user of the unit, or (if none is set) the user running the systemd instance.</td></tr><tr><td align="left"><code class="literal">%U</code></td><td align="left">User UID</td><td align="left">This is the UID of the configured user of the unit, or (if none is set) the user running the systemd instance.</td></tr><tr><td align="left"><code class="literal">%h</code></td><td align="left">User home directory</td><td align="left">This is the home directory of the configured user of the unit, or (if none is set) the user running the systemd instance.</td></tr><tr><td align="left"><code class="literal">%s</code></td><td align="left">User shell</td><td align="left">This is the shell of the configured user of the unit, or (if none is set) the user running the systemd instance.  If the user is <code class="literal">root</code> (UID equal to 0), the shell configured in account database is ignored and <code class="filename">/bin/sh</code> is always used.</td></tr><tr><td align="left"><code class="literal">%m</code></td><td align="left">Machine ID</td><td align="left">The machine ID of the running system, formatted as string. See <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a> for more information.</td></tr><tr><td align="left"><code class="literal">%b</code></td><td align="left">Boot ID</td><td align="left">The boot ID of the running system, formatted as string. See <a href="random.html"><span class="citerefentry"><span class="refentrytitle">random</span>(4)</span></a> for more information.</td></tr><tr><td align="left"><code class="literal">%H</code></td><td align="left">Host name</td><td align="left">The host name of the running system.</td></tr><tr><td align="left"><code class="literal">%%</code></td><td align="left">Escaped %</td><td align="left">Single percent sign.</td></tr></tbody></table></div></div><br class="table-break"></div><div class="refsect1"><a name="idm259765336960"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                         <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>,

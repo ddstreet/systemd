@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>hostnamectl</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>hostnamectl</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="hostnamectl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>hostnamectl — Control the system hostname</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">hostnamectl [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idp3964144"></a><h2>Description</h2><p><span class="command"><strong>hostnamectl</strong></span> may be used to
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="hostnamectl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>hostnamectl — Control the system hostname</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">hostnamectl [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idm259793979248"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p><span class="command"><strong>hostnamectl</strong></span> may be used to
                 query and change the system hostname and related
                 settings.</p><p>This tool distinguishes three different host
                 names: the high-level "pretty" hostname which might
@@ -23,23 +40,23 @@
                 for more information. The pretty host name, chassis
                 type and icon name are stored in
                 <code class="filename">/etc/machine-info</code>, see
-                <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a>.</p></div><div class="refsect1"><a name="idp3971296"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
-                                text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
-                                string and exits.</p></dd><dt><span class="term"><code class="option">--no-ask-password</code></span></dt><dd><p>Don't query the user
+                <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a>.</p></div><div class="refsect1"><a name="idm259793972096"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt id="-h"><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span><a class="headerlink" title="Permalink to this term" href="#-h">¶</a></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt id="--version"><span class="term"><code class="option">--version</code></span><a class="headerlink" title="Permalink to this term" href="#--version">¶</a></dt><dd><p>Prints a short version
+                                string and exits.</p></dd><dt id="--no-ask-password"><span class="term"><code class="option">--no-ask-password</code></span><a class="headerlink" title="Permalink to this term" href="#--no-ask-password">¶</a></dt><dd><p>Don't query the user
                                 for authentication for privileged
-                                operations.</p></dd><dt><span class="term"><code class="option">-H</code>, </span><span class="term"><code class="option">--host</code></span></dt><dd><p>Execute the operation
+                                operations.</p></dd><dt id="-H"><span class="term"><code class="option">-H</code>, </span><span class="term"><code class="option">--host</code></span><a class="headerlink" title="Permalink to this term" href="#-H">¶</a></dt><dd><p>Execute the operation
                                 remotely. Specify a hostname, or
                                 username and hostname separated by @,
                                 to connect to. This will use SSH to
                                 talk to a remote
-                                system.</p></dd><dt><span class="term"><code class="option">--static</code>, </span><span class="term"><code class="option">--transient</code>, </span><span class="term"><code class="option">--pretty</code></span></dt><dd><p>If
+                                system.</p></dd><dt id="--static"><span class="term"><code class="option">--static</code>, </span><span class="term"><code class="option">--transient</code>, </span><span class="term"><code class="option">--pretty</code></span><a class="headerlink" title="Permalink to this term" href="#--static">¶</a></dt><dd><p>If
                                 <span class="command"><strong>set-hostname</strong></span> is
                                 invoked and one or more of these
                                 options are passed only the selected
                                 hostnames is
-                                updated.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="command"><strong>status</strong></span></span></dt><dd><p>Show current system
+                                updated.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt id="status"><span class="term"><span class="command"><strong>status</strong></span></span><a class="headerlink" title="Permalink to this term" href="#status">¶</a></dt><dd><p>Show current system
                                 hostname and related
-                                information.</p></dd><dt><span class="term"><span class="command"><strong>set-hostname [NAME]</strong></span></span></dt><dd><p>Set the system
+                                information.</p></dd><dt id="set-hostname [NAME]"><span class="term"><span class="command"><strong>set-hostname [NAME]</strong></span></span><a class="headerlink" title="Permalink to this term" href="#set-hostname%20%5BNAME%5D">¶</a></dt><dd><p>Set the system
                                 hostname. By default this will alter
                                 the pretty, the static, and the
                                 transient hostname alike, however if
@@ -67,7 +84,7 @@
                                 string "" as hostname to reset the
                                 selected hostnames to their default
                                 (usually
-                                "localhost").</p></dd><dt><span class="term"><span class="command"><strong>set-icon-name [NAME]</strong></span></span></dt><dd><p>Set the system icon
+                                "localhost").</p></dd><dt id="set-icon-name [NAME]"><span class="term"><span class="command"><strong>set-icon-name [NAME]</strong></span></span><a class="headerlink" title="Permalink to this term" href="#set-icon-name%20%5BNAME%5D">¶</a></dt><dd><p>Set the system icon
                                 name. The icon name is used by some
                                 graphical applications to visualize
                                 this host. The icon name should follow
@@ -77,7 +94,7 @@
                                 reset the icon name to the default
                                 value which is determined from chassis
                                 type (see below) and possibly other
-                                parameters.</p></dd><dt><span class="term"><span class="command"><strong>set-chassis [TYPE]</strong></span></span></dt><dd><p>Set the chassis
+                                parameters.</p></dd><dt id="set-chassis [TYPE]"><span class="term"><span class="command"><strong>set-chassis [TYPE]</strong></span></span><a class="headerlink" title="Permalink to this term" href="#set-chassis%20%5BTYPE%5D">¶</a></dt><dd><p>Set the chassis
                                 type. The chassis type is used by some
                                 graphical applications to visualize
                                 the host or alter user
@@ -97,8 +114,8 @@
                                 reset the chassis type to the default
                                 value which is determined from the
                                 firmware and possibly other
-                                parameters.</p></dd></dl></div></div><div class="refsect1"><a name="idp56592"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1"><a name="idp57776"></a><h2>See Also</h2><p>
+                                parameters.</p></dd></dl></div></div><div class="refsect1"><a name="idm259797884656"></a><h2 id="Exit status">Exit status<a class="headerlink" title="Permalink to this headline" href="#Exit%20status">¶</a></h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idm259797883472"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="hostname.html"><span class="citerefentry"><span class="refentrytitle">hostname</span>(1)</span></a>,
                         <a href="hostname.html"><span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span></a>,

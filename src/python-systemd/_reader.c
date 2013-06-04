@@ -30,6 +30,7 @@
 #include "pyutil.h"
 #include "macro.h"
 #include "util.h"
+#include "build.h"
 
 typedef struct {
     PyObject_HEAD
@@ -212,19 +213,7 @@ static PyObject* Reader_get_timeout_ms(Reader *self, PyObject *args)
     if (r < 0)
         return NULL;
 
-    if (t == (uint64_t) -1)
-        return PyLong_FromLong(-1);
-    else {
-        struct timespec ts;
-        uint64_t n;
-        int msec;
-
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        n = (uint64_t) ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
-        msec = t > n ? (int) ((t - n + 999) / 1000) : 0;
-
-        return PyLong_FromLong(msec);
-    }
+    return absolute_timeout(t);
 }
 
 
@@ -567,11 +556,31 @@ static PyObject* Reader_add_match(Reader *self, PyObject *args, PyObject *keywds
 
 PyDoc_STRVAR(Reader_add_disjunction__doc__,
              "add_disjunction() -> None\n\n"
-             "Inserts a logical OR between matches added before and afterwards.");
+             "Inserts a logical OR between matches added since previous\n"
+             "add_disjunction() or add_conjunction() and the next\n"
+             "add_disjunction() or add_conjunction().\n\n"
+             "See man:sd_journal_add_disjunction(3) for explanation.");
 static PyObject* Reader_add_disjunction(Reader *self, PyObject *args)
 {
     int r;
     r = sd_journal_add_disjunction(self->j);
+    set_error(r, NULL, NULL);
+    if (r < 0)
+        return NULL;
+    Py_RETURN_NONE;
+}
+
+
+PyDoc_STRVAR(Reader_add_conjunction__doc__,
+             "add_conjunction() -> None\n\n"
+             "Inserts a logical AND between matches added since previous\n"
+             "add_disjunction() or add_conjunction() and the next\n"
+             "add_disjunction() or add_conjunction().\n\n"
+             "See man:sd_journal_add_disjunction(3) for explanation.");
+static PyObject* Reader_add_conjunction(Reader *self, PyObject *args)
+{
+    int r;
+    r = sd_journal_add_conjunction(self->j);
     set_error(r, NULL, NULL);
     if (r < 0)
         return NULL;
@@ -980,6 +989,7 @@ static PyMethodDef Reader_methods[] = {
     {"_get_monotonic",  (PyCFunction) Reader_get_monotonic, METH_NOARGS, Reader_get_monotonic__doc__},
     {"add_match",       (PyCFunction) Reader_add_match, METH_VARARGS|METH_KEYWORDS, Reader_add_match__doc__},
     {"add_disjunction", (PyCFunction) Reader_add_disjunction, METH_NOARGS, Reader_add_disjunction__doc__},
+    {"add_conjunction", (PyCFunction) Reader_add_conjunction, METH_NOARGS, Reader_add_conjunction__doc__},
     {"flush_matches",   (PyCFunction) Reader_flush_matches, METH_NOARGS, Reader_flush_matches__doc__},
     {"seek_head",       (PyCFunction) Reader_seek_head, METH_NOARGS, Reader_seek_head__doc__},
     {"seek_tail",       (PyCFunction) Reader_seek_tail, METH_NOARGS, Reader_seek_tail__doc__},
@@ -1105,7 +1115,8 @@ init_reader(void)
         PyModule_AddIntConstant(m, "INVALIDATE", SD_JOURNAL_INVALIDATE) ||
         PyModule_AddIntConstant(m, "LOCAL_ONLY", SD_JOURNAL_LOCAL_ONLY) ||
         PyModule_AddIntConstant(m, "RUNTIME_ONLY", SD_JOURNAL_RUNTIME_ONLY) ||
-        PyModule_AddIntConstant(m, "SYSTEM_ONLY", SD_JOURNAL_SYSTEM_ONLY)) {
+        PyModule_AddIntConstant(m, "SYSTEM_ONLY", SD_JOURNAL_SYSTEM_ONLY) ||
+        PyModule_AddStringConstant(m, "__version__", PACKAGE_VERSION)) {
 #if PY_MAJOR_VERSION >= 3
         Py_DECREF(m);
         return NULL;

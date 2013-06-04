@@ -32,27 +32,27 @@ SUBDIRS = . po
 .SECONDARY:
 
 LIBUDEV_CURRENT=4
-LIBUDEV_REVISION=3
+LIBUDEV_REVISION=5
 LIBUDEV_AGE=3
 
 LIBGUDEV_CURRENT=1
 LIBGUDEV_REVISION=3
 LIBGUDEV_AGE=1
 
-LIBSYSTEMD_LOGIN_CURRENT=6
-LIBSYSTEMD_LOGIN_REVISION=0
-LIBSYSTEMD_LOGIN_AGE=6
+LIBSYSTEMD_LOGIN_CURRENT=7
+LIBSYSTEMD_LOGIN_REVISION=1
+LIBSYSTEMD_LOGIN_AGE=7
 
 LIBSYSTEMD_DAEMON_CURRENT=0
 LIBSYSTEMD_DAEMON_REVISION=10
 LIBSYSTEMD_DAEMON_AGE=0
 
 LIBSYSTEMD_ID128_CURRENT=0
-LIBSYSTEMD_ID128_REVISION=21
+LIBSYSTEMD_ID128_REVISION=23
 LIBSYSTEMD_ID128_AGE=0
 
 LIBSYSTEMD_JOURNAL_CURRENT=10
-LIBSYSTEMD_JOURNAL_REVISION=0
+LIBSYSTEMD_JOURNAL_REVISION=2
 LIBSYSTEMD_JOURNAL_AGE=10
 
 # Dirs of external packages
@@ -90,6 +90,7 @@ udevhomedir=$(udevlibexecdir)
 udevrulesdir=$(udevlibexecdir)/rules.d
 udevhwdbdir=$(udevlibexecdir)/hwdb.d
 catalogdir=$(prefix)/lib/systemd/catalog
+kernelinstalldir = $(prefix)/lib/kernel/install.d
 
 # And these are the special ones for /
 rootprefix=@rootprefix@
@@ -137,12 +138,11 @@ udevlibexec_PROGRAMS =
 
 AM_CPPFLAGS = \
 	-include $(top_builddir)/config.h \
-	-DSYSTEM_CONFIG_FILE=\"$(pkgsysconfdir)/system.conf\" \
+	-DPKGSYSCONFDIR=\"$(pkgsysconfdir)\" \
 	-DSYSTEM_CONFIG_UNIT_PATH=\"$(pkgsysconfdir)/system\" \
 	-DSYSTEM_DATA_UNIT_PATH=\"$(systemunitdir)\" \
 	-DSYSTEM_SYSVINIT_PATH=\"$(SYSTEM_SYSVINIT_PATH)\" \
 	-DSYSTEM_SYSVRCND_PATH=\"$(SYSTEM_SYSVRCND_PATH)\" \
-	-DUSER_CONFIG_FILE=\"$(pkgsysconfdir)/user.conf\" \
 	-DUSER_CONFIG_UNIT_PATH=\"$(pkgsysconfdir)/user\" \
 	-DUSER_DATA_UNIT_PATH=\"$(userunitdir)\" \
 	-DCATALOG_DATABASE=\"$(catalogstatedir)/database\" \
@@ -164,6 +164,7 @@ AM_CPPFLAGS = \
 	-DX_SERVER=\"$(bindir)/X\" \
 	-DUDEVLIBEXECDIR=\"$(udevlibexecdir)\" \
 	-DPOLKIT_AGENT_BINARY_PATH=\"$(bindir)/pkttyagent\" \
+	-DQUOTACHECK=\"$(QUOTACHECK)\" \
 	-I $(top_srcdir)/src \
 	-I $(top_srcdir)/src/shared \
 	-I $(top_srcdir)/src/login \
@@ -243,8 +244,8 @@ install-aliases-hook:
 		dir= && $(install-aliases)
 
 define install-aliases
-	$(MKDIR_P) /$(DESTDIR)$$dir && \
 	while [ -n "$$1" ]; do \
+		$(MKDIR_P) `dirname $(DESTDIR)$$dir/$$2` && \
 		rm -f $(DESTDIR)$$dir/$$2 && \
 		$(LN_S) $$1 $(DESTDIR)$$dir/$$2 && \
 		shift 2 || exit $$?; \
@@ -291,11 +292,12 @@ bin_PROGRAMS = \
 	systemd-delta \
 	systemd-analyze
 
-bin_SCRIPTS = \
+dist_bin_SCRIPTS = \
 	src/kernel-install/kernel-install
 
-EXTRA_DIST += \
-	src/kernel-install/kernel-install
+dist_kernelinstall_SCRIPTS = \
+	src/kernel-install/50-depmod.install \
+	src/kernel-install/90-loaderentry.install
 
 rootlibexec_PROGRAMS = \
 	systemd \
@@ -331,6 +333,7 @@ systemd_analyze_LDADD = \
 dist_bashcompletion_DATA = \
 	shell-completion/bash/journalctl \
 	shell-completion/bash/systemctl \
+	shell-completion/bash/systemd-analyze \
 	shell-completion/bash/udevadm
 
 dist_tmpfiles_DATA = \
@@ -416,6 +419,7 @@ nodist_systemunit_DATA = \
 	units/systemd-remount-fs.service \
 	units/systemd-update-utmp-runlevel.service \
 	units/systemd-update-utmp-shutdown.service \
+	units/systemd-tmpfiles-setup-dev.service \
 	units/systemd-tmpfiles-setup.service \
 	units/systemd-tmpfiles-clean.service \
 	units/systemd-ask-password-wall.service \
@@ -433,7 +437,6 @@ nodist_systemunit_DATA = \
 	units/systemd-kexec.service \
 	units/systemd-fsck@.service \
 	units/systemd-fsck-root.service \
-	units/systemd-static-nodes.service \
 	units/systemd-udevd.service \
 	units/systemd-udev-trigger.service \
 	units/systemd-udev-settle.service \
@@ -441,7 +444,8 @@ nodist_systemunit_DATA = \
 	units/initrd-parse-etc.service \
 	units/initrd-cleanup.service \
 	units/initrd-udevadm-cleanup-db.service \
-	units/initrd-switch-root.service
+	units/initrd-switch-root.service \
+	units/systemd-nspawn@.service
 
 dist_userunit_DATA = \
 	units/user/default.target \
@@ -461,6 +465,7 @@ EXTRA_DIST += \
 	units/systemd-remount-fs.service.in \
 	units/systemd-update-utmp-runlevel.service.in \
 	units/systemd-update-utmp-shutdown.service.in \
+	units/systemd-tmpfiles-setup-dev.service.in \
 	units/systemd-tmpfiles-setup.service.in \
 	units/systemd-tmpfiles-clean.service.in \
 	units/systemd-ask-password-wall.service.in \
@@ -475,7 +480,6 @@ EXTRA_DIST += \
 	units/systemd-fsck@.service.in \
 	units/systemd-fsck-root.service.in \
 	units/user@.service.in \
-	units/systemd-static-nodes.service \
 	units/systemd-udevd.service \
 	units/systemd-udev-trigger.service \
 	units/systemd-udev-settle.service \
@@ -488,6 +492,7 @@ EXTRA_DIST += \
 	units/initrd-cleanup.service.in \
 	units/initrd-udevadm-cleanup-db.service.in \
 	units/initrd-switch-root.service.in \
+	units/systemd-nspawn@.service.in \
 	introspect.awk
 
 CLEANFILES += \
@@ -637,6 +642,8 @@ libsystemd_shared_la_SOURCES = \
 	src/shared/fdset.h \
 	src/shared/prioq.c \
 	src/shared/prioq.h \
+	src/shared/sleep-config.c \
+	src/shared/sleep-config.h \
 	src/shared/strv.c \
 	src/shared/strv.h \
 	src/shared/env-util.c \
@@ -1099,7 +1106,8 @@ tests += \
 	test-cgroup-util \
 	test-prioq \
 	test-fileio \
-	test-time
+	test-time \
+	test-hashmap
 
 EXTRA_DIST += \
 	test/sched_idle_bad.service \
@@ -1188,6 +1196,15 @@ test_util_CFLAGS = \
 	$(AM_CFLAGS)
 
 test_util_LDADD = \
+	libsystemd-core.la
+
+test_hashmap_SOURCES = \
+	src/test/test-hashmap.c
+
+test_hashmap_CFLAGS = \
+	$(AM_CFLAGS)
+
+test_hashmap_LDADD = \
 	libsystemd-core.la
 
 test_prioq_SOURCES = \
@@ -1952,13 +1969,11 @@ CLEANFILES += \
 	src/udev/udev.pc
 
 EXTRA_DIST += \
-	units/systemd-static-nodes.service.in \
 	units/systemd-udevd.service.in \
 	units/systemd-udev-trigger.service.in \
 	units/systemd-udev-settle.service.in
 
 CLEANFILES += \
-	units/systemd-static-nodes.service \
 	units/systemd-udevd.service \
 	units/systemd-udev-trigger.service \
 	units/systemd-udev-settle.service
@@ -1967,7 +1982,6 @@ SOCKETS_TARGET_WANTS += \
 	systemd-udevd-control.socket \
 	systemd-udevd-kernel.socket
 SYSINIT_TARGET_WANTS += \
-	systemd-static-nodes.service \
 	systemd-udevd.service \
 	systemd-udev-trigger.service
 
@@ -3587,6 +3601,7 @@ pam_systemd_la_LIBADD = \
 	libsystemd-audit.la \
 	libsystemd-dbus.la \
 	libsystemd-shared.la \
+	libsystemd-daemon-internal.la \
 	$(PAM_LIBS)
 
 pamlib_LTLIBRARIES = \
@@ -3683,7 +3698,8 @@ pkgpyexec_LTLIBRARIES = \
 	_journal.la \
 	id128.la \
 	_daemon.la \
-	_reader.la
+	_reader.la \
+	login.la
 
 _journal_la_SOURCES = \
 	src/python-systemd/_journal.c
@@ -3766,7 +3782,31 @@ _reader_la_LIBADD = \
 	$(PYTHON_LIBS) \
 	libsystemd-journal.la \
 	libsystemd-id128.la \
-	libsystemd-shared.la
+	libsystemd-shared.la \
+	libsystemd-daemon-internal.la
+
+login_la_SOURCES = \
+	src/python-systemd/login.c \
+	src/python-systemd/pyutil.c \
+	src/python-systemd/pyutil.h
+
+login_la_CFLAGS = \
+	$(AM_CFLAGS) \
+	-fvisibility=default \
+	$(PYTHON_CFLAGS)
+
+login_la_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	-shared \
+	-module \
+	-avoid-version
+
+login_la_LIBADD = \
+	$(PYTHON_LIBS) \
+	libsystemd-journal.la \
+	libsystemd-login.la \
+	libsystemd-shared.la \
+	libsystemd-daemon-internal.la
 
 dist_pkgpyexec_PYTHON = \
 	src/python-systemd/journal.py \
@@ -4021,6 +4061,7 @@ SYSINIT_TARGET_WANTS += \
 	sys-kernel-config.mount \
 	sys-kernel-debug.mount \
 	sys-fs-fuse-connections.mount \
+	systemd-tmpfiles-setup-dev.service \
 	systemd-tmpfiles-setup.service \
 	systemd-sysctl.service \
 	systemd-ask-password-console.path
@@ -4148,11 +4189,11 @@ upload: all distcheck
 www_target = www.freedesktop.org:/srv/www.freedesktop.org/www/software/systemd
 doc-sync: all destdir-sphinx
 	gtkdoc-rebase --html-dir=docs/libudev/html --online
-	rsync -av --delete docs/libudev/html/ --omit-dir-times $(www_target)/libudev/
+	rsync -rlv --delete docs/libudev/html/ --omit-dir-times $(www_target)/libudev/
 	gtkdoc-rebase --html-dir=docs/gudev/html --online
-	rsync -av --delete docs/gudev/html/ --omit-dir-times $(www_target)/gudev/
-	rsync -av --delete-excluded --include="*.html" --exclude="*" --omit-dir-times man/ $(www_target)/man/
-	rsync -av --delete --omit-dir-times docs/html/python-systemd/ $(www_target)/python-systemd/
+	rsync -rlv --delete docs/gudev/html/ --omit-dir-times $(www_target)/gudev/
+	rsync -rlv --delete-excluded --include="*.html" --exclude="*" --omit-dir-times man/ $(www_target)/man/
+	rsync -rlv --delete --omit-dir-times docs/html/python-systemd/ $(www_target)/python-systemd/
 
 git-tag:
 	git tag "v$(VERSION)" -m "systemd $(VERSION)"
