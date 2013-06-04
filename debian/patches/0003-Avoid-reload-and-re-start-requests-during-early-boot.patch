@@ -1,4 +1,4 @@
-From 20c8e36ff8228bb6c74a4c8e73227dd1f9d8d543 Mon Sep 17 00:00:00 2001
+From bca8b01a7df86782b62ccdfc7e52b51387825ea8 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Thu, 18 Oct 2012 10:16:14 +0200
 Subject: [PATCH 03/10] Avoid reload and (re)start requests during early boot
@@ -9,10 +9,10 @@ Subject: [PATCH 03/10] Avoid reload and (re)start requests during early boot
  1 file changed, 15 insertions(+)
 
 diff --git a/src/core/manager.c b/src/core/manager.c
-index c24c640..02a557e 100644
+index 20e5844..1509a30 100644
 --- a/src/core/manager.c
 +++ b/src/core/manager.c
-@@ -918,6 +918,21 @@ int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool ove
+@@ -907,6 +907,21 @@ int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool ove
                                  dbus_set_error(e, BUS_ERROR_INVALID_JOB_MODE, "final.target is queued, ignoring %s request for unit %s", job_type_to_string(type), unit->id);
                                  return -EINVAL;
                          }

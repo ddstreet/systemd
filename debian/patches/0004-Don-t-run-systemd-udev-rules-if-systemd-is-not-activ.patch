@@ -1,4 +1,4 @@
-From 1e6c6f45454113142721e48176f69db63b1261ce Mon Sep 17 00:00:00 2001
+From f370818c5bfaf79afd1749df616bf70aafceaa36 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Mon, 26 Nov 2012 19:44:22 +0100
 Subject: [PATCH 04/10] Don't run systemd udev rules if systemd is not active

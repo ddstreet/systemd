@@ -28,6 +28,7 @@
 #include <inttypes.h>
 
 #define _printf_attr_(a,b) __attribute__ ((format (printf, a, b)))
+#define _alloc_(...) __attribute__ ((alloc_size(__VA_ARGS__)))
 #define _sentinel_ __attribute__ ((sentinel))
 #define _noreturn_ __attribute__((noreturn))
 #define _unused_ __attribute__ ((unused))
@@ -263,6 +264,13 @@ do {                                                                    \
                 }                                                       \
         }                                                               \
 } while(false)
+
+ /* Because statfs.t_type can be int on some architecures, we have to cast
+  * the const magic to the type, otherwise the compiler warns about
+  * signed/unsigned comparison, because the magic can be 32 bit unsigned.
+ */
+#define F_TYPE_CMP(a, b) (a == (typeof(a)) b)
+
 
 /* Returns the number of chars needed to format variables of the
  * specified type as a decimal string. Adds in extra space for a

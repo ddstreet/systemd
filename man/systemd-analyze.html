@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-analyze</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-analyze</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd-analyze"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-analyze — Analyze system boot-up performance</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] time</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] blame </code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] plot  [&gt; file.svg]</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] dot  [pattern...] </code> </p></div></div><div class="refsect1"><a name="idp3907744"></a><h2>Description</h2><p><span class="command"><strong>systemd-analyze</strong></span> may be used
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="systemd-analyze"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-analyze — Analyze system boot-up performance</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] time</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] blame </code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] critical-chain </code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] plot  [&gt; file.svg]</code> </p></div><div class="cmdsynopsis"><p><code class="command">systemd-analyze [OPTIONS...] dot  [pattern...] </code> </p></div></div><div class="refsect1"><a name="idm259795164352"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p><span class="command"><strong>systemd-analyze</strong></span> may be used
                 to determine system boot-up performance of the current
                 boot.</p><p><span class="command"><strong>systemd-analyze time</strong></span>
                 prints the time spent in the kernel before
@@ -19,7 +36,15 @@
                 optimize boot-up times. Note that the output might be
                 misleading as the initialization of one service might
                 be slow simply because it waits for the initialization
-                of another service to complete.</p><p><span class="command"><strong>systemd-analyze plot</strong></span> prints
+                of another service to complete.</p><p><span class="command"><strong>systemd-analyze critical-chain</strong></span>
+                prints a tree of the time critical chain of units.
+                The time after the unit is active or started is printed
+                after the "@" character. The time the unit takes to
+                start is printed after the "+" character.
+                Note that the output might be misleading as the
+                initialization of one service might depend on socket
+                activation and because of the parallel execution
+                of units.</p><p><span class="command"><strong>systemd-analyze plot</strong></span> prints
                 an SVG graphic detailing which system services have
                 been started at what time, highlighting the time they
                 spent on initialization.</p><p><span class="command"><strong>systemd-analyze dot</strong></span> Generate
@@ -37,10 +62,10 @@
                 the end. A unit dependency is included in the graph if
                 any of these patterns match either the origin or
                 destination node.</p><p>If no command is passed <span class="command"><strong>systemd-analyze
-                time</strong></span> is implied.</p></div><div class="refsect1"><a name="idp3919344"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
-                                text and exits.</p></dd><dt><span class="term"><code class="option">--user</code></span></dt><dd><p>Shows performance data
+                time</strong></span> is implied.</p></div><div class="refsect1"><a name="idm259799104080"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt id="-h"><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span><a class="headerlink" title="Permalink to this term" href="#-h">¶</a></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt id="--user"><span class="term"><code class="option">--user</code></span><a class="headerlink" title="Permalink to this term" href="#--user">¶</a></dt><dd><p>Shows performance data
                                 of user sessions instead of the system
-                                manager.</p></dd><dt><span class="term"><code class="option">--order</code>, </span><span class="term"><code class="option">--require</code></span></dt><dd><p>When used in
+                                manager.</p></dd><dt id="--order"><span class="term"><code class="option">--order</code>, </span><span class="term"><code class="option">--require</code></span><a class="headerlink" title="Permalink to this term" href="#--order">¶</a></dt><dd><p>When used in
                                 conjunction with the
                                 <span class="command"><strong>dot</strong></span> command (see
                                 above), selects which dependencies are
@@ -59,7 +84,7 @@
                                 <code class="varname">Conflicts=</code> are
                                 shown. If neither is passed, shows
                                 dependencies of all these
-                                types.</p></dd><dt><span class="term"><code class="option">--from-pattern=</code>, </span><span class="term"><code class="option">--to-pattern=</code></span></dt><dd><p>When used in
+                                types.</p></dd><dt id="--from-pattern="><span class="term"><code class="option">--from-pattern=</code>, </span><span class="term"><code class="option">--to-pattern=</code></span><a class="headerlink" title="Permalink to this term" href="#--from-pattern=">¶</a></dt><dd><p>When used in
                                 conjunction with the
                                 <span class="command"><strong>dot</strong></span> command (see
                                 above), selects which relationships
@@ -72,11 +97,18 @@
                                 relationship. Each of these can be
                                 used more than once which means a
                                 unit name must match one of given
-                                values.</p></dd></dl></div></div><div class="refsect1"><a name="idp37664"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1"><a name="idp38848"></a><h2>Examples</h2><p>This plots all dependencies of any unit whose
+                                values.</p></dd><dt id="--fuzz=timespan"><span class="term"><code class="option">--fuzz=</code><em class="replaceable"><code>timespan</code></em></span><a class="headerlink" title="Permalink to this term" href="#--fuzz=timespan">¶</a></dt><dd><p>When used in conjunction
+                                with the <span class="command"><strong>critical-chain</strong></span>
+                                command (see above), also show units, which
+                                finished <em class="replaceable"><code>timespan</code></em> earlier, than the
+                                latest unit in the same level. The unit of
+                                <em class="replaceable"><code>timespan</code></em> is seconds
+                                unless specified with a different unit,
+                                i.e. "50ms".</p></dd></dl></div></div><div class="refsect1"><a name="idm259799075808"></a><h2 id="Exit status">Exit status<a class="headerlink" title="Permalink to this headline" href="#Exit%20status">¶</a></h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idm259799074624"></a><h2 id="Examples">Examples<a class="headerlink" title="Permalink to this headline" href="#Examples">¶</a></h2><p>This plots all dependencies of any unit whose
                 name starts with "<code class="literal">avahi-daemon.</code>":</p><pre class="programlisting">$ systemd-analyze dot 'avahi-daemon.*' | dot -Tsvg &gt; avahi.svg
 $ eog avahi.svg</pre><p>This plots the dependencies between all known target units:</p><pre class="programlisting">systemd-analyze dot --to-pattern='*.target' --from-patter='*.target' | dot -Tsvg &gt; targets.svg
-$ eog targets.svg</pre></div><div class="refsect1"><a name="idp49584"></a><h2>See Also</h2><p>
+$ eog targets.svg</pre></div><div class="refsect1"><a name="idm259799070928"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span></a>
                 </p></div></div></body></html>

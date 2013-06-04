@@ -569,7 +569,7 @@ int job_run_and_invalidate(Job *j) {
         return r;
 }
 
-static const char *job_get_status_message_format(Unit *u, JobType t, JobResult result) {
+_pure_ static const char *job_get_status_message_format(Unit *u, JobType t, JobResult result) {
         const UnitStatusMessageFormats *format_table;
 
         assert(u);
@@ -588,7 +588,7 @@ static const char *job_get_status_message_format(Unit *u, JobType t, JobResult r
         return NULL;
 }
 
-static const char *job_get_status_message_format_try_harder(Unit *u, JobType t, JobResult result) {
+_pure_ static const char *job_get_status_message_format_try_harder(Unit *u, JobType t, JobResult result) {
         const char *format;
 
         assert(u);
@@ -840,8 +840,10 @@ int job_finish_and_invalidate(Job *j, JobResult result, bool recursive) {
                            job_result_to_string(result),
                            NULL);
 
-                unit_trigger_on_failure(u);
+                unit_start_on_failure(u);
         }
+
+        unit_trigger_notify(u);
 
 finish:
         /* Try to start the next jobs that can be started */

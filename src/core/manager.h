@@ -284,14 +284,14 @@ int manager_distribute_fds(Manager *m, FDSet *fds);
 
 int manager_reload(Manager *m);
 
-bool manager_is_reloading_or_reexecuting(Manager *m);
+bool manager_is_reloading_or_reexecuting(Manager *m) _pure_;
 
 void manager_reset_failed(Manager *m);
 
 void manager_send_unit_audit(Manager *m, Unit *u, int type, bool success);
 void manager_send_unit_plymouth(Manager *m, Unit *u);
 
-bool manager_unit_pending_inactive(Manager *m, const char *name);
+bool manager_unit_inactive_or_pending(Manager *m, const char *name);
 
 void manager_check_finished(Manager *m);
 
@@ -301,6 +301,6 @@ void manager_undo_generators(Manager *m);
 void manager_recheck_journal(Manager *m);
 
 void manager_set_show_status(Manager *m, bool b);
-void manager_status_printf(Manager *m, bool ephemeral, const char *status, const char *format, ...);
+void manager_status_printf(Manager *m, bool ephemeral, const char *status, const char *format, ...) _printf_attr_(4,5);
 
 void watch_init(Watch *w);

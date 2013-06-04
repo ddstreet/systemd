@@ -1,4 +1,4 @@
-From 501f3e31f7e36689fb9c6f48a3202d2658f619f6 Mon Sep 17 00:00:00 2001
+From 145975edaf89f3cd3ed160c425818914f986428b Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Thu, 28 Mar 2013 03:17:59 +0100
 Subject: [PATCH 09/10] Revert "service: ignore dependencies on $syslog and
@@ -21,10 +21,10 @@ Conflicts:
  create mode 100644 units/syslog.target
 
 diff --git a/Makefile.am b/Makefile.am
-index d594a3d..ed20b57 100644
+index 3a196a6..2adb46d 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -401,6 +401,7 @@ dist_systemunit_DATA = \
+@@ -404,6 +404,7 @@ dist_systemunit_DATA = \
  	units/quotaon.service \
  	units/systemd-ask-password-wall.path \
  	units/systemd-ask-password-console.path \
@@ -33,7 +33,7 @@ index d594a3d..ed20b57 100644
  	units/systemd-udevd-kernel.socket \
  	units/system-update.target \
 diff --git a/man/systemd.special.xml b/man/systemd.special.xml
-index 61d45ff..b23a3ea 100644
+index 7164b1e..036b6e5 100644
 --- a/man/systemd.special.xml
 +++ b/man/systemd.special.xml
 @@ -97,6 +97,7 @@
@@ -93,7 +93,7 @@ index 61d45ff..b23a3ea 100644
                                  <listitem>
                                          <para>A special target unit
 diff --git a/src/core/service.c b/src/core/service.c
-index 6e1072a..0d96ea4 100644
+index b89631e..d5d75eb 100644
 --- a/src/core/service.c
 +++ b/src/core/service.c
 @@ -330,8 +330,7 @@ static void service_done(Unit *u) {

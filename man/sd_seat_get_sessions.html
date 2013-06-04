@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_seat_get_active</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_seat_get_active</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="sd_seat_get_active"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_seat_get_active, sd_seat_get_sessions, sd_seat_can_multi_session — Determine state of a specific seat</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-login.h&gt;</pre><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_get_active</b>(</code></td><td>const char* <var class="pdparam">seat</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>uid_t* <var class="pdparam">uid</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_get_sessions</b>(</code></td><td>const char* <var class="pdparam">seat</var>, </td></tr><tr><td> </td><td>char*** <var class="pdparam">sessions</var>, </td></tr><tr><td> </td><td>uid_t** <var class="pdparam">uid</var>, </td></tr><tr><td> </td><td>unsigned* <var class="pdparam">n_uids</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_can_multi_session</b>(</code></td><td>const char* <var class="pdparam">seat</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_can_tty</b>(</code></td><td>const char* <var class="pdparam">seat</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_can_graphical</b>(</code></td><td>const char* <var class="pdparam">seat</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1"><a name="idp26160"></a><h2>Description</h2><p><code class="function">sd_seat_get_active()</code> may be
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="sd_seat_get_active"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_seat_get_active, sd_seat_get_sessions, sd_seat_can_multi_session — Determine state of a specific seat</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-login.h&gt;</pre><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_get_active</b>(</code></td><td>const char* <var class="pdparam">seat</var>, </td></tr><tr><td> </td><td>char** <var class="pdparam">session</var>, </td></tr><tr><td> </td><td>uid_t* <var class="pdparam">uid</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_get_sessions</b>(</code></td><td>const char* <var class="pdparam">seat</var>, </td></tr><tr><td> </td><td>char*** <var class="pdparam">sessions</var>, </td></tr><tr><td> </td><td>uid_t** <var class="pdparam">uid</var>, </td></tr><tr><td> </td><td>unsigned* <var class="pdparam">n_uids</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_can_multi_session</b>(</code></td><td>const char* <var class="pdparam">seat</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_can_tty</b>(</code></td><td>const char* <var class="pdparam">seat</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_seat_can_graphical</b>(</code></td><td>const char* <var class="pdparam">seat</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1"><a name="idm259794011072"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p><code class="function">sd_seat_get_active()</code> may be
                 used to determine which session is currently active on
                 a seat, if there is any. Returns the session
                 identifier and the user identifier of the Unix user
@@ -37,7 +54,7 @@
                 display.</p><p>If the <code class="literal">seat</code> parameter of any
                 of these functions is passed as NULL the operation is
                 executed for the seat of the session of the calling
-                process, if there is any.</p></div><div class="refsect1"><a name="idp36592"></a><h2>Return Value</h2><p> On success
+                process, if there is any.</p></div><div class="refsect1"><a name="idm259797900912"></a><h2 id="Return Value">Return Value<a class="headerlink" title="Permalink to this headline" href="#Return%20Value">¶</a></h2><p> On success
                 <code class="function">sd_seat_get_active()</code>
                 returns 0 or a positive integer. On success
                 <code class="function">sd_seat_get_sessions()</code> returns
@@ -47,7 +64,7 @@
                 <code class="function">sd_seat_can_tty</code> and
                 <code class="function">sd_seat_can_graphical</code> return a
                 positive integer, if it fails 0. On failure, these
-                calls return a negative errno-style error code.</p></div><div class="refsect1"><a name="idp49008"></a><h2>Notes</h2><p>The <code class="function">sd_seat_get_active()</code>,
+                calls return a negative errno-style error code.</p></div><div class="refsect1"><a name="idm259797895856"></a><h2 id="Notes">Notes<a class="headerlink" title="Permalink to this headline" href="#Notes">¶</a></h2><p>The <code class="function">sd_seat_get_active()</code>,
                 <code class="function">sd_seat_get_sessions()</code>,
                 <code class="function">sd_seat_can_multi_session()</code>,
                 <code class="function">sd_seat_can_tty()</code> and
@@ -56,7 +73,7 @@
                 and linked to with the
                 <code class="literal">libsystemd-login</code>
                 <a href="pkg-config.html"><span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span></a>
-                file.</p></div><div class="refsect1"><a name="idp55488"></a><h2>See Also</h2><p>
+                file.</p></div><div class="refsect1"><a name="idm259797889376"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="sd-login.html"><span class="citerefentry"><span class="refentrytitle">sd-login</span>(3)</span></a>,
                         <a href="sd_session_get_seat.html"><span class="citerefentry"><span class="refentrytitle">sd_session_get_seat</span>(3)</span></a>

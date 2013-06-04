@@ -12,6 +12,9 @@ _ctls()
                 {-t,--type=}'[List only units of a particular type]:unit type:(automount device mount path service snapshot socket swap target timer)' \
                 \*{-p,--property=}'[Show only properties by specific name]:unit property' \
                 {-a,--all}'[Show all units/properties, including dead/empty ones]' \
+                '--reverse[Show reverse dependencies]' \
+                '--after[Show units ordered after]' \
+                '--before[Show units ordered before]' \
                 '--failed[Show only failed units]' \
                 "--full[Don't ellipsize unit names on output]" \
                 '--fail[When queueing a new job, fail if conflicting jobs are pending]' \
@@ -291,11 +294,13 @@ _systemd_inhibit_command(){
 
 _systemd_analyze_command(){
     local -a _systemd_analyze_cmds
+    # Descriptions taken from systemd-analyze --help.
     _systemd_analyze_cmds=(
-        'time:Print the time taken to start'
-        'blame:prints a list of all running units, ordered by the time they took to initialize'
-        'plot:prints an SVG graphic detailing which system services have been started at what time'
-        'dot:Dump dependency graph for dot(1)'
+        'time:Print time spent in the kernel before reaching userspace'
+        'blame:Print list of running units ordered by time to init'
+        'critical-chain:Print a tree of the time critical chain of units'
+        'plot:Output SVG graphic showing service initialization'
+        'dot:Dump dependency graph (in dot(1) format)'
     )
 
     if (( CURRENT == 1 )); then
@@ -348,6 +353,8 @@ _outputmodes() {
     "disable:Disable one or more unit files"
     "reenable:Reenable one or more unit files"
     "preset:Enable/disable one or more unit files based on preset configuration"
+    "help:Show documentation for specified units"
+    "list-dependencies:Show unit dependency tree"
     "mask:Mask one or more units"
     "unmask:Unmask one or more units"
     "link:Link one or more units files into the search path"
@@ -462,7 +469,7 @@ _systemctl_disabled_units(){_sys_disabled_units=($(__systemctl list-unit-files  
 _systemctl_masked_units()  {_sys_masked_units=(  $(__systemctl list-unit-files     | { while read a b; do [[ $b == "masked" ]] && echo " $a"; done; }) )}
 
 # Completion functions for ALL_UNITS
-for fun in is-active is-failed is-enabled status show mask preset ; do
+for fun in is-active is-failed is-enabled status show mask preset help list-dependencies ; do
   (( $+functions[_systemctl_$fun] )) || _systemctl_$fun()
   {
     _systemctl_really_all_units
@@ -889,12 +896,13 @@ _systemd-coredumpctl_command(){
         _describe -t commands 'systemd-coredumpctl command' _systemd_coredumpctl_cmds
     else
         local curcontext="$curcontext"
-        local -a dumps
+        local -a _dumps
         cmd="${${_systemd_coredumpctl_cmds[(r)$words[1]:*]%%:*}}"
         if (( $#cmd  )); then
-            dumps=( "${(f)$(_call_program dumps "systemd-coredumpctl list 2>/dev/null")}" )
-            if [[ -n "$dumps" ]]; then
-                compadd "${dumps[@]}"
+			# user can set zstyle ':completion:*:*:systemd-coredumpctl:*' sort no for coredumps to be ordered by date, otherwise they get ordered by pid
+			_dumps=( "${(foa)$(systemd-coredumpctl list | awk 'BEGIN{OFS=":"} /^\s/ {sub(/[[ \t]+/, ""); print $5,$0}' 2>/dev/null)}" )
+            if [[ -n "$_dumps" ]]; then
+                _describe -t pids 'coredumps' _dumps
             else
                 _message "no coredumps"
             fi
@@ -964,7 +972,7 @@ _udevadm_monitor(){
         '--kernel[Print the kernel uevents.]' \
         '--udev[Print the udev event after the rule processing.]' \
         '--property[Also print the properties of the event.]' \
-        '--subsystem-match=[Filter events by subsystem[/devtype].]' \
+        '--subsystem-match=[Filter events by subsystem/\[devtype\].]' \
         '--tag-match=[Filter events by property.]' \
         '--help[Print help text.]'
 }
