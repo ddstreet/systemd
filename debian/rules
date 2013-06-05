@@ -19,7 +19,7 @@ CONFFLAGS = \
 	--libexecdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) \
 	--with-rootprefix= \
 	--with-rootlibdir=/lib/$(DEB_HOST_MULTIARCH) \
-	--with-firmware-path=/lib/firmware \
+	--with-firmware-path=/lib/firmware:/system/firmware:/vendor/firmware \
 	--with-sysvinit-path=/etc/init.d \
 	--with-sysvrcnd-path=/etc \
 	--enable-libcryptsetup \
