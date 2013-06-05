@@ -1,3 +1,13 @@
+systemd (204-0ubuntu2) saucy; urgency=low
+
+  * debian/rules: Add /system/firmware and /vendor/firmware to firmware search
+    paths. (LP: #1187616)
+  * debian/libpam-systemd.postinst: Notify about required reboot when
+    upgrading from < 204, as due to changed cgroup layout restarting logind
+    after the upgrade would lose all existing sessions. (LP: #1187579)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 05 Jun 2013 11:07:38 +0200
+
 systemd (204-0ubuntu1) saucy; urgency=low
 
   * New upstream release.
