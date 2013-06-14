@@ -169,6 +169,13 @@ endif
 	rm debian/udev/lib/udev/rules.d/80-net-name-slot.rules
 	rm debian/udev-udeb/lib/udev/rules.d/80-net-name-slot.rules
 
+	# build and ship pre-generated hwdb; do not ship the source files, they
+	# are quite big and for now we do not have other packages which want to
+	# add files there
+	debian/udev/bin/udevadm hwdb --update --root=$(CURDIR)/debian/udev/
+	rm -r debian/udev/lib/udev/hwdb.d
+	rmdir debian/udev/etc/udev/hwdb.d
+
 override_dh_makeshlibs:
 	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb
 	dh_makeshlibs --remaining-packages
