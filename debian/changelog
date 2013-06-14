@@ -1,3 +1,15 @@
+systemd (204-0ubuntu4) saucy; urgency=low
+
+  * Properly integrate hwdb, to get back vendor/product names in the udev db:
+    - Add 0024-hwdb-in-lib.patch: udev hwdb: Store binary database in libdir,
+      not in /etc.
+    - debian/rules: Build and ship pre-generated hwdb; do not ship the source
+      files, they are quite big and for now we do not have other packages
+      which want to add files there.
+    - LP: #1190947
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 14 Jun 2013 12:59:10 +0200
+
 systemd (204-0ubuntu3) saucy; urgency=low
 
   * debian/extra/udev.startup: Restore devpts mounting, dropped in
