@@ -1,3 +1,22 @@
+systemd (44-12) unstable; urgency=low
+
+  * Cherry-pick e17187 from upstream to fix build failures with newer glibc
+    where the clock_* symbols have been moved from librt to libc.
+    Closes: #701364
+  * If the new init-system-helpers package is installed, make the
+    debian-enable-units script a no-op. The auto-enabler was meant as a
+    temporary workaround and will be removed once all packages use the new
+    helper.
+  * Update the checks which test if systemd is the active init. The
+    recommended check is [ -d /run/systemd/system ] as this will also work
+    with a standalone systemd-logind.
+  * Set Maintainer to pkg-systemd-maintainers@lists.alioth.debian.org. Add
+    Tollef and myself as Uploaders.
+  * Stop building the GUI bits. They have been split into a separate source
+    package called systemd-ui.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 20 Jun 2013 01:32:16 +0200
+
 systemd (44-11) unstable; urgency=low
 
   * Team upload.
