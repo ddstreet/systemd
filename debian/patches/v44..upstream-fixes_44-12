@@ -39,6 +39,19 @@ index d33ae7f..4bdbb93 100644
  * journald: make configurable "store-on-var", "store-on-run", "dont-store", "auto"
    (store-persistent, store-volatile?)
  
+diff --git a/configure.ac b/configure.ac
+index 629e505..ff72560 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -109,7 +109,7 @@ CC_CHECK_CFLAGS_APPEND([ \
+ LT_PREREQ(2.2)
+ LT_INIT
+ 
+-AC_SEARCH_LIBS([clock_gettime], [rt], [], [AC_MSG_ERROR([*** POSIX RT library not found])])
++AC_SEARCH_LIBS([mq_open], [rt], [], [AC_MSG_ERROR([*** POSIX RT library not found])])
+ AC_SEARCH_LIBS([dlsym], [dl], [], [AC_MSG_ERROR([*** Dynamic linking loader library not found])])
+ 
+ save_LIBS="$LIBS"
 diff --git a/man/systemd.path.xml b/man/systemd.path.xml
 index 5b1ff75..306d8d2 100644
 --- a/man/systemd.path.xml
