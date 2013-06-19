@@ -5,16 +5,24 @@ Description: <short summary of the patch>
  information below has been extracted from the changelog. Adjust it or drop
  it.
  .
- systemd (44-11) unstable; urgency=low
+ systemd (44-12) unstable; urgency=low
  .
-   * Team upload.
-   * Run debian-enable-units.service after sysinit.target to ensure our tmp
-     files aren't nuked by systemd-tmpfiles.
-   * The mountoverflowtmp SysV init script no longer exists so remove that
-     from remount-rootfs.service to avoid an unnecessary diff to upstream.
-   * Do not fail on purge if /var/lib/systemd is empty and has been removed
-     by dpkg.
+   * Cherry-pick e17187 from upstream to fix build failures with newer glibc
+     where the clock_* symbols have been moved from librt to libc.
+     Closes: #701364
+   * If the new init-system-helpers package is installed, make the
+     debian-enable-units script a no-op. The auto-enabler was meant as a
+     temporary workaround and will be removed once all packages use the new
+     helper.
+   * Update the checks which test if systemd is the active init. The
+     recommended check is [ -d /run/systemd/system ] as this will also work
+     with a standalone systemd-logind.
+   * Set Maintainer to pkg-systemd-maintainers@lists.alioth.debian.org. Add
+     Tollef and myself as Uploaders.
+   * Stop building the GUI bits. They have been split into a separate source
+     package called systemd-ui.
 Author: Michael Biebl <biebl@debian.org>
+Bug-Debian: http://bugs.debian.org/701364
 
 ---
 The information above should follow the Patch Tagging Guidelines, please
