@@ -1,3 +1,12 @@
+systemd (204-0ubuntu5) saucy; urgency=low
+
+  * Add 0000-upstream-keymaps.patch: Backport latest keymap fixes from
+    upstream, as we won't be able to update to newer upstream releases anytime
+    soon. (LP: #1193147, #1157334, #1152377, #1012365, #727139)
+  * Refresh our patches to apply cleanly.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 05 Jul 2013 08:54:06 +0200
+
 systemd (204-0ubuntu4) saucy; urgency=low
 
   * Properly integrate hwdb, to get back vendor/product names in the udev db:
