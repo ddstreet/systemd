@@ -17,9 +17,9 @@ overhead.
 
 Index: systemd/src/login/logind.c
 ===================================================================
---- systemd.orig/src/login/logind.c	2013-04-29 14:43:24.720833973 -0700
-+++ systemd/src/login/logind.c	2013-04-29 14:43:24.716833973 -0700
-@@ -1361,9 +1361,15 @@
+--- systemd.orig/src/login/logind.c	2013-07-05 08:20:43.653243418 +0200
++++ systemd/src/login/logind.c	2013-07-05 08:20:43.645243417 +0200
+@@ -1371,9 +1371,15 @@
          Seat *seat;
          Session *session;
          User *user;
