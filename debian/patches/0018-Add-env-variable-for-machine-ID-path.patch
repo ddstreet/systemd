@@ -14,11 +14,11 @@ https://bugs.freedesktop.org/show_bug.cgi?id=62344
  src/libsystemd-id128/sd-id128.c | 6 +++++-
  1 file changed, 5 insertions(+), 1 deletion(-)
 
-diff --git a/src/libsystemd-id128/sd-id128.c b/src/libsystemd-id128/sd-id128.c
-index 4286ae7..8d2b1df 100644
---- a/src/libsystemd-id128/sd-id128.c
-+++ b/src/libsystemd-id128/sd-id128.c
-@@ -95,6 +95,7 @@ _public_ int sd_id128_get_machine(sd_id128_t *ret) {
+Index: systemd/src/libsystemd-id128/sd-id128.c
+===================================================================
+--- systemd.orig/src/libsystemd-id128/sd-id128.c	2013-07-05 08:20:51.769243811 +0200
++++ systemd/src/libsystemd-id128/sd-id128.c	2013-07-05 08:20:51.765243810 +0200
+@@ -115,6 +115,7 @@
          ssize_t k;
          unsigned j;
          sd_id128_t t;
@@ -26,7 +26,7 @@ index 4286ae7..8d2b1df 100644
  
          if (!ret)
                  return -EINVAL;
-@@ -104,7 +105,10 @@ _public_ int sd_id128_get_machine(sd_id128_t *ret) {
+@@ -124,7 +125,10 @@
                  return 0;
          }
  
@@ -38,6 +38,3 @@ index 4286ae7..8d2b1df 100644
          if (fd < 0)
                  return -errno;
  
--- 
-1.8.1.2
-
