@@ -3,6 +3,8 @@
 /lib/systemd/system/systemd-random-seed-load.service /lib/systemd/system/urandom.service
 /lib/systemd/system/systemd-sysctl.service /lib/systemd/system/procps.service
 
+/lib/systemd/system/rc-local.service /lib/systemd/system/rc.local.service
+
 /lib/systemd/system/systemd-modules-load.service /lib/systemd/system/module-init-tools.service
 /lib/systemd/system/systemd-modules-load.service /lib/systemd/system/kmod.service
 /etc/modules /etc/modules-load.d/modules.conf
@@ -22,10 +24,6 @@
 /dev/null /lib/systemd/system/stop-bootlogd-single.service
 /dev/null /lib/systemd/system/stop-bootlogd.service
 
-# These are pointless, /etc/mtab should be a symlink
-/dev/null /lib/systemd/system/mtab.service
-/dev/null /lib/systemd/system/udev-mtab.service
-
 # systemd sets the hwclock internally
 # http://cgit.freedesktop.org/systemd/systemd/commit/?id=7948c4dfbea73ac21250b588089039aa17a90386
 /dev/null /lib/systemd/system/hwclock.service
@@ -41,7 +39,7 @@
 /dev/null /lib/systemd/system/mountnfs-bootclean.service
 /dev/null /lib/systemd/system/checkfs.service
 # We need checkroot as synchronisation point, so symlink it to remount-rootfs
-/lib/systemd/system/remount-rootfs.service /lib/systemd/system/checkroot.service
+/lib/systemd/system/systemd-remount-fs.service /lib/systemd/system/checkroot.service
 # checkroot-bootclean cleans up directories before mounting a tmpfs
 # over it. As systemd handles mounts differently, mask this service.
 /dev/null /lib/systemd/system/checkroot-bootclean.service
