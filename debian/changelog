@@ -1,3 +1,75 @@
+systemd (204-1) experimental; urgency=low
+
+  * New upstream release.  Closes: #675175, #675177
+    - In v183 the udev sources have been merged into the systemd source tree.
+      As a result, the udev binary packages will now be built from the systemd
+      source package. To align the version numbers 139 releases were skipped.
+    - For a complete list of changes, please refer to the NEWS file.
+  * Add Marco to Uploaders.
+  * Drop Suggests on the various python packages from systemd. The
+    systemd-analyze tool has been reimplemented in C.
+  * Add binary packages as found in the udev 175-7.2 source package.
+  * Wrap dependencies for better readability.
+  * Drop hard-coded Depends on libglib2.0-0 from gir1.2-gudev-1.0.
+  * Drop old Conflicts, Replaces and Breaks, which are no longer necessary.
+  * Make libgudev-1.0-dev depend on gir1.2-gudev-1.0 as per GObject
+    introspection mini-policy.  Closes: #691313
+  * The hwdb builtin has replaced pci-db and usb-db in udev. Drop the
+    Recommends on pciutils and usbutils accordingly.
+  * Drop our faketime hack. Upstream uses a custom xsl style sheet now to
+    generate the man pages which no longer embeds the build date.
+  * Add Depends on libpam-runtime (>= 1.0.1-6) to libpam-systemd as we are
+    using pam-auth-update.
+  * Explicitly set Section and Priority for the udev binary package.
+  * Update Build-Depends:
+    - Drop libudev-dev, no longer required.
+    - Add gtk-doc-tools and libglib2.0-doc for the API documentation in
+      libudev and libgudev.
+    - Add libgirepository1.0-dev and gobject-introspection for GObject
+      introspection support in libgudev.
+    - Add libgcrypt11-dev for encryption support in the journal.
+    - Add libblkid-dev for the blkid udev builtin.
+  * Use gir dh addon to ensure ${gir:Depends} is properly set.
+  * Rename libudev0 → libudev1 for the SONAME bump.
+  * Update symbols files. libudev now uses symbols versioning as the other
+    libsystemd libraries. The libgudev-1.0-0 symbols file has been copied from
+    the old udev package.
+  * Run gtkdocize on autoreconf.
+  * Enable python bindings for the systemd libraries and ship them in a new
+    package named python-systemd.
+  * Tighten Depends on libsystemd-id128-dev for libsystemd-journal-dev as per
+    libsystemd-journal.pc.
+  * Remove obsolete bash-completion scripts on upgrades. Nowadays they are
+    installed in /usr/share/bash-completion/completions.
+  * Rename conffiles for logind and journald.
+  * Rename udev-gtk-udeb → libudev1-udeb to better reflect its actual contents.
+  * Build two flavours: a regular build and one for the udev udebs with
+    reduced features/dependencies.
+  * Create a few compat symlinks for the udev package, most notably
+    /sbin/udevadm and /sbin/udevd.
+  * Remove the dpkg-triggered debian-enable-units script. This was a temporary
+    workaround for wheezy. Packages should use dh-systemd now to properly
+    integrate service files with systemd.
+  * Update debian/copyright using the machine-readable copyright format 1.0.
+  * Integrate changes from udev 175-7 and acknowledge the 175-7.1 and 175-7.2
+    non-maintainer uploads.
+  * Keep the old persistent network interface naming scheme for now and make
+    the new one opt-in via net.ifnames=1 on the kernel command line.
+  * Drop the obsolete udev-mtab SysV init script and properly clean up on
+    upgrades.
+  * Simplify the udev SysV init script and remove experimental and obsolete
+    features.
+  * Revert upstream commits which dropped support for distro specific
+    features and config files.
+  * Make logind, hostnamed, localed and timedated D-Bus activatable and
+    usable when systemd is not running.
+  * Store hwdb binary database in /lib/udev, not /etc/udev. Create the file on
+    install and upgrades.
+  * Provide a dpkg file trigger for hwdb, so the database is automatically
+    updated when packages install files into /lib/udev/hwdb.d.
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 19 Jul 2013 00:32:36 +0200
+
 systemd (44-12) unstable; urgency=low
 
   * Cherry-pick e17187 from upstream to fix build failures with newer glibc
