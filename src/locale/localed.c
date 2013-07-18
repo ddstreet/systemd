@@ -6,16 +6,16 @@
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -26,10 +26,15 @@
 #include <unistd.h>
 
 #include "util.h"
+#include "mkdir.h"
 #include "strv.h"
 #include "dbus-common.h"
 #include "polkit.h"
 #include "def.h"
+#include "env-util.h"
+#include "fileio.h"
+#include "fileio-label.h"
+#include "label.h"
 
 #define INTERFACE                                                       \
         " <interface name=\"org.freedesktop.locale1\">\n"               \
@@ -113,21 +118,7 @@ static const char * const names[_PROP_MAX] = {
         [PROP_LC_IDENTIFICATION] = "LC_IDENTIFICATION"
 };
 
-static char *data[_PROP_MAX] = {
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL
-};
+static char *data[_PROP_MAX] = {};
 
 typedef struct State {
         char *x11_layout, *x11_model, *x11_variant, *x11_options;
@@ -211,6 +202,24 @@ static int read_data_locale(void) {
                            "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
                            NULL);
 
+        if (r == -ENOENT)
+                r = parse_env_file("/etc/default/locale", NEWLINE,
+                                   "LANG",              &data[PROP_LANG],
+                                   "LANGUAGE",          &data[PROP_LANGUAGE],
+                                   "LC_CTYPE",          &data[PROP_LC_CTYPE],
+                                   "LC_NUMERIC",        &data[PROP_LC_NUMERIC],
+                                   "LC_TIME",           &data[PROP_LC_TIME],
+                                   "LC_COLLATE",        &data[PROP_LC_COLLATE],
+                                   "LC_MONETARY",       &data[PROP_LC_MONETARY],
+                                   "LC_MESSAGES",       &data[PROP_LC_MESSAGES],
+                                   "LC_PAPER",          &data[PROP_LC_PAPER],
+                                   "LC_NAME",           &data[PROP_LC_NAME],
+                                   "LC_ADDRESS",        &data[PROP_LC_ADDRESS],
+                                   "LC_TELEPHONE",      &data[PROP_LC_TELEPHONE],
+                                   "LC_MEASUREMENT",    &data[PROP_LC_MEASUREMENT],
+                                   "LC_IDENTIFICATION", &data[PROP_LC_IDENTIFICATION],
+                                   NULL);
+
         if (r == -ENOENT) {
                 int p;
 
@@ -263,93 +272,18 @@ static int read_data_vconsole(void) {
 }
 
 static int read_data_x11(void) {
-        FILE *f;
-        char line[LINE_MAX];
-        bool in_section = false;
+        int r;
 
         free_data_x11();
 
-        f = fopen("/etc/X11/xorg.conf.d/00-keyboard.conf", "re");
-        if (!f) {
-                if (errno == ENOENT) {
+        r = parse_env_file("/etc/default/keyboard", NEWLINE,
+                           "XKBMODEL",          &state.x11_model,
+                           "XKBLAYOUT",         &state.x11_layout,
+                           "XKBVARIANT",        &state.x11_variant,
+                           "XKBOPTIONS",        &state.x11_options,
+                           NULL);
 
-#ifdef TARGET_FEDORA
-                        f = fopen("/etc/X11/xorg.conf.d/00-system-setup-keyboard.conf", "re");
-                        if (!f) {
-                                if (errno == ENOENT)
-                                        return 0;
-                                else
-                                        return -errno;
-                        }
-#else
-                        return 0;
-#endif
-
-                } else
-                          return -errno;
-        }
-
-        while (fgets(line, sizeof(line), f)) {
-                char *l;
-
-                char_array_0(line);
-                l = strstrip(line);
-
-                if (l[0] == 0 || l[0] == '#')
-                        continue;
-
-                if (in_section && first_word(l, "Option")) {
-                        char **a;
-
-                        a = strv_split_quoted(l);
-                        if (!a) {
-                                fclose(f);
-                                return -ENOMEM;
-                        }
-
-                        if (strv_length(a) == 3) {
-
-                                if (streq(a[1], "XkbLayout")) {
-                                        free(state.x11_layout);
-                                        state.x11_layout = a[2];
-                                        a[2] = NULL;
-                                } else if (streq(a[1], "XkbModel")) {
-                                        free(state.x11_model);
-                                        state.x11_model = a[2];
-                                        a[2] = NULL;
-                                } else if (streq(a[1], "XkbVariant")) {
-                                        free(state.x11_variant);
-                                        state.x11_variant = a[2];
-                                        a[2] = NULL;
-                                } else if (streq(a[1], "XkbOptions")) {
-                                        free(state.x11_options);
-                                        state.x11_options = a[2];
-                                        a[2] = NULL;
-                                }
-                        }
-
-                        strv_free(a);
-
-                } else if (!in_section && first_word(l, "Section")) {
-                        char **a;
-
-                        a = strv_split_quoted(l);
-                        if (!a) {
-                                fclose(f);
-                                return -ENOMEM;
-                        }
-
-                        if (strv_length(a) == 2 && streq(a[1], "InputClass"))
-                                in_section = true;
-
-                        strv_free(a);
-                } else if (in_section && first_word(l, "EndSection"))
-                        in_section = false;
-        }
-
-        fclose(f);
-
-        return 0;
+        return r;
 }
 
 static int read_data(void) {
@@ -365,8 +299,13 @@ static int read_data(void) {
 static int write_data_locale(void) {
         int r, p;
         char **l = NULL;
+        const char *path = "/etc/locale.conf";
 
-        r = load_env_file("/etc/locale.conf", &l);
+        r = load_env_file(path, NULL, &l);
+        if (r < 0 && r == -ENOENT) {
+                path = "/etc/default/locale";
+                r = load_env_file(path, NULL, &l);
+        }
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -398,13 +337,13 @@ static int write_data_locale(void) {
         if (strv_isempty(l)) {
                 strv_free(l);
 
-                if (unlink("/etc/locale.conf") < 0)
+                if (unlink(path) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
 
-        r = write_env_file("/etc/locale.conf", l);
+        r = write_env_file_label(path, l);
         strv_free(l);
 
         return r;
@@ -424,7 +363,7 @@ static void push_data(DBusConnection *bus) {
         l_set = new0(char*, _PROP_MAX);
         l_unset = new0(char*, _PROP_MAX);
         if (!l_set || !l_unset) {
-                log_error("Out of memory");
+                log_oom();
                 goto finish;
         }
 
@@ -437,7 +376,7 @@ static void push_data(DBusConnection *bus) {
                         char *s;
 
                         if (asprintf(&s, "%s=%s", names[p], data[p]) < 0) {
-                                log_error("Out of memory");
+                                log_oom();
                                 goto finish;
                         }
 
@@ -455,30 +394,30 @@ static void push_data(DBusConnection *bus) {
         dbus_message_iter_init_append(m, &iter);
 
         if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "s", &sub)) {
-                log_error("Out of memory.");
+                log_oom();
                 goto finish;
         }
 
         STRV_FOREACH(t, l_unset)
                 if (!dbus_message_iter_append_basic(&sub, DBUS_TYPE_STRING, t)) {
-                        log_error("Out of memory.");
+                        log_oom();
                         goto finish;
                 }
 
         if (!dbus_message_iter_close_container(&iter, &sub) ||
             !dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY, "s", &sub)) {
-                log_error("Out of memory.");
+                log_oom();
                 goto finish;
         }
 
         STRV_FOREACH(t, l_set)
                 if (!dbus_message_iter_append_basic(&sub, DBUS_TYPE_STRING, t)) {
-                        log_error("Out of memory.");
+                        log_oom();
                         goto finish;
                 }
 
         if (!dbus_message_iter_close_container(&iter, &sub)) {
-                log_error("Out of memory.");
+                log_oom();
                 goto finish;
         }
 
@@ -505,7 +444,7 @@ static int write_data_vconsole(void) {
         int r;
         char **l = NULL;
 
-        r = load_env_file("/etc/vconsole.conf", &l);
+        r = load_env_file("/etc/vconsole.conf", NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -560,84 +499,107 @@ static int write_data_vconsole(void) {
                 return 0;
         }
 
-        r = write_env_file("/etc/vconsole.conf", l);
+        r = write_env_file_label("/etc/vconsole.conf", l);
         strv_free(l);
 
         return r;
 }
 
 static int write_data_x11(void) {
-        FILE *f;
-        char *temp_path;
         int r;
 
-        if (isempty(state.x11_layout) &&
-            isempty(state.x11_model) &&
-            isempty(state.x11_variant) &&
-            isempty(state.x11_options)) {
+        char *t, **u, **l = NULL;
 
-#ifdef TARGET_FEDORA
-                unlink("/etc/X11/xorg.conf.d/00-system-setup-keyboard.conf");
+        r = load_env_file("/etc/default/keyboard", NULL, &l);
+        if (r < 0 && r != -ENOENT)
+                return r;
 
-                /* Symlink this to /dev/null, so that s-s-k (if it is
-                 * still running) doesn't recreate this. */
-                symlink("/dev/null", "/etc/X11/xorg.conf.d/00-system-setup-keyboard.conf");
-#endif
+        /* This could perhaps be done more elegantly using an array
+         * like we do for the locale, instead of struct
+         */
+        if (isempty(state.x11_layout)) {
+                l = strv_env_unset(l, "XKBLAYOUT");
+        } else {
+                if (asprintf(&t, "XKBLAYOUT=%s", state.x11_layout) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
 
-                if (unlink("/etc/X11/xorg.conf.d/00-keyboard.conf") < 0)
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (isempty(state.x11_model)) {
+                l = strv_env_unset(l, "XKBMODEL");
+        } else {
+                if (asprintf(&t, "XKBMODEL=%s", state.x11_model) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
+
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (isempty(state.x11_variant)) {
+                l = strv_env_unset(l, "XKBVARIANT");
+        } else {
+                if (asprintf(&t, "XKBVARIANT=%s", state.x11_variant) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
+
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (isempty(state.x11_options)) {
+                l = strv_env_unset(l, "XKBOPTIONS");
+        } else {
+                if (asprintf(&t, "XKBOPTIONS=%s", state.x11_options) < 0) {
+                        strv_free(l);
+                        return -ENOMEM;
+                }
+
+                u = strv_env_set(l, t);
+                free(t);
+                strv_free(l);
+
+                if (!u)
+                        return -ENOMEM;
+
+                l = u;
+        }
+
+        if (strv_isempty(l)) {
+                strv_free(l);
+
+                if (unlink("/etc/default/keyboard") < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
 
-        mkdir_parents("/etc/X11/xorg.conf.d", 0755);
-
-        r = fopen_temporary("/etc/X11/xorg.conf.d/00-keyboard.conf", &f, &temp_path);
-        if (r < 0)
-                return r;
-
-        fchmod(fileno(f), 0644);
-
-        fputs("# Read and parsed by systemd-localed. It's probably wise not to edit this file\n"
-              "# manually too freely.\n"
-              "Section \"InputClass\"\n"
-              "        Identifier \"system-keyboard\"\n"
-              "        MatchIsKeyboard \"on\"\n", f);
-
-        if (!isempty(state.x11_layout))
-                fprintf(f, "        Option \"XkbLayout\" \"%s\"\n", state.x11_layout);
-
-        if (!isempty(state.x11_model))
-                fprintf(f, "        Option \"XkbModel\" \"%s\"\n", state.x11_model);
-
-        if (!isempty(state.x11_variant))
-                fprintf(f, "        Option \"XkbVariant\" \"%s\"\n", state.x11_variant);
-
-        if (!isempty(state.x11_options))
-                fprintf(f, "        Option \"XkbOptions\" \"%s\"\n", state.x11_options);
-
-        fputs("EndSection\n", f);
-        fflush(f);
-
-        if (ferror(f) || rename(temp_path, "/etc/X11/xorg.conf.d/00-keyboard.conf") < 0) {
-                r = -errno;
-                unlink("/etc/X11/xorg.conf.d/00-keyboard.conf");
-                unlink(temp_path);
-        } else {
-
-#ifdef TARGET_FEDORA
-                unlink("/etc/X11/xorg.conf.d/00-system-setup-keyboard.conf");
-
-                /* Symlink this to /dev/null, so that s-s-k (if it is
-                 * still running) doesn't recreate this. */
-                symlink("/dev/null", "/etc/X11/xorg.conf.d/00-system-setup-keyboard.conf");
-#endif
-
-                r = 0;
-        }
-
-        fclose(f);
-        free(temp_path);
+        r = write_env_file("/etc/default/keyboard", l);
+        strv_free(l);
 
         return r;
 }
@@ -886,7 +848,7 @@ static int convert_x11_to_vconsole(DBusConnection *connection) {
                                  * layout stripped off. */
                                 if (x > 0 &&
                                     strlen(a[1]) == x &&
-                                    strncmp(state.x11_layout, a[1], x) == 0)
+                                    strneq(state.x11_layout, a[1], x))
                                         matching = 5;
                                 else  {
                                         size_t w;
@@ -1040,7 +1002,7 @@ static DBusHandlerResult locale_message_handler(
                 dbus_bool_t interactive;
                 DBusMessageIter iter;
                 bool modified = false;
-                bool passed[_PROP_MAX];
+                bool passed[_PROP_MAX] = {};
                 int p;
 
                 if (!dbus_message_iter_init(message, &iter))
@@ -1062,8 +1024,6 @@ static DBusHandlerResult locale_message_handler(
 
                 dbus_message_iter_get_basic(&iter, &interactive);
 
-                zero(passed);
-
                 /* Check whether a variable changed and if so valid */
                 STRV_FOREACH(i, l) {
                         bool valid = false;
@@ -1072,7 +1032,9 @@ static DBusHandlerResult locale_message_handler(
                                 size_t k;
 
                                 k = strlen(names[p]);
-                                if (startswith(*i, names[p]) && (*i)[k] == '=') {
+                                if (startswith(*i, names[p]) &&
+                                    (*i)[k] == '=' &&
+                                    string_is_safe((*i) + k + 1)) {
                                         valid = true;
                                         passed[p] = true;
 
@@ -1156,7 +1118,9 @@ static DBusHandlerResult locale_message_handler(
                                         "Locale\0");
                         if (!changed)
                                 goto oom;
-                }
+                } else
+                        strv_free(l);
+
         } else if (dbus_message_is_method_call(message, "org.freedesktop.locale1", "SetVConsoleKeyboard")) {
 
                 const char *keymap, *keymap_toggle;
@@ -1180,6 +1144,10 @@ static DBusHandlerResult locale_message_handler(
 
                 if (!streq_ptr(keymap, state.vc_keymap) ||
                     !streq_ptr(keymap_toggle, state.vc_keymap_toggle)) {
+
+                        if ((keymap && (!filename_is_safe(keymap) || !string_is_safe(keymap))) ||
+                            (keymap_toggle && (!filename_is_safe(keymap_toggle) || !string_is_safe(keymap_toggle))))
+                                return bus_send_error_reply(connection, message, NULL, -EINVAL);
 
                         r = verify_polkit(connection, message, "org.freedesktop.locale1.set-keyboard", interactive, NULL, &error);
                         if (r < 0)
@@ -1251,6 +1219,12 @@ static DBusHandlerResult locale_message_handler(
                     !streq_ptr(variant, state.x11_variant) ||
                     !streq_ptr(options, state.x11_options)) {
 
+                        if ((layout && !string_is_safe(layout)) ||
+                            (model && !string_is_safe(model)) ||
+                            (variant && !string_is_safe(variant)) ||
+                            (options && !string_is_safe(options)))
+                                return bus_send_error_reply(connection, message, NULL, -EINVAL);
+
                         r = verify_polkit(connection, message, "org.freedesktop.locale1.set-keyboard", interactive, NULL, &error);
                         if (r < 0)
                                 return bus_send_error_reply(connection, message, &error, r);
@@ -1292,7 +1266,7 @@ static DBusHandlerResult locale_message_handler(
         if (!(reply = dbus_message_new_method_return(message)))
                 goto oom;
 
-        if (!dbus_connection_send(connection, reply, NULL))
+        if (!bus_maybe_send_reply(connection, message, reply))
                 goto oom;
 
         dbus_message_unref(reply);
@@ -1343,8 +1317,7 @@ static int connect_bus(DBusConnection **_bus) {
 
         if (!dbus_connection_register_object_path(bus, "/org/freedesktop/locale1", &locale_vtable, NULL) ||
             !dbus_connection_add_filter(bus, bus_exit_idle_filter, &remain_until, NULL)) {
-                log_error("Not enough memory");
-                r = -ENOMEM;
+                r = log_oom();
                 goto fail;
         }
 
@@ -1383,7 +1356,7 @@ int main(int argc, char *argv[]) {
         log_set_target(LOG_TARGET_AUTO);
         log_parse_environment();
         log_open();
-
+        label_init("/etc");
         umask(0022);
 
         if (argc == 2 && streq(argv[1], "--introspect")) {
