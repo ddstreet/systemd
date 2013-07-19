@@ -1,3 +1,10 @@
+systemd (204-0ubuntu7) saucy; urgency=low
+
+  * debian/tests/control: Add missing pkg-config test dependency, drop
+    unnecessary python3 dependency.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 19 Jul 2013 11:38:40 +0200
+
 systemd (204-0ubuntu6) saucy; urgency=low
 
   * debian/rules: Drop /system/firmware and /vendor/firmware paths again, we
