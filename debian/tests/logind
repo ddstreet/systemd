@@ -25,6 +25,7 @@ echo "seat user: $USER"
 
 # we use scsi_debug to create new devices which we can put ACLs on
 # tell udev about the tagging, so that logind can pick it up
+mkdir -p /run/udev/rules.d/
 cat <<EOF > /run/udev/rules.d/60-scsi_debug-user.rules
 SUBSYSTEM=="block", ATTRS{model}=="scsi_debug*", TAG+="uaccess"
 EOF

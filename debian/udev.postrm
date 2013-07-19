@@ -41,6 +41,7 @@ purge_files()
     if [ -f /var/log/udev ]; then
 	rm -f /var/log/udev || true
     fi
+    rm -f /lib/udev/hwdb.bin
 }
 
 

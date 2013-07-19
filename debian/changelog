@@ -1,3 +1,22 @@
+systemd (204-0ubuntu6) saucy; urgency=low
+
+  * debian/rules: Drop /system/firmware and /vendor/firmware paths again, we
+    don't currently need them.
+  * debian/extra/initramfs.top: Drop the $ROOTDELAY sleep, we already do that
+    in a more sensible way in wait-for-root. (LP: #1202700)
+  * Add debian/tests/api: Add check for sd_login_monitor_*(), to reproduce
+    LP #1201180.
+  * Add 0025-login-monitor-no-machine.patch: Fix sd_login_monitor_new() to not
+    fail if there is no /sys/fs/cgroup/systemd/machine; that only exists when
+    running with systemd as PID 1. (LP: #1201180)
+  * debian/tests/logind: Create /run/udev/rules.d if it does not exist.
+  * Switch from pre-generated hwdb database to shipping the source files
+    (/lib/udev/hwdb.d/) and building hwdb.bin in postinst and with a trigger.
+    Upstream software like libgphoto, libsane, and media-player-info will ship
+    their own hwdb files soon, so be prepared for that.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 19 Jul 2013 09:45:54 +0200
+
 systemd (204-0ubuntu5) saucy; urgency=low
 
   * Add 0000-upstream-keymaps.patch: Backport latest keymap fixes from
