@@ -3,4 +3,4 @@ Depends: systemd-services, libpam-systemd, acl
 Restrictions: needs-root
 
 Tests: api
-Depends: systemd-services, libpam-systemd, libsystemd-login-dev, build-essential, python3
+Depends: systemd-services, libpam-systemd, libsystemd-login-dev, build-essential, pkg-config
