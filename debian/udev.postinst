@@ -11,15 +11,26 @@ enable_udevadm()
     fi
 }
 
+update_hwdb() {
+  udevadm hwdb --update || true
+}
 
 case "$1" in
     configure)
+        # update/create hwdb before we (re)start udev
+        update_hwdb
+
 	invoke-rc.d udev restart
 	enable_udevadm
 	update-initramfs -u
 	;;
 
     abort-upgrade|abort-deconfigure|abort-remove)
+	;;
+
+    triggered)
+	update_hwdb
+	exit 0
 	;;
 
     *)
