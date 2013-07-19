@@ -18,3 +18,4 @@
 0022-fix-race-condition-of-serio-driver-module-not-loading.patch
 0023-load-fbcon.patch
 0024-hwdb-in-lib.patch
+0025-login-monitor-no-machine.patch
