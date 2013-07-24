@@ -11,3 +11,13 @@ index 77d98ea..973f905 100644
                  { NULL, }
          };
  
+diff --git a/units/systemd-tmpfiles-setup-dev.service.in b/units/systemd-tmpfiles-setup-dev.service.in
+index f029285..764da01 100644
+--- a/units/systemd-tmpfiles-setup-dev.service.in
++++ b/units/systemd-tmpfiles-setup-dev.service.in
+@@ -14,4 +14,5 @@ ConditionCapability=CAP_MKNOD
+ 
+ [Service]
+ Type=oneshot
++RemainAfterExit=yes
+ ExecStart=@rootbindir@/systemd-tmpfiles --prefix=/dev --create
