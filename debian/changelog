@@ -1,3 +1,11 @@
+systemd (204-0ubuntu8) saucy; urgency=low
+
+  * rules/80-drivers.rules: trigger the cpu helper modules regardless of
+    whether the kernel already has a driver loaded for the CPU components.
+    (LP: #1207705)
+
+ -- Andy Whitcroft <apw@canonical.com>  Fri, 02 Aug 2013 10:34:17 +0100
+
 systemd (204-0ubuntu7) saucy; urgency=low
 
   * debian/tests/control: Add missing pkg-config test dependency, drop
