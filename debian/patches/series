@@ -19,3 +19,4 @@
 0023-load-fbcon.patch
 0024-hwdb-in-lib.patch
 0025-login-monitor-no-machine.patch
+0026-always-probe-cpu-support-drivers.patch
