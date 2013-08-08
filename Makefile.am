@@ -2452,6 +2452,7 @@ dist_udevkeymap_DATA = \
 	keymaps/lenovo-thinkpad_x6_tablet \
 	keymaps/lenovo-thinkpad_x200_tablet \
 	keymaps/lg-x110 \
+	keymaps/logitech-usb \
 	keymaps/logitech-wave \
 	keymaps/logitech-wave-cordless \
 	keymaps/logitech-wave-pro-cordless \
@@ -2471,6 +2472,7 @@ dist_udevkeymap_DATA = \
 	keymaps/oqo-model2 \
 	keymaps/samsung-other \
 	keymaps/samsung-series-9 \
+	keymaps/samsung-series-3 \
 	keymaps/samsung-sq1us \
 	keymaps/samsung-sx20s \
 	keymaps/toshiba-satellite_a100 \
@@ -2485,6 +2487,7 @@ dist_udevkeymapforcerel_DATA = \
 	keymaps-force-release/hp-other \
 	keymaps-force-release/samsung-other \
 	keymaps-force-release/samsung-series-9 \
+	keymaps-force-release/samsung-series-3 \
 	keymaps-force-release/common-volume-keys
 
 src/udev/keymap/keys.txt: Makefile
