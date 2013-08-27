@@ -19,11 +19,10 @@ DRIVER!="atkbd", GOTO="force_release_end"
 ENV{DMI_VENDOR}="$attr{[dmi/id]sys_vendor}"
 
 ENV{DMI_VENDOR}=="[sS][aA][mM][sS][uU][nN][gG]*", RUN+="keyboard-force-release.sh $devpath samsung-other"
-ENV{DMI_VENDOR}=="[sS][aA][mM][sS][uU][nN][gG]*", ATTR{[dmi/id]product_name}=="*90X3A*|*900X3*|*900X4*|*900XC3*", RUN+="keyboard-force-release.sh $devpath samsung-series-9"
-ENV{DMI_VENDOR}=="[sS][aA][mM][sS][uU][nN][gG]*", ATTR{[dmi/id]product_name}=="*300E5*|*300E4*|*300E7*|*270E5*|*270E4*", RUN+="keyboard-force-release.sh $devpath samsung-series-3"
+ENV{DMI_VENDOR}=="[sS][aA][mM][sS][uU][nN][gG]*", ATTR{[dmi/id]product_name}=="*90X3A*|*900X3*|*900X4*", RUN+="keyboard-force-release.sh $devpath samsung-series-9"
 
 ENV{DMI_VENDOR}=="Dell Inc.", ATTR{[dmi/id]product_name}=="Studio 1557|Studio 1558", RUN+="keyboard-force-release.sh $devpath common-volume-keys"
-ENV{DMI_VENDOR}=="Dell Inc.", ATTR{[dmi/id]product_name}=="*Latitude*|*Precision*", RUN+="keyboard-force-release.sh $devpath dell-touchpad"
+ENV{DMI_VENDOR}=="Dell Inc.", ATTR{[dmi/id]product_name}=="Latitude E*|Latitude *U|Precision M*", RUN+="keyboard-force-release.sh $devpath dell-touchpad"
 ENV{DMI_VENDOR}=="Dell Inc.", ATTR{[dmi/id]product_name}=="XPS*", RUN+="keyboard-force-release.sh $devpath dell-xps"
 
 ENV{DMI_VENDOR}=="FUJITSU SIEMENS", ATTR{[dmi/id]product_name}=="AMILO*", RUN+="keyboard-force-release.sh $devpath common-volume-keys"
@@ -53,8 +52,6 @@ ENV{DMI_VENDOR}=="HANNspree", ATTR{[dmi/id]product_name}=="SN10E100", RUN+="keyb
 
 ENV{DMI_VENDOR}=="GIGABYTE", ATTR{[dmi/id]product_name}=="i1520M", RUN+="keyboard-force-release.sh $devpath common-volume-keys"
 
-ENV{DMI_VENDOR}=="BenQ", ATTR{[dmi/id]product_name}=="*nScreen*|Joybook Lite*", RUN+="keyboard-force-release.sh $devpath common-volume-keys"
-
-ENV{DMI_VENDOR}=="DIXONSP", ATTR{[dmi/id]product_name}=="DIXON*", RUN+="keyboard-force-release.sh $devpath common-volume-keys"
+ENV{DMI_VENDOR}=="BenQ", ATTR{[dmi/id]product_name}=="*nScreen*", RUN+="keyboard-force-release.sh $devpath common-volume-keys"
 
 LABEL="force_release_end"
