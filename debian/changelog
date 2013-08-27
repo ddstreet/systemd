@@ -1,3 +1,23 @@
+systemd (204-0ubuntu10) saucy; urgency=low
+
+  * debian/systemd-services.install: Install systemd-multi-seat-x
+    (LP: #1214146)
+  * debian/local/78-graphics-card.rules: Also recognize vmwgfx driver. Thanks
+    Reagan Sanders! (LP: #1208024)
+  * Add 0000-upstream-hwdb-updates.patch: Update to latest upstream fixes of
+    hwdb, to get proper keyboard support.
+  * Move to hwdb keymap database to be able to continue to sync to upstream,
+    and benefit from the improved speed and eased maintenance:
+    - Drop 0000-upstream-keymaps.patch.
+    - Add 0000-upstream-hwdb-keyboard.patch to backport the "keymap" builtin.
+    - Add debian/extra/60-keyboard.hwdb (straight copy from upstream master),
+      install in debian/udev.install.
+    - debian/rules: Configure with --disable-keymap to not build/install the
+      old keymap stuff any more.
+    - Adds keymap for Samsung NP53U3C (LP: #1203853)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 27 Aug 2013 13:09:08 +0200
+
 systemd (204-0ubuntu9) saucy; urgency=low
 
   * debian/udev.install: re-add installing /lib/udev/hotplug.functions,
