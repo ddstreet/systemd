@@ -1,4 +1,5 @@
-0000-upstream-keymaps.patch
+0000-upstream-hwdb-updates.patch
+0000-upstream-hwdb-keyboard.patch
 0001-Avoid-sending-sigterm-to-session-leader.patch
 0002-Avoid-reloading-services-when-shutting-down.patch
 0003-Avoid-reload-and-re-start-requests-during-early-boot.patch
