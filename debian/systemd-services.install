@@ -11,6 +11,7 @@ lib/systemd/systemd-hostnamed
 lib/systemd/systemd-localed
 lib/systemd/systemd-timedated
 lib/systemd/systemd-logind
+lib/systemd/systemd-multi-seat-x
 usr/bin/timedatectl
 usr/bin/localectl
 usr/bin/hostnamectl

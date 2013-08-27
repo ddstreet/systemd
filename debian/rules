@@ -27,6 +27,7 @@ CONFFLAGS = \
 	--disable-coredump \
 	--disable-efi \
 	--disable-myhostname \
+	--disable-keymap \
 	--disable-vconsole
 
 CONFFLAGS_deb = \
@@ -121,8 +122,6 @@ endif
 	install -D --mode=755 debian/extra/initramfs.bottom \
 		debian/udev/usr/share/initramfs-tools/scripts/init-bottom/udev
 	# documentation
-	install -D --mode=644 debian/systemd/usr/share/doc/systemd/README.keymap.txt \
-		debian/udev/usr/share/doc/udev/README.keymap.txt
 	install -m 644 -o root -g root debian/extra/README-etc-rules.d \
 		debian/udev/etc/udev/rules.d/README
 	install -m 644 -o root -g root debian/extra/README-lib-rules.d \
@@ -145,7 +144,6 @@ endif
 	rm debian/systemd/lib/systemd/systemd-udevd
 	rm debian/systemd/usr/share/man/man7/udev.7
 	rm debian/systemd/usr/share/man/man8/*udev*.8
-	rm debian/systemd/usr/share/doc/systemd/README.keymap.txt
 	# files systemd by cryptsetup
 	rm debian/systemd/usr/share/man/man5/crypttab.5
 	# files shipped by systemd-services
