@@ -1,3 +1,10 @@
+systemd (204-0ubuntu11) saucy; urgency=low
+
+  * Refresh debian/extra/60-keyboard.hwdb from upstream. Fixes keymap
+    regressions on Dell and Samsung models. (LP: #1218433)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 06 Sep 2013 15:24:02 +0200
+
 systemd (204-0ubuntu10) saucy; urgency=low
 
   * debian/systemd-services.install: Install systemd-multi-seat-x
