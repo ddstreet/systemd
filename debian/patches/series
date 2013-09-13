@@ -18,3 +18,4 @@
 0018-Add-env-variable-for-machine-ID-path.patch
 0019-disable-unit-name-test.patch
 0020-uaccess-rule-with-old-udev.patch
+CVE-2013-4327.patch
