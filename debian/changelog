@@ -1,3 +1,14 @@
+systemd (198-0ubuntu11.2) raring-security; urgency=low
+
+  * SECURITY UPDATE: possible privilege escalation via policykit UID lookup
+    race.
+    - debian/patches/CVE-2013-4327.patch: pass system-bus-name as a subject
+      instead of pid so policykit can get the information from the system
+      bus in src/shared/polkit.c.
+    - CVE-2013-4327
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Fri, 13 Sep 2013 15:18:21 -0400
+
 systemd (198-0ubuntu11.1) raring-proposed; urgency=low
 
   [ Iain Lane ]
