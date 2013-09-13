@@ -3642,7 +3642,8 @@ XSLTPROC_FLAGS = \
 
 XSLTPROC_PROCESS_MAN = \
 	$(AM_V_XSLT)$(MKDIR_P) $(dir $@) && \
-	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
+	$(XSLTPROC) -o $@ $(XSLTPROC_FLAGS) http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $< && \
+	$(SED) -e '/.*Date: .*/d' -i $@
 
 XSLTPROC_PROCESS_HTML = \
 	$(AM_V_XSLT)$(MKDIR_P) $(dir $@) && \
