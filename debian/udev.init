@@ -8,7 +8,7 @@
 # Short-Description: Start udevd, populate /dev and load drivers.
 ### END INIT INFO
 
-# we need to unmount /dev/pts/ and remount it later over the tmpfs
+# we need to unmount /dev/pts/ and remount it later over the devtmpfs
 unmount_devpts() {
   if mountpoint -q /dev/pts/; then
     umount -n -l /dev/pts/
@@ -19,15 +19,15 @@ unmount_devpts() {
   fi
 }
 
-# mount a tmpfs over /dev, if somebody did not already do it
-mount_tmpfs() {
-  if grep -E -q "^[^[:space:]]+ /dev (dev)?tmpfs" /proc/mounts; then
-    mount -n -o remount,${dev_mount_options} -t tmpfs tmpfs /dev
+# mount a devtmpfs over /dev, if somebody did not already do it
+mount_devtmpfs() {
+  if grep -E -q "^[^[:space:]]+ /dev devtmpfs" /proc/mounts; then
+    mount -n -o remount,size=$tmpfs_size,mode=0755 -t devtmpfs devtmpfs /dev
     return
   fi
 
-  if ! mount -n -o $dev_mount_options -t tmpfs tmpfs /dev; then
-    log_failure_msg "udev requires tmpfs support, not started"
+  if ! mount -n -o size=$tmpfs_size,mode=0755 -t devtmpfs devtmpfs /dev; then
+    log_failure_msg "udev requires devtmpfs support, not started"
     log_end_msg 1
   fi
 
@@ -45,12 +45,12 @@ create_dev_makedev() {
 # If the initramfs does not have /run, the initramfs udev database must
 # be migrated from /dev/.udev/ to /run/udev/.
 move_udev_database() {
-  [ -e "$udev_root/.udev/" ] || return 0
+  [ -e "/dev/.udev/" ] || return 0
   [ ! -e /run/udev/ ] || return 0
   [ -e /run/ ] || return 0
   mountpoint -q /run/ || return 0
 
-  mv $udev_root/.udev/ /run/udev/ || true
+  mv /dev/.udev/ /run/udev/ || true
 }
 
 supported_kernel() {
@@ -95,7 +95,6 @@ PATH="/sbin:/bin"
 
 # defaults
 tmpfs_size="10M"
-udev_root="/dev"
 
 if [ -e /etc/udev/udev.conf ]; then
   . /etc/udev/udev.conf
@@ -113,8 +112,8 @@ if [ ! -e /proc/filesystems ]; then
   log_end_msg 1
 fi
 
-if ! grep -q '[[:space:]]tmpfs$' /proc/filesystems; then
-  log_failure_msg "udev requires tmpfs support, not started"
+if ! grep -q '[[:space:]]devtmpfs$' /proc/filesystems; then
+  log_failure_msg "udev requires devtmpfs support, not started"
   log_end_msg 1
 fi
 
@@ -149,13 +148,13 @@ case "$1" in
     if init_is_upstart 2>/dev/null; then
 	exit 1
     fi
-    if mountpoint -q $udev_root/; then
+    if mountpoint -q /dev/; then
 	TMPFS_MOUNTED=1
-    elif [ -e "$udev_root/.udev/" ]; then
-	log_warning_msg ".udev/ already exists on the static $udev_root"
+    elif [ -e "/dev/.udev/" ]; then
+	log_warning_msg ".udev/ already exists on the static /dev"
     fi
 
-    if [ ! -e "$udev_root/.udev/" -a ! -e "/run/udev/" ]; then
+    if [ ! -e "/dev/.udev/" -a ! -e "/run/udev/" ]; then
 	warn_if_interactive
     fi
 
@@ -165,7 +164,7 @@ case "$1" in
 
     if [ -z "$TMPFS_MOUNTED" ]; then
 	unmount_devpts
-	mount_tmpfs
+	mount_devtmpfs
 	[ -d /proc/1 ] || mount -n /proc
     fi
 
