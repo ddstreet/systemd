@@ -1,3 +1,14 @@
+systemd (204-0ubuntu12) saucy; urgency=low
+
+  * SECURITY UPDATE: possible privilege escalation via policykit UID lookup
+    race.
+    - debian/patches/0027-CVE-2013-4327.patch: pass system-bus-name as a
+      subject instead of pid so policykit can get the information from the
+      system bus in src/shared/polkit.c.
+    - CVE-2013-4327
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Wed, 18 Sep 2013 13:19:40 -0400
+
 systemd (204-0ubuntu11) saucy; urgency=low
 
   * Refresh debian/extra/60-keyboard.hwdb from upstream. Fixes keymap
