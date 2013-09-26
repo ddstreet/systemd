@@ -22,3 +22,4 @@
 0025-login-monitor-no-machine.patch
 0026-always-probe-cpu-support-drivers.patch
 0027-CVE-2013-4327.patch
+0028-fix-reboot-polkit-permissions.patch
