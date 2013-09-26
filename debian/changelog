@@ -1,3 +1,12 @@
+systemd (204-0ubuntu13) saucy; urgency=low
+
+  * debian/patches/0028-fix-reboot-polkit-permissions.patch: make
+    reboot-multiple-sessions polkit permissions consistent with
+    power-off-multiple-sessions in
+    src/login/org.freedesktop.login1.policy.in. (LP: #1226509)
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Thu, 26 Sep 2013 14:49:51 -0400
+
 systemd (204-0ubuntu12) saucy; urgency=low
 
   * SECURITY UPDATE: possible privilege escalation via policykit UID lookup
