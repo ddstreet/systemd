@@ -1,5 +1,7 @@
 0000-upstream-hwdb-updates.patch
 0000-upstream-hwdb-keyboard.patch
+0000-upstream-CVE-2013-4327.patch
+0000-upstream-reboot-polkit-permissions.patch
 0001-Avoid-sending-sigterm-to-session-leader.patch
 0002-Avoid-reloading-services-when-shutting-down.patch
 0003-Avoid-reload-and-re-start-requests-during-early-boot.patch
@@ -21,5 +23,4 @@
 0024-hwdb-in-lib.patch
 0025-login-monitor-no-machine.patch
 0026-always-probe-cpu-support-drivers.patch
-0027-CVE-2013-4327.patch
-0028-fix-reboot-polkit-permissions.patch
+0029-Support-phablet-etc-writable.patch
