@@ -97,6 +97,9 @@ ifeq (udeb ,$(filter udeb, $(FLAVORS)))
 		debian/udev-udeb/lib/debian-installer/start-udev
 	install -D --mode=755 debian/extra/udev.base-installer \
 		debian/udev-udeb/usr/lib/base-installer.d/05udev
+	# drop rules which we don't need in the installer
+	rm debian/udev-udeb/lib/udev/rules.d/60-persistent-v4l.rules
+	rm debian/udev-udeb/lib/udev/rules.d/61-accelerometer.rules
 endif
 	dh_install -Nudev-udeb -Nlibudev1-udeb --sourcedir=debian/install/deb -O--parallel -Xetc/rpm/ --list-missing
 	# install some files manually, --sourcedir makes that necessary
