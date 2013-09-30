@@ -1,3 +1,20 @@
+systemd (204-0ubuntu14) saucy; urgency=low
+
+  * Add 0029-Support-phablet-etc-writable.patch: On Ubuntu Phone with readonly
+    /etc we symlink /etc/{adjtime,localtime,timezone} to /etc/writable/, so we
+    need to update those files instead if the original files are symlinks into
+    /etc/writable/. (LP: #1227520)
+  * Refresh debian/extra/60-keyboard.hwdb with latest keymaps from upstream.
+    Among others, this fixes Samsung Ativ 9 Plus. (LP: #1229936)
+  * Rename 0027-CVE-2013-4327.patch and
+    0028-fix-reboot-polkit-permissions.patch to 0000-upstream-* as they are in
+    upstream git.
+  * Ship {ata,cdrom,scsi}_id in udev-udeb. (LP: #1231230)
+  * Drop 60-persistent-v4l.rules and 61-accelerometer.rules from udev-udeb, we
+    don't need these in the installer.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 30 Sep 2013 13:34:06 +0200
+
 systemd (204-0ubuntu13) saucy; urgency=low
 
   * debian/patches/0028-fix-reboot-polkit-permissions.patch: make
