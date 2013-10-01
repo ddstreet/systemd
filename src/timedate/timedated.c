@@ -109,15 +109,15 @@ static void free_data(void) {
  * /etc/writable; if it is, update that instead */
 static const char* writable_filename(const char *path) {
         ssize_t r;
-        static char realfile[PATH_MAX];
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
         const char *result = path;
         int orig_errno = errno;
 
-        r = readlink(path, realfile, sizeof(realfile) - 1);
-
-        if (r > 0 && (size_t) r < sizeof(realfile) && startswith(realfile, "/etc/writable")) {
-                realfile[r] = '\0';
-                result = realfile;
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
         }
 
         errno = orig_errno;
