@@ -5,8 +5,8 @@ Bug-Ubuntu: https://launchpad.net/bugs/1227520
 
 Index: systemd/src/timedate/timedated.c
 ===================================================================
---- systemd.orig/src/timedate/timedated.c	2013-09-25 12:14:57.057609132 +0200
-+++ systemd/src/timedate/timedated.c	2013-09-25 13:07:14.009760951 +0200
+--- systemd.orig/src/timedate/timedated.c	2013-10-01 17:13:57.962277474 +0200
++++ systemd/src/timedate/timedated.c	2013-10-01 17:18:59.818292083 +0200
 @@ -105,6 +105,25 @@
          tz.local_rtc = false;
  }
@@ -15,15 +15,15 @@ Index: systemd/src/timedate/timedated.c
 + * /etc/writable; if it is, update that instead */
 +static const char* writable_filename(const char *path) {
 +        ssize_t r;
-+        static char realfile[PATH_MAX];
++        static char realfile_buf[PATH_MAX];
++        _cleanup_free_ char *realfile = NULL;
 +        const char *result = path;
 +        int orig_errno = errno;
 +
-+        r = readlink(path, realfile, sizeof(realfile) - 1);
-+
-+        if (r > 0 && (size_t) r < sizeof(realfile) && startswith(realfile, "/etc/writable")) {
-+                realfile[r] = '\0';
-+                result = realfile;
++        r = readlink_and_make_absolute(path, &realfile);
++        if (r >= 0 && startswith(realfile, "/etc/writable")) {
++                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
++                result = realfile_buf;
 +        }
 +
 +        errno = orig_errno;
