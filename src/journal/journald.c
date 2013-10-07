@@ -29,7 +29,6 @@
 #include <sys/ioctl.h>
 #include <linux/sockios.h>
 #include <sys/statvfs.h>
-#include <sys/user.h>
 
 #include <systemd/sd-journal.h>
 #include <systemd/sd-login.h>
@@ -330,7 +329,10 @@ static void server_rotate(Server *s) {
         if (s->runtime_journal) {
                 r = journal_file_rotate(&s->runtime_journal);
                 if (r < 0)
-                        log_error("Failed to rotate %s: %s", s->runtime_journal->path, strerror(-r));
+                        if (s->runtime_journal)
+                                log_error("Failed to rotate %s: %s", s->runtime_journal->path, strerror(-r));
+                        else
+                                log_error("Failed to create new runtime journal: %s", strerror(-r));
                 else
                         server_fix_perms(s, s->runtime_journal, 0);
         }
@@ -338,7 +340,11 @@ static void server_rotate(Server *s) {
         if (s->system_journal) {
                 r = journal_file_rotate(&s->system_journal);
                 if (r < 0)
-                        log_error("Failed to rotate %s: %s", s->system_journal->path, strerror(-r));
+                        if (s->system_journal)
+                                log_error("Failed to rotate %s: %s", s->system_journal->path, strerror(-r));
+                        else
+                                log_error("Failed to create new system journal: %s", strerror(-r));
+
                 else
                         server_fix_perms(s, s->system_journal, 0);
         }
@@ -346,7 +352,10 @@ static void server_rotate(Server *s) {
         HASHMAP_FOREACH_KEY(f, k, s->user_journals, i) {
                 r = journal_file_rotate(&f);
                 if (r < 0)
-                        log_error("Failed to rotate %s: %s", f->path, strerror(-r));
+                        if (f->path)
+                                log_error("Failed to rotate %s: %s", f->path, strerror(-r));
+                        else
+                                log_error("Failed to create user journal: %s", strerror(-r));
                 else {
                         hashmap_replace(s->user_journals, k, f);
                         server_fix_perms(s, s->system_journal, PTR_TO_UINT32(k));
@@ -609,7 +618,15 @@ retry:
         else {
                 r = journal_file_append_entry(f, NULL, iovec, n, &s->seqnum, NULL, NULL);
 
-                if ((r == -EBADMSG || r == -E2BIG) && !vacuumed) {
+                if ((r == -E2BIG || /* hit limit */
+                     r == -EFBIG || /* hit fs limit */
+                     r == -EDQUOT || /* quota hit */
+                     r == -ENOSPC || /* disk full */
+                     r == -EBADMSG || /* corrupted */
+                     r == -ENODATA || /* truncated */
+                     r == -EHOSTDOWN || /* other machine */
+                     r == -EPROTONOSUPPORT) && /* unsupported feature */
+                    !vacuumed) {
 
                         if (r == -E2BIG)
                                 log_info("Allocation limit reached, rotating.");
@@ -2141,10 +2158,20 @@ static int process_event(Server *s, struct epoll_event *ev) {
                         size_t label_len = 0;
                         union {
                                 struct cmsghdr cmsghdr;
+
+                                /* We use NAME_MAX space for the
+                                 * SELinux label here. The kernel
+                                 * currently enforces no limit, but
+                                 * according to suggestions from the
+                                 * SELinux people this will change and
+                                 * it will probably be identical to
+                                 * NAME_MAX. For now we use that, but
+                                 * this should be updated one day when
+                                 * the final limit is known.*/
                                 uint8_t buf[CMSG_SPACE(sizeof(struct ucred)) +
                                             CMSG_SPACE(sizeof(struct timeval)) +
-                                            CMSG_SPACE(sizeof(int)) +
-                                            CMSG_SPACE(PAGE_SIZE)]; /* selinux label */
+                                            CMSG_SPACE(sizeof(int)) + /* fd */
+                                            CMSG_SPACE(NAME_MAX)]; /* selinux label */
                         } control;
                         ssize_t n;
                         int v;
