@@ -69,7 +69,8 @@
 
 #define N_IOVEC_META_FIELDS 17
 
-#define ENTRY_SIZE_MAX (1024*1024*32)
+#define ENTRY_SIZE_MAX (1024*1024*64)
+#define DATA_SIZE_MAX (1024*1024*64)
 
 typedef enum StdoutStreamState {
         STDOUT_STREAM_IDENTIFIER,
@@ -1279,7 +1280,12 @@ static void process_native_message(
                         memcpy(&l, e + 1, sizeof(uint64_t));
                         l = le64toh(l);
 
-                        if (remaining < e - p + 1 + sizeof(uint64_t) + l + 1 ||
+                        if (l > DATA_SIZE_MAX) {
+                                log_debug("Received binary data block too large, ignoring.");
+                                break;
+                        }
+
+                        if ((uint64_t) remaining < e - p + 1 + sizeof(uint64_t) + l + 1 ||
                             e[1+sizeof(uint64_t)+l] != '\n') {
                                 log_debug("Failed to parse message, ignoring.");
                                 break;

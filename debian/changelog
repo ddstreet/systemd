@@ -1,3 +1,11 @@
+systemd (44-11+deb7u4) stable-security; urgency=low
+
+  * Fix CVE-2013-4327, CVE-2013-4391 and CVE-2013-4394
+    (starting with +deb7u4 due to problems with debsrc3-related build
+     problems, removed singÃle-debian-patch optio)
+
+ -- Moritz Muehlenhoff <jmm@debian.org>  Mon, 07 Oct 2013 23:25:14 +0000
+
 systemd (44-11) unstable; urgency=low
 
   * Team upload.
