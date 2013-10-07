@@ -56,6 +56,7 @@
 #include <glob.h>
 #include <grp.h>
 #include <sys/mman.h>
+#include <limits.h>
 
 #include "macro.h"
 #include "util.h"
@@ -6253,4 +6254,40 @@ int fd_inc_rcvbuf(int fd, size_t n) {
                 return -errno;
 
         return 1;
+}
+
+bool filename_is_safe(const char *p) {
+
+        if (isempty(p))
+                return false;
+
+        if (strchr(p, '/'))
+                return false;
+
+        if (streq(p, "."))
+                return false;
+
+        if (streq(p, ".."))
+                return false;
+
+        if (strlen(p) > FILENAME_MAX)
+                return false;
+
+        return true;
+}
+
+bool string_is_safe(const char *p) {
+        const char *t;
+
+        assert(p);
+
+        for (t = p; *t; t++) {
+                if (*p < ' ')
+                        return false;
+
+                if (strchr("\\\"\'", *p))
+                        return false;
+        }
+
+        return true;
 }

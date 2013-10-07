@@ -321,6 +321,9 @@ unsigned long long random_ull(void);
 int fd_nonblock(int fd, bool nonblock);
 int fd_cloexec(int fd, bool cloexec);
 
+bool filename_is_safe(const char *p);
+bool string_is_safe(const char *p);
+
 int close_all_fds(const int except[], unsigned n_except);
 
 bool fstype_is_network(const char *fstype);
