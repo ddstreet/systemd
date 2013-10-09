@@ -24,3 +24,4 @@
 0025-login-monitor-no-machine.patch
 0026-always-probe-cpu-support-drivers.patch
 0029-Support-phablet-etc-writable.patch
+0030-revert-removal-of-rename_netif-functionality.patch
