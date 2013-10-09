@@ -745,11 +745,32 @@ out:
         return err;
 }
 
+static void rename_netif_kernel_log(struct ifreq ifr)
+{
+        int klog;
+        FILE *f;
+
+        klog = open("/dev/kmsg", O_WRONLY|O_CLOEXEC);
+        if (klog < 0)
+                return;
+
+        f = fdopen(klog, "w");
+        if (f == NULL) {
+                close(klog);
+                return;
+        }
+
+        fprintf(f, "<30>systemd-udevd[%u]: renamed network interface %s to %s\n",
+                getpid(), ifr.ifr_name, ifr.ifr_newname);
+        fclose(f);
+}
+
 static int rename_netif(struct udev_event *event)
 {
         struct udev_device *dev = event->dev;
         int sk;
         struct ifreq ifr;
+        int loop;
         int err;
 
         log_debug("changing net interface name from '%s' to '%s'\n",
@@ -766,12 +787,48 @@ static int rename_netif(struct udev_event *event)
         strscpy(ifr.ifr_name, IFNAMSIZ, udev_device_get_sysname(dev));
         strscpy(ifr.ifr_newname, IFNAMSIZ, event->name);
         err = ioctl(sk, SIOCSIFNAME, &ifr);
-        if (err >= 0) {
-                print_kmsg("renamed network interface %s to %s\n", ifr.ifr_name, ifr.ifr_newname);
-        } else {
-                err = -errno;
-                log_error("error changing net interface name %s to %s: %m\n", ifr.ifr_name, ifr.ifr_newname);
+        if (err == 0) {
+                rename_netif_kernel_log(ifr);
+                goto out;
         }
+
+        /* keep trying if the destination interface name already exists */
+        err = -errno;
+        if (err != -EEXIST)
+                goto out;
+
+        /* free our own name, another process may wait for us */
+        snprintf(ifr.ifr_newname, IFNAMSIZ, "rename%u", udev_device_get_ifindex(dev));
+        err = ioctl(sk, SIOCSIFNAME, &ifr);
+        if (err < 0) {
+                err = -errno;
+                goto out;
+        }
+
+        /* log temporary name */
+        rename_netif_kernel_log(ifr);
+
+        /* wait a maximum of 90 seconds for our target to become available */
+        strscpy(ifr.ifr_name, IFNAMSIZ, ifr.ifr_newname);
+        strscpy(ifr.ifr_newname, IFNAMSIZ, event->name);
+        loop = 90 * 20;
+        while (loop--) {
+                const struct timespec duration = { 0, 1000 * 1000 * 1000 / 20 };
+
+                nanosleep(&duration, NULL);
+                err = ioctl(sk, SIOCSIFNAME, &ifr);
+                if (err == 0) {
+                        rename_netif_kernel_log(ifr);
+                        break;
+                }
+                err = -errno;
+                if (err != -EEXIST)
+                        break;
+        }
+
+out:
+        if (err < 0)
+                log_error("error changing net interface name %s to %s: %m\n", ifr.ifr_name, ifr.ifr_newname);
         close(sk);
         return err;
 }
