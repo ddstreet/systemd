@@ -1,3 +1,15 @@
+systemd (204-0ubuntu16) saucy; urgency=low
+
+  [ TJ ]
+  * Add 0030-revert-removal-of-rename_netif-functionality.patch: Return the
+    previous ability to postpone renaming until the target interface name
+    is free. (LP: #1235162)
+
+  [ Martin Pitt ]
+  * Refresh debian/extra/60-keyboard.hwdb to fix Samsung models.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 09 Oct 2013 16:16:50 +0200
+
 systemd (204-0ubuntu15) saucy; urgency=low
 
   * 0029-Support-phablet-etc-writable.patch: Update patch to also work for
