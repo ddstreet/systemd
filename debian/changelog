@@ -1,3 +1,9 @@
+systemd (204-0ubuntu17) saucy; urgency=low
+
+  * Mount devpts with the correct permissions to avoid needing pt_chown.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Fri, 11 Oct 2013 00:46:12 -0600
+
 systemd (204-0ubuntu16) saucy; urgency=low
 
   [ TJ ]
