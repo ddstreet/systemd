@@ -20,6 +20,7 @@ usr/share/pkgconfig/udev.pc
 ../../extra/rules/75-persistent-net-generator.rules lib/udev/rules.d/
 
 # Ubuntu
+../../extra/rules/40-hyperv-hotadd.rules lib/udev/rules.d/
 ../../extra/rules/78-graphics-card.rules lib/udev/rules.d/
 ../../extra/udev.py usr/share/apport/package-hooks
 ../../extra/hotplug.functions lib/udev/
