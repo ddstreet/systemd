@@ -11,6 +11,7 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
 CONFFLAGS = \
+	--disable-silent-rules \
 	--build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr \
 	--sysconfdir=/etc \
