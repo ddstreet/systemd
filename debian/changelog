@@ -1,3 +1,12 @@
+systemd (204-0ubuntu18) saucy; urgency=low
+
+  * Configure with --disable-silent-rules, as per request from Matthias.
+  * Add debian/extra/rules/40-hyperv-hotadd.rules: On Hyper-V VMs, bring new
+    CPU and memory devices online as soon as they appear. This is not quite an
+    ideal solution, but an unintrusive compromise for Saucy. (LP: #1233466)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sat, 12 Oct 2013 12:16:29 +0200
+
 systemd (204-0ubuntu17) saucy; urgency=low
 
   * Mount devpts with the correct permissions to avoid needing pt_chown.
