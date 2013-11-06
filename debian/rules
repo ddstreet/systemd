@@ -3,6 +3,11 @@
 #export DH_VERBOSE=1
 #export DEB_BUILD_OPTIONS="nostrip"
 
+VERSION = $(shell dpkg-parsechangelog | sed -n -e '/^Version:/s/.*: //p')
+
+# Ubuntu: systemd{,-sysv} not yet approved for universe
+BINARY_BLACKLIST = -Nsystemd -Nsystemd-sysv
+
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 CONFFLAGS = \
@@ -17,6 +22,7 @@ CONFFLAGS = \
 	--disable-coredump \
 	--disable-efi \
 	--disable-myhostname \
+	--disable-keymap \
 	--disable-vconsole \
 	--disable-silent-rules
 
@@ -80,7 +86,7 @@ override_dh_install:
 	rm -rf debian/install/*/etc/kernel/
 	find debian/install/ -name '*.la' -delete
 	dh_install -pudev-udeb -plibudev1-udeb --sourcedir=debian/install/udeb
-	dh_install -Nudev-udeb -Nlibudev1-udeb --sourcedir=debian/install/deb
+	dh_install -Nudev-udeb -Nlibudev1-udeb --sourcedir=debian/install/deb --list-missing
 	# install some files manually, --sourcedir makes that necessary
 	# udev-udeb
 	install -D --mode=755 debian/extra/udev.startup \
@@ -89,22 +95,15 @@ override_dh_install:
 		debian/udev-udeb/usr/lib/base-installer.d/05udev
 	mkdir -p debian/udev-udeb/lib/udev/rules.d/
 	install -D --mode=644 \
-		debian/extra/rules/50-udev-default.rules \
 		debian/extra/rules/60-persistent-storage.rules \
-		debian/extra/rules/75-cd-aliases-generator.rules \
-		debian/extra/rules/75-persistent-net-generator.rules \
 		debian/extra/rules/80-drivers.rules \
-		debian/extra/rules/91-permissions.rules \
 		debian/udev-udeb/lib/udev/rules.d/
-	install -D --mode=644 debian/extra/links.conf \
-		debian/udev-udeb/etc/udev/links.conf
 	mkdir -p debian/udev-udeb/lib/udev
 	install -D --mode=644 \
 		debian/extra/hotplug.functions \
 		debian/extra/rule_generator.functions \
 		debian/udev-udeb/lib/udev/
 	install -D --mode=755 \
-		debian/extra/write_cd_rules \
 		debian/extra/write_net_rules \
 		debian/udev-udeb/lib/udev/
 	# udev: initramfs-tools support
@@ -117,8 +116,6 @@ override_dh_install:
 	# udev: debian specific rules and helpers
 	install -D --mode=644 debian/extra/rules/* \
 		debian/udev/lib/udev/rules.d/
-	install -D --mode=644 debian/extra/links.conf \
-		debian/udev/etc/udev/
 	install -D --mode=644 debian/extra/fbdev-blacklist.conf \
 		debian/udev/etc/modprobe.d/fbdev-blacklist.conf
 	install -D --mode=644 \
@@ -126,13 +123,13 @@ override_dh_install:
 		debian/extra/rule_generator.functions \
 		debian/udev/lib/udev/
 	install -D --mode=755 \
-		debian/extra/create_static_nodes \
-		debian/extra/dsl-modem.agent \
-		debian/extra/logger.agent \
-		debian/extra/net.agent \
-		debian/extra/write_cd_rules \
 		debian/extra/write_net_rules \
 		debian/udev/lib/udev/
+	# udev rules documentation
+	install -m 644 -o root -g root debian/extra/README-etc-rules.d \
+		debian/udev/etc/udev/rules.d/README
+	install -m 644 -o root -g root debian/extra/README-lib-rules.d \
+		debian/udev/lib/udev/rules.d/README
 	# systemd
 	cp -a debian/pam-configs debian/libpam-systemd/usr/share/
 	install -D --mode=644 debian/init-functions.d/40-systemd \
@@ -166,28 +163,36 @@ override_dh_install:
 	rm debian/systemd/lib/systemd/systemd-udevd
 	rm debian/systemd/usr/share/man/man7/udev.7
 	rm debian/systemd/usr/share/man/man8/*udev*.8
-	# files shipped by udev / bash-completion
-	rm debian/systemd/usr/share/bash-completion/completions/udevadm
 	# files systemd by cryptsetup
 	rm debian/systemd/usr/share/man/man5/crypttab.5
-	# files shipped by systemd
+	# files shipped by systemd-services
+	rm debian/systemd/etc/systemd/logind.conf
+	rm debian/systemd/lib/systemd/systemd-logind
+	rm debian/systemd/lib/systemd/systemd-hostnamed
+	rm debian/systemd/lib/systemd/systemd-localed
+	rm debian/systemd/lib/systemd/systemd-timedated
+	rm debian/systemd/usr/share/man/man5/logind*
+	rm debian/systemd/usr/share/man/man8/systemd-logind*
+	rm debian/systemd/usr/share/man/man8/systemd-hostnamed*
+	rm debian/systemd/usr/share/man/man8/systemd-localed*
+	rm debian/systemd/usr/share/man/man8/systemd-timedated*
 	rm debian/udev/lib/udev/rules.d/70-uaccess.rules
 	rm debian/udev/lib/udev/rules.d/73-seat-late.rules
 	rm debian/udev/lib/udev/rules.d/71-seat.rules
+	# files shipped by systemd
 	rm debian/udev/lib/udev/rules.d/99-systemd.rules
 
-# use symlinked doc directories as the old udev package did
-override_dh_installdocs:
-	dh_installdocs -pudev -plibudev-dev --link-doc=libudev1
-	dh_installdocs -pgir1.2-gudev-1.0 -plibgudev-1.0-dev --link-doc=libgudev-1.0-0
-	dh_installdocs --remaining-packages
+	# we continue to use the old net iface naming schema for the time being
+	rm -f debian/udev/lib/udev/rules.d/80-net-name-slot.rules
+	rm -f debian/udev-udeb/lib/udev/rules.d/80-net-name-slot.rules
 
 override_dh_installinit:
-	dh_installinit --no-start
-	dh_installinit --name=udev-finish --no-start
-	dh_installinit --name=udevtrigger --no-start
-	dh_installinit --name=udevmonitor --no-start
-	dh_installinit --name=udev-fallback-graphics --no-start
+	dh_installinit --upstart-only --no-start
+	dh_installinit --upstart-only --name=udev-finish --no-start
+	dh_installinit --upstart-only --name=udevtrigger --no-start
+	dh_installinit --upstart-only --name=udevmonitor --no-start
+	dh_installinit --upstart-only --name=udev-fallback-graphics --no-start
+	dh_installinit --upstart-only --name systemd-logind --no-start
 
 override_dh_makeshlibs:
 	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb
@@ -201,5 +206,25 @@ autoreconf:
 override_dh_autoreconf:
 	dh_autoreconf debian/rules -- autoreconf
 
+override_dh_auto_test:
+	# some tests hang under fakeroot, so disable fakeroot
+	echo "01234567890123456789012345678901" > build-deb/machine-id
+	env -u LD_PRELOAD SYSTEMD_MACHINE_ID_PATH=$(CURDIR)/build-deb/machine-id \
+		make -C build-deb check || ( \
+		cd build-deb; \
+		for f in test-*.log; do echo "==== $$f ===="; cat $$f; done; \
+		exit 1; )
+
 %:
 	dh $@ --with autoreconf,gir,python2
+
+override_dh_gencontrol:
+	# Ubuntu has an epoch on gudev
+	dh_gencontrol -plibgudev-1.0-0 -plibgudev-1.0-dev -pgir1.2-gudev-1.0 -- "-v1:$(VERSION)"
+	dh_gencontrol $(BINARY_BLACKLIST) --remaining-packages
+
+override_dh_strip:
+	dh_strip $(BINARY_BLACKLIST)
+
+override_dh_builddeb:
+	dh_builddeb $(BINARY_BLACKLIST)

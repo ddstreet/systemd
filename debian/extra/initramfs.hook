@@ -24,8 +24,11 @@ root_over_the_network() {
 
 mkdir -p $DESTDIR/lib/systemd
 copy_exec /lib/systemd/systemd-udevd      /lib/systemd
-copy_exec /bin/udevadm    /bin
-
+if [ -x /sbin/udevadm.upgrade ]; then
+    copy_exec /bin/udevadm.upgrade /bin/udevadm
+else
+    copy_exec /bin/udevadm
+fi
 # copy compat symlink
 cp -a /sbin/udevadm $DESTDIR/sbin/udevadm
 
