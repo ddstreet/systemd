@@ -336,6 +336,10 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         /* pam_syslog(handle, LOG_INFO, "pam-systemd initializing"); */
 
+        /* Make this a NOP on non-logind systems */
+        if (!logind_running())
+                return PAM_SUCCESS;
+
         if (parse_argv(handle,
                        argc, argv,
                        &controllers, &reset_controllers,
@@ -396,8 +400,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         bus = dbus_bus_get_private(DBUS_BUS_SYSTEM, &error);
         if (!bus) {
-                if (debug)
-                        pam_syslog(handle, LOG_ERR, "Failed to connect to system bus: %s", bus_error_message(&error));
+                pam_syslog(handle, LOG_ERR, "Failed to connect to system bus: %s", bus_error_message(&error));
                 r = PAM_SESSION_ERR;
                 goto finish;
         }

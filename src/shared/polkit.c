@@ -40,6 +40,7 @@ int verify_polkit(
         DBusMessage *m = NULL, *reply = NULL;
         const char *system_bus_name = "system-bus-name", *name = "name", *cancel_id = "";
         uint32_t flags = interactive ? 1 : 0;
+        unsigned long long starttime_raw;
         DBusMessageIter iter_msg, iter_struct, iter_array, iter_dict, iter_variant;
         int r;
         dbus_bool_t authorized = FALSE, challenge = FALSE;
