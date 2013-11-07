@@ -10,10 +10,6 @@ usr/share/man/man8/*udev*.8
 #usr/share/bash-completion/completions/udevadm
 usr/share/pkgconfig/udev.pc
 
-# Ubuntu: want to keep the old persistent net names for now
-../../extra/rule_generator.functions lib/udev/
-../../extra/rules/75-persistent-net-generator.rules lib/udev/rules.d/
-
 # Ubuntu
 ../../extra/rules/40-hyperv-hotadd.rules lib/udev/rules.d/
 ../../extra/rules/78-graphics-card.rules lib/udev/rules.d/

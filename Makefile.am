@@ -405,6 +405,7 @@ dist_systemunit_DATA = \
 	units/quotaon.service \
 	units/systemd-ask-password-wall.path \
 	units/systemd-ask-password-console.path \
+	units/syslog.target \
 	units/systemd-udevd-control.socket \
 	units/systemd-udevd-kernel.socket \
 	units/system-update.target \
@@ -2376,15 +2377,6 @@ typelibs_DATA = \
 CLEANFILES += $(gir_DATA) $(typelibs_DATA)
 endif # HAVE_INTROSPECTION
 
-# move lib from $(libdir) to $(rootlibdir) and update devel link, if needed
-libgudev-install-hook:
-	libname=libgudev-1.0.so && $(move-to-rootlibdir)
-
-libgudev-uninstall-hook:
-	rm -f $(DESTDIR)$(rootlibdir)/libgudev-1.0.so*
-
-INSTALL_EXEC_HOOKS += libgudev-install-hook
-UNINSTALL_EXEC_HOOKS += libgudev-uninstall-hook
 endif
 
 EXTRA_DIST += \

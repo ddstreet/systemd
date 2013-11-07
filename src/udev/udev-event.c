@@ -745,26 +745,6 @@ out:
         return err;
 }
 
-static void rename_netif_kernel_log(struct ifreq ifr)
-{
-        int klog;
-        FILE *f;
-
-        klog = open("/dev/kmsg", O_WRONLY|O_CLOEXEC);
-        if (klog < 0)
-                return;
-
-        f = fdopen(klog, "w");
-        if (f == NULL) {
-                close(klog);
-                return;
-        }
-
-        fprintf(f, "<30>systemd-udevd[%u]: renamed network interface %s to %s\n",
-                getpid(), ifr.ifr_name, ifr.ifr_newname);
-        fclose(f);
-}
-
 static int rename_netif(struct udev_event *event)
 {
         struct udev_device *dev = event->dev;
@@ -788,7 +768,7 @@ static int rename_netif(struct udev_event *event)
         strscpy(ifr.ifr_newname, IFNAMSIZ, event->name);
         err = ioctl(sk, SIOCSIFNAME, &ifr);
         if (err == 0) {
-                rename_netif_kernel_log(ifr);
+                print_kmsg("renamed network interface %s to %s\n", ifr.ifr_name, ifr.ifr_newname);
                 goto out;
         }
 
@@ -806,7 +786,7 @@ static int rename_netif(struct udev_event *event)
         }
 
         /* log temporary name */
-        rename_netif_kernel_log(ifr);
+        print_kmsg("renamed network interface %s to %s\n", ifr.ifr_name, ifr.ifr_newname);
 
         /* wait a maximum of 90 seconds for our target to become available */
         strscpy(ifr.ifr_name, IFNAMSIZ, ifr.ifr_newname);
@@ -816,9 +796,10 @@ static int rename_netif(struct udev_event *event)
                 const struct timespec duration = { 0, 1000 * 1000 * 1000 / 20 };
 
                 nanosleep(&duration, NULL);
+
                 err = ioctl(sk, SIOCSIFNAME, &ifr);
                 if (err == 0) {
-                        rename_netif_kernel_log(ifr);
+                        print_kmsg("renamed network interface %s to %s\n", ifr.ifr_name, ifr.ifr_newname);
                         break;
                 }
                 err = -errno;
