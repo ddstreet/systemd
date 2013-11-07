@@ -12,6 +12,7 @@ env-variable-for-machine-ID-path.patch
 persistent-storage-rule-mmc-partname.patch
 
 # Ubuntu specific
+login-monitor-no-machine.patch
 disable-failing-buildd-tests.patch
 block-polling.patch
 fix-race-condition-of-serio-driver-module-not-loading.patch
