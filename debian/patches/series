@@ -1,19 +1,21 @@
-0000-upstream-hwdb-updates.patch
-0000-upstream-hwdb-keyboard.patch
-0000-upstream-CVE-2013-4327.patch
-0000-upstream-reboot-polkit-permissions.patch
-0010-Add-back-support-for-Debian-specific-config-files.patch
-0012-Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
-0017-Clean-up-empty-sessions-when-not-running-under-syste.patch
-0018-Add-env-variable-for-machine-ID-path.patch
-0019-disable-failing-buildd-tests.patch
-0020-persistent-storage-rule-mmc-partname.patch
-0021-block-polling.patch
-0022-fix-race-condition-of-serio-driver-module-not-loading.patch
-0023-load-fbcon.patch
-0024-hwdb-in-lib.patch
-0025-login-monitor-no-machine.patch
-0026-always-probe-cpu-support-drivers.patch
-0029-Support-phablet-etc-writable.patch
-0030-revert-removal-of-rename_netif-functionality.patch
-0031-ignore-omap-vsync.patch
+# debian/source/git-patches exported from git by export-hook
+v204..upstream-fixes_204-5
+debian-changes
+
+# cherrypicked from upstream trunk
+upstream-hwdb-keyboard.patch
+upstream-hwdb-updates.patch
+upstream-reboot-polkit-permissions.patch
+
+# rejected upstream
+env-variable-for-machine-ID-path.patch
+persistent-storage-rule-mmc-partname.patch
+
+# Ubuntu specific
+disable-failing-buildd-tests.patch
+block-polling.patch
+fix-race-condition-of-serio-driver-module-not-loading.patch
+load-fbcon.patch
+always-probe-cpu-support-drivers.patch
+support-phablet-etc-writable.patch
+ignore-omap-vsync.patch

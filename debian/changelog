@@ -1,3 +1,31 @@
+systemd (204-5ubuntu2) trusty; urgency=low
+
+  * debian/udev.install: Drop duplicate installation of net generator, reduces
+    Debian delta.
+  * Drop debian/extra/firmware.agent and its invocation in 80-drivers.rules;
+    we do not install this anyway, firmware is loaded by the udev builtin (and
+    the kernel).
+  * 0020-persistent-storage-rule-mmc-partname.patch: Create symlinks for MMC
+    partitions with a "PARTNAME" property (Android specific patch) in
+    /dev/disks/by-partlabel/ for consistency with GUID partitions, not in
+    /dev/disks/by-name/.
+  * Add magically generated debian patches from the source package
+    (v204..upstream-fixes_204-5 and debian-changes), and drop our patches
+    which are contained in that:
+    - 0000-upstream-CVE-2013-4327.patch
+    - 0010-Add-back-support-for-Debian-specific-config-files.patch
+    - 0012-Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
+    - 0017-Clean-up-empty-sessions-when-not-running-under-syste.patch
+    - 0024-hwdb-in-lib.patch
+    - 0030-revert-removal-of-rename_netif-functionality.patch
+  * Drop prefix from our remaining patches, and sort quilt series into
+    categories.
+  * Drop "Breaks: consolekit (<< 0.4.6-1)" (slipped in with the merge), we
+    don't depend on consolekit providing udev-acl as we only support logind's
+    ACLs.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 07 Nov 2013 06:13:20 +0100
+
 systemd (204-5ubuntu1) trusty; urgency=low
 
   * Merge packaging with current Debian unstable, to greatly reduce the diff
