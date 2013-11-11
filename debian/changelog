@@ -1,3 +1,10 @@
+systemd (204-5ubuntu5) trusty; urgency=low
+
+  * Remove Debian's customized 80-drivers.rules, use (patched) upstream's as
+    we always did.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 11 Nov 2013 07:06:47 +0100
+
 systemd (204-5ubuntu4) trusty; urgency=low
 
   * Remove Debian's customized persistent storage rules, use upstream's as we
