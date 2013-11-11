@@ -690,10 +690,13 @@ _public_ int sd_login_monitor_new(const char *category, sd_login_monitor **m) {
                         return r;
 
                 k = inotify_add_watch(fd, p, IN_MOVED_TO|IN_CREATE|IN_DELETE);
+                /* when running logind without pid 1, this will fail */
+                /*
                 if (k < 0) {
                         close_nointr_nofail(fd);
                         return -errno;
                 }
+                */
 
                 good = true;
         }
