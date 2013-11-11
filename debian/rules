@@ -95,7 +95,6 @@ override_dh_install:
 		debian/udev-udeb/usr/lib/base-installer.d/05udev
 	mkdir -p debian/udev-udeb/lib/udev/rules.d/
 	install -D --mode=644 \
-		debian/extra/rules/60-persistent-storage.rules \
 		debian/extra/rules/80-drivers.rules \
 		debian/udev-udeb/lib/udev/rules.d/
 	mkdir -p debian/udev-udeb/lib/udev
