@@ -20,3 +20,4 @@ load-fbcon.patch
 always-probe-cpu-support-drivers.patch
 support-phablet-etc-writable.patch
 ignore-omap-vsync.patch
+pam-check-runtime-dir-user.patch
