@@ -1,3 +1,15 @@
+systemd (204-5ubuntu6) trusty; urgency=low
+
+  * Add pam-check-runtime-dir-user.patch: Don't set an existing
+    $XDG_RUNTIME_DIR in the PAM module if it isn't owned by the session user.
+    Otherwise su sessions get a runtime dir from a different user which leads
+    to either permission errors or scribbling over the other user's files.
+    (LP: #1197395)
+  * Update debian/extra/60-keyboard.hwdb from current upstream trunk:
+    - Fix Lenovo Z370 (LP: #1245189)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 13 Nov 2013 14:00:55 +0100
+
 systemd (204-5ubuntu5) trusty; urgency=low
 
   * Remove Debian's customized 80-drivers.rules, use (patched) upstream's as
