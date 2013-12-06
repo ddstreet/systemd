@@ -1,3 +1,17 @@
+systemd (204-0ubuntu19.1) saucy-proposed; urgency=low
+
+  * Add pam-check-runtime-dir-user.patch: Don't set an existing
+    $XDG_RUNTIME_DIR in the PAM module if it isn't owned by the session user.
+    Otherwise su sessions get a runtime dir from a different user which leads
+    to either permission errors or scribbling over the other user's files.
+    (Backported from current trusty package) (LP: #1197395)
+  * debian/extra/60-keyboard.hwdb: Backport latest maps from trusty, as per
+    standing SRU exception:
+    - Fix Lenovo Z370 (LP: #1245189)
+    - Add Toshiba Satellite U940
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 06 Dec 2013 08:37:14 +0100
+
 systemd (204-0ubuntu19) saucy; urgency=low
 
   * Add 0031-ignore-omap-vsync.patch: Gross, but effective hack to ignore
