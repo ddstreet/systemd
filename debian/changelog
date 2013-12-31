@@ -1,3 +1,38 @@
+systemd (204-6) unstable; urgency=low
+
+  [ Michael Stapelberg ]
+  * Run update-rc.d defaults before update-rc.d <enable|disable>
+    (Closes: #722523)
+  * preinst: preserve var-{lock,run}.mount when upgrading from 44 to 204
+    (Closes: #723936)
+  * fstab-generator: don’t rely on /usr being mounted in the initrd
+    (Closes: #724797)
+  * systemctl: mangle names when avoiding dbus (Closes: #723855)
+  * allow group adm read access on /var/log/journal (Closes: #717386)
+  * add systemd-journal group (Thanks Guido Günther) (Closes: #724668)
+  * copy /etc/localtime instead of symlinking (Closes: #726256)
+  * don’t try to start autovt units when not running with systemd as pid 1
+    (Closes: #726466)
+  * Add breaks/replaces for the new sysvinit-core package (Thanks Alf Gaida)
+    (Closes: #733240)
+  * Add myself to uploaders
+
+  [ Tollef Fog Heen ]
+  * Make 99-systemd.rules check for /run/systemd/systemd instead of the
+    ill-named cgroups directory.
+
+  [ Martin Pitt ]
+  * debian/udev.upstart: Fix path to udevd, the /sbin/udevd compat symlink
+    should go away at some point.
+  * debian/udev-udeb.install: Add 64-btrfs.rules and 75-probe_mtd.rules, they
+    are potentially useful in a d-i environment.
+  * debian/shlibs.local: Drop libudev; this unnecessarily generates overly
+    strict dependencies, the libudev ABI is stable.
+  * debian/extra/rules/75-persistent-net-generator.rules: Add Ravello systems
+    (LP: #1099278)
+
+ -- Michael Stapelberg <stapelberg@debian.org>  Tue, 31 Dec 2013 14:39:44 +0100
+
 systemd (204-5) unstable; urgency=high
 
   * Cherry-pick 72fd713 from upstream which fixes insecure calling of polkit
