@@ -581,8 +581,8 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                         pam_syslog(handle, LOG_ERR, "Failed to set runtime dir.");
                         goto finish;
                 }
-        } else {
-                pam_syslog(handle, LOG_INFO, "Runtime dir %s is not owned by the target uid %u, ignoring.",
+        } else if (debug) {
+                pam_syslog(handle, LOG_DEBUG, "Runtime dir %s is not owned by the target uid %u, ignoring.",
                            runtime_path, uid);
         }
 
