@@ -16,8 +16,8 @@ Bug-Ubuntu: https://launchpad.net/bugs/1197395
 
 Index: systemd/src/login/pam-module.c
 ===================================================================
---- systemd.orig/src/login/pam-module.c	2013-11-13 12:09:34.708802644 +0100
-+++ systemd/src/login/pam-module.c	2013-11-13 12:55:54.812777307 +0100
+--- systemd.orig/src/login/pam-module.c	2013-11-14 17:45:34.227987658 +0100
++++ systemd/src/login/pam-module.c	2013-11-14 17:48:01.203986318 +0100
 @@ -329,6 +329,7 @@
          dbus_bool_t remote, existing;
          int r;
@@ -48,8 +48,8 @@ Index: systemd/src/login/pam-module.c
 +                        pam_syslog(handle, LOG_ERR, "Failed to set runtime dir.");
 +                        goto finish;
 +                }
-+        } else {
-+                pam_syslog(handle, LOG_INFO, "Runtime dir %s is not owned by the target uid %u, ignoring.",
++        } else if (debug) {
++                pam_syslog(handle, LOG_DEBUG, "Runtime dir %s is not owned by the target uid %u, ignoring.",
 +                           runtime_path, uid);
 +        }
  
