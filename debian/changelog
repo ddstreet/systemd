@@ -1,3 +1,11 @@
+systemd (204-5ubuntu9) trusty; urgency=medium
+
+  [ Chris Wayne ]
+  * support-phablet-etc-writable.patch: Allow writing to /etc/hostname and
+    /etc/machine-info as symlinks.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 20 Jan 2014 10:03:39 +0100
+
 systemd (204-5ubuntu8) trusty; urgency=low
 
   * pam-check-runtime-dir-user.patch: Make "not owned by the target uid" log
