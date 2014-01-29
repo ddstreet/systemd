@@ -1,3 +1,14 @@
+systemd (204-5ubuntu10) trusty; urgency=medium
+
+  * Add debian/extra/rules/73-idrac.rules: On Dell PowerEdge systems, the
+    iDRAC7 and later support a USB Virtual NIC for management. Name this
+    interface "idrac" to avoid confusion with "real" network interfaces.
+  * Pull latest keymaps from upstream git:
+    - Acer Aspire One A110 Fn+F5 Key release (LP: #1272658)
+    - Sony Vaio VGN-FW250 (LP: #1271163)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 29 Jan 2014 17:51:14 +0100
+
 systemd (204-5ubuntu9) trusty; urgency=medium
 
   [ Chris Wayne ]
