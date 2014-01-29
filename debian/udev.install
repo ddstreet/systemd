@@ -12,6 +12,7 @@ usr/share/pkgconfig/udev.pc
 
 # Ubuntu
 ../../extra/rules/40-hyperv-hotadd.rules lib/udev/rules.d/
+../../extra/rules/73-idrac.rules lib/udev/rules.d/
 ../../extra/rules/78-graphics-card.rules lib/udev/rules.d/
 ../../extra/udev.py usr/share/apport/package-hooks
 ../../extra/*.hwdb lib/udev/hwdb.d
