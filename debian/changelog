@@ -1,3 +1,20 @@
+systemd (204-5ubuntu11) trusty; urgency=medium
+
+  [ Ben Howard ]
+  * debian/extra/rules/75-persistent-net-generator.rules: Add new block of
+    Windows Azure ethernet hardware address to ignore persistent naming
+    (LP: #1274348).
+
+  [ Stefan Bader ]
+  * Modify debian/extra/rules/78-graphics-card.rules to match for
+    "efi-framebuffer" in addition to "efifb" (LP: #1277006)
+
+  [ Martin Pitt ]
+  * debian/extra/rules/78-graphics-card.rules: Add vesa-framebuffer as well,
+    thanks to Andy Whitcroft for pointing out.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 06 Feb 2014 12:42:39 +0100
+
 systemd (204-5ubuntu10) trusty; urgency=medium
 
   * Add debian/extra/rules/73-idrac.rules: On Dell PowerEdge systems, the
