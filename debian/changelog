@@ -1,3 +1,10 @@
+systemd (204-0ubuntu19.2) saucy-proposed; urgency=medium
+
+  * debian/extra/rules/75-persistent-net-generator.rules: update ethernet
+    exclusions for Hyper-V (LP: #1274348).
+
+ -- Ben Howard <ben.howard@ubuntu.com>  Tue, 18 Feb 2014 17:30:36 -0700
+
 systemd (204-0ubuntu19.1) saucy-proposed; urgency=low
 
   * Add pam-check-runtime-dir-user.patch: Don't set an existing
