@@ -1,3 +1,11 @@
+systemd (204-5ubuntu12) trusty; urgency=medium
+
+  * Mark autopkgtest with "isolation-machine" as this test can't run in
+    schroot or LXC.
+  * Import latest keymaps from upstream git.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 28 Feb 2014 11:55:09 +0100
+
 systemd (204-5ubuntu11) trusty; urgency=medium
 
   [ Ben Howard ]
