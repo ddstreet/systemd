@@ -22,3 +22,4 @@ support-phablet-etc-writable.patch
 ignore-omap-vsync.patch
 pam-check-runtime-dir-user.patch
 ubuntu-logind-controllers.patch
+fix-ftbfs.patch
