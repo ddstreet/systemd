@@ -4244,6 +4244,8 @@ static int enable_unit(DBusConnection *bus, char **args) {
         _cleanup_dbus_error_free_ DBusError error;
         _cleanup_strv_free_ char **mangled_names = NULL;
 
+        dbus_error_init(&error);
+
         if (!args[1])
                 return 0;
 
@@ -4255,7 +4257,8 @@ static int enable_unit(DBusConnection *bus, char **args) {
         if (r < 0)
                 return r;
 
-        dbus_error_init(&error);
+        if (!args[1])
+                return 0;
 
         if (!bus || avoid_bus()) {
                 if (streq(verb, "enable")) {
