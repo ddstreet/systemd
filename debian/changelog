@@ -1,3 +1,17 @@
+systemd (204-5ubuntu14) trusty; urgency=medium
+
+  [ Steve Langasek ]
+  * Do proper refcounting of the PAM module package on prerm, so that we
+    don't drop the module from the PAM config when uninstalling a
+    foreign-arch package.  Related to Ubuntu bug #1295521.
+
+  [ Stéphane Graber ]
+  * Add cgmanager support to logind. This will use the cgmanager socket
+    instead of cgroupfs when cgmanager is available. Otherwise it'll simply
+    fallback on the cgroupfs code. (LP: #1297363)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Tue, 01 Apr 2014 20:02:35 -0400
+
 systemd (204-5ubuntu13) trusty; urgency=medium
 
   * Fix FTBFS against recent kernels & glibc.
