@@ -105,6 +105,25 @@ static void free_data(void) {
         tz.local_rtc = false;
 }
 
+/* Hack for Ubuntu phone: check if path is an existing symlink to
+ * /etc/writable; if it is, update that instead */
+static const char* writable_filename(const char *path) {
+        ssize_t r;
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
+        const char *result = path;
+        int orig_errno = errno;
+
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
+        }
+
+        errno = orig_errno;
+        return result;
+}
+
 static bool valid_timezone(const char *name) {
         const char *p;
         char *t;
@@ -159,7 +178,7 @@ static int read_data(void) {
 
         free_data();
 
-        r = readlink_malloc("/etc/localtime", &t);
+        r = readlink_malloc(writable_filename("/etc/localtime"), &t);
         if (r < 0) {
                 if (r == -EINVAL)
                         log_warning("/etc/localtime should be a symbolic link to a timezone data file in /usr/share/zoneinfo/.");
@@ -207,25 +226,25 @@ static int write_data_timezone(void) {
         struct stat st;
 
         if (!tz.zone) {
-                if (unlink("/etc/localtime") < 0 && errno != ENOENT)
+                if (unlink(writable_filename("/etc/localtime")) < 0 && errno != ENOENT)
                         r = -errno;
 
-                if (unlink("/etc/timezone") < 0 && errno != ENOENT)
+                if (unlink(writable_filename("/etc/timezone")) < 0 && errno != ENOENT)
                         r = -errno;
 
                 return r;
         }
 
-        p = strappend("../usr/share/zoneinfo/", tz.zone);
+        p = strappend("/usr/share/zoneinfo/", tz.zone);
         if (!p)
                 return log_oom();
 
-        r = symlink_atomic(p, "/etc/localtime");
+        r = symlink_atomic(p, writable_filename("/etc/localtime"));
         if (r < 0)
                 return r;
 
-        if (stat("/etc/timezone", &st) == 0 && S_ISREG(st.st_mode)) {
-                r = write_string_file_atomic("/etc/timezone", tz.zone);
+        if (stat(writable_filename("/etc/timezone"), &st) == 0 && S_ISREG(st.st_mode)) {
+                r = write_string_file_atomic(writable_filename("/etc/timezone"), tz.zone);
                 if (r < 0)
                         return r;
         }
@@ -276,7 +295,7 @@ static int write_data_local_rtc(void) {
                 *(char*) mempcpy(stpcpy(mempcpy(w, s, a), tz.local_rtc ? "LOCAL" : "UTC"), e, b) = 0;
 
                 if (streq(w, NULL_ADJTIME_UTC)) {
-                        if (unlink("/etc/adjtime") < 0)
+                        if (unlink(writable_filename("/etc/adjtime")) < 0)
                                 if (errno != ENOENT)
                                         return -errno;
 
@@ -284,7 +303,7 @@ static int write_data_local_rtc(void) {
                 }
         }
         label_init("/etc");
-        return write_string_file_atomic_label("/etc/adjtime", w);
+        return write_string_file_atomic_label(writable_filename("/etc/adjtime"), w);
 }
 
 static char** get_ntp_services(void) {
