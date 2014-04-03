@@ -1,7 +1,7 @@
 Index: systemd/Makefile.am
 ===================================================================
---- systemd.orig/Makefile.am	2014-03-31 16:00:46.979732146 -0400
-+++ systemd/Makefile.am	2014-03-31 16:00:46.967732146 -0400
+--- systemd.orig/Makefile.am	2014-04-03 13:48:57.669425480 -0400
++++ systemd/Makefile.am	2014-04-03 13:48:57.661425480 -0400
 @@ -178,6 +178,10 @@
  	-I $(top_srcdir)/src/libsystemd-bus \
  	$(OUR_CPPFLAGS)
@@ -51,8 +51,8 @@ Index: systemd/Makefile.am
  	libsystemd-logs.la
 Index: systemd/configure.ac
 ===================================================================
---- systemd.orig/configure.ac	2014-03-31 16:00:46.979732146 -0400
-+++ systemd/configure.ac	2014-03-31 16:00:46.967732146 -0400
+--- systemd.orig/configure.ac	2014-04-03 13:48:57.669425480 -0400
++++ systemd/configure.ac	2014-04-03 13:48:57.661425480 -0400
 @@ -780,6 +780,24 @@
  
  # ------------------------------------------------------------------------------
@@ -89,8 +89,8 @@ Index: systemd/configure.ac
 Index: systemd/src/shared/cgmanager.c
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ systemd/src/shared/cgmanager.c	2014-04-01 19:06:44.596785406 -0400
-@@ -0,0 +1,243 @@
++++ systemd/src/shared/cgmanager.c	2014-04-03 13:50:36.964076000 -0400
+@@ -0,0 +1,250 @@
 +/*
 + * lxc: linux Container library
 + *
@@ -134,7 +134,7 @@ Index: systemd/src/shared/cgmanager.c
 +	DBusConnection *connection;
 +	dbus_error_init(&dbus_error);
 +
-+	connection = nih_dbus_connect(CGMANAGER_DBUS_SOCK, cgm_dbus_disconnected);
++	connection = dbus_connection_open_private(CGMANAGER_DBUS_SOCK, &dbus_error);
 +	if (!connection) {
 +		NihError *nerr;
 +		nerr = nih_error_get();
@@ -143,6 +143,14 @@ Index: systemd/src/shared/cgmanager.c
 +		return false;
 +	}
 +
++	if (nih_dbus_setup(connection, NULL) < 0) {
++		NihError *nerr;
++		nerr = nih_error_get();
++		nih_free(nerr);
++		dbus_error_free(&dbus_error);
++		dbus_connection_unref(connection);
++		return false;
++	}
 +	dbus_connection_set_exit_on_disconnect(connection, FALSE);
 +	dbus_error_free(&dbus_error);
 +	cgroup_manager = nih_dbus_proxy_new(NULL, connection,
@@ -163,21 +171,20 @@ Index: systemd/src/shared/cgmanager.c
 +		nerr = nih_error_get();
 +		log_error("cgmanager: Error pinging manager: %s", nerr->message);
 +		nih_free(nerr);
++		nih_free(cgroup_manager);
++		cgroup_manager = NULL;
 +	}
 +	return true;
 +}
 +
 +void cgm_dbus_disconnect(void)
 +{
-+	if (cgroup_manager)
++	if (cgroup_manager) {
++		dbus_connection_flush(cgroup_manager->connection);
++		dbus_connection_close(cgroup_manager->connection);
 +		nih_free(cgroup_manager);
-+	cgroup_manager = NULL;
-+}
-+
-+void cgm_dbus_disconnected(DBusConnection *connection)
-+{
-+	cgroup_manager = NULL;
-+	(void) cgm_dbus_connect();
++		cgroup_manager = NULL;
++	}
 +}
 +
 +bool cgm_create(const char *controller, const char *cgroup_path, int32_t *existed)
@@ -337,8 +344,8 @@ Index: systemd/src/shared/cgmanager.c
 Index: systemd/src/shared/cgmanager.h
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ systemd/src/shared/cgmanager.h	2014-03-31 16:00:46.971732146 -0400
-@@ -0,0 +1,45 @@
++++ systemd/src/shared/cgmanager.h	2014-04-03 13:50:36.964076000 -0400
+@@ -0,0 +1,44 @@
 +/*
 + * lxc: linux Container library
 + *
@@ -374,7 +381,6 @@ Index: systemd/src/shared/cgmanager.h
 +
 +bool cgm_dbus_connect(void);
 +void cgm_dbus_disconnect(void);
-+void cgm_dbus_disconnected(DBusConnection *connection);
 +bool cgm_create(const char *controller, const char *cgroup_path, int32_t *existed);
 +bool cgm_remove(const char *controller, const char *cgroup_path, int recursive);
 +char *cgm_get(const char *controller, const char *path, const char *key);
@@ -386,8 +392,8 @@ Index: systemd/src/shared/cgmanager.h
 +#endif
 Index: systemd/src/shared/cgroup-label.c
 ===================================================================
---- systemd.orig/src/shared/cgroup-label.c	2014-03-31 16:00:46.979732146 -0400
-+++ systemd/src/shared/cgroup-label.c	2014-03-31 16:00:46.971732146 -0400
+--- systemd.orig/src/shared/cgroup-label.c	2014-04-03 13:48:57.669425480 -0400
++++ systemd/src/shared/cgroup-label.c	2014-04-03 13:49:55.000000000 -0400
 @@ -30,6 +30,7 @@
  #include <ftw.h>
  
@@ -396,7 +402,7 @@ Index: systemd/src/shared/cgroup-label.c
  #include "log.h"
  #include "set.h"
  #include "macro.h"
-@@ -40,6 +41,22 @@
+@@ -40,6 +41,27 @@
          _cleanup_free_ char *fs = NULL;
          int r;
  
@@ -404,6 +410,11 @@ Index: systemd/src/shared/cgroup-label.c
 +        /* CGManager support */
 +        int existed;
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                r = cgm_create(normalize_controller(controller),
 +                                         path, &existed);
 +
@@ -421,8 +432,8 @@ Index: systemd/src/shared/cgroup-label.c
                  return r;
 Index: systemd/src/shared/cgroup-util.c
 ===================================================================
---- systemd.orig/src/shared/cgroup-util.c	2014-03-31 16:00:46.979732146 -0400
-+++ systemd/src/shared/cgroup-util.c	2014-03-31 16:00:46.971732146 -0400
+--- systemd.orig/src/shared/cgroup-util.c	2014-04-03 13:48:57.669425480 -0400
++++ systemd/src/shared/cgroup-util.c	2014-04-03 13:49:55.000000000 -0400
 @@ -29,6 +29,7 @@
  #include <sys/types.h>
  #include <ftw.h>
@@ -431,7 +442,7 @@ Index: systemd/src/shared/cgroup-util.c
  #include "cgroup-util.h"
  #include "log.h"
  #include "set.h"
-@@ -43,9 +44,52 @@
+@@ -43,9 +44,57 @@
          _cleanup_free_ char *fs = NULL;
          FILE *f;
          int r;
@@ -444,6 +455,11 @@ Index: systemd/src/shared/cgroup-util.c
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                value = cgm_get(normalize_controller(controller),
 +                                path, "cgroup.procs");
 +
@@ -484,7 +500,7 @@ Index: systemd/src/shared/cgroup-util.c
          r = cg_get_path(controller, path, "cgroup.procs", &fs);
          if (r < 0)
                  return r;
-@@ -62,9 +106,51 @@
+@@ -62,9 +111,56 @@
          _cleanup_free_ char *fs = NULL;
          FILE *f;
          int r;
@@ -497,6 +513,11 @@ Index: systemd/src/shared/cgroup-util.c
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                value = cgm_get(normalize_controller(controller),
 +                                path, "tasks");
 +
@@ -536,13 +557,18 @@ Index: systemd/src/shared/cgroup-util.c
          r = cg_get_path(controller, path, "tasks", &fs);
          if (r < 0)
                  return r;
-@@ -154,6 +240,21 @@
+@@ -154,6 +250,26 @@
          _cleanup_free_ char *p = NULL;
          int r;
  
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                r = cgm_remove(normalize_controller(controller),
 +                                         path, 0);
 +
@@ -558,7 +584,7 @@ Index: systemd/src/shared/cgroup-util.c
          r = cg_get_path(controller, path, NULL, &p);
          if (r < 0)
                  return r;
-@@ -462,7 +563,7 @@
+@@ -462,7 +578,7 @@
          return ret;
  }
  
@@ -567,7 +593,7 @@ Index: systemd/src/shared/cgroup-util.c
  
          assert(controller);
  
-@@ -531,9 +632,24 @@
+@@ -531,9 +647,24 @@
  
  static int check_hierarchy(const char *p) {
          char *cc;
@@ -592,7 +618,7 @@ Index: systemd/src/shared/cgroup-util.c
          /* Check if this controller actually really exists */
          cc = alloca(sizeof("/sys/fs/cgroup/") + strlen(p));
          strcpy(stpcpy(cc, "/sys/fs/cgroup/"), p);
-@@ -592,9 +708,53 @@
+@@ -592,9 +723,58 @@
  int cg_trim(const char *controller, const char *path, bool delete_root) {
          _cleanup_free_ char *fs = NULL;
          int r = 0;
@@ -605,6 +631,11 @@ Index: systemd/src/shared/cgroup-util.c
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                if (delete_root) {
 +                        r = cgm_remove(normalize_controller(controller),
 +                                       path, 1);
@@ -646,13 +677,18 @@ Index: systemd/src/shared/cgroup-util.c
          r = cg_get_path(controller, path, NULL, &fs);
          if (r < 0)
                  return r;
-@@ -644,6 +804,21 @@
+@@ -644,6 +824,26 @@
          assert(path);
          assert(pid >= 0);
  
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                r = cgm_enter(normalize_controller(controller),
 +                              path, pid);
 +
@@ -668,7 +704,7 @@ Index: systemd/src/shared/cgroup-util.c
          r = cg_get_path_and_check(controller, path, "tasks", &fs);
          if (r < 0)
                  return r;
-@@ -664,10 +839,28 @@
+@@ -664,10 +864,33 @@
                  gid_t gid) {
  
          _cleanup_free_ char *fs = NULL;
@@ -680,6 +716,11 @@ Index: systemd/src/shared/cgroup-util.c
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                r = cgm_chmod(normalize_controller(controller),
 +                                         path, mode);
 +
@@ -698,13 +739,18 @@ Index: systemd/src/shared/cgroup-util.c
          if (mode != (mode_t) -1)
                  mode &= 0777;
  
-@@ -697,6 +890,31 @@
+@@ -697,6 +920,36 @@
          if (mode != (mode_t) -1)
                  mode &= 0666;
  
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                r = cgm_chmod(normalize_controller(controller),
 +                              path, mode);
 +
@@ -730,7 +776,7 @@ Index: systemd/src/shared/cgroup-util.c
          r = cg_get_path(controller, path, "tasks", &fs);
          if (r < 0)
                  return r;
-@@ -906,14 +1124,54 @@
+@@ -906,14 +1159,59 @@
  int cg_is_empty_recursive(const char *controller, const char *path, bool ignore_self) {
          _cleanup_closedir_ DIR *d = NULL;
          char *fn;
@@ -750,6 +796,11 @@ Index: systemd/src/shared/cgroup-util.c
 +        #ifdef HAVE_CGMANAGER
 +        /* CGManager support */
 +        if (cgm_dbus_connect()) {
++                if (!controller) {
++                    cgm_dbus_disconnect();
++                    return -1;
++                }
++
 +                r = cgm_list_children(normalize_controller(controller),
 +                                      path, &children);
 +
@@ -787,8 +838,8 @@ Index: systemd/src/shared/cgroup-util.c
                  return r == -ENOENT ? 1 : r;
 Index: systemd/src/shared/cgroup-util.h
 ===================================================================
---- systemd.orig/src/shared/cgroup-util.h	2014-03-31 16:00:46.979732146 -0400
-+++ systemd/src/shared/cgroup-util.h	2014-03-31 16:00:46.971732146 -0400
+--- systemd.orig/src/shared/cgroup-util.h	2014-04-03 13:48:57.669425480 -0400
++++ systemd/src/shared/cgroup-util.h	2014-04-03 13:49:55.000000000 -0400
 @@ -113,3 +113,5 @@
  char *cg_unescape(const char *p) _pure_;
  
@@ -797,8 +848,8 @@ Index: systemd/src/shared/cgroup-util.h
 +const char *normalize_controller(const char *controller);
 Index: systemd/src/login/logind.c
 ===================================================================
---- systemd.orig/src/login/logind.c	2014-03-31 16:00:46.979732146 -0400
-+++ systemd/src/login/logind.c	2014-03-31 16:00:46.971732146 -0400
+--- systemd.orig/src/login/logind.c	2014-04-03 13:48:57.669425480 -0400
++++ systemd/src/login/logind.c	2014-04-03 13:49:55.000000000 -0400
 @@ -38,6 +38,7 @@
  #include "strv.h"
  #include "conf-parser.h"
