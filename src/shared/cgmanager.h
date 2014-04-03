@@ -33,7 +33,6 @@
 
 bool cgm_dbus_connect(void);
 void cgm_dbus_disconnect(void);
-void cgm_dbus_disconnected(DBusConnection *connection);
 bool cgm_create(const char *controller, const char *cgroup_path, int32_t *existed);
 bool cgm_remove(const char *controller, const char *cgroup_path, int recursive);
 char *cgm_get(const char *controller, const char *path, const char *key);

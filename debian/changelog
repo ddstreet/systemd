@@ -1,3 +1,14 @@
+systemd (204-5ubuntu16) trusty; urgency=medium
+
+  [ Stéphane Graber ]
+  * Never call normalize_controller when controll is NULL as this
+    triggers an assert... (LP: #1301846)
+
+  [ Serge Hallyn ]
+  * d/p/add-cgmanager-support: make sure connections are closed  (LP: #1301882)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Thu, 03 Apr 2014 13:53:09 -0400
+
 systemd (204-5ubuntu15) trusty; urgency=medium
 
   * Pass --disable-cgmanager in the udeb build pass, d-i doesn't need it.

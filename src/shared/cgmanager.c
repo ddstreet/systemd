@@ -41,7 +41,7 @@ bool cgm_dbus_connect(void)
 	DBusConnection *connection;
 	dbus_error_init(&dbus_error);
 
-	connection = nih_dbus_connect(CGMANAGER_DBUS_SOCK, cgm_dbus_disconnected);
+	connection = dbus_connection_open_private(CGMANAGER_DBUS_SOCK, &dbus_error);
 	if (!connection) {
 		NihError *nerr;
 		nerr = nih_error_get();
@@ -50,6 +50,14 @@ bool cgm_dbus_connect(void)
 		return false;
 	}
 
+	if (nih_dbus_setup(connection, NULL) < 0) {
+		NihError *nerr;
+		nerr = nih_error_get();
+		nih_free(nerr);
+		dbus_error_free(&dbus_error);
+		dbus_connection_unref(connection);
+		return false;
+	}
 	dbus_connection_set_exit_on_disconnect(connection, FALSE);
 	dbus_error_free(&dbus_error);
 	cgroup_manager = nih_dbus_proxy_new(NULL, connection,
@@ -70,21 +78,20 @@ bool cgm_dbus_connect(void)
 		nerr = nih_error_get();
 		log_error("cgmanager: Error pinging manager: %s", nerr->message);
 		nih_free(nerr);
+		nih_free(cgroup_manager);
+		cgroup_manager = NULL;
 	}
 	return true;
 }
 
 void cgm_dbus_disconnect(void)
 {
-	if (cgroup_manager)
+	if (cgroup_manager) {
+		dbus_connection_flush(cgroup_manager->connection);
+		dbus_connection_close(cgroup_manager->connection);
 		nih_free(cgroup_manager);
-	cgroup_manager = NULL;
-}
-
-void cgm_dbus_disconnected(DBusConnection *connection)
-{
-	cgroup_manager = NULL;
-	(void) cgm_dbus_connect();
+		cgroup_manager = NULL;
+	}
 }
 
 bool cgm_create(const char *controller, const char *cgroup_path, int32_t *existed)
