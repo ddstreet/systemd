@@ -45,6 +45,11 @@ int cg_create(const char *controller, const char *path, const char *suffix) {
         /* CGManager support */
         int existed;
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 r = cgm_create(normalize_controller(controller),
                                          path, &existed);
 

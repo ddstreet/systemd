@@ -53,6 +53,11 @@ int cg_enumerate_processes(const char *controller, const char *path, FILE **_f) 
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 value = cgm_get(normalize_controller(controller),
                                 path, "cgroup.procs");
 
@@ -115,6 +120,11 @@ int cg_enumerate_tasks(const char *controller, const char *path, FILE **_f) {
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 value = cgm_get(normalize_controller(controller),
                                 path, "tasks");
 
@@ -243,6 +253,11 @@ int cg_rmdir(const char *controller, const char *path, bool honour_sticky) {
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 r = cgm_remove(normalize_controller(controller),
                                          path, 0);
 
@@ -717,6 +732,11 @@ int cg_trim(const char *controller, const char *path, bool delete_root) {
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 if (delete_root) {
                         r = cgm_remove(normalize_controller(controller),
                                        path, 1);
@@ -807,6 +827,11 @@ int cg_attach(const char *controller, const char *path, pid_t pid) {
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 r = cgm_enter(normalize_controller(controller),
                               path, pid);
 
@@ -846,6 +871,11 @@ int cg_set_group_access(
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 r = cgm_chmod(normalize_controller(controller),
                                          path, mode);
 
@@ -893,6 +923,11 @@ int cg_set_task_access(
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 r = cgm_chmod(normalize_controller(controller),
                               path, mode);
 
@@ -1140,6 +1175,11 @@ int cg_is_empty_recursive(const char *controller, const char *path, bool ignore_
         #ifdef HAVE_CGMANAGER
         /* CGManager support */
         if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
                 r = cgm_list_children(normalize_controller(controller),
                                       path, &children);
 
