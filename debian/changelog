@@ -1,3 +1,9 @@
+systemd (204-5ubuntu15) trusty; urgency=medium
+
+  * Pass --disable-cgmanager in the udeb build pass, d-i doesn't need it.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Wed, 02 Apr 2014 22:01:55 -0600
+
 systemd (204-5ubuntu14) trusty; urgency=medium
 
   [ Steve Langasek ]
