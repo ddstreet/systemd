@@ -43,9 +43,6 @@ bool cgm_dbus_connect(void)
 
 	connection = dbus_connection_open_private(CGMANAGER_DBUS_SOCK, &dbus_error);
 	if (!connection) {
-		NihError *nerr;
-		nerr = nih_error_get();
-		nih_free(nerr);
 		dbus_error_free(&dbus_error);
 		return false;
 	}
