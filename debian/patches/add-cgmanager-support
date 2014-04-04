@@ -1,7 +1,7 @@
 Index: systemd/Makefile.am
 ===================================================================
---- systemd.orig/Makefile.am	2014-04-03 13:48:57.669425480 -0400
-+++ systemd/Makefile.am	2014-04-03 13:48:57.661425480 -0400
+--- systemd.orig/Makefile.am	2014-04-03 23:57:07.578259000 -0400
++++ systemd/Makefile.am	2014-04-03 23:57:07.578259000 -0400
 @@ -178,6 +178,10 @@
  	-I $(top_srcdir)/src/libsystemd-bus \
  	$(OUR_CPPFLAGS)
@@ -51,8 +51,8 @@ Index: systemd/Makefile.am
  	libsystemd-logs.la
 Index: systemd/configure.ac
 ===================================================================
---- systemd.orig/configure.ac	2014-04-03 13:48:57.669425480 -0400
-+++ systemd/configure.ac	2014-04-03 13:48:57.661425480 -0400
+--- systemd.orig/configure.ac	2014-04-03 23:57:07.578259000 -0400
++++ systemd/configure.ac	2014-04-03 23:57:07.578259000 -0400
 @@ -780,6 +780,24 @@
  
  # ------------------------------------------------------------------------------
@@ -89,8 +89,8 @@ Index: systemd/configure.ac
 Index: systemd/src/shared/cgmanager.c
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ systemd/src/shared/cgmanager.c	2014-04-03 13:50:36.964076000 -0400
-@@ -0,0 +1,250 @@
++++ systemd/src/shared/cgmanager.c	2014-04-04 00:05:02.969051852 -0400
+@@ -0,0 +1,247 @@
 +/*
 + * lxc: linux Container library
 + *
@@ -136,9 +136,6 @@ Index: systemd/src/shared/cgmanager.c
 +
 +	connection = dbus_connection_open_private(CGMANAGER_DBUS_SOCK, &dbus_error);
 +	if (!connection) {
-+		NihError *nerr;
-+		nerr = nih_error_get();
-+		nih_free(nerr);
 +		dbus_error_free(&dbus_error);
 +		return false;
 +	}
@@ -344,7 +341,7 @@ Index: systemd/src/shared/cgmanager.c
 Index: systemd/src/shared/cgmanager.h
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ systemd/src/shared/cgmanager.h	2014-04-03 13:50:36.964076000 -0400
++++ systemd/src/shared/cgmanager.h	2014-04-03 23:57:07.578259000 -0400
 @@ -0,0 +1,44 @@
 +/*
 + * lxc: linux Container library
@@ -392,8 +389,8 @@ Index: systemd/src/shared/cgmanager.h
 +#endif
 Index: systemd/src/shared/cgroup-label.c
 ===================================================================
---- systemd.orig/src/shared/cgroup-label.c	2014-04-03 13:48:57.669425480 -0400
-+++ systemd/src/shared/cgroup-label.c	2014-04-03 13:49:55.000000000 -0400
+--- systemd.orig/src/shared/cgroup-label.c	2014-04-03 23:57:07.578259000 -0400
++++ systemd/src/shared/cgroup-label.c	2014-04-03 23:57:07.578259000 -0400
 @@ -30,6 +30,7 @@
  #include <ftw.h>
  
@@ -432,8 +429,8 @@ Index: systemd/src/shared/cgroup-label.c
                  return r;
 Index: systemd/src/shared/cgroup-util.c
 ===================================================================
---- systemd.orig/src/shared/cgroup-util.c	2014-04-03 13:48:57.669425480 -0400
-+++ systemd/src/shared/cgroup-util.c	2014-04-03 13:49:55.000000000 -0400
+--- systemd.orig/src/shared/cgroup-util.c	2014-04-03 23:57:07.578259000 -0400
++++ systemd/src/shared/cgroup-util.c	2014-04-03 23:57:07.578259000 -0400
 @@ -29,6 +29,7 @@
  #include <sys/types.h>
  #include <ftw.h>
@@ -838,8 +835,8 @@ Index: systemd/src/shared/cgroup-util.c
                  return r == -ENOENT ? 1 : r;
 Index: systemd/src/shared/cgroup-util.h
 ===================================================================
---- systemd.orig/src/shared/cgroup-util.h	2014-04-03 13:48:57.669425480 -0400
-+++ systemd/src/shared/cgroup-util.h	2014-04-03 13:49:55.000000000 -0400
+--- systemd.orig/src/shared/cgroup-util.h	2014-04-03 23:57:07.578259000 -0400
++++ systemd/src/shared/cgroup-util.h	2014-04-03 23:57:07.578259000 -0400
 @@ -113,3 +113,5 @@
  char *cg_unescape(const char *p) _pure_;
  
@@ -848,8 +845,8 @@ Index: systemd/src/shared/cgroup-util.h
 +const char *normalize_controller(const char *controller);
 Index: systemd/src/login/logind.c
 ===================================================================
---- systemd.orig/src/login/logind.c	2014-04-03 13:48:57.669425480 -0400
-+++ systemd/src/login/logind.c	2014-04-03 13:49:55.000000000 -0400
+--- systemd.orig/src/login/logind.c	2014-04-03 23:57:07.578259000 -0400
++++ systemd/src/login/logind.c	2014-04-03 23:57:07.578259000 -0400
 @@ -38,6 +38,7 @@
  #include "strv.h"
  #include "conf-parser.h"
