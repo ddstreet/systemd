@@ -1,3 +1,17 @@
+systemd (204-5ubuntu18) trusty; urgency=medium
+
+  * Revert "Do not restart logind on package upgrades" change from
+    204-0ubuntu1. This is obsolete now, as we only ever shipped version 204 in
+    stable releases. This was an intra-development release upgrade fix only,
+    and it did not even work properly. This fixes logind not getting started
+    on package install. (LP: #1305395)
+  * Update 60-keyboard.hwdb from upstream git. Adds Samsung Series 7 Ultra.
+  * debian/libpam-systemd.systemd-logind.upstart: Don't try to mount
+    /sys/fs/cgroup/systemd in a container, as that will fail. cgmanager will
+    be used for these cases.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 10 Apr 2014 15:46:51 +0200
+
 systemd (204-5ubuntu17) trusty; urgency=medium
 
   * Fix crash on systems without cgmanager. (LP: #1302264)
