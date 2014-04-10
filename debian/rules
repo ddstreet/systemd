@@ -189,7 +189,7 @@ override_dh_installinit:
 	dh_installinit --upstart-only --name=udevtrigger --no-start
 	dh_installinit --upstart-only --name=udevmonitor --no-start
 	dh_installinit --upstart-only --name=udev-fallback-graphics --no-start
-	dh_installinit --upstart-only --name systemd-logind --no-start
+	dh_installinit --upstart-only --name systemd-logind
 
 override_dh_makeshlibs:
 	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb
