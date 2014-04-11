@@ -1,3 +1,10 @@
+systemd (204-5ubuntu19) trusty; urgency=medium
+
+  * cgmanager: don't call nih_dbus_setup() since we won't use the
+    nih_mainloop().  (LP: #1303649)
+
+ -- Serge Hallyn <serge.hallyn@ubuntu.com>  Fri, 11 Apr 2014 10:17:04 -0500
+
 systemd (204-5ubuntu18) trusty; urgency=medium
 
   * Revert "Do not restart logind on package upgrades" change from
