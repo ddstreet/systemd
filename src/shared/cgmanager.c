@@ -47,14 +47,6 @@ bool cgm_dbus_connect(void)
 		return false;
 	}
 
-	if (nih_dbus_setup(connection, NULL) < 0) {
-		NihError *nerr;
-		nerr = nih_error_get();
-		nih_free(nerr);
-		dbus_error_free(&dbus_error);
-		dbus_connection_unref(connection);
-		return false;
-	}
 	dbus_connection_set_exit_on_disconnect(connection, FALSE);
 	dbus_error_free(&dbus_error);
 	cgroup_manager = nih_dbus_proxy_new(NULL, connection,
