@@ -1,3 +1,12 @@
+systemd (204-5ubuntu20) trusty; urgency=medium
+
+  * systemd-logind.conf: Don't use the limit stanza which fails the
+    whole job when failing to set the ulimit. Instead call ulimit itself
+    from the job and ignore its return code. This allow systemd-logind to
+    start in unprivileged LXC containers. (LP: #1307595)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Mon, 14 Apr 2014 12:20:33 -0400
+
 systemd (204-5ubuntu19) trusty; urgency=medium
 
   * cgmanager: don't call nih_dbus_setup() since we won't use the

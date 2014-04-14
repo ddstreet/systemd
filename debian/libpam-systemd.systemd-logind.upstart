@@ -3,8 +3,6 @@ description "SystemD login management service"
 start on started dbus
 stop on stopping dbus
 
-limit nofile 16384 16384
-
 respawn
 
 env SYSTEMD_LOG_TARGET=syslog
@@ -27,4 +25,11 @@ pre-start script
     fi
 end script
 
-exec /lib/systemd/systemd-logind
+script
+    # Don't use the limit stanza as failure to set the limit (unprivileged
+    # containers for example) causes a complete failure to start the job.
+    ulimit -S -n 16384 || true
+    ulimit -H -n 16384 || true
+
+    exec /lib/systemd/systemd-logind
+end script
