@@ -315,6 +315,7 @@ rootlibexec_PROGRAMS = \
 	systemd-sleep
 
 systemgenerator_PROGRAMS = \
+	systemd-insserv-generator \
 	systemd-getty-generator \
 	systemd-fstab-generator \
 	systemd-system-update-generator
@@ -447,6 +448,12 @@ nodist_systemunit_DATA = \
 	units/initrd-udevadm-cleanup-db.service \
 	units/initrd-switch-root.service \
 	units/systemd-nspawn@.service
+
+if HAVE_SYSV_COMPAT
+nodist_systemunit_DATA += \
+	units/x-display-manager.target \
+	units/mail-transport-agent.target
+endif
 
 dist_userunit_DATA = \
 	units/user/default.target \
@@ -1516,6 +1523,14 @@ systemd_delta_SOURCES = \
 	src/delta/delta.c
 
 systemd_delta_LDADD = \
+	libsystemd-shared.la
+
+# ------------------------------------------------------------------------------
+systemd_insserv_generator_SOURCES = \
+	src/insserv-generator/insserv-generator.c
+
+systemd_insserv_generator_LDADD = \
+	libsystemd-label.la \
 	libsystemd-shared.la
 
 # ------------------------------------------------------------------------------
