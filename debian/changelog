@@ -1,3 +1,87 @@
+systemd (204-9) unstable; urgency=medium
+
+  * The "Flemish Beef and Beer Stew" release.
+
+  [ Steve Langasek ]
+  * Do proper refcounting of the PAM module package on prerm, so that we
+    don't drop the module from the PAM config when uninstalling a
+    foreign-arch package.  Related to Ubuntu bug #1295521.
+
+  [ Martin Pitt ]
+  * debian/udev.udev-finish.upstart: Fix path to tmp-rules,
+    debian/extra/rule_generator.functions creates them in /run/udev/.
+  * rules: Remove the kernel-install bits; we don't want that in Debian and
+    thus it shouldn't appear in dh_install --list-missing output.
+  * Ship sd-shutdown.h in libsystemd-daemon-dev.
+  * Run dh_install with --fail-missing, to avoid forgetting files when we move
+    to new versions.
+  * Mount /dev/pts with the correct permissions in the udev, to avoid needing
+    pt_chown (not available on all architectures). Thanks Adam Conrad.
+  * Add new block of Windows Azure ethernet hardware address to
+    75-persistent-net-generator.rules. (LP: #1274348, Closes: #739018)
+  * Drop our Debian specific 60-persistent-storage{,-tape}.rules and use the
+    upstream rules. They are compatible and do a superset of the
+    functionality. (Closes: #645466)
+  * Drop our Debian specific 80-drivers.rules and use the upstream rules with
+    a patch for the sg module (see #657948). These now stop calling modprobe
+    and use the kmod builtin, giving some nice boot speed improvement.
+    (Closes: #717404)
+  * Drop our Debian specific 50-udev-default.rules and 91-permissions.rules
+    and use the upstream rules with a patch for the remaining Debian specific
+    default device permissions. Many thanks to Marco d'Itri for researching
+    which Debian-specific rules are obsolete! Amongst other things, this now
+    also reads the hwdb info for USB devices (Closes: #717405) and gets rid of
+    some syntax errors (Closes: #706221)
+  * Set default polling interval on removable devices as well, for kernels
+    which have "block" built in instead of being a module. (Closes: #713877)
+  * Make sd_login_monitor_new() work for logind without systemd.
+  * Cherry-pick upstream fix for polkit permissions for rebooting with
+    multiple sessions.
+  * Kill /etc/udev/links.conf, create_static_nodes, and associated code. It's
+    obsolete with devtmpfs (which is required now), and doesn't run with
+    systemd or upstart anyway.
+  * Drop unnecessary udev.dirs.
+  * Add autopkgtests for smoke-testing logind, hostnamed, timedated, localed,
+    and a compile/link/run test against libsystemd-login-dev.
+
+  [ Marco d'Itri ]
+  * preinst: check for all the system calls required by modern releases
+    of udev. (Closes: #648325)
+  * Updated fbdev-blacklist.conf for recent kernels.
+  * Do not blacklist viafb because it is required on the OLPC XO-1.5.
+    (Closes: #705792)
+  * Remove write_cd_rules and the associated rules which create "persistent"
+    symlinks for CD/DVD devices and replace them with more rules in
+    60-cdrom_id, which will create symlinks for one at random among the
+    devices installed. Since the common case is having a single device
+    then everything will work out just fine most of the times...
+    (Closes: #655924)
+  * Fix write_net_rules for systemd and sysvinit users by copying the
+    temporary rules from /run/udev/ to /etc/udev/. (Closes: #735563)
+  * Do not install sysctl.d/50-default.conf because the systemd package
+    should not change kernel policies, at least until it will become
+    the only supported init system.
+
+  [ Michael Stapelberg ]
+  * Add systemd-dbg package, thanks Daniel Schaal (Closes: #742724).
+  * Switch from gitpkg to git-buildpackage. Update README.source accordingly.
+  * Make libpam-systemd depend on systemd-sysv | systemd-shim. Packages that
+    need logind functionality should depend on libpam-systemd.
+
+  [ Michael Biebl ]
+  * Do not send potentially private fstab information without prior user
+    confirmation. (Closes: #743158)
+  * Add support for LSB facilities defined by insserv.
+    Parse /etc/insserv.conf.d content and /etc/insserv.conf and generate
+    systemd unit drop-in files to add corresponding dependencies. Also ship
+    targets for the Debian specific $x-display-manager and
+    $mail-transport-agent system facilities. (Closes: #690892)
+  * Do not accidentally re-enable /var/tmp cleaning when migrating the TMPTIME
+    setting from /etc/default/rcS. Fix up existing broken configurations.
+    (Closes: #738862)
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 26 Apr 2014 21:37:29 +0200
+
 systemd (204-8) unstable; urgency=low
 
   [ Michael Stapelberg ]

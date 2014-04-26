@@ -313,8 +313,7 @@ static int add_mount(
         }
 
         if (!noauto) {
-                /* don't start network mounts automatically, we do that via ifupdown hooks for now */
-                if (post && !streq(post, SPECIAL_REMOTE_FS_TARGET)) {
+                if (post) {
                         lnk = strjoin(arg_dest, "/", post, nofail || automount ? ".wants/" : ".requires/", name, NULL);
                         if (!lnk)
                                 return log_oom();
