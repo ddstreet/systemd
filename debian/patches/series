@@ -1,3 +1,23 @@
 # debian/source/git-patches exported from git by export-hook
 v204..upstream-fixes_204-8
 debian-changes
+
+# cherrypicked from upstream trunk
+upstream-hwdb-keyboard.patch
+upstream-hwdb-updates.patch
+upstream-reboot-polkit-permissions.patch
+
+# rejected upstream
+env-variable-for-machine-ID-path.patch
+persistent-storage-rule-mmc-partname.patch
+
+# Ubuntu specific
+login-monitor-no-machine.patch
+disable-failing-buildd-tests.patch
+block-polling.patch
+fix-race-condition-of-serio-driver-module-not-loading.patch
+always-probe-cpu-support-drivers.patch
+support-phablet-etc-writable.patch
+ubuntu-logind-controllers.patch
+fix-ftbfs.patch
+add-cgmanager-support
