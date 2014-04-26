@@ -1,3 +1,81 @@
+systemd (204-8ubuntu1) utopic; urgency=medium
+
+  * Merge with Debian unstable. Drop the systemd-services split as we want to
+    move to systemd as pid 1 (UbuntuSpec:core-1403-systemd-transition) so that
+    we can start experimenting with booting Ubuntu with systemd. This does NOT
+    yet change the default, with this upstart will still be used to bring up
+    the system. To boot with systemd, add init=/lib/systemd/systemd to the
+    grub menu (at boot or in /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT).
+
+    Remaining Ubuntu specific changes:
+    - debian/rules: Don't build the systemd-sysv package for now.
+    - debian/udev.templates: Drop debconfiscation of udev, not necessary for
+      Ubuntu. Drop debconf pre-dependency.
+    - debian/extra/initramfs.top: Drop $ROOTDELAY, we do that in a more
+      sensible way with wait-for-root. (Will get applicable to Debian once
+      Debian gets wait-for-root in initramfs-tools.)
+    - Drop debian/extra/{50-udev-default.rules,60-persistent-storage*.rules,
+      75-cd-aliases-generator.rules,80-drivers.rules,80-networking.rules,
+      91-permissions.rules}: These are the Debian specific rules, in Ubuntu we
+      have always used the upstream ones.
+    - Add debian/extra/rules/78-graphics-card.rules: Mark graphics devices as
+      PRIMARY_DEVICE_FOR_DISPLAY so that we can wait for those in plymouth.
+    - Add debian/extra/rules/73-idrac.rules: On Dell PowerEdge systems, the
+      iDRAC7 and later support a USB Virtual NIC for management. Name this
+      interface "idrac" to avoid confusion with "real" network interfaces.
+    - Add debian/extra/udev.py: Apport hook.
+    - debian/extra/udev.startup, debian/rules: Don't install/support
+      /etc/udev/links.conf, that's a hack (if you want links, create udev
+      rules).
+    - Drop debian/source/{git-patches,options}, we use proper patches.
+    - debian/rules: We continue to use the old net iface naming schema for the
+      time being. Install old udev rule generator in debian/udev.install.
+    - debian/rules: Don't install init.d scripts, only the upstart jobs.
+    - debian/rules: Add an epoch to libgudev.
+    - Drop debian/udev.dirs, not necessary.
+    - Drop debian/udev.NEWS, debian/udev.maintscript: Not applicable to
+      Ubuntu.
+    - debian/udev.{postinst,postrm,preinst,prerm}: Keep our much simpler
+      versions (all platforms must support udev, no debconf).
+    - debian/rules: Drop doc dir symlinking. It creates havoc with dpkg
+      upgrades, and we already have the automatic per-file symlinking.
+    - Add debian/extra/rules/40-hyperv-hotadd.rules: Workaround for LP #1233466
+    - Various debian/patches/*, see patch headers.
+
+    Applicable to Debian:
+    - Add libpam-systemd.systemd-logind.upstart to bring up logind at boot
+      when using upstart.
+    - debian/control, debian/tests/: Add autopkgtest.
+    - debian/extra/initramfs.hook, debian/udev.*{pre,post}inst: Divert udevadm
+      to udevadm.upgrade during upgrades while udev is unconfigured.
+    - Add debian/extra/60-keyboard.hwdb: Latest upstream keymaps, for easy
+      backporting.
+    - debian/extra/initramfs.bottom: If LVM is installed, settle udev,
+      otherwise we get missing LV symlinks. (LP #1185394)
+    - Add debian/extra/README-{etc,lib}-rules.d documentation, install into
+      udev.
+    - debian/rules: Run tests during package build.
+    - debian/udev.udev-finish.upstart: Fix path to tmp-rules,
+      debian/extra/rule_generator.functions creates them in /run/udev/.
+    - debian/udev-udeb.install: Add 64-btrfs.rules, 75-probe_mtd.rules, and
+      80-drivers.rules, they are potentially useful in a d-i environment.
+    - debian/extra/rules/75-persistent-net-generator.rules: Add new block of
+      Windows Azure ethernet hardware address to ignore persistent naming
+      (LP #1274348).
+    - debian/extra/udev.startup: Mount devpts with the correct permissions to
+      avoid needing pt_chown.
+    - debian/libpam-systemd.prerm: Do proper refcounting of the PAM module
+      package on prerm, so that we don't drop the module from the PAM config
+      when uninstalling a foreign-arch package.  Related to LP #1295521.
+    - Run dh_install with --list-missing.
+
+    Upgrade fixes, keep until 16.04 LTS release:
+    - debian/control: Conflicts/Replaces/Provides systemd-services.
+  * debian/tests/timedated: Get along with comments in /etc/timezone,
+    cloud-init puts one there.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sat, 26 Apr 2014 17:29:00 +0200
+
 systemd (204-8) unstable; urgency=low
 
   [ Michael Stapelberg ]
@@ -74,6 +152,284 @@ systemd (204-6) unstable; urgency=low
     (LP: #1099278)
 
  -- Michael Stapelberg <stapelberg@debian.org>  Tue, 31 Dec 2013 14:39:44 +0100
+
+systemd (204-5ubuntu20) trusty; urgency=medium
+
+  * systemd-logind.conf: Don't use the limit stanza which fails the
+    whole job when failing to set the ulimit. Instead call ulimit itself
+    from the job and ignore its return code. This allow systemd-logind to
+    start in unprivileged LXC containers. (LP: #1307595)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Mon, 14 Apr 2014 12:20:33 -0400
+
+systemd (204-5ubuntu19) trusty; urgency=medium
+
+  * cgmanager: don't call nih_dbus_setup() since we won't use the
+    nih_mainloop().  (LP: #1303649)
+
+ -- Serge Hallyn <serge.hallyn@ubuntu.com>  Fri, 11 Apr 2014 10:17:04 -0500
+
+systemd (204-5ubuntu18) trusty; urgency=medium
+
+  * Revert "Do not restart logind on package upgrades" change from
+    204-0ubuntu1. This is obsolete now, as we only ever shipped version 204 in
+    stable releases. This was an intra-development release upgrade fix only,
+    and it did not even work properly. This fixes logind not getting started
+    on package install. (LP: #1305395)
+  * Update 60-keyboard.hwdb from upstream git. Adds Samsung Series 7 Ultra.
+  * debian/libpam-systemd.systemd-logind.upstart: Don't try to mount
+    /sys/fs/cgroup/systemd in a container, as that will fail. cgmanager will
+    be used for these cases.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 10 Apr 2014 15:46:51 +0200
+
+systemd (204-5ubuntu17) trusty; urgency=medium
+
+  * Fix crash on systems without cgmanager. (LP: #1302264)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Fri, 04 Apr 2014 00:17:14 -0400
+
+systemd (204-5ubuntu16) trusty; urgency=medium
+
+  [ Stéphane Graber ]
+  * Never call normalize_controller when controll is NULL as this
+    triggers an assert... (LP: #1301846)
+
+  [ Serge Hallyn ]
+  * d/p/add-cgmanager-support: make sure connections are closed  (LP: #1301882)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Thu, 03 Apr 2014 13:53:09 -0400
+
+systemd (204-5ubuntu15) trusty; urgency=medium
+
+  * Pass --disable-cgmanager in the udeb build pass, d-i doesn't need it.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Wed, 02 Apr 2014 22:01:55 -0600
+
+systemd (204-5ubuntu14) trusty; urgency=medium
+
+  [ Steve Langasek ]
+  * Do proper refcounting of the PAM module package on prerm, so that we
+    don't drop the module from the PAM config when uninstalling a
+    foreign-arch package.  Related to Ubuntu bug #1295521.
+
+  [ Stéphane Graber ]
+  * Add cgmanager support to logind. This will use the cgmanager socket
+    instead of cgroupfs when cgmanager is available. Otherwise it'll simply
+    fallback on the cgroupfs code. (LP: #1297363)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Tue, 01 Apr 2014 20:02:35 -0400
+
+systemd (204-5ubuntu13) trusty; urgency=medium
+
+  * Fix FTBFS against recent kernels & glibc.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Fri, 28 Feb 2014 23:54:54 +0000
+
+systemd (204-5ubuntu12) trusty; urgency=medium
+
+  * Mark autopkgtest with "isolation-machine" as this test can't run in
+    schroot or LXC.
+  * Import latest keymaps from upstream git.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 28 Feb 2014 11:55:09 +0100
+
+systemd (204-5ubuntu11) trusty; urgency=medium
+
+  [ Ben Howard ]
+  * debian/extra/rules/75-persistent-net-generator.rules: Add new block of
+    Windows Azure ethernet hardware address to ignore persistent naming
+    (LP: #1274348).
+
+  [ Stefan Bader ]
+  * Modify debian/extra/rules/78-graphics-card.rules to match for
+    "efi-framebuffer" in addition to "efifb" (LP: #1277006)
+
+  [ Martin Pitt ]
+  * debian/extra/rules/78-graphics-card.rules: Add vesa-framebuffer as well,
+    thanks to Andy Whitcroft for pointing out.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 06 Feb 2014 12:42:39 +0100
+
+systemd (204-5ubuntu10) trusty; urgency=medium
+
+  * Add debian/extra/rules/73-idrac.rules: On Dell PowerEdge systems, the
+    iDRAC7 and later support a USB Virtual NIC for management. Name this
+    interface "idrac" to avoid confusion with "real" network interfaces.
+  * Pull latest keymaps from upstream git:
+    - Acer Aspire One A110 Fn+F5 Key release (LP: #1272658)
+    - Sony Vaio VGN-FW250 (LP: #1271163)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 29 Jan 2014 17:51:14 +0100
+
+systemd (204-5ubuntu9) trusty; urgency=medium
+
+  [ Chris Wayne ]
+  * support-phablet-etc-writable.patch: Allow writing to /etc/hostname and
+    /etc/machine-info as symlinks.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 20 Jan 2014 10:03:39 +0100
+
+systemd (204-5ubuntu8) trusty; urgency=low
+
+  * pam-check-runtime-dir-user.patch: Make "not owned by the target uid" log
+    message only appear in debug mode, as it's a normal operation.
+  * Respect DEB_BUILD_OPTIONS=nocheck.
+  * Update 60-keyboard.hwdb from upstream git.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 10 Jan 2014 08:18:59 +0100
+
+systemd (204-5ubuntu7) trusty; urgency=medium
+
+  * Enable all cgroup controllers in logind.conf. This is needed so that
+    unprivileged LXC may work.
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Thu, 09 Jan 2014 11:16:57 -0500
+
+systemd (204-5ubuntu6) trusty; urgency=low
+
+  * Add pam-check-runtime-dir-user.patch: Don't set an existing
+    $XDG_RUNTIME_DIR in the PAM module if it isn't owned by the session user.
+    Otherwise su sessions get a runtime dir from a different user which leads
+    to either permission errors or scribbling over the other user's files.
+    (LP: #1197395)
+  * Update debian/extra/60-keyboard.hwdb from current upstream trunk:
+    - Fix Lenovo Z370 (LP: #1245189)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 13 Nov 2013 14:00:55 +0100
+
+systemd (204-5ubuntu5) trusty; urgency=low
+
+  * Remove Debian's customized 80-drivers.rules, use (patched) upstream's as
+    we always did.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 11 Nov 2013 07:06:47 +0100
+
+systemd (204-5ubuntu4) trusty; urgency=low
+
+  * Remove Debian's customized persistent storage rules, use upstream's as we
+    always used to do.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 11 Nov 2013 06:59:42 +0100
+
+systemd (204-5ubuntu3) trusty; urgency=low
+
+  * Re-add login-monitor-no-machine.patch to quilt series.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 07 Nov 2013 10:05:33 +0100
+
+systemd (204-5ubuntu2) trusty; urgency=low
+
+  * debian/udev.install: Drop duplicate installation of net generator, reduces
+    Debian delta.
+  * Drop debian/extra/firmware.agent and its invocation in 80-drivers.rules;
+    we do not install this anyway, firmware is loaded by the udev builtin (and
+    the kernel).
+  * 0020-persistent-storage-rule-mmc-partname.patch: Create symlinks for MMC
+    partitions with a "PARTNAME" property (Android specific patch) in
+    /dev/disks/by-partlabel/ for consistency with GUID partitions, not in
+    /dev/disks/by-name/.
+  * Add magically generated debian patches from the source package
+    (v204..upstream-fixes_204-5 and debian-changes), and drop our patches
+    which are contained in that:
+    - 0000-upstream-CVE-2013-4327.patch
+    - 0010-Add-back-support-for-Debian-specific-config-files.patch
+    - 0012-Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
+    - 0017-Clean-up-empty-sessions-when-not-running-under-syste.patch
+    - 0024-hwdb-in-lib.patch
+    - 0030-revert-removal-of-rename_netif-functionality.patch
+  * Drop prefix from our remaining patches, and sort quilt series into
+    categories.
+  * Drop "Breaks: consolekit (<< 0.4.6-1)" (slipped in with the merge), we
+    don't depend on consolekit providing udev-acl as we only support logind's
+    ACLs.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 07 Nov 2013 06:13:20 +0100
+
+systemd (204-5ubuntu1) trusty; urgency=low
+
+  * Merge packaging with current Debian unstable, to greatly reduce the diff
+    noise. Ubuntu changes:
+    Permanently Ubuntu specific:
+    - debian/control, debian/rules, debian/systemd.install,
+      debian/systemd-services.install: Split out systemd-services package with
+      logind, timedated, hostnamed, and localed. Add
+      libpam-systemd.systemd-logind.upstart to bring up logind at boot.
+    - debian/rules: Don't build systemd and systemd-sysv packages, not
+      approved for universe for now.
+    - debian/udev.templates, Drop debconfiscation of udev, not necessary for
+      Ubuntu.
+    - debian/extra/initramfs.top: Drop $ROOTDELAY, we do that in a more
+      sensible way with wait-for-root. (Will get applicable to Debian once
+      Debian gets wait-for-root in initramfs-tools.)
+    - Add debian/extra/rules/78-graphics-card.rules: Mark graphics devices as
+      PRIMARY_DEVICE_FOR_DISPLAY so that we can wait for those in plymouth.
+    - Drop debian/extra/{50-udev-default.rules,75-cd-aliases-generator.rules,
+      80-networking.rules,91-permissions.rules}, we don't want these in
+      Ubuntu.
+    - Add debian/extra/udev.py: Apport hook.
+    - debian/extra/udev.startup, debian/rules: Don't install/support
+      /etc/udev/links.conf, that's a hack (if you want links, create udev
+      rules).
+    - Various debian/patches/*, see patch headers (unmergeable with Debian).
+    - Drop debian/source/{git-patches,options}, we use proper patches.
+    - debian/rules: We continue to use the old net iface naming schema for the
+      time being. Install old udev rule generator in debian/udev.install.
+      (Reconsider post-LTS)
+    - debian/rules: Don't install init.d scripts, only the upstart jobs.
+    - debian/rules: Add an epoch to libgudev.
+    - Drop debian/udev.dirs, not necessary.
+    - Drop debian/udev.NEWS, debian/udev.maintscript: Not applicable to
+      Ubuntu.
+    - debian/udev.{postinst,postrm,preinst,prerm}: Keep our much simpler
+      versions (all platforms must support udev, no debconf).
+    - debian/libgudev-1.0-0.install: Install into /lib/ (Debian has a patch
+      for this to go into /usr/lib/).
+    - debian/rules: Drop doc dir symlinking. It creates havoc with dpkg
+      upgrades, and we already have the automatic per-file symlinking.
+
+    Applicable to Debian:
+    - debian/control, debian/tests/: Add autopkgtest.
+    - debian/extra/initramfs.hook, debian/udev.*{pre,post}inst: Divert udevadm
+      to udevadm.upgrade during upgrades while udev is unconfigured.
+    - Add debian/extra/60-keyboard.hwdb: Latest upstream keymaps, for easy
+      backporting.
+    - debian/extra/initramfs.bottom: If LVM is installed, settle udev,
+      otherwise we get missing LV symlinks. (LP #1185394)
+    - debian/extra/rules/75-persistent-net-generator.rules: Add Ravello
+      systems (LP #1099278)
+    - Add debian/extra/README-{etc,lib}-rules.d documentation, install into
+      udev.
+    - debian/rules: Run tests during package build.
+    - debian/udev.udev-finish.upstart: Fix path to tmp-rules,
+      debian/extra/rule_generator.functions creates them in /run/udev/.
+    - debian/udev.upstart: Fix path to udevd.
+    - debian/shlibs.local: Drop libudev; this unnecessarily generates overly
+      strict dependencies, and even wrong ones for our epoched libgudev.
+    - debian/udev-udeb.install: Add 64-btrfs.rules and 75-probe_mtd.rules,
+      they are potentially useful in a d-i environment.
+
+    Will go away eventually:
+    - Add debian/extra/rules/40-hyperv-hotadd.rules: Workaround for LP #1233466
+    - Keep debian/extra/firmware.agent and rule in
+      debian/extra/rules/80-drivers.rules until this has been tested to not be
+      necessary under Ubuntu kernels any more.
+
+    Upgrade fixes, keep until 14.04 LTS release:
+    - debian/control: Conflicts/Replaces libpam-xdg-support.
+    - debian/libpam-systemd.postinst: Trigger reboot notification for upgrade
+      from < 204, due to changed cgroup layout.
+    - debian/systemd-services.maintscript: Clean up obsolete
+      /etc/init/systemd-logind.conf on upgrades.
+
+  * Promote "systemd | systemd-shim" to Depends. (LP: #1221809)
+  * 0000-upstream-hwdb-keyboard.patch: udev-builtin-keyboard: Fix large scan
+    codes on 32 bit architectures. (side issue in LP #1247676)
+  * Drop systemd init specific Debian patches which we don't need in Ubuntu;
+    The Debian package does not track proper patches any more, so it doesn't
+    help us keeping the patches around for merging.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 06 Nov 2013 14:01:26 +0100
 
 systemd (204-5) unstable; urgency=high
 
@@ -239,6 +595,511 @@ systemd (204-1) experimental; urgency=low
     updated when packages install files into /lib/udev/hwdb.d.
 
  -- Michael Biebl <biebl@debian.org>  Fri, 19 Jul 2013 00:32:36 +0200
+
+systemd (204-0ubuntu19) saucy; urgency=low
+
+  * Add 0031-ignore-omap-vsync.patch: Gross, but effective hack to ignore
+    VSYNC change uevents from omapfb, as they happen at each vsync and thus
+    keep waking up udevd (including rules processing), upstart, and other
+    parts of the system 60 times a second. (LP: #1234743)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 17 Oct 2013 12:01:42 +0200
+
+systemd (204-0ubuntu18) saucy; urgency=low
+
+  * Configure with --disable-silent-rules, as per request from Matthias.
+  * Add debian/extra/rules/40-hyperv-hotadd.rules: On Hyper-V VMs, bring new
+    CPU and memory devices online as soon as they appear. This is not quite an
+    ideal solution, but an unintrusive compromise for Saucy. (LP: #1233466)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sat, 12 Oct 2013 12:16:29 +0200
+
+systemd (204-0ubuntu17) saucy; urgency=low
+
+  * Mount devpts with the correct permissions to avoid needing pt_chown.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Fri, 11 Oct 2013 00:46:12 -0600
+
+systemd (204-0ubuntu16) saucy; urgency=low
+
+  [ TJ ]
+  * Add 0030-revert-removal-of-rename_netif-functionality.patch: Return the
+    previous ability to postpone renaming until the target interface name
+    is free. (LP: #1235162)
+
+  [ Martin Pitt ]
+  * Refresh debian/extra/60-keyboard.hwdb to fix Samsung models.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 09 Oct 2013 16:16:50 +0200
+
+systemd (204-0ubuntu15) saucy; urgency=low
+
+  * 0029-Support-phablet-etc-writable.patch: Update patch to also work for
+    relative symlinks to /etc/writable, as livecd-rootfs 2.191 creates them
+    relative now. (LP: #1227520)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 01 Oct 2013 17:53:13 +0200
+
+systemd (204-0ubuntu14) saucy; urgency=low
+
+  * Add 0029-Support-phablet-etc-writable.patch: On Ubuntu Phone with readonly
+    /etc we symlink /etc/{adjtime,localtime,timezone} to /etc/writable/, so we
+    need to update those files instead if the original files are symlinks into
+    /etc/writable/. (LP: #1227520)
+  * Refresh debian/extra/60-keyboard.hwdb with latest keymaps from upstream.
+    Among others, this fixes Samsung Ativ 9 Plus. (LP: #1229936)
+  * Rename 0027-CVE-2013-4327.patch and
+    0028-fix-reboot-polkit-permissions.patch to 0000-upstream-* as they are in
+    upstream git.
+  * Ship {ata,cdrom,scsi}_id in udev-udeb. (LP: #1231230)
+  * Drop 60-persistent-v4l.rules and 61-accelerometer.rules from udev-udeb, we
+    don't need these in the installer.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 30 Sep 2013 13:34:06 +0200
+
+systemd (204-0ubuntu13) saucy; urgency=low
+
+  * debian/patches/0028-fix-reboot-polkit-permissions.patch: make
+    reboot-multiple-sessions polkit permissions consistent with
+    power-off-multiple-sessions in
+    src/login/org.freedesktop.login1.policy.in. (LP: #1226509)
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Thu, 26 Sep 2013 14:49:51 -0400
+
+systemd (204-0ubuntu12) saucy; urgency=low
+
+  * SECURITY UPDATE: possible privilege escalation via policykit UID lookup
+    race.
+    - debian/patches/0027-CVE-2013-4327.patch: pass system-bus-name as a
+      subject instead of pid so policykit can get the information from the
+      system bus in src/shared/polkit.c.
+    - CVE-2013-4327
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Wed, 18 Sep 2013 13:19:40 -0400
+
+systemd (204-0ubuntu11) saucy; urgency=low
+
+  * Refresh debian/extra/60-keyboard.hwdb from upstream. Fixes keymap
+    regressions on Dell and Samsung models. (LP: #1218433)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 06 Sep 2013 15:24:02 +0200
+
+systemd (204-0ubuntu10) saucy; urgency=low
+
+  * debian/systemd-services.install: Install systemd-multi-seat-x
+    (LP: #1214146)
+  * debian/local/78-graphics-card.rules: Also recognize vmwgfx driver. Thanks
+    Reagan Sanders! (LP: #1208024)
+  * Add 0000-upstream-hwdb-updates.patch: Update to latest upstream fixes of
+    hwdb, to get proper keyboard support.
+  * Move to hwdb keymap database to be able to continue to sync to upstream,
+    and benefit from the improved speed and eased maintenance:
+    - Drop 0000-upstream-keymaps.patch.
+    - Add 0000-upstream-hwdb-keyboard.patch to backport the "keymap" builtin.
+    - Add debian/extra/60-keyboard.hwdb (straight copy from upstream master),
+      install in debian/udev.install.
+    - debian/rules: Configure with --disable-keymap to not build/install the
+      old keymap stuff any more.
+    - Adds keymap for Samsung NP53U3C (LP: #1203853)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 27 Aug 2013 13:09:08 +0200
+
+systemd (204-0ubuntu9) saucy; urgency=low
+
+  * debian/udev.install: re-add installing /lib/udev/hotplug.functions,
+    since it's still being used by the inputattach, bluez, and usb_modeswitch
+    scripts.
+
+ -- Mathieu Trudel-Lapierre <mathieu-tl@ubuntu.com>  Thu, 08 Aug 2013 10:42:38 -0400
+
+systemd (204-0ubuntu8) saucy; urgency=low
+
+  * rules/80-drivers.rules: trigger the cpu helper modules regardless of
+    whether the kernel already has a driver loaded for the CPU components.
+    (LP: #1207705)
+
+ -- Andy Whitcroft <apw@canonical.com>  Fri, 02 Aug 2013 10:34:17 +0100
+
+systemd (204-0ubuntu7) saucy; urgency=low
+
+  * debian/tests/control: Add missing pkg-config test dependency, drop
+    unnecessary python3 dependency.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 19 Jul 2013 11:38:40 +0200
+
+systemd (204-0ubuntu6) saucy; urgency=low
+
+  * debian/rules: Drop /system/firmware and /vendor/firmware paths again, we
+    don't currently need them.
+  * debian/extra/initramfs.top: Drop the $ROOTDELAY sleep, we already do that
+    in a more sensible way in wait-for-root. (LP: #1202700)
+  * Add debian/tests/api: Add check for sd_login_monitor_*(), to reproduce
+    LP #1201180.
+  * Add 0025-login-monitor-no-machine.patch: Fix sd_login_monitor_new() to not
+    fail if there is no /sys/fs/cgroup/systemd/machine; that only exists when
+    running with systemd as PID 1. (LP: #1201180)
+  * debian/tests/logind: Create /run/udev/rules.d if it does not exist.
+  * Switch from pre-generated hwdb database to shipping the source files
+    (/lib/udev/hwdb.d/) and building hwdb.bin in postinst and with a trigger.
+    Upstream software like libgphoto, libsane, and media-player-info will ship
+    their own hwdb files soon, so be prepared for that.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 19 Jul 2013 09:45:54 +0200
+
+systemd (204-0ubuntu5) saucy; urgency=low
+
+  * Add 0000-upstream-keymaps.patch: Backport latest keymap fixes from
+    upstream, as we won't be able to update to newer upstream releases anytime
+    soon. (LP: #1193147, #1157334, #1152377, #1012365, #727139)
+  * Refresh our patches to apply cleanly.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 05 Jul 2013 08:54:06 +0200
+
+systemd (204-0ubuntu4) saucy; urgency=low
+
+  * Properly integrate hwdb, to get back vendor/product names in the udev db:
+    - Add 0024-hwdb-in-lib.patch: udev hwdb: Store binary database in libdir,
+      not in /etc.
+    - debian/rules: Build and ship pre-generated hwdb; do not ship the source
+      files, they are quite big and for now we do not have other packages
+      which want to add files there.
+    - LP: #1190947
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 14 Jun 2013 12:59:10 +0200
+
+systemd (204-0ubuntu3) saucy; urgency=low
+
+  * debian/extra/udev.startup: Restore devpts mounting, dropped in
+    202-0ubuntu10.  The justification for dropping it was that it's already
+    done by /usr/share/initramfs-tools/init, but this script is only used in
+    d-i and d-i does not use /usr/share/initramfs-tools/init (LP: #1188864).
+
+ -- Colin Watson <cjwatson@ubuntu.com>  Sat, 08 Jun 2013 00:32:53 +0100
+
+systemd (204-0ubuntu2) saucy; urgency=low
+
+  * debian/rules: Add /system/firmware and /vendor/firmware to firmware search
+    paths. (LP: #1187616)
+  * debian/libpam-systemd.postinst: Notify about required reboot when
+    upgrading from < 204, as due to changed cgroup layout restarting logind
+    after the upgrade would lose all existing sessions. (LP: #1187579)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 05 Jun 2013 11:07:38 +0200
+
+systemd (204-0ubuntu1) saucy; urgency=low
+
+  * New upstream release.
+  * debian/rules: Do not restart logind on package upgrades, as the cgroup
+    organization changed in this version.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 04 Jun 2013 10:46:58 +0200
+
+systemd (202-0ubuntu12) saucy; urgency=low
+
+  * Rename debian/tests/localed to locale-locale, as we are going to add more
+    tests for localed.
+  * Add debian/tests/localed-x11-keymap: Test "localectl set-x11-keymap".
+  * Put back 0010-Add-back-support-for-Debian-specific-config-files.patch to
+    re-fix timedated, and add Steve's fix for /etc/default/keymap. Re-drop
+    0025-Adjust-localed-to-use-the-Debian-locations-of-etc-de.patch.
+  * debian/extra/initramfs.bottom: We cannot properly synthesize LVM LV change
+    events with udevadm trigger during boot, so if we use LVM, we need to let
+    udev finish all the pending events in the initramfs. The
+    0024-avoid-exit-deadlock-for-dm_cookie.patch approach was
+    inherently racy, as it still left vgchange subprocesses running from
+    watershed (which then run into a non-existing /dev), so disable that
+    patch. (LP: #1185394)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 03 Jun 2013 14:41:20 +0200
+
+systemd (202-0ubuntu11) saucy; urgency=low
+
+  * Drop 0010-Add-back-support-for-Debian-specific-config-files.patch in
+    favor of 0025-Adjust-localed-to-use-the-Debian-locations-of-etc-de.patch,
+    the more complete fix for Debian/Ubuntu configuration paths that was
+    silently dropped from the Ubuntu package when updating to 198.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 30 May 2013 13:56:41 -0700
+
+systemd (202-0ubuntu10) saucy; urgency=low
+
+  * debian/extra/initramfs.bottom: Drop reading of /etc/udev/udev.conf, the
+    location of /dev hasn't been configurable for ages.
+  * debian/extra/initramfs.top: Drop obsolete "scsi_wait_scan" modprobing here
+    as well.
+  * all_generic_ide blacklist: Depend on "all_generic_ide blacklist", as in
+    previous udev.
+  * debian/extra/initramfs.top: Drop unnecessary "udevadm settle".
+  * debian/extra/initramfs.hook: Put back ata_id and scsi_id, these were
+    overzealously removed with the bits that are built in now (like blkid and
+    usb_id). LP: #1185060
+  * debian/extra/udev.startup: Drop devpts mounting again, already done by
+    /usr/share/initramfs-tools/init.
+  * debian/extra/initramfs.hook: Install udevadm.upgrade when updating the
+    initramfs while udev is unconfigured.
+  * debian/extra/initramfs.hook: Remove duplicate copying of
+    70-persistent-net.rules.
+  * debian/extra/initramfs.hook: Don't install the dmsetup and md rules. This
+    is already done by dmsetup's and mdadm's initramfs hooks.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 29 May 2013 08:12:35 +0200
+
+systemd (202-0ubuntu9) saucy; urgency=low
+
+  * debian/udev-udeb.links: Add /sbin/udevadm backwards compat symlink, too.
+  * debian/extra/udev.startup: Mount devtmpfs, not tmpfs with the manual
+    make_extra_nodes().
+  * debian/extra/udev.startup: Mount devpts.
+  * debian/extra/udev.startup: Drop obsolete "scsi_wait_scan" modprobing.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 28 May 2013 17:29:08 +0200
+
+systemd (202-0ubuntu8) saucy; urgency=low
+
+  * debian/udev.{preinst,postinst,postrm}: Disable udevadm trigger during
+    upgrades, to cause installation failures of packages which call udevadm
+    trigger without depending on udev. (LP: #1182948)
+  * debian/extra/initramfs.hook: Copy /sbin/udevadm compatibility symlink into
+    initramfs. (LP: #1184066)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 28 May 2013 13:13:42 +0200
+
+systemd (202-0ubuntu7) saucy; urgency=low
+
+  [ Martin Pitt ]
+  * debian/*: Replace remaining "udevadm info --run" invocations with
+    /run/udev/. (LP: #1182788)
+  * Add 0020-persistent-storage-rule-mmc-partname.patch: Create disk/by-name
+    links for mmcblk partitions if they have a PARTNAME property. Patch by
+    Ricardo Salveti de Araujo, taken from udev 175-0ubuntu29.
+
+  [ Andy Whitcroft ]
+  * debian/extra/rules/78-graphics-card.rules -- demote efifb to a secondary
+    display adaptor as in the majority of cases this will be replaced by
+    a DRM driver.  (LP: #1100386)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 22 May 2013 12:09:59 +0200
+
+systemd (202-0ubuntu6) saucy; urgency=low
+
+  * Build udev from this source package:
+    - Unblacklist udev and udev-udeb packages.
+    - Drop 70-power-switch.rules from systemd-services (shipped in udev).
+    - Port patches from old udev source package which are still relevant:
+      + 0021-block-polling.patch
+      + 0022-fix-race-condition-of-serio-driver-module-not-loading.patch
+      + 0023-load-fbcon.patch
+      + 0024-avoid-exit-deadlock-for-dm_cookie.patch
+      + 75-persistent-net-generator.rules: Do not create persistent net rules
+        for Ravello Systems MAC addresses. Now apply inline in
+        debian/extra/rules, as upstream dropped these. (LP #1099278)
+    - Add debian/extra/rules/78-graphics-card.rules (taken from old udev
+      package)
+    - Add debian/*.upstart from old udev package, and adjust dh_installinit
+      calls accordingly.
+    - Add Apport package hook.
+    - Add READMEs for /lib/udev/rules.d/ and /etc/udev/rules.d/.
+    - Add debian/udev.postinst for restarting udev and rebuilding initramfs.
+    - Drop 0020-uaccess-rule-with-old-udev.patch, not necessary any more with
+      current udev.
+  * debian/extra/initramfs.hook: Adjust for changed paths and rules files.
+  * debian/extra/initramfs.bottom: Replace undefined "nuke" with "rm -rf".
+  * Install udev rules into udev-udeb.
+  * Ship README.keymap.txt in udev, not in systemd.
+  * Copy persistent net/cd rules generator scripts from udev 175 to
+    debian/extra/, and adjust for dropped "udevadm info --run". We continue to
+    use the old naming schema for the time being,  Don't install
+    80-net-name-slot.rules for now.
+  * debian/extra/initramfs.bottom: Ignore timeout errors from udevadm we
+    expect (and indeed requested) in certain failure modes.  If we do not we
+    will bail out early and not transfer /dev into /root which is always fatal
+    leading to unbootable machines. (Taken from old udev package) (LP #818177)
+  * Configure with correct --with-firmware-path.
+  * Show test logs if running the test suite fails.
+  * Disable test-sched-prio and test-util, they don't work in PPA buildds.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 21 May 2013 08:11:30 +0200
+
+systemd (202-0ubuntu5) saucy; urgency=low
+
+  * Drop 0016-Add-poweroff-reboot-suspend-hibernate-fallback.patch.
+    systemd-shim 3 has a much better implementation of pm-utils fallback.
+    Recommend systemd or systemd-shim >= 3 for that.
+  * Ship 70-power-switch.rules. (LP: #1160995)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 02 May 2013 11:19:42 -0700
+
+systemd (202-0ubuntu4) saucy; urgency=low
+
+  * 0010-Add-back-support-for-Debian-specific-config-files.patch: Re-apply
+    parts that use /etc/default/locale, which accidentally got dropped in
+    202-0ubuntu1. (LP: #1175065)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 01 May 2013 11:35:55 -0700
+
+systemd (202-0ubuntu3) saucy; urgency=low
+
+  * Disable journal-stream test case, which fails on powerpc.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 30 Apr 2013 11:31:39 -0700
+
+systemd (202-0ubuntu2) saucy; urgency=low
+
+  * Merge 0019-disable-unit-name-test.patch and
+    0021-disable-catalog-test.patch to
+    0019-disable-failing-buildd-tests.patch, and disable the cgroup-util as
+    well (which fails on the buildds, too).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 30 Apr 2013 08:40:07 -0700
+
+systemd (202-0ubuntu1) saucy; urgency=low
+
+  * New upstream release.
+  * Drop patches applied/superseded upstream:
+    - 0011-Don-t-strip-rc.-from-sysv-init-scripts.patch
+    - 0013-build-sys-don-t-hard-code-binary-paths-in-initrd-.se.patch
+    - 0014-Move-udevadm-to-rootbindir.patch
+    - 0015-Strip-Date-from-man-pages.patch
+  * Update *.symbols for new release.
+  * Add 0021-disable-catalog-test.patch: Disable catalog test for now, fails
+    at the moment
+  * Disable 0004-Don-t-run-systemd-udev-rules-if-systemd-is-not-activ.patch.
+    We'll drop udev-acl and use uaccess exclusively.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 29 Apr 2013 17:15:47 -0700
+
+systemd (198-0ubuntu12) saucy; urgency=low
+
+  [ Martin Pitt ]
+  * debian/rules: Don't build ddebs for blacklisted binary packages.
+  * debian/systemd-services.install: Put back logind D-BUS activation file,
+    now that we will use logind by default.
+
+  [ Iain Lane ]
+  * Use the shutdown fallback for "poweroff.target" too; this is invoked by
+    org.freedesktop.login1.Manager.PowerOff (LP: #1171504)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sun, 28 Apr 2013 06:34:43 -0700
+
+systemd (198-0ubuntu11) raring; urgency=low
+
+  * debian/libpam-systemd.systemd-logind.upstart: Don't start if
+    libpam-systemd is removed but not purged. (LP: #1171691)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 23 Apr 2013 07:38:20 +0200
+
+systemd (198-0ubuntu10) raring; urgency=low
+
+  * debian/systemd-services.install: Don't install the D-BUS activation file
+    for logind. Without libpam-systemd's upstart job (which sets up the
+    cgroups) it does not work anyway, and with the upstart job it is already
+    running anyway. We'll put that back in raring+1 to respawn after crashes,
+    but for raring we do not want to run logind by default. (LP: #1167642)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 12 Apr 2013 06:44:27 +0200
+
+systemd (198-0ubuntu9) raring; urgency=low
+
+  * debian/tests/control: Add libpam-systemd dependency for logind test, as
+    it checks for the mounted cgroup. Mounting that moved into libpam-systemd,
+    see 198-0ubuntu7.
+  * Drop usr/lib/systemd/ from systemd-services, this doesn't belong there and
+    is already installed into systemd.
+  * 0016-Add-poweroff-reboot-suspend-hibernate-fallback.patch: Send
+    PrepareFor{Sleep,Shutdown}() signals with "false" after the operation
+    finished. Thanks to Iain Lane for the initial patch! (LP: #1157122)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 26 Mar 2013 11:08:39 +0100
+
+systemd (198-0ubuntu8) raring; urgency=low
+
+  * Add gir addon, to call dh_girepository to get the gir:Depends
+    dependency. (LP: #1159997)
+
+ -- Dmitrijs Ledkovs <dmitrij.ledkov@ubuntu.com>  Tue, 26 Mar 2013 09:24:38 +0000
+
+systemd (198-0ubuntu7) raring; urgency=low
+
+  * Make systemd-services installable without forcing the usage of logind, so
+    that we can install it by default for the other D-BUS services:
+    - Move systemd-logind upstart job into libpam-systemd.
+    - Drop systemd-services' Recommends: to libpam-systemd.
+    - LP: #1156074
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 19 Mar 2013 13:14:33 +0100
+
+systemd (198-0ubuntu6) raring; urgency=low
+
+  * Fix logind autopkgtest when there are no seats (as in Jenkins).
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 18 Mar 2013 09:49:55 +0100
+
+systemd (198-0ubuntu5) raring; urgency=low
+
+  * Mark systemd-services as Multi-Arch: foreign.
+  * Add autopkgtest for logind. Note that in Jenkins this will only have very
+    light coverage as there it does not have a seat. When run locally, it will
+    also cover hotplug and coldplug ACLs.
+  * Add 0020-uaccess-rule-with-old-udev.patch: Our old udev does not yet
+    understand RUN{builtin}, use IMPORT.  This can be dropped when moving to a
+    recent udev. Depend on the udev version with the uaccess builtin backport,
+    so that applying ACLs on hotplugged devices actually works.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 15 Mar 2013 19:15:32 +0100
+
+systemd (198-0ubuntu4) raring; urgency=low
+
+  * Add 0019-disable-unit-name-test.patch: Disable test-unit-name for now, as
+    it fails on the buildds, presumably because of a missing /etc/hostname.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 15 Mar 2013 11:55:21 +0100
+
+systemd (198-0ubuntu3) raring; urgency=low
+
+  * Add 0018-Add-env-variable-for-machine-ID-path.patch: During package build,
+    in minimal chroots, or other systems which do not already have an
+    /etc/machine-id we get six test failures. Introduce a
+    $SYSTEMD_MACHINE_ID_PATH environment variable which can specify a location
+    other than /etc/machine-id, so that the unit tests are independent from
+    the environment.
+  * debian/rules: Re-enable unit tests. Don't run them under fakeroot as that
+    hangs some tests, and supply a local machine id file.
+  * Add autopkgtests for hostnamed, localed, and timedated.
+  * 0010-Add-back-support-for-Debian-specific-config-files.patch: Update patch
+    for localed to use /etc/default/locale instead of /etc/locale.conf.
+  * Rename udev-gtk-udeb to libudev1-udeb, and build it for Ubuntu.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 15 Mar 2013 11:37:45 +0100
+
+systemd (198-0ubuntu2) raring; urgency=low
+
+  * libgudev-1.0-dev: Don't depend on exact binary version of
+    gir1.2-gudev-1.0, as libgudev-* have an epoch.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 13 Mar 2013 13:45:13 +0100
+
+systemd (198-0ubuntu1) raring; urgency=low
+
+  FFE for new version and libudev1 soname bump: LP #1153224
+
+  [ Michael Biebl ]
+  * New upstream release with merged udev+systemd code bases.
+
+  [ Martin Pitt ]
+  * Split off new systemd-services binary package with logind, timedated,
+    hostnamed, and localed. These can be used without the systemd init parts.
+  * Add fallback to poweroff/reboot/pm-suspend/pm-hibernate if logind is
+    running without systemd.
+  * Clean up empty sessions when not running under systemd.
+  * Add upstart job for logind.
+  * Add Conflicts/Replaces/Provides for libpam-xdg-support and logind.
+  * Disable udev and systemd packages for Ubuntu. udev (and its udebs) will be
+    re-enabled once we apply our customizations from the standalone package,
+    and the packages are confirmed to work. For systemd{,-sysv}, we need to
+    decide whether or not we want these in universe.
+  * Add epoch to libgudev packages for Ubuntu, as we had in udev.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 13 Mar 2013 10:46:40 +0100
 
 systemd (44-12) unstable; urgency=low
 
