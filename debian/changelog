@@ -1,3 +1,20 @@
+systemd (204-10) unstable; urgency=medium
+
+  * In the udeb's udev.startup, make sure that /dev/pts exists.
+  * systemd-logind-launch: Set the #files ulimit, for unprivileged LXC
+    containers.
+  * Drop udev.NEWS, it only applies to pre-squeeze.
+  * Remove /var/log/udev on purge.
+  * Always probe cpu support drivers. (LP #1207705)
+  * On Dell PowerEdge systems, the iDRAC7 and later support a USB Virtual NIC
+    for management. Name this interface "idrac" to avoid confusion with "real"
+    network interfaces.
+  * Drop numerical prefixes from patches, to avoid future diff noise when
+    removing, cherry-picking, and merging patches. From now on, always use
+    "gbp-pq export --no-patch-numbers" to update them.
+
+ -- Martin Pitt <mpitt@debian.org>  Sun, 27 Apr 2014 11:53:52 +0200
+
 systemd (204-9) unstable; urgency=medium
 
   * The "Flemish Beef and Beer Stew" release.
