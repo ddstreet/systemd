@@ -1,3 +1,35 @@
+systemd (208-1) experimental; urgency=medium
+
+  [ Michael Biebl ]
+  * New upstream release. (Closes: #729566)
+  * Update patches.
+  * Update symbols files for libsystemd-journal and libsystemd-login.
+  * Install new files and remove the ones we don't use.
+  * Install zsh completion files. (Closes: #717540)
+  * Create a compat symlink /etc/sysctl.d/99-sysctl.conf as systemd-sysctl no
+    longer reads /etc/sysctl.conf.
+  * Bump Build-Depends on kmod to (>= 14).
+  * Bump Build-Depends on libcryptsetup-dev to (>= 2:1.6.0) for tcrypt
+    support.
+  * Make kmod-static-nodes.service check for the kmod binary since we don't
+    want a hard dependency on kmod e.g. for container installations.
+  * Disable various features which aren't required for the udeb build.
+  * Move new sd_pid_get_slice and sd_session_get_vt man pages into
+    libsystemd-login-dev.
+  * Make no-patch-numbers the default for gbp-pq.
+  * Adjust systemd-user pam config file for Debian.
+    This pam config file is used by libpam-systemd/systemd-logind when
+    launching systemd user instances.
+  * Drop patches to make logind D-Bus activatable. The cgroup handling has
+    been reworked in v205 and logind no longer creates cgroup hierarchies on
+    its own. That means that the standalone logind is no longer functional
+    without support from systemd (or an equivalent cgroup manager).
+
+  [ Martin Pitt ]
+  * Explain patch management in debian/README.source.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 28 Apr 2014 00:22:57 +0200
+
 systemd (204-10) unstable; urgency=medium
 
   * In the udeb's udev.startup, make sure that /dev/pts exists.

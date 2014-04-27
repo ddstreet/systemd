@@ -768,7 +768,7 @@ static DBusHandlerResult timedate_message_handler(
                                 return bus_send_error_reply(connection, message, NULL, r);
                         }
 
-                        /* 2. Tell the kernel our time zone */
+                        /* 2. Tell the kernel our timezone */
                         hwclock_set_timezone(NULL);
 
                         if (tz.local_rtc) {
@@ -825,7 +825,7 @@ static DBusHandlerResult timedate_message_handler(
                                 return bus_send_error_reply(connection, message, NULL, r);
                         }
 
-                        /* 2. Tell the kernel our time zone */
+                        /* 2. Tell the kernel our timezone */
                         hwclock_set_timezone(NULL);
 
                         /* 3. Synchronize clocks */
