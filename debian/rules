@@ -33,14 +33,19 @@ CONFFLAGS_deb = \
 
 CONFFLAGS_udeb = \
 	--disable-selinux \
+	--disable-smack \
+	--disable-ima \
 	--disable-introspection \
 	--disable-gtk-doc \
 	--disable-binfmt \
 	--disable-readahead \
 	--disable-bootchart \
 	--disable-quotacheck \
+	--disable-tmpfiles \
 	--disable-randomseed \
+	--disable-backlight \
 	--disable-logind \
+	--disable-machined \
 	--disable-hostnamed \
 	--disable-timedated \
 	--disable-localed \
@@ -83,8 +88,11 @@ override_dh_install:
 	rm -f debian/install/*/etc/init.d/README
 	rm -f debian/install/*/usr/share/man/man8/kernel-install.8
 	rm -f debian/install/*/usr/bin/kernel-install
+	rm -f debian/install/*/usr/share/zsh/site-functions/_kernel-install
+	rm -f debian/install/*/usr/share/bash-completion/completions/kernel-install
 	rm -rf debian/install/*/usr/lib/kernel/install.d
 	rm -rf debian/install/*/etc/rpm/
+	rm -rf debian/install/*/usr/lib/rpm/
 	rm -rf debian/install/*/etc/kernel/
 	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	find debian/install/ -name '*.la' -delete
@@ -145,8 +153,6 @@ override_dh_install:
 		debian/udev/lib/systemd/system/
 	ln -s ../udev-finish.service debian/udev/lib/systemd/system/sysinit.target.wants/
 	install --mode=755 debian/debian-fixup \
-		debian/systemd/lib/systemd/
-	install --mode=755 debian/systemd-logind-launch \
 		debian/systemd/lib/systemd/
 	# remove duplicates
 	# files shipped by systemd-sysv / sysvinit
