@@ -4459,16 +4459,19 @@ static int enable_unit(DBusConnection *bus, char **args) {
 
         dbus_error_init(&error);
 
-        r = enable_sysv_units(args);
-        if (r < 0)
-                return r;
-
         if (!args[1])
                 return 0;
 
         r = mangle_names(args+1, &mangled_names);
         if (r < 0)
                 goto finish;
+
+        r = enable_sysv_units(args);
+        if (r < 0)
+                return r;
+
+        if (!args[1])
+                return 0;
 
         if (!bus || avoid_bus()) {
                 if (streq(verb, "enable")) {
