@@ -11,6 +11,7 @@ DefaultDependencies=no
 Before=sysinit.target systemd-tmpfiles-setup-dev.service
 ConditionCapability=CAP_MKNOD
 ConditionPathExists=/lib/modules/%v/modules.devname
+ConditionFileIsExecutable=@KMOD@
 
 [Service]
 Type=oneshot
