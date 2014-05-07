@@ -1,3 +1,11 @@
+systemd (204-5ubuntu20.1) trusty-proposed; urgency=medium
+
+  [Martin Pitt]
+  * Advertise hibernation only if there's enough free swap. Patches backported
+    from current upstream. (LP: #1313522)
+
+ -- Yu Ning <ning.yu@canonical.com>  Wed, 07 May 2014 19:41:29 +0800
+
 systemd (204-5ubuntu20) trusty; urgency=medium
 
   * systemd-logind.conf: Don't use the limit stanza which fails the
