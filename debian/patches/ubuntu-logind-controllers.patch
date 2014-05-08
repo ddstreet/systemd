@@ -17,15 +17,17 @@ unprivileged containers.
 Origin: vendor
 Forwarded: not-needed
 
---- systemd-204.orig/src/login/logind.conf
-+++ systemd-204/src/login/logind.conf
+Index: systemd-204/src/login/logind.conf
+===================================================================
+--- systemd-204.orig/src/login/logind.conf	2014-05-08 18:30:35.349061594 -0500
++++ systemd-204/src/login/logind.conf	2014-05-08 18:30:52.377060908 -0500
 @@ -13,8 +13,8 @@
  #KillUserProcesses=no
  #KillOnlyUsers=
  #KillExcludeUsers=root
 -#Controllers=
 -#ResetControllers=cpu
-+Controllers=blkio cpu cpuacct cpuset devices freezer hugetlb memory perf_event
++Controllers=blkio cpu cpuacct cpuset devices freezer hugetlb memory perf_event net_cls net_prio
 +ResetControllers=
  #InhibitDelayMaxSec=5
  #HandlePowerKey=poweroff
