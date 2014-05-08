@@ -20,17 +20,17 @@ Forwarded: not-needed
  src/login/logind.conf | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/src/login/logind.conf b/src/login/logind.conf
-index 0861d73..a87278b 100644
---- a/src/login/logind.conf
-+++ b/src/login/logind.conf
+Index: systemd-204/src/login/logind.conf
+===================================================================
+--- systemd-204.orig/src/login/logind.conf	2012-12-23 17:29:39.965278291 -0600
++++ systemd-204/src/login/logind.conf	2014-05-08 18:27:12.269069780 -0500
 @@ -13,8 +13,8 @@
  #KillUserProcesses=no
  #KillOnlyUsers=
  #KillExcludeUsers=root
 -#Controllers=
 -#ResetControllers=cpu
-+Controllers=blkio cpu cpuacct cpuset devices freezer hugetlb memory perf_event
++Controllers=blkio cpu cpuacct cpuset devices freezer hugetlb memory perf_event net_cls net_prio
 +ResetControllers=
  #InhibitDelayMaxSec=5
  #HandlePowerKey=poweroff
