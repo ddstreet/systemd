@@ -1,3 +1,11 @@
+systemd (204-5ubuntu20.2) trusty; urgency=medium
+
+  * Update Enable-all-cgroup-controllers-in-logind.patch to also include
+    net_cls and net_prio. That should cover all existing cgroups.
+    (LP: #1317179)
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Thu, 08 May 2014 18:32:05 -0500
+
 systemd (204-5ubuntu20.1) trusty-proposed; urgency=medium
 
   [Martin Pitt]
