@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <ftw.h>
 
+#include "cgmanager.h"
 #include "cgroup-util.h"
 #include "log.h"
 #include "set.h"
@@ -43,8 +44,56 @@ int cg_enumerate_processes(const char *controller, const char *path, FILE **_f) 
         _cleanup_free_ char *fs = NULL;
         FILE *f;
         int r;
+        char *value = NULL;
+        char *template = NULL;
+        int fd;
 
         assert(_f);
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                value = cgm_get(normalize_controller(controller),
+                                path, "cgroup.procs");
+
+                cgm_dbus_disconnect();
+
+                if (!value)
+                        return -1;
+
+                template = strdup("/tmp/.cgmanager-logind.XXXXXX");
+                if (!template)
+                        return -1;
+
+                fd = mkstemp(template);
+
+                if (fd < 0) {
+                        free(template);
+                        return -1;
+                }
+
+                f = fdopen(fd, "w+");
+                if (!f) {
+                        close(fd);
+                        free(template);
+                        return -1;
+                }
+
+                unlink(template);
+                free(template);
+                write(fd, value, strlen(value));
+                fflush(f);
+                rewind(f);
+
+                *_f = f;
+                return 0;
+        }
+        #endif
 
         r = cg_get_path(controller, path, "cgroup.procs", &fs);
         if (r < 0)
@@ -62,8 +111,55 @@ int cg_enumerate_tasks(const char *controller, const char *path, FILE **_f) {
         _cleanup_free_ char *fs = NULL;
         FILE *f;
         int r;
+        char *value = NULL;
+        char *template = NULL;
+        int fd;
 
         assert(_f);
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                value = cgm_get(normalize_controller(controller),
+                                path, "tasks");
+
+                cgm_dbus_disconnect();
+
+                if (!value)
+                        return -1;
+
+                template = strdup("/tmp/.cgmanager-logind.XXXXXX");
+                if (!template)
+                        return -1;
+
+                fd = mkstemp(template);
+                if (fd < 0) {
+                        free(template);
+                        return -1;
+                }
+
+                f = fdopen(fd, "w+");
+                if (!f) {
+                        close(fd);
+                        free(template);
+                        return -1;
+                }
+
+                unlink(template);
+                free(template);
+                write(fd, value, strlen(value));
+                fflush(f);
+                rewind(f);
+
+                *_f = f;
+                return 0;
+        }
+        #endif
 
         r = cg_get_path(controller, path, "tasks", &fs);
         if (r < 0)
@@ -153,6 +249,26 @@ int cg_read_subgroup(DIR *d, char **fn) {
 int cg_rmdir(const char *controller, const char *path, bool honour_sticky) {
         _cleanup_free_ char *p = NULL;
         int r;
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                r = cgm_remove(normalize_controller(controller),
+                                         path, 0);
+
+                cgm_dbus_disconnect();
+
+                if (!r)
+                        return -1;
+
+                return 0;
+        }
+        #endif
 
         r = cg_get_path(controller, path, NULL, &p);
         if (r < 0)
@@ -462,7 +578,7 @@ int cg_migrate_recursive(const char *cfrom, const char *pfrom, const char *cto, 
         return ret;
 }
 
-static const char *normalize_controller(const char *controller) {
+const char *normalize_controller(const char *controller) {
 
         assert(controller);
 
@@ -531,8 +647,23 @@ int cg_get_path(const char *controller, const char *path, const char *suffix, ch
 
 static int check_hierarchy(const char *p) {
         char *cc;
+        int r;
 
         assert(p);
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                r = cgm_controller_exists(p);
+
+                cgm_dbus_disconnect();
+
+                if (!r)
+                        return -1;
+
+                return 0;
+        }
+        #endif
 
         /* Check if this controller actually really exists */
         cc = alloca(sizeof("/sys/fs/cgroup/") + strlen(p));
@@ -592,8 +723,57 @@ static int trim_cb(const char *path, const struct stat *sb, int typeflag, struct
 int cg_trim(const char *controller, const char *path, bool delete_root) {
         _cleanup_free_ char *fs = NULL;
         int r = 0;
+        char **children = NULL;
+        int i = 0;
+        char *p1 = NULL;
 
         assert(path);
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                if (delete_root) {
+                        r = cgm_remove(normalize_controller(controller),
+                                       path, 1);
+
+                        if (!r) {
+                                cgm_dbus_disconnect();
+                                return -1;
+                        }
+                }
+                else {
+                        r = cgm_list_children(normalize_controller(controller),
+                                              path, &children);
+
+                        if (!r) {
+                                cgm_dbus_disconnect();
+                                return -1;
+                        }
+
+                        if (children) {
+                                while (children[i]) {
+                                        p1 = strjoin(path, "/", children[i], NULL);
+
+                                        r = cgm_remove(normalize_controller(controller),
+                                                       p1, 1);
+
+                                        free(p1);
+                                        i++;
+                                }
+                                nih_free(children);
+                        }
+                }
+
+                cgm_dbus_disconnect();
+
+                return 0;
+        }
+        #endif
 
         r = cg_get_path(controller, path, NULL, &fs);
         if (r < 0)
@@ -644,6 +824,26 @@ int cg_attach(const char *controller, const char *path, pid_t pid) {
         assert(path);
         assert(pid >= 0);
 
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                r = cgm_enter(normalize_controller(controller),
+                              path, pid);
+
+                cgm_dbus_disconnect();
+
+                if (!r)
+                        return -1;
+
+                return 0;
+        }
+        #endif
+
         r = cg_get_path_and_check(controller, path, "tasks", &fs);
         if (r < 0)
                 return r;
@@ -664,9 +864,32 @@ int cg_set_group_access(
                 gid_t gid) {
 
         _cleanup_free_ char *fs = NULL;
-        int r;
+        int r, r1;
 
         assert(path);
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                r = cgm_chmod(normalize_controller(controller),
+                                         path, mode);
+
+                r1 = cgm_chown(normalize_controller(controller),
+                                         path, uid, gid);
+
+                cgm_dbus_disconnect();
+
+                if (!r && !r1)
+                        return -1;
+
+                return 0;
+        }
+        #endif
 
         if (mode != (mode_t) -1)
                 mode &= 0777;
@@ -696,6 +919,36 @@ int cg_set_task_access(
 
         if (mode != (mode_t) -1)
                 mode &= 0666;
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                r = cgm_chmod(normalize_controller(controller),
+                              path, mode);
+
+                if (!r) {
+                        cgm_dbus_disconnect();
+                        return -1;
+                    }
+
+                r = cgm_chown(normalize_controller(controller),
+                              path, uid, gid);
+
+                if (!r) {
+                        cgm_dbus_disconnect();
+                        return -1;
+                }
+
+                cgm_dbus_disconnect();
+                return 0;
+        }
+        #endif
+
 
         r = cg_get_path(controller, path, "tasks", &fs);
         if (r < 0)
@@ -906,13 +1159,58 @@ int cg_is_empty_by_spec(const char *spec, bool ignore_self) {
 int cg_is_empty_recursive(const char *controller, const char *path, bool ignore_self) {
         _cleanup_closedir_ DIR *d = NULL;
         char *fn;
+        char *p;
         int r;
+
+        char **children;
+        char *p1;
+        int i = 0;
 
         assert(path);
 
         r = cg_is_empty(controller, path, ignore_self);
         if (r <= 0)
                 return r;
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                r = cgm_list_children(normalize_controller(controller),
+                                      path, &children);
+
+                cgm_dbus_disconnect();
+
+                if (!r)
+                        return -1;
+
+                if (children) {
+                        r = 0;
+                        while (children[i]) {
+                                p1 = strjoin(path, "/", children[i], NULL);
+
+                                if (cg_is_empty_recursive(controller,  p1, ignore_self) != 0) {
+                                        r = -1;
+                                        free(p1);
+                                        break;
+                                }
+
+                                free(p1);
+                                i++;
+                        }
+                        nih_free(children);
+
+                        if (r < 0)
+                                return r;
+                }
+
+                return 1;
+        }
+        #endif
 
         r = cg_enumerate_subgroups(controller, path, &d);
         if (r < 0)
