@@ -69,6 +69,7 @@ bool cgm_dbus_connect(void)
 		nih_free(nerr);
 		nih_free(cgroup_manager);
 		cgroup_manager = NULL;
+		return false;
 	}
 	return true;
 }

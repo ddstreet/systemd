@@ -1,3 +1,11 @@
+systemd (204-10ubuntu3) utopic; urgency=medium
+
+  * debian/patches/Add-cgmanager-support-to-logind.patch:
+    - Fix an uninitialized variable bug that could cause a crash and
+      correctly note that cgmanager isn't available if it can't be pinged.
+
+ -- Michael Terry <mterry@ubuntu.com>  Tue, 13 May 2014 15:45:14 -0400
+
 systemd (204-10ubuntu2) utopic; urgency=medium
 
   * Update Enable-all-cgroup-controllers-in-logind.patch to also include
