@@ -38,6 +38,7 @@
 #include "strv.h"
 #include "conf-parser.h"
 #include "mkdir.h"
+#include "cgmanager.h"
 
 Manager *manager_new(void) {
         Manager *m;
@@ -601,6 +602,57 @@ static int manager_enumerate_users_from_cgroup(Manager *m) {
         int r = 0, k;
         char *name;
 
+        char **children;
+        int i;
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        if (cgm_dbus_connect()) {
+                r = cgm_list_children("systemd", m->cgroup_path,
+                                      &children);
+
+                cgm_dbus_disconnect();
+                if (!r)
+                        return -1;
+
+                if (children) {
+                        i = 0;
+                        while (children[i]) {
+                                User *user;
+                                char *e;
+
+                                name = children[i];
+
+                                e = endswith(name, ".user");
+                                if (e) {
+                                        *e = 0;
+
+                                        k = manager_add_user_by_name(m, name, &user);
+                                        if (k < 0) {
+                                                r = k;
+                                                i++;
+                                                continue;
+                                        }
+
+                                        user_add_to_gc_queue(user);
+
+                                        if (!user->cgroup_path) {
+                                                user->cgroup_path = strjoin(m->cgroup_path, "/", name, NULL);
+                                                if (!user->cgroup_path) {
+                                                        r = log_oom();
+                                                        break;
+                                                }
+                                        }
+                                }
+                                i++;
+                        }
+                        nih_free(children);
+                }
+
+                return r;
+        }
+        #endif
+
         r = cg_enumerate_subgroups(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_path, &d);
         if (r < 0) {
                 if (r == -ENOENT)
@@ -737,6 +789,9 @@ static int manager_enumerate_sessions_from_cgroup(Manager *m) {
         Iterator i;
         int r = 0;
 
+        char **children;
+        int i1;
+
         HASHMAP_FOREACH(u, m->users, i) {
                 _cleanup_closedir_ DIR *d = NULL;
                 char *name;
@@ -744,6 +799,55 @@ static int manager_enumerate_sessions_from_cgroup(Manager *m) {
 
                 if (!u->cgroup_path)
                         continue;
+
+                #ifdef HAVE_CGMANAGER
+                /* CGManager support */
+                if (cgm_dbus_connect()) {
+                        r = cgm_list_children("systemd",
+                                              u->cgroup_path, &children);
+
+                        cgm_dbus_disconnect();
+
+                        if (!r)
+                                return -1;
+
+                        if (children) {
+                                i1 = 0;
+                                while (children[i1]) {
+                                        Session *session;
+                                        char *e;
+
+                                        name = children[i1];
+
+                                        e = endswith(name, ".session");
+                                        if (e) {
+                                                *e = 0;
+
+                                                k = manager_add_session(m, u, name, &session);
+                                                if (k < 0) {
+                                                        r = k;
+                                                        i1++;
+                                                        continue;
+                                                }
+
+                                                session_add_to_gc_queue(session);
+
+                                                if (!session->cgroup_path) {
+                                                        session->cgroup_path = strjoin(m->cgroup_path, "/", name, NULL);
+                                                        if (!session->cgroup_path) {
+                                                                r = log_oom();
+                                                                break;
+                                                        }
+                                                }
+                                        }
+                                        i1++;
+                                }
+                                nih_free(children);
+                        }
+
+                        continue;
+                }
+                #endif
 
                 k = cg_enumerate_subgroups(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, &d);
                 if (k < 0) {
