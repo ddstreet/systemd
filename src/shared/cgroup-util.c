@@ -1162,7 +1162,7 @@ int cg_is_empty_recursive(const char *controller, const char *path, bool ignore_
         char *p;
         int r;
 
-        char **children;
+        char **children = NULL;
         char *p1;
         int i = 0;
 
