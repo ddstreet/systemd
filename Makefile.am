@@ -177,6 +177,10 @@ AM_CPPFLAGS = \
 	-I $(top_srcdir)/src/libsystemd-bus \
 	$(OUR_CPPFLAGS)
 
+if ENABLE_CGMANAGER
+AM_CPPFLAGS += -DHAVE_CGMANAGER
+endif
+
 AM_CFLAGS = $(OUR_CFLAGS)
 AM_LDFLAGS = $(OUR_LDFLAGS)
 
@@ -681,6 +685,8 @@ libsystemd_shared_la_SOURCES = \
 	src/shared/cgroup-util.h \
 	src/shared/cgroup-show.c \
 	src/shared/cgroup-show.h \
+	src/shared/cgmanager.c \
+	src/shared/cgmanager.h \
 	src/shared/unit-name.c \
 	src/shared/unit-name.h \
 	src/shared/utmp-wtmp.c \
@@ -704,6 +710,14 @@ libsystemd_shared_la_SOURCES = \
 	src/shared/output-mode.h \
 	src/shared/MurmurHash3.c \
 	src/shared/MurmurHash3.h
+
+if ENABLE_CGMANAGER
+libsystemd_shared_la_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(CGMANAGER_CFLAGS)
+libsystemd_shared_la_LIBADD = \
+	$(CGMANAGER_LIBS)
+endif
 
 #-------------------------------------------------------------------------------
 noinst_LTLIBRARIES += \
@@ -768,6 +782,11 @@ libsystemd_label_la_CFLAGS = \
 
 libsystemd_label_la_LIBADD = \
 	$(SELINUX_LIBS)
+
+if ENABLE_CGMANAGER
+libsystemd_label_la_CFLAGS += $(CGMANAGER_CFLAGS)
+libsystemd_label_la_LIBADD += $(CGMANAGER_LIBS)
+endif
 
 # ------------------------------------------------------------------------------
 noinst_LTLIBRARIES += \
