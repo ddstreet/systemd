@@ -602,7 +602,7 @@ static int manager_enumerate_users_from_cgroup(Manager *m) {
         int r = 0, k;
         char *name;
 
-        char **children;
+        char **children = NULL;
         int i;
 
         #ifdef HAVE_CGMANAGER
@@ -789,7 +789,7 @@ static int manager_enumerate_sessions_from_cgroup(Manager *m) {
         Iterator i;
         int r = 0;
 
-        char **children;
+        char **children = NULL;
         int i1;
 
         HASHMAP_FOREACH(u, m->users, i) {

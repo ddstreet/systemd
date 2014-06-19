@@ -69,6 +69,7 @@ bool cgm_dbus_connect(void)
 		nih_free(nerr);
 		nih_free(cgroup_manager);
 		cgroup_manager = NULL;
+		return false;
 	}
 	return true;
 }
@@ -128,6 +129,7 @@ bool cgm_remove(const char *controller, const char *cgroup_path, int recursive)
 char *cgm_get(const char *controller, const char *cgroup_path, const char *key)
 {
 	char *result = NULL;
+	char *ret = NULL;
 
 	if (cgroup_path[0] == '/')
 		cgroup_path++;
@@ -138,10 +140,16 @@ char *cgm_get(const char *controller, const char *cgroup_path, const char *key)
 		log_error("cgmanager: cgm_get for controller=%s, cgroup_path=%s failed: %s",
 		          controller, cgroup_path, nerr->message);
 		nih_free(nerr);
-		free(result);
+		nih_free(result);
 		return NULL;
 	}
-	return result;
+
+	if (result) {
+		ret = strdup(result);
+		nih_free(result);
+	}
+
+	return ret;
 }
 
 bool cgm_chmod(const char *controller, const char *cgroup_path, int mode)
