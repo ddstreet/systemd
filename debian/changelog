@@ -1,3 +1,13 @@
+systemd (204-5ubuntu20.3) trusty; urgency=medium
+
+  * Fix various issues with the cgmanager integration (LP: #1309025):
+     - Always return false on connection failure.
+     - Always nih_free variables that were potentially nih allocated.
+     - Always initialize the children listings to NULL.
+     - Always initialize the list iterator to 0.
+
+ -- Stéphane Graber <stgraber@ubuntu.com>  Wed, 18 Jun 2014 23:37:50 -0400
+
 systemd (204-5ubuntu20.2) trusty; urgency=medium
 
   * Update Enable-all-cgroup-controllers-in-logind.patch to also include
