@@ -182,7 +182,7 @@ static int parse_insserv_conf(const char* filename) {
                                         _cleanup_free_ char *dep = NULL;
 
                                         /* targets should not pull in and activate other targets so skip them */
-                                        if (*j[0] == '!')
+                                        if (*j[0] == '$')
                                                 continue;
 
                                         if (*j[0] == '+')
