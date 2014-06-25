@@ -322,6 +322,7 @@ rootlibexec_PROGRAMS = \
 	systemd-sleep
 
 systemgenerator_PROGRAMS = \
+	systemd-insserv-generator \
 	systemd-getty-generator \
 	systemd-fstab-generator \
 	systemd-system-update-generator
@@ -1680,6 +1681,14 @@ systemd_delta_SOURCES = \
 	src/delta/delta.c
 
 systemd_delta_LDADD = \
+	libsystemd-shared.la
+
+# ------------------------------------------------------------------------------
+systemd_insserv_generator_SOURCES = \
+	src/insserv-generator/insserv-generator.c
+
+systemd_insserv_generator_LDADD = \
+	libsystemd-label.la \
 	libsystemd-shared.la
 
 # ------------------------------------------------------------------------------
