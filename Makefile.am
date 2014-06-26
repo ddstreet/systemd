@@ -174,8 +174,13 @@ AM_CPPFLAGS = \
 	-I $(top_srcdir)/src/core \
 	-I $(top_srcdir)/src/libudev \
 	-I $(top_srcdir)/src/udev \
+	-I $(top_builddir)/src/udev \
 	-I $(top_srcdir)/src/libsystemd-bus \
 	$(OUR_CPPFLAGS)
+
+if ENABLE_CGMANAGER
+AM_CPPFLAGS += -DHAVE_CGMANAGER
+endif
 
 AM_CFLAGS = $(OUR_CFLAGS)
 AM_LDFLAGS = $(OUR_LDFLAGS)
@@ -681,6 +686,8 @@ libsystemd_shared_la_SOURCES = \
 	src/shared/cgroup-util.h \
 	src/shared/cgroup-show.c \
 	src/shared/cgroup-show.h \
+	src/shared/cgmanager.c \
+	src/shared/cgmanager.h \
 	src/shared/unit-name.c \
 	src/shared/unit-name.h \
 	src/shared/utmp-wtmp.c \
@@ -704,6 +711,14 @@ libsystemd_shared_la_SOURCES = \
 	src/shared/output-mode.h \
 	src/shared/MurmurHash3.c \
 	src/shared/MurmurHash3.h
+
+if ENABLE_CGMANAGER
+libsystemd_shared_la_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(CGMANAGER_CFLAGS)
+libsystemd_shared_la_LIBADD = \
+	$(CGMANAGER_LIBS)
+endif
 
 #-------------------------------------------------------------------------------
 noinst_LTLIBRARIES += \
@@ -768,6 +783,11 @@ libsystemd_label_la_CFLAGS = \
 
 libsystemd_label_la_LIBADD = \
 	$(SELINUX_LIBS)
+
+if ENABLE_CGMANAGER
+libsystemd_label_la_CFLAGS += $(CGMANAGER_CFLAGS)
+libsystemd_label_la_LIBADD += $(CGMANAGER_LIBS)
+endif
 
 # ------------------------------------------------------------------------------
 noinst_LTLIBRARIES += \
@@ -1102,16 +1122,12 @@ tests += \
 	test-strv \
 	test-path-util \
 	test-strxcpyx \
-	test-unit-name \
 	test-unit-file \
-	test-util \
 	test-date \
 	test-sleep \
 	test-replace-var \
-	test-sched-prio \
 	test-calendarspec \
 	test-strip-tab-ansi \
-	test-cgroup-util \
 	test-prioq \
 	test-fileio \
 	test-time \
@@ -1947,6 +1963,7 @@ dist_udevrules_DATA += \
 	rules/99-systemd.rules \
 	rules/42-usb-hid-pm.rules \
 	rules/50-udev-default.rules \
+	rules/60-keyboard.rules \
 	rules/60-persistent-storage-tape.rules \
 	rules/60-persistent-serial.rules \
 	rules/60-persistent-input.rules \
@@ -2010,6 +2027,19 @@ rootlibexec_PROGRAMS += \
 noinst_LTLIBRARIES += \
 	libudev-core.la
 
+src/udev/keyboard-keys.txt: Makefile
+	$(AM_V_at)$(MKDIR_P) $(dir $@)
+	$(AM_V_GEN)$(CPP) $(CFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) -dM -include linux/input.h - < /dev/null | $(AWK) '/^#define[ \t]+KEY_[^ ]+[ \t]+[0-9]/ { if ($$2 != "KEY_MAX") { print $$2 } }' | sed 's/^KEY_COFFEE$$/KEY_SCREENLOCK/' > $@
+
+src/udev/keyboard-keys-from-name.gperf: src/udev/keyboard-keys.txt Makefile
+	$(AM_V_GEN)$(AWK) 'BEGIN{ print "struct key { const char* name; unsigned short id; };"; print "%null-strings"; print "%%";} { print tolower(substr($$1 ,5)) ", " $$1 }' < $< > $@
+
+src/udev/keyboard-keys-from-name.h: src/udev/keyboard-keys-from-name.gperf Makefile
+	$(AM_V_GPERF)$(GPERF) -L ANSI-C -t -N keyboard_lookup_key -H hash_key_name -p -C < $< > $@
+
+src/udev/keyboard-keys-to-name.h: src/udev/keyboard-keys.txt Makefile
+	$(AM_V_GEN)$(AWK) 'BEGIN{ print "const char* const key_names[KEY_CNT] = { "} { print "[" $$1 "] = \"" $$1 "\"," } END{print "};"}' < $< > $@
+
 libudev_core_la_SOURCES = \
 	src/udev/udev.h \
 	src/udev/udev-event.c \
@@ -2021,9 +2051,21 @@ libudev_core_la_SOURCES = \
 	src/udev/udev-builtin-btrfs.c \
 	src/udev/udev-builtin-hwdb.c \
 	src/udev/udev-builtin-input_id.c \
+	src/udev/udev-builtin-keyboard.c \
 	src/udev/udev-builtin-net_id.c \
 	src/udev/udev-builtin-path_id.c \
 	src/udev/udev-builtin-usb_id.c
+
+nodist_libudev_core_la_SOURCES = \
+	src/udev/keyboard-keys-from-name.h \
+	src/udev/keyboard-keys-to-name.h
+
+BUILT_SOURCES += \
+	$(nodist_libudev_core_la_SOURCES)
+
+CLEANFILES += \
+	src/udev/keyboard-keys-from-name.gperf \
+	src/udev/keyboard-keys.txt
 
 libudev_core_la_CFLAGS = \
 	$(AM_CFLAGS) \
@@ -2870,10 +2912,9 @@ tests += \
 	test-journal-send \
 	test-journal-syslog \
 	test-journal-match \
-	test-journal-stream \
 	test-journal-verify \
 	test-mmap-cache \
-	test-catalog
+	$(NULL)
 
 pkginclude_HEADERS += \
 	src/systemd/sd-journal.h \
