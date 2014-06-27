@@ -180,6 +180,7 @@ static int parse_insserv_conf(const char* filename) {
                                 STRV_FOREACH (j, parsed+1) {
                                         _cleanup_free_ char *unit = NULL;
                                         _cleanup_free_ char *dep = NULL;
+                                        _cleanup_free_ char *initscript = NULL;
 
                                         /* targets should not pull in and activate other targets so skip them */
                                         if (*j[0] == '$')
@@ -191,6 +192,16 @@ static int parse_insserv_conf(const char* filename) {
                                                 name = *j;
                                         if ((sysv_translate_facility(name, NULL, &dep) < 0) || !dep)
                                                 continue;
+
+                                        /* don't create any drop-in configs if the
+                                         * corresponding SysV init script does not exist */
+                                        initscript = strjoin("/etc/init.d/", name, NULL);
+                                        if (access(initscript, F_OK) < 0) {
+                                                strcat(initscript, ".sh");
+                                                if (access(initscript, F_OK) < 0) {
+                                                        continue;
+                                                }
+                                        }
 
                                         unit = strjoin(arg_dest, "/", dep, ".d/50-",basename(filename),"-",parsed[0],".conf", NULL);
                                         if (!unit)
