@@ -197,8 +197,11 @@ static int parse_insserv_conf(const char* filename) {
                                          * corresponding SysV init script does not exist */
                                         initscript = strjoin("/etc/init.d/", name, NULL);
                                         if (access(initscript, F_OK) < 0) {
-                                                strcat(initscript, ".sh");
-                                                if (access(initscript, F_OK) < 0) {
+                                                _cleanup_free_ char *initscript_sh = NULL;
+
+                                                /* Try *.sh source'able init scripts */
+                                                initscript_sh = strjoin(initscript, ".sh", NULL);
+                                                if (access(initscript_sh, F_OK) < 0) {
                                                         continue;
                                                 }
                                         }

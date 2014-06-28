@@ -1,3 +1,9 @@
+systemd (208-5) experimental; urgency=medium
+
+  * Merge changes from unstable branch.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 28 Jun 2014 13:41:32 +0200
+
 systemd (208-4) experimental; urgency=medium
 
   * Merge changes from unstable branch.
@@ -60,6 +66,14 @@ systemd (208-1) experimental; urgency=medium
   * Explain patch management in debian/README.source.
 
  -- Michael Biebl <biebl@debian.org>  Mon, 28 Apr 2014 00:22:57 +0200
+
+systemd (204-14) unstable; urgency=medium
+
+  * Fix SIGABRT in insserv generator caused by incorrect usage of strcat().
+    (Closes: #752992)
+  * Mark -dev packages as Multi-Arch: same. (Closes: #720017)
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 28 Jun 2014 13:22:43 +0200
 
 systemd (204-13) unstable; urgency=medium
 
