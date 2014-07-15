@@ -41,7 +41,7 @@
 #include "pager.h"
 
 #define SCALE_X (0.1 / 1000.0)   /* pixels per us */
-#define SCALE_Y 20.0
+#define SCALE_Y (20.0)
 
 #define compare(a, b) (((a) > (b))? 1 : (((b) > (a))? -1 : 0))
 
@@ -462,7 +462,7 @@ static int analyze_plot(DBusConnection *bus) {
                 m++;
 
         for (u = times; u < times + n; u++) {
-                double len;
+                double text_start, text_width;
 
                 if (u->ixt < boot->userspace_time ||
                     u->ixt > boot->finish_time) {
@@ -470,10 +470,14 @@ static int analyze_plot(DBusConnection *bus) {
                         u->name = NULL;
                         continue;
                 }
-                len = ((boot->firmware_time + u->ixt) * SCALE_X)
-                        + (10.0 * strlen(u->name));
-                if (len > width)
-                        width = len;
+
+                /* If the text cannot fit on the left side then
+                 * increase the svg width so it fits on the right.
+                 * TODO: calculate the text width more accurately */
+                text_width = 8.0 * strlen(u->name);
+                text_start = (boot->firmware_time + u->ixt) * SCALE_X;
+                if (text_width > text_start && text_width + text_start > width)
+                        width = text_width + text_start;
 
                 if (u->iet > u->ixt && u->iet <= boot->finish_time
                                 && u->aet == 0 && u->axt == 0)
@@ -507,6 +511,7 @@ static int analyze_plot(DBusConnection *bus) {
         /* style sheet */
         svg("<defs>\n  <style type=\"text/css\">\n    <![CDATA[\n"
             "      rect       { stroke-width: 1; stroke-opacity: 0; }\n"
+            "      rect.background   { fill: rgb(255,255,255); }\n"
             "      rect.activating   { fill: rgb(255,0,0); fill-opacity: 0.7; }\n"
             "      rect.active       { fill: rgb(200,150,150); fill-opacity: 0.7; }\n"
             "      rect.deactivating { fill: rgb(150,100,100); fill-opacity: 0.7; }\n"
@@ -528,13 +533,14 @@ static int analyze_plot(DBusConnection *bus) {
             "      text.sec   { font-size: 10px; }\n"
             "    ]]>\n   </style>\n</defs>\n\n");
 
+        svg("<rect class=\"background\" width=\"100%%\" height=\"100%%\" />\n");
         svg("<text x=\"20\" y=\"50\">%s</text>", pretty_times);
         svg("<text x=\"20\" y=\"30\">%s %s (%s %s) %s</text>",
             isempty(osname) ? "Linux" : osname,
             name.nodename, name.release, name.version, name.machine);
 
         svg("<g transform=\"translate(%.3f,100)\">\n", 20.0 + (SCALE_X * boot->firmware_time));
-        svg_graph_box(m, -boot->firmware_time, boot->finish_time);
+        svg_graph_box(m, -(double) boot->firmware_time, boot->finish_time);
 
         if (boot->firmware_time) {
                 svg_bar("firmware", -(double) boot->firmware_time, -(double) boot->loader_time, y);
@@ -559,7 +565,7 @@ static int analyze_plot(DBusConnection *bus) {
         svg_bar("active", boot->userspace_time, boot->finish_time, y);
         svg_bar("generators", boot->generators_start_time, boot->generators_finish_time, y);
         svg_bar("unitsload", boot->unitsload_start_time, boot->unitsload_finish_time, y);
-        svg_text("left", boot->userspace_time, y, "systemd");
+        svg_text(true, boot->userspace_time, y, "systemd");
         y++;
 
         for (u = times; u < times + n; u++) {
@@ -573,7 +579,8 @@ static int analyze_plot(DBusConnection *bus) {
                 svg_bar("active",       u->aet, u->axt, y);
                 svg_bar("deactivating", u->axt, u->iet, y);
 
-                b = u->ixt * SCALE_X > width * 2 / 3;
+                /* place the text on the left if we have passed the half of the svg width */
+                b = u->ixt * SCALE_X < width / 2;
                 if (u->time)
                         svg_text(b, u->ixt, y, "%s (%s)",
                                  u->name, format_timespan(ts, sizeof(ts), u->time, USEC_PER_MSEC));
@@ -582,22 +589,25 @@ static int analyze_plot(DBusConnection *bus) {
                 y++;
         }
 
+        svg("</g>\n");
+
         /* Legend */
+        svg("<g transform=\"translate(20,100)\">\n");
         y++;
         svg_bar("activating", 0, 300000, y);
-        svg_text("right", 400000, y, "Activating");
+        svg_text(true, 400000, y, "Activating");
         y++;
         svg_bar("active", 0, 300000, y);
-        svg_text("right", 400000, y, "Active");
+        svg_text(true, 400000, y, "Active");
         y++;
         svg_bar("deactivating", 0, 300000, y);
-        svg_text("right", 400000, y, "Deactivating");
+        svg_text(true, 400000, y, "Deactivating");
         y++;
         svg_bar("generators", 0, 300000, y);
-        svg_text("right", 400000, y, "Generators");
+        svg_text(true, 400000, y, "Generators");
         y++;
         svg_bar("unitsload", 0, 300000, y);
-        svg_text("right", 400000, y, "Loading unit files");
+        svg_text(true, 400000, y, "Loading unit files");
         y++;
 
         svg("</g>\n\n");
@@ -768,7 +778,7 @@ static int list_dependencies_one(DBusConnection *bus, const char *name, unsigned
         if (r < 0)
                 return r;
 
-        qsort(deps, strv_length(deps), sizeof (char*), list_dependencies_compare);
+        qsort_safe(deps, strv_length(deps), sizeof (char*), list_dependencies_compare);
 
         r = acquire_boot_times(bus, &boot);
         if (r < 0)

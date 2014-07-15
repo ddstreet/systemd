@@ -50,6 +50,8 @@
 
 #define DEFAULT_DATA_THRESHOLD (64*1024)
 
+static void remove_file_real(sd_journal *j, JournalFile *f);
+
 static bool journal_pid_changed(sd_journal *j) {
         assert(j);
 
@@ -472,7 +474,7 @@ static int compare_entry_order(JournalFile *af, Object *_ao,
 
         if (sd_id128_equal(ao->entry.boot_id, bo->entry.boot_id)) {
 
-                /* If the boot id matches compare monotonic time */
+                /* If the boot id matches, compare monotonic time */
                 a = le64toh(ao->entry.monotonic);
                 b = le64toh(bo->entry.monotonic);
 
@@ -482,7 +484,7 @@ static int compare_entry_order(JournalFile *af, Object *_ao,
                         return 1;
         }
 
-        /* Otherwise compare UTC time */
+        /* Otherwise, compare UTC time */
         a = le64toh(ao->entry.realtime);
         b = le64toh(bo->entry.realtime);
 
@@ -895,6 +897,7 @@ static int real_journal_next(sd_journal *j, direction_t direction) {
                 r = next_beyond_location(j, f, direction, &o, &p);
                 if (r < 0) {
                         log_debug("Can't iterate through %s, ignoring: %s", f->path, strerror(-r));
+                        remove_file_real(j, f);
                         continue;
                 } else if (r == 0)
                         continue;
@@ -1276,7 +1279,7 @@ static void check_network(sd_journal *j, int fd) {
 static bool file_has_type_prefix(const char *prefix, const char *filename) {
         const char *full, *tilded, *atted;
 
-        full = strappend(prefix, ".journal");
+        full = strappenda(prefix, ".journal");
         tilded = strappenda(full, "~");
         atted = strappenda(prefix, "@");
 
@@ -1368,7 +1371,7 @@ static int add_file(sd_journal *j, const char *prefix, const char *filename) {
 }
 
 static int remove_file(sd_journal *j, const char *prefix, const char *filename) {
-        char *path;
+        _cleanup_free_ char *path;
         JournalFile *f;
 
         assert(j);
@@ -1380,9 +1383,16 @@ static int remove_file(sd_journal *j, const char *prefix, const char *filename) 
                 return -ENOMEM;
 
         f = hashmap_get(j->files, path);
-        free(path);
         if (!f)
                 return 0;
+
+        remove_file_real(j, f);
+        return 0;
+}
+
+static void remove_file_real(sd_journal *j, JournalFile *f) {
+        assert(j);
+        assert(f);
 
         hashmap_remove(j->files, f->path);
 
@@ -1401,8 +1411,6 @@ static int remove_file(sd_journal *j, const char *prefix, const char *filename) 
         journal_file_close(f);
 
         j->current_invalidate_counter ++;
-
-        return 0;
 }
 
 static int add_directory(sd_journal *j, const char *prefix, const char *dirname) {
@@ -1828,11 +1836,12 @@ _public_ void sd_journal_close(sd_journal *j) {
         hashmap_free(j->directories_by_path);
         hashmap_free(j->directories_by_wd);
 
-        if (j->inotify_fd >= 0)
-                close_nointr_nofail(j->inotify_fd);
+        safe_close(j->inotify_fd);
 
-        if (j->mmap)
+        if (j->mmap) {
+                log_debug("mmap cache statistics: %u hit, %u miss", mmap_cache_get_hit(j->mmap), mmap_cache_get_missed(j->mmap));
                 mmap_cache_unref(j->mmap);
+        }
 
         free(j->path);
         free(j->unique_field);
@@ -2357,6 +2366,7 @@ _public_ int sd_journal_get_cutoff_realtime_usec(sd_journal *j, uint64_t *from, 
         Iterator i;
         JournalFile *f;
         bool first = true;
+        uint64_t fmin = 0, tmax = 0;
         int r;
 
         if (!j)
@@ -2380,18 +2390,19 @@ _public_ int sd_journal_get_cutoff_realtime_usec(sd_journal *j, uint64_t *from, 
                         continue;
 
                 if (first) {
-                        if (from)
-                                *from = fr;
-                        if (to)
-                                *to = t;
+                        fmin = fr;
+                        tmax = t;
                         first = false;
                 } else {
-                        if (from)
-                                *from = MIN(fr, *from);
-                        if (to)
-                                *to = MAX(t, *to);
+                        fmin = MIN(fr, fmin);
+                        tmax = MAX(t, tmax);
                 }
         }
+
+        if (from)
+                *from = fmin;
+        if (to)
+                *to = tmax;
 
         return first ? 0 : 1;
 }
@@ -2506,9 +2517,7 @@ _public_ int sd_journal_query_unique(sd_journal *j, const char *field) {
 }
 
 _public_ int sd_journal_enumerate_unique(sd_journal *j, const void **data, size_t *l) {
-        Object *o;
         size_t k;
-        int r;
 
         if (!j)
                 return -EINVAL;
@@ -2533,9 +2542,11 @@ _public_ int sd_journal_enumerate_unique(sd_journal *j, const void **data, size_
         for (;;) {
                 JournalFile *of;
                 Iterator i;
+                Object *o;
                 const void *odata;
                 size_t ol;
                 bool found;
+                int r;
 
                 /* Proceed to next data object in the field's linked list */
                 if (j->unique_offset == 0) {
@@ -2572,8 +2583,16 @@ _public_ int sd_journal_enumerate_unique(sd_journal *j, const void **data, size_
                         return r;
 
                 /* Let's do the type check by hand, since we used 0 context above. */
-                if (o->object.type != OBJECT_DATA)
+                if (o->object.type != OBJECT_DATA) {
+                        log_error("%s:offset " OFSfmt ": object has type %d, expected %d",
+                                  j->unique_file->path, j->unique_offset,
+                                  o->object.type, OBJECT_DATA);
                         return -EBADMSG;
+                }
+
+                r = journal_file_object_keep(j->unique_file, o, j->unique_offset);
+                if (r < 0)
+                        return r;
 
                 r = return_data(j, j->unique_file, o, &odata, &ol);
                 if (r < 0)
@@ -2606,6 +2625,10 @@ _public_ int sd_journal_enumerate_unique(sd_journal *j, const void **data, size_
 
                 if (found)
                         continue;
+
+                r = journal_file_object_release(j->unique_file, o, j->unique_offset);
+                if (r < 0)
+                        return r;
 
                 r = return_data(j, j->unique_file, o, data, l);
                 if (r < 0)

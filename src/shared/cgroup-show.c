@@ -63,7 +63,7 @@ static void show_pid_array(int pids[], unsigned n_pids, const char *prefix, unsi
         pid_width = DECIMAL_STR_WIDTH(biggest);
 
         /* And sort */
-        qsort(pids, n_pids, sizeof(pid_t), compare);
+        qsort_safe(pids, n_pids, sizeof(pid_t), compare);
 
         if(flags & OUTPUT_FULL_WIDTH)
                 n_columns = 0;

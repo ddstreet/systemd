@@ -122,7 +122,7 @@ static int load_module(struct kmod_ctx *ctx, const char *m) {
         struct kmod_list *itr, *modlist = NULL;
         int r = 0;
 
-        log_debug("load: %s\n", m);
+        log_debug("load: %s", m);
 
         r = kmod_module_new_from_lookup(ctx, m, &modlist);
         if (r < 0) {
@@ -181,7 +181,7 @@ static int apply_file(struct kmod_ctx *ctx, const char *path, bool ignore_enoent
         assert(ctx);
         assert(path);
 
-        r = search_and_fopen_nulstr(path, "re", conf_file_dirs, &f);
+        r = search_and_fopen_nulstr(path, "re", NULL, conf_file_dirs, &f);
         if (r < 0) {
                 if (ignore_enoent && r == -ENOENT)
                         return 0;
@@ -190,7 +190,7 @@ static int apply_file(struct kmod_ctx *ctx, const char *path, bool ignore_enoent
                 return r;
         }
 
-        log_debug("apply: %s\n", path);
+        log_debug("apply: %s", path);
         for (;;) {
                 char line[LINE_MAX], *l;
                 int k;
@@ -302,13 +302,15 @@ int main(int argc, char *argv[]) {
 
                 STRV_FOREACH(i, arg_proc_cmdline_modules) {
                         k = load_module(ctx, *i);
-                        if (k < 0)
-                                r = EXIT_FAILURE;
+                        if (k < 0 && r == 0)
+                                r = k;
                 }
 
-                r = conf_files_list_nulstr(&files, ".conf", NULL, conf_file_dirs);
-                if (r < 0) {
-                        log_error("Failed to enumerate modules-load.d files: %s", strerror(-r));
+                k = conf_files_list_nulstr(&files, ".conf", NULL, conf_file_dirs);
+                if (k < 0) {
+                        log_error("Failed to enumerate modules-load.d files: %s", strerror(-k));
+                        if (r == 0)
+                                r = k;
                         goto finish;
                 }
 

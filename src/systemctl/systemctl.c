@@ -287,14 +287,16 @@ static bool output_show_unit(const struct unit_info *u) {
 }
 
 static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
-        unsigned id_len, max_id_len, active_len, sub_len, job_len, desc_len, n_shown = 0;
+        unsigned id_len, max_id_len, load_len, active_len, sub_len, job_len, desc_len;
+        unsigned n_shown = 0;
         const struct unit_info *u;
         int job_count = 0;
 
-        max_id_len = sizeof("UNIT")-1;
-        active_len = sizeof("ACTIVE")-1;
-        sub_len = sizeof("SUB")-1;
-        job_len = sizeof("JOB")-1;
+        max_id_len = strlen("UNIT");
+        load_len = strlen("LOAD");
+        active_len = strlen("ACTIVE");
+        sub_len = strlen("SUB");
+        job_len = strlen("JOB");
         desc_len = 0;
 
         for (u = unit_infos; u < unit_infos + c; u++) {
@@ -302,6 +304,7 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
                         continue;
 
                 max_id_len = MAX(max_id_len, strlen(u->id));
+                load_len = MAX(load_len, strlen(u->load_state));
                 active_len = MAX(active_len, strlen(u->active_state));
                 sub_len = MAX(sub_len, strlen(u->sub_state));
                 if (u->job_id != 0) {
@@ -344,7 +347,7 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
                         continue;
 
                 if (!n_shown && !arg_no_legend) {
-                        printf("%-*s %-6s %-*s %-*s ", id_len, "UNIT", "LOAD",
+                        printf("%-*s %-*s %-*s %-*s ", id_len, "UNIT", load_len, "LOAD",
                                active_len, "ACTIVE", sub_len, "SUB");
                         if (job_count)
                                 printf("%-*s ", job_len, "JOB");
@@ -371,9 +374,9 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
 
                 e = arg_full ? NULL : ellipsize(u->id, id_len, 33);
 
-                printf("%s%-*s%s %s%-6s%s %s%-*s %-*s%s %-*s",
+                printf("%s%-*s%s %s%-*s%s %s%-*s %-*s%s %-*s",
                        on, id_len, e ? e : u->id, off,
-                       on_loaded, u->load_state, off_loaded,
+                       on_loaded, load_len, u->load_state, off_loaded,
                        on_active, active_len, u->active_state,
                        sub_len, u->sub_state, off_active,
                        job_count ? job_len + 1 : 0, u->job_id ? u->job_type : "");
@@ -471,7 +474,7 @@ static int list_units(DBusConnection *bus, char **args) {
         if (r < 0)
                 return r;
 
-        qsort(unit_infos, c, sizeof(struct unit_info), compare_unit_info);
+        qsort_safe(unit_infos, c, sizeof(struct unit_info), compare_unit_info);
 
         output_units_list(unit_infos, c);
 
@@ -733,8 +736,8 @@ static int list_sockets(DBusConnection *bus, char **args) {
                 listen = triggered = NULL; /* avoid cleanup */
         }
 
-        qsort(socket_infos, cs, sizeof(struct socket_info),
-              (__compar_fn_t) socket_info_compare);
+        qsort_safe(socket_infos, cs, sizeof(struct socket_info),
+                   (__compar_fn_t) socket_info_compare);
 
         output_sockets_list(socket_infos, cs);
 
@@ -1108,7 +1111,7 @@ static int list_dependencies_one(DBusConnection *bus, const char *name, int leve
         if (r < 0)
                 return r;
 
-        qsort(deps, strv_length(deps), sizeof (char*), list_dependencies_compare);
+        qsort_safe(deps, strv_length(deps), sizeof (char*), list_dependencies_compare);
 
         STRV_FOREACH(c, deps) {
                 if (strv_contains(u, *c)) {
@@ -1362,7 +1365,7 @@ static int list_jobs(DBusConnection *bus, char **args) {
         }
         free(jobs);
 
-        return 0;
+        return r;
 }
 
 static int cancel_job(DBusConnection *bus, char **args) {
@@ -3532,7 +3535,7 @@ static int show_all(const char* verb,
         if (r < 0)
                 return r;
 
-        qsort(unit_infos, c, sizeof(struct unit_info), compare_unit_info);
+        qsort_safe(unit_infos, c, sizeof(struct unit_info), compare_unit_info);
 
         for (u = unit_infos; u < unit_infos + c; u++) {
                 _cleanup_free_ char *p = NULL;
@@ -4218,10 +4221,9 @@ static int set_environment(DBusConnection *bus, char **args) {
         return 0;
 }
 
-static int enable_sysv_units(char **args) {
+static int enable_sysv_units(const char *verb, char **args) {
         int r = 0;
 
-        const char *verb = args[0];
         unsigned f = 1, t = 1;
         LookupPaths paths = {};
 
@@ -4237,12 +4239,12 @@ static int enable_sysv_units(char **args) {
         /* Processes all SysV units, and reshuffles the array so that
          * afterwards only the native units remain */
 
-        r = lookup_paths_init(&paths, SYSTEMD_SYSTEM, false, NULL, NULL, NULL);
+        r = lookup_paths_init(&paths, SYSTEMD_SYSTEM, false, arg_root, NULL, NULL, NULL);
         if (r < 0)
                 return r;
 
         r = 0;
-        for (f = 1; args[f]; f++) {
+        for (f = 0; args[f]; f++) {
                 const char *name;
                 _cleanup_free_ char *p = NULL, *q = NULL;
                 bool found_native = false, found_sysv;
@@ -4402,7 +4404,7 @@ finish:
         lookup_paths_free(&paths);
 
         /* Drop all SysV units */
-        for (f = 1, t = 1; args[f]; f++) {
+        for (f = 0, t = 0; args[f]; f++) {
 
                 if (isempty(args[f]))
                         continue;
@@ -4464,13 +4466,15 @@ static int enable_unit(DBusConnection *bus, char **args) {
 
         r = mangle_names(args+1, &mangled_names);
         if (r < 0)
-                goto finish;
+                return r;
 
-        r = enable_sysv_units(args);
+        r = enable_sysv_units(verb, mangled_names);
         if (r < 0)
                 return r;
 
-        if (!args[1])
+        /* If the operation was fully executed by the SysV compat,
+         * let's finish early */
+        if (strv_isempty(mangled_names))
                 return 0;
 
         if (!bus || avoid_bus()) {
@@ -4663,11 +4667,15 @@ static int unit_is_enabled(DBusConnection *bus, char **args) {
         _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         bool enabled;
         char **name;
-        char *n;
+        _cleanup_strv_free_ char **mangled_names = NULL;
 
         dbus_error_init(&error);
 
-        r = enable_sysv_units(args);
+        r = mangle_names(args+1, &mangled_names);
+        if (r < 0)
+                return r;
+
+        r = enable_sysv_units(args[0], mangled_names);
         if (r < 0)
                 return r;
 
@@ -4675,16 +4683,10 @@ static int unit_is_enabled(DBusConnection *bus, char **args) {
 
         if (!bus || avoid_bus()) {
 
-                STRV_FOREACH(name, args+1) {
+                STRV_FOREACH(name, mangled_names) {
                         UnitFileState state;
 
-                        n = unit_name_mangle(*name);
-                        if (!n)
-                                return log_oom();
-
-                        state = unit_file_get_state(arg_scope, arg_root, n);
-
-                        free(n);
+                        state = unit_file_get_state(arg_scope, arg_root, *name);
 
                         if (state < 0)
                                 return state;
@@ -4699,12 +4701,8 @@ static int unit_is_enabled(DBusConnection *bus, char **args) {
                 }
 
         } else {
-                STRV_FOREACH(name, args+1) {
+                STRV_FOREACH(name, mangled_names) {
                         const char *s;
-
-                        n = unit_name_mangle(*name);
-                        if (!n)
-                                return log_oom();
 
                         r = bus_method_call_with_reply (
                                         bus,
@@ -4714,10 +4712,8 @@ static int unit_is_enabled(DBusConnection *bus, char **args) {
                                         "GetUnitFileState",
                                         &reply,
                                         NULL,
-                                        DBUS_TYPE_STRING, &n,
+                                        DBUS_TYPE_STRING, name,
                                         DBUS_TYPE_INVALID);
-
-                        free(n);
 
                         if (r)
                                 return r;
@@ -4791,9 +4787,10 @@ static int systemctl_help(void) {
                "  -f --force          When enabling unit files, override existing symlinks\n"
                "                      When shutting down, execute action immediately\n"
                "     --root=PATH      Enable unit files in the specified root directory\n"
-               "  -n --lines=INTEGER  Numer of journal entries to show\n"
+               "  -n --lines=INTEGER  Number of journal entries to show\n"
                "  -o --output=STRING  Change journal output mode (short, short-monotonic,\n"
-               "                      verbose, export, json, json-pretty, json-sse, cat)\n\n"
+               "                      verbose, export, json, json-pretty, json-sse, cat)\n"
+               "     --plain          Print unit dependencies as a list instead of a tree\n\n"
                "Unit Commands:\n"
                "  list-units                      List loaded units\n"
                "  list-sockets                    List loaded sockets ordered by address\n"

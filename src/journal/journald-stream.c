@@ -75,9 +75,11 @@ struct StdoutStream {
 
 static int stdout_stream_log(StdoutStream *s, const char *p) {
         struct iovec iovec[N_IOVEC_META_FIELDS + 5];
-        char *message = NULL, *syslog_priority = NULL, *syslog_facility = NULL, *syslog_identifier = NULL;
-        unsigned n = 0;
         int priority;
+        char syslog_priority[] = "PRIORITY=\0";
+        char syslog_facility[sizeof("SYSLOG_FACILITY=") + DECIMAL_STR_MAX(priority)];
+        _cleanup_free_ char *message = NULL, *syslog_identifier = NULL;
+        unsigned n = 0;
         char *label = NULL;
         size_t label_len = 0;
 
@@ -90,7 +92,7 @@ static int stdout_stream_log(StdoutStream *s, const char *p) {
         priority = s->priority;
 
         if (s->level_prefix)
-                syslog_parse_priority((char**) &p, &priority, false);
+                syslog_parse_priority(&p, &priority, false);
 
         if (s->forward_to_syslog || s->server->forward_to_syslog)
                 server_forward_syslog(s->server, syslog_fixup_facility(priority), s->identifier, p, &s->ucred, NULL);
@@ -103,12 +105,13 @@ static int stdout_stream_log(StdoutStream *s, const char *p) {
 
         IOVEC_SET_STRING(iovec[n++], "_TRANSPORT=stdout");
 
-        if (asprintf(&syslog_priority, "PRIORITY=%i", priority & LOG_PRIMASK) >= 0)
-                IOVEC_SET_STRING(iovec[n++], syslog_priority);
+        syslog_priority[strlen("PRIORITY=")] = '0' + LOG_PRI(priority);
+        IOVEC_SET_STRING(iovec[n++], syslog_priority);
 
-        if (priority & LOG_FACMASK)
-                if (asprintf(&syslog_facility, "SYSLOG_FACILITY=%i", LOG_FAC(priority)) >= 0)
-                        IOVEC_SET_STRING(iovec[n++], syslog_facility);
+        if (priority & LOG_FACMASK) {
+                snprintf(syslog_facility, sizeof(syslog_facility), "SYSLOG_FACILITY=%i", LOG_FAC(priority));
+                IOVEC_SET_STRING(iovec[n++], syslog_facility);
+        }
 
         if (s->identifier) {
                 syslog_identifier = strappend("SYSLOG_IDENTIFIER=", s->identifier);
@@ -128,12 +131,6 @@ static int stdout_stream_log(StdoutStream *s, const char *p) {
 #endif
 
         server_dispatch_message(s->server, iovec, n, ELEMENTSOF(iovec), &s->ucred, NULL, label, label_len, s->unit_id, priority, 0);
-
-        free(message);
-        free(syslog_priority);
-        free(syslog_facility);
-        free(syslog_identifier);
-
         return 0;
 }
 
@@ -330,7 +327,7 @@ void stdout_stream_free(StdoutStream *s) {
                 if (s->server)
                         epoll_ctl(s->server->epoll_fd, EPOLL_CTL_DEL, s->fd, NULL);
 
-                close_nointr_nofail(s->fd);
+                safe_close(s->fd);
         }
 
 #ifdef HAVE_SELINUX
@@ -339,6 +336,7 @@ void stdout_stream_free(StdoutStream *s) {
 #endif
 
         free(s->identifier);
+        free(s->unit_id);
         free(s);
 }
 
@@ -361,13 +359,13 @@ int stdout_stream_new(Server *s) {
 
         if (s->n_stdout_streams >= STDOUT_STREAMS_MAX) {
                 log_warning("Too many stdout streams, refusing connection.");
-                close_nointr_nofail(fd);
+                safe_close(fd);
                 return 0;
         }
 
         stream = new0(StdoutStream, 1);
         if (!stream) {
-                close_nointr_nofail(fd);
+                safe_close(fd);
                 return log_oom();
         }
 
@@ -413,7 +411,7 @@ fail:
 
 int server_open_stdout_socket(Server *s) {
         int r;
-        struct epoll_event ev;
+        struct epoll_event ev = { .events = EPOLLIN };
 
         assert(s);
 
@@ -446,8 +444,6 @@ int server_open_stdout_socket(Server *s) {
         } else
                 fd_nonblock(s->stdout_fd, 1);
 
-        zero(ev);
-        ev.events = EPOLLIN;
         ev.data.fd = s->stdout_fd;
         if (epoll_ctl(s->epoll_fd, EPOLL_CTL_ADD, s->stdout_fd, &ev) < 0) {
                 log_error("Failed to add stdout server fd to epoll object: %m");

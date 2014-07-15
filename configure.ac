@@ -67,16 +67,18 @@ AC_PROG_GCC_TRADITIONAL
 AC_PATH_PROG([M4], [m4])
 AC_PATH_PROG([XSLTPROC], [xsltproc])
 
-AC_PATH_PROG([QUOTAON], [quotaon], [/sbin/quotaon])
-AC_PATH_PROG([QUOTACHECK], [quotacheck], [/sbin/quotacheck])
+AC_PATH_PROG([QUOTAON], [quotaon], [/sbin/quotaon], [$PATH:/usr/sbin:/sbin])
+AC_PATH_PROG([QUOTACHECK], [quotacheck], [/sbin/quotacheck], [$PATH:/usr/sbin:/sbin])
 
-AC_PATH_PROG([SETCAP], [setcap], [/sbin/setcap])
+AC_PATH_PROG([SETCAP], [setcap], [/sbin/setcap], [$PATH:/usr/sbin:/sbin])
 
-AC_PATH_PROG([KILL], [kill], [/bin/kill])
+AC_PATH_PROG([KILL], [kill], [/bin/kill], [$PATH:/usr/sbin:/sbin])
 
-AC_PATH_PROG([KMOD], [kmod], [/bin/kmod])
+AC_PATH_PROG([KMOD], [kmod], [/bin/kmod], [$PATH:/usr/sbin:/sbin])
 
-AC_PATH_PROG([KEXEC], [kexec], [/sbin/kexec])
+AC_PATH_PROG([KEXEC], [kexec], [/sbin/kexec], [$PATH:/usr/sbin:/sbin])
+
+AS_IF([! ln --relative --help > /dev/null 2>&1], [AC_MSG_ERROR([*** ln doesn't support --relative ***])])
 
 # gtkdocize greps for '^GTK_DOC_CHECK', so it needs to be on its own line
 m4_ifdef([GTK_DOC_CHECK], [
@@ -269,9 +271,9 @@ AC_ARG_ENABLE(kmod, AS_HELP_STRING([--disable-kmod], [disable loadable modules s
 if test "x$enable_kmod" != "xno"; then
         PKG_CHECK_EXISTS([ libkmod ], have_kmod=yes, have_kmod=no)
         if test "x$have_kmod" = "xyes"; then
-                PKG_CHECK_MODULES(KMOD, [ libkmod >= 14 ],
+                PKG_CHECK_MODULES(KMOD, [ libkmod >= 15 ],
                         [AC_DEFINE(HAVE_KMOD, 1, [Define if kmod is available])],
-                        AC_MSG_ERROR([*** kmod version >= 14 not found]))
+                        AC_MSG_ERROR([*** kmod version >= 15 not found]))
         fi
         if test "x$have_kmod" = xno -a "x$enable_kmod" = xyes; then
                 AC_MSG_ERROR([*** kmod support requested, but libraries not found])
@@ -814,7 +816,7 @@ AC_DEFINE_UNQUOTED(TELINIT, ["$TELINIT"], [Path to telinit])
 
 AC_SUBST(TELINIT)
 
-AC_CHECK_HEADERS_ONCE([valgrind/memcheck.h])
+AC_CHECK_HEADERS_ONCE([valgrind/memcheck.h valgrind/valgrind.h])
 
 # ------------------------------------------------------------------------------
 have_myhostname=no

@@ -25,7 +25,6 @@
 #include <mntent.h>
 
 #include <libcryptsetup.h>
-#include <libudev.h>
 
 #include "fileio.h"
 #include "log.h"
@@ -34,10 +33,13 @@
 #include "strv.h"
 #include "ask-password-api.h"
 #include "def.h"
+#include "libudev.h"
+#include "udev-util.h"
 
 static const char *opt_type = NULL; /* CRYPT_LUKS1, CRYPT_TCRYPT or CRYPT_PLAIN */
 static char *opt_cipher = NULL;
 static unsigned opt_key_size = 0;
+static int opt_key_slot = CRYPT_ANY_SLOT;
 static unsigned opt_keyfile_size = 0;
 static unsigned opt_keyfile_offset = 0;
 static char *opt_hash = NULL;
@@ -74,7 +76,7 @@ static int parse_one_option(const char *option) {
 
                 t = strdup(option+7);
                 if (!t)
-                        return -ENOMEM;
+                        return log_oom();
 
                 free(opt_cipher);
                 opt_cipher = t;
@@ -86,12 +88,28 @@ static int parse_one_option(const char *option) {
                         return 0;
                 }
 
+                if (opt_key_size % 8) {
+                        log_error("size= not a multiple of 8, ignoring.");
+                        return 0;
+                }
+
+                opt_key_size /= 8;
+
+        } else if (startswith(option, "key-slot=")) {
+
+                opt_type = CRYPT_LUKS1;
+                if (safe_atoi(option+9, &opt_key_slot) < 0) {
+                        log_error("key-slot= parse failure, ignoring.");
+                        return 0;
+                }
+
         } else if (startswith(option, "tcrypt-keyfile=")) {
 
                 opt_type = CRYPT_TCRYPT;
-                if (path_is_absolute(option+15))
-                        opt_tcrypt_keyfiles = strv_append(opt_tcrypt_keyfiles, strdup(option+15));
-                else
+                if (path_is_absolute(option+15)) {
+                        if (strv_extend(&opt_tcrypt_keyfiles, option + 15) < 0)
+                                return log_oom();
+                } else
                         log_error("Key file path '%s' is not absolute. Ignoring.", option+15);
 
         } else if (startswith(option, "keyfile-size=")) {
@@ -113,7 +131,7 @@ static int parse_one_option(const char *option) {
 
                 t = strdup(option+5);
                 if (!t)
-                        return -ENOMEM;
+                        return log_oom();
 
                 free(opt_hash);
                 opt_hash = t;
@@ -183,7 +201,7 @@ static void log_glue(int level, const char *msg, void *usrptr) {
         log_debug("%s", msg);
 }
 
-static char *disk_description(const char *path) {
+static char* disk_description(const char *path) {
 
         static const char name_fields[] = {
                 "ID_PART_ENTRY_NAME\0"
@@ -192,10 +210,9 @@ static char *disk_description(const char *path) {
                 "ID_MODEL\0"
         };
 
-        struct udev *udev = NULL;
-        struct udev_device *device = NULL;
+        _cleanup_udev_unref_ struct udev *udev = NULL;
+        _cleanup_udev_device_unref_ struct udev_device *device = NULL;
         struct stat st;
-        char *description = NULL;
         const char *i;
 
         assert(path);
@@ -212,26 +229,17 @@ static char *disk_description(const char *path) {
 
         device = udev_device_new_from_devnum(udev, 'b', st.st_rdev);
         if (!device)
-                goto finish;
+                return NULL;
 
         NULSTR_FOREACH(i, name_fields) {
                 const char *name;
 
                 name = udev_device_get_property_value(device, i);
-                if (!isempty(name)) {
-                        description = strdup(name);
-                        break;
-                }
+                if (!isempty(name))
+                        return strdup(name);
         }
 
-finish:
-        if (device)
-                udev_device_unref(device);
-
-        if (udev)
-                udev_unref(udev);
-
-        return description;
+        return NULL;
 }
 
 static char *disk_mount_point(const char *label) {
@@ -413,7 +421,7 @@ static int attach_luks_or_plain(struct crypt_device *cd,
                 /* for CRYPT_PLAIN limit reads
                  * from keyfile to key length, and
                  * ignore keyfile-size */
-                opt_keyfile_size = opt_key_size / 8;
+                opt_keyfile_size = opt_key_size;
 
                 /* In contrast to what the name
                  * crypt_setup() might suggest this
@@ -440,7 +448,7 @@ static int attach_luks_or_plain(struct crypt_device *cd,
                  crypt_get_device_name(cd));
 
         if (key_file) {
-                r = crypt_activate_by_keyfile_offset(cd, name, CRYPT_ANY_SLOT,
+                r = crypt_activate_by_keyfile_offset(cd, name, opt_key_slot,
                                                      key_file, opt_keyfile_size,
                                                      opt_keyfile_offset, flags);
                 if (r < 0) {
@@ -454,7 +462,7 @@ static int attach_luks_or_plain(struct crypt_device *cd,
                         if (pass_volume_key)
                                 r = crypt_activate_by_volume_key(cd, name, *p, opt_key_size, flags);
                         else
-                                r = crypt_activate_by_passphrase(cd, name, CRYPT_ANY_SLOT, *p, strlen(*p), flags);
+                                r = crypt_activate_by_passphrase(cd, name, opt_key_slot, *p, strlen(*p), flags);
 
                         if (r >= 0)
                                 break;
@@ -576,7 +584,7 @@ int main(int argc, char *argv[]) {
                 else
                         until = 0;
 
-                opt_key_size = (opt_key_size > 0 ? opt_key_size : 256);
+                opt_key_size = (opt_key_size > 0 ? opt_key_size : (256 / 8));
 
                 if (key_file) {
                         struct stat st;

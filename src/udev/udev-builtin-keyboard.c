@@ -88,7 +88,7 @@ static int builtin_keyboard(struct udev_device *dev, int argc, char *argv[], boo
                         continue;
 
                 /* KEYBOARD_KEY_<hex scan code>=<key identifier string> */
-                scancode = strtol(key + 13, &endptr, 16);
+                scancode = strtoul(key + 13, &endptr, 16);
                 if (endptr[0] != '\0') {
                         log_error("Error, unable to parse scan code from '%s'\n", key);
                         continue;
@@ -143,7 +143,7 @@ static int builtin_keyboard(struct udev_device *dev, int argc, char *argv[], boo
                         log_debug("keyboard: mapping scan code %d (0x%x) to key code %d (0x%x)\n",
                                   map[i].scan, map[i].scan, map[i].key, map[i].key);
                         if (ioctl(fd, EVIOCSKEYCODE, &map[i]) < 0)
-                                log_error("Error calling EVIOCSKEYCODE: %m\n");
+                                log_error("Error calling EVIOCSKEYCODE on device node '%s' (scan code 0x%x, key code %d): %m", node, map[i].scan, map[i].key);
                 }
 
                 /* install list of force-release codes */

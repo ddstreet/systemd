@@ -106,6 +106,7 @@ static Set *unix_sockets = NULL;
 static bool arg_create = false;
 static bool arg_clean = false;
 static bool arg_remove = false;
+static bool arg_boot = false;
 
 static char **include_prefixes = NULL;
 static char **exclude_prefixes = NULL;
@@ -214,19 +215,16 @@ static bool unix_socket_alive(const char *fn) {
 }
 
 static int dir_is_mount_point(DIR *d, const char *subdir) {
-        struct file_handle *h;
+        union file_handle_union h = { .handle.handle_bytes = MAX_HANDLE_SZ };
         int mount_id_parent, mount_id;
         int r_p, r;
 
-        h = alloca(MAX_HANDLE_SZ);
-
-        h->handle_bytes = MAX_HANDLE_SZ;
-        r_p = name_to_handle_at(dirfd(d), ".", h, &mount_id_parent, 0);
+        r_p = name_to_handle_at(dirfd(d), ".", &h.handle, &mount_id_parent, 0);
         if (r_p < 0)
                 r_p = -errno;
 
-        h->handle_bytes = MAX_HANDLE_SZ;
-        r = name_to_handle_at(dirfd(d), subdir, h, &mount_id, 0);
+        h.handle.handle_bytes = MAX_HANDLE_SZ;
+        r = name_to_handle_at(dirfd(d), subdir, &h.handle, &mount_id, 0);
         if (r < 0)
                 r = -errno;
 
@@ -275,12 +273,15 @@ static int dir_cleanup(
                         continue;
 
                 if (fstatat(dirfd(d), dent->d_name, &s, AT_SYMLINK_NOFOLLOW) < 0) {
+                        if (errno == ENOENT)
+                                continue;
 
-                        if (errno != ENOENT) {
+                        /* FUSE, NFS mounts, SELinux might return EACCES */
+                        if (errno == EACCES)
+                                log_debug("stat(%s/%s) failed: %m", p, dent->d_name);
+                        else
                                 log_error("stat(%s/%s) failed: %m", p, dent->d_name);
-                                r = -errno;
-                        }
-
+                        r = -errno;
                         continue;
                 }
 
@@ -356,7 +357,7 @@ static int dir_cleanup(
                                 continue;
 
                         if (i->type != IGNORE_DIRECTORY_PATH || !streq(dent->d_name, p)) {
-                                log_debug("rmdir '%s'\n", sub_path);
+                                log_debug("rmdir '%s'", sub_path);
 
                                 if (unlinkat(dirfd(d), dent->d_name, AT_REMOVEDIR) < 0) {
                                         if (errno != ENOENT && errno != ENOTEMPTY) {
@@ -404,7 +405,7 @@ static int dir_cleanup(
                         if (age >= cutoff)
                                 continue;
 
-                        log_debug("unlink '%s'\n", sub_path);
+                        log_debug("unlink '%s'", sub_path);
 
                         if (unlinkat(dirfd(d), dent->d_name, 0) < 0) {
                                 if (errno != ENOENT) {
@@ -431,8 +432,6 @@ finish:
 }
 
 static int item_set_perms_full(Item *i, const char *path, bool ignore_enoent) {
-        int r;
-
         /* not using i->path directly because it may be a glob */
         if (i->mode_set)
                 if (chmod(path, i->mode) < 0) {
@@ -453,8 +452,7 @@ static int item_set_perms_full(Item *i, const char *path, bool ignore_enoent) {
                         }
                 }
 
-        r = label_fix(path, false, false);
-        return r == -ENOENT && ignore_enoent ? 0 : r;
+        return label_fix(path, ignore_enoent, false);
 }
 
 static int item_set_perms(Item *i, const char *path) {
@@ -462,8 +460,11 @@ static int item_set_perms(Item *i, const char *path) {
 }
 
 static int write_one_file(Item *i, const char *path) {
-        int r, e, fd, flags;
+        int r, fd, flags;
         struct stat st;
+
+        assert(i);
+        assert(path);
 
         flags = i->type == CREATE_FILE ? O_CREAT|O_APPEND :
                 i->type == TRUNCATE_FILE ? O_CREAT|O_TRUNC : 0;
@@ -471,9 +472,7 @@ static int write_one_file(Item *i, const char *path) {
         RUN_WITH_UMASK(0) {
                 label_context_set(path, S_IFREG);
                 fd = open(path, flags|O_NDELAY|O_CLOEXEC|O_WRONLY|O_NOCTTY|O_NOFOLLOW, i->mode);
-                e = errno;
                 label_context_clear();
-                errno = e;
         }
 
         if (fd < 0) {
@@ -491,7 +490,7 @@ static int write_one_file(Item *i, const char *path) {
 
                 unescaped = cunescape(i->argument);
                 if (unescaped == NULL) {
-                        close_nointr_nofail(fd);
+                        safe_close(fd);
                         return log_oom();
                 }
 
@@ -500,12 +499,12 @@ static int write_one_file(Item *i, const char *path) {
 
                 if (n < 0 || (size_t) n < l) {
                         log_error("Failed to write file %s: %s", path, n < 0 ? strerror(-n) : "Short write");
-                        close_nointr_nofail(fd);
+                        safe_close(fd);
                         return n < 0 ? n : -EIO;
                 }
         }
 
-        close_nointr_nofail(fd);
+        safe_close(fd);
 
         if (stat(path, &st) < 0) {
                 log_error("stat(%s) failed: %m", path);
@@ -635,7 +634,7 @@ static int glob_item(Item *i, int (*action)(Item *, const char *)) {
 }
 
 static int create_item(Item *i) {
-        int r, e;
+        int r;
         struct stat st;
 
         assert(i);
@@ -700,9 +699,11 @@ static int create_item(Item *i) {
 
         case CREATE_FIFO:
 
+                label_context_set(i->path, S_IFIFO);
                 RUN_WITH_UMASK(0000) {
                         r = mkfifo(i->path, i->mode);
                 }
+                label_context_clear();
 
                 if (r < 0 && errno != EEXIST) {
                         log_error("Failed to create fifo %s: %m", i->path);
@@ -730,9 +731,7 @@ static int create_item(Item *i) {
 
                 label_context_set(i->path, S_IFLNK);
                 r = symlink(i->argument, i->path);
-                e = errno;
                 label_context_clear();
-                errno = e;
 
                 if (r < 0 && errno != EEXIST) {
                         log_error("symlink(%s, %s) failed: %m", i->argument, i->path);
@@ -774,9 +773,7 @@ static int create_item(Item *i) {
                 RUN_WITH_UMASK(0000) {
                         label_context_set(i->path, file_type);
                         r = mknod(i->path, i->mode | file_type, i->major_minor);
-                        e = errno;
                         label_context_clear();
-                        errno = e;
                 }
 
                 if (r < 0 && errno != EEXIST) {
@@ -995,10 +992,7 @@ static void item_free(Item *i) {
         free(i);
 }
 
-static inline void item_freep(Item **i) {
-        if (*i)
-                item_free(*i);
-}
+DEFINE_TRIVIAL_CLEANUP_FUNC(Item*, item_free);
 #define _cleanup_item_free_ _cleanup_(item_freep)
 
 static bool item_equal(Item *a, Item *b) {
@@ -1073,7 +1067,7 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
         _cleanup_item_free_ Item *i = NULL;
         Item *existing;
         _cleanup_free_ char
-                *mode = NULL, *user = NULL, *group = NULL, *age = NULL, *path = NULL;
+                *action = NULL, *mode = NULL, *user = NULL, *group = NULL, *age = NULL, *path = NULL;
         char type;
         Hashmap *h;
         int r, n = -1;
@@ -1083,8 +1077,8 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
         assert(buffer);
 
         r = sscanf(buffer,
-                   "%c %ms %ms %ms %ms %ms %n",
-                   &type,
+                   "%ms %ms %ms %ms %ms %ms %n",
+                   &action,
                    &path,
                    &mode,
                    &user,
@@ -1095,6 +1089,14 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
                 log_error("[%s:%u] Syntax error.", fname, line);
                 return -EIO;
         }
+
+        if (strlen(action) > 2 || (strlen(action) > 1 && action[1] != '!')) {
+                log_error("[%s:%u] Unknown modifier '%s'", fname, line, action);
+                return -EINVAL;
+        } else if (strlen(action) > 1 && !arg_boot)
+                return 0;
+
+        type = action[0];
 
         i = new0(Item, 1);
         if (!i)
@@ -1266,6 +1268,7 @@ static int help(void) {
                "     --create               Create marked files/directories\n"
                "     --clean                Clean up marked directories\n"
                "     --remove               Remove marked files/directories\n"
+               "     --boot                 Execute actions only safe at boot\n"
                "     --prefix=PATH          Only apply rules that apply to paths with the specified prefix\n"
                "     --exclude-prefix=PATH  Ignore rules that apply to paths with the specified prefix\n",
                program_invocation_short_name);
@@ -1279,6 +1282,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_CREATE,
                 ARG_CLEAN,
                 ARG_REMOVE,
+                ARG_BOOT,
                 ARG_PREFIX,
                 ARG_EXCLUDE_PREFIX,
         };
@@ -1288,6 +1292,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "create",         no_argument,         NULL, ARG_CREATE         },
                 { "clean",          no_argument,         NULL, ARG_CLEAN          },
                 { "remove",         no_argument,         NULL, ARG_REMOVE         },
+                { "boot",           no_argument,         NULL, ARG_BOOT           },
                 { "prefix",         required_argument,   NULL, ARG_PREFIX         },
                 { "exclude-prefix", required_argument,   NULL, ARG_EXCLUDE_PREFIX },
                 { NULL,             0,                   NULL, 0                  }
@@ -1318,13 +1323,17 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_remove = true;
                         break;
 
+                case ARG_BOOT:
+                        arg_boot = true;
+                        break;
+
                 case ARG_PREFIX:
-                        if (strv_extend(&include_prefixes, optarg) < 0)
+                        if (strv_push(&include_prefixes, optarg) < 0)
                                 return log_oom();
                         break;
 
                 case ARG_EXCLUDE_PREFIX:
-                        if (strv_extend(&exclude_prefixes, optarg) < 0)
+                        if (strv_push(&exclude_prefixes, optarg) < 0)
                                 return log_oom();
                         break;
 
@@ -1355,7 +1364,7 @@ static int read_config_file(const char *fn, bool ignore_enoent) {
 
         assert(fn);
 
-        r = search_and_fopen_nulstr(fn, "re", conf_file_dirs, &f);
+        r = search_and_fopen_nulstr(fn, "re", NULL, conf_file_dirs, &f);
         if (r < 0) {
                 if (ignore_enoent && r == -ENOENT)
                         return 0;
@@ -1485,7 +1494,8 @@ finish:
         hashmap_free(items);
         hashmap_free(globs);
 
-        strv_free(include_prefixes);
+        free(include_prefixes);
+        free(exclude_prefixes);
 
         set_free_free(unix_sockets);
 

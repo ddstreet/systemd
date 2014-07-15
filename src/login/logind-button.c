@@ -74,7 +74,7 @@ void button_free(Button *b) {
 
                 /* If the device has been unplugged close() returns
                  * ENODEV, let's ignore this, hence we don't use
-                 * close_nointr_nofail() */
+                 * safe_close() */
                 close(b->fd);
         }
 
@@ -172,7 +172,7 @@ static int button_handle(
                  * execute another one until the lid is opened/closed again */
                 b->lid_close_queued = false;
 
-        return r;
+        return 0;
 }
 
 int button_process(Button *b) {

@@ -83,7 +83,7 @@
                 <citerefentry><refentrytitle>sd_booted</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                 <citerefentry><refentrytitle>sd_is_fifo</refentrytitle><manvolnum>3</manvolnum></citerefentry>
                 for more information about the functions
-                implemented. In addition to these functions a couple
+                implemented. In addition to these functions, a couple
                 of logging prefixes are defined as macros:</para>
 
                 <programlisting>#define SD_EMERG   "&lt;0&gt;"  /* system is unusable */
@@ -96,7 +96,7 @@
 #define SD_DEBUG   "&lt;7&gt;"  /* debug-level messages */</programlisting>
 
                 <para>These prefixes are intended to be used in
-                conjunction with STDERR-based logging as implemented
+                conjunction with stderr-based logging as implemented
                 by systemd. If a systemd service definition file is
                 configured with <varname>StandardError=syslog</varname>
                 or <varname>StandardError=kmsg</varname>, these
@@ -135,7 +135,7 @@
                 implementation. See the respective function man pages
                 for details.</para>
 
-                <para>In addition, for details about the algorithms
+                <para>In addition, for details about the algorithms,
                 check the liberally licensed reference implementation
                 sources:
                 <ulink url="http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c"/>
@@ -144,7 +144,7 @@
                 <para>These APIs are implemented in the reference
                 implementation's <filename>sd-daemon.c</filename> and
                 <filename>sd-daemon.h</filename> files. These
-                interfaces are available as shared library, which can
+                interfaces are available as a shared library, which can
                 be compiled and linked to with the
                 <constant>libsystemd-daemon</constant> <citerefentry><refentrytitle>pkg-config</refentrytitle><manvolnum>1</manvolnum></citerefentry>
                 file. Alternatively, applications consuming these APIs

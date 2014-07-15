@@ -43,9 +43,9 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 
-#include <systemd/sd-daemon.h>
-#include <systemd/sd-bus.h>
-
+#include "sd-daemon.h"
+#include "sd-bus.h"
+#include "sd-id128.h"
 #include "log.h"
 #include "util.h"
 #include "mkdir.h"
@@ -56,13 +56,14 @@
 #include "strv.h"
 #include "path-util.h"
 #include "loopback-setup.h"
-#include "sd-id128.h"
 #include "dev-setup.h"
 #include "fdset.h"
 #include "build.h"
 #include "fileio.h"
 #include "bus-internal.h"
 #include "bus-message.h"
+#include "bus-error.h"
+#include "ptyfwd.h"
 
 #ifndef TTY_GID
 #define TTY_GID 5
@@ -129,6 +130,7 @@ static int help(void) {
                "     --read-only           Mount the root directory read-only\n"
                "     --capability=CAP      In addition to the default, retain specified\n"
                "                           capability\n"
+               "     --drop-capability=CAP Drop the specified capability from the default set\n"
                "     --link-journal=MODE   Link up guest journal, one of no, auto, guest, host\n"
                "  -j                       Equivalent to --link-journal=host\n"
                "     --bind=PATH[:PATH]    Bind mount a file or directory from the host into\n"
@@ -147,6 +149,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_UUID,
                 ARG_READ_ONLY,
                 ARG_CAPABILITY,
+                ARG_DROP_CAPABILITY,
                 ARG_LINK_JOURNAL,
                 ARG_BIND,
                 ARG_BIND_RO
@@ -162,6 +165,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "uuid",            required_argument, NULL, ARG_UUID            },
                 { "read-only",       no_argument,       NULL, ARG_READ_ONLY       },
                 { "capability",      required_argument, NULL, ARG_CAPABILITY      },
+                { "drop-capability", required_argument, NULL, ARG_DROP_CAPABILITY },
                 { "link-journal",    required_argument, NULL, ARG_LINK_JOURNAL    },
                 { "bind",            required_argument, NULL, ARG_BIND            },
                 { "bind-ro",         required_argument, NULL, ARG_BIND_RO         },
@@ -224,6 +228,9 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case 'S':
                         arg_slice = strdup(optarg);
+                        if (!arg_slice)
+                                return log_oom();
+
                         break;
 
                 case 'M':
@@ -243,7 +250,8 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_read_only = true;
                         break;
 
-                case ARG_CAPABILITY: {
+                case ARG_CAPABILITY:
+                case ARG_DROP_CAPABILITY: {
                         char *state, *word;
                         size_t length;
 
@@ -262,7 +270,11 @@ static int parse_argv(int argc, char *argv[]) {
                                 }
 
                                 free(t);
-                                arg_retain |= 1ULL << (uint64_t) cap;
+
+                                if (c == ARG_CAPABILITY)
+                                        arg_retain |= 1ULL << (uint64_t) cap;
+                                else
+                                        arg_retain &= ~(1ULL << (uint64_t) cap);
                         }
 
                         break;
@@ -315,11 +327,11 @@ static int parse_argv(int argc, char *argv[]) {
 
                         r = strv_extend(x, a);
                         if (r < 0)
-                                return r;
+                                return log_oom();
 
                         r = strv_extend(x, b);
                         if (r < 0)
-                                return r;
+                                return log_oom();
 
                         break;
                 }
@@ -549,6 +561,15 @@ static int setup_resolv_conf(const char *dest) {
         return 0;
 }
 
+static char* id128_format_as_uuid(sd_id128_t id, char s[37]) {
+
+        snprintf(s, 37,
+                 "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                 SD_ID128_FORMAT_VAL(id));
+
+        return s;
+}
+
 static int setup_boot_id(const char *dest) {
         _cleanup_free_ char *from = NULL, *to = NULL;
         sd_id128_t rnd;
@@ -571,10 +592,7 @@ static int setup_boot_id(const char *dest) {
                 return r;
         }
 
-        snprintf(as_uuid, sizeof(as_uuid),
-                 "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-                 SD_ID128_FORMAT_VAL(rnd));
-        char_array_0(as_uuid);
+        id128_format_as_uuid(rnd, as_uuid);
 
         r = write_string_file(from, as_uuid);
         if (r < 0) {
@@ -667,23 +685,19 @@ static int setup_ptmx(const char *dest) {
 }
 
 static int setup_dev_console(const char *dest, const char *console) {
-        struct stat st;
-        _cleanup_free_ char *to = NULL;
-        int r;
         _cleanup_umask_ mode_t u;
+        const char *to;
+        struct stat st;
+        int r;
 
         assert(dest);
         assert(console);
 
         u = umask(0000);
 
-        if (stat(console, &st) < 0) {
-                log_error("Failed to stat %s: %m", console);
+        if (stat("/dev/null", &st) < 0) {
+                log_error("Failed to stat /dev/null: %m");
                 return -errno;
-
-        } else if (!S_ISCHR(st.st_mode)) {
-                log_error("/dev/console is not a char device");
-                return -EIO;
         }
 
         r = chmod_and_chown(console, 0600, 0, 0);
@@ -692,16 +706,15 @@ static int setup_dev_console(const char *dest, const char *console) {
                 return r;
         }
 
-        if (asprintf(&to, "%s/dev/console", dest) < 0)
-                return log_oom();
-
         /* We need to bind mount the right tty to /dev/console since
          * ptys can only exist on pts file systems. To have something
-         * to bind mount things on we create a device node first, that
-         * has the right major/minor (note that the major minor
-         * doesn't actually matter here, since we mount it over
-         * anyway). */
+         * to bind mount things on we create a device node first, and
+         * use /dev/null for that since we the cgroups device policy
+         * allows us to create that freely, while we cannot create
+         * /dev/console. (Note that the major minor doesn't actually
+         * matter here, since we mount it over anyway). */
 
+        to = strappenda(dest, "/dev/console");
         if (mknod(to, (st.st_mode & ~07777) | 0600, st.st_rdev) < 0) {
                 log_error("mknod() for /dev/console failed: %m");
                 return -errno;
@@ -778,7 +791,7 @@ static int setup_kmsg(const char *dest, int kmsg_socket) {
         /* Store away the fd in the socket, so that it stays open as
          * long as we run the child */
         k = sendmsg(kmsg_socket, &mh, MSG_DONTWAIT|MSG_NOSIGNAL);
-        close_nointr_nofail(fd);
+        safe_close(fd);
 
         if (k < 0) {
                 log_error("Failed to send FIFO fd: %m");
@@ -799,13 +812,10 @@ static int setup_hostname(void) {
 }
 
 static int setup_journal(const char *directory) {
-        sd_id128_t machine_id;
+        sd_id128_t machine_id, this_id;
         _cleanup_free_ char *p = NULL, *b = NULL, *q = NULL, *d = NULL;
         char *id;
         int r;
-
-        if (arg_link_journal == LINK_NO)
-                return 0;
 
         p = strappend(directory, "/etc/machine-id");
         if (!p)
@@ -829,6 +839,24 @@ static int setup_journal(const char *directory) {
                 log_error("Failed to parse machine ID from %s: %s", p, strerror(-r));
                 return r;
         }
+
+        r = sd_id128_get_machine(&this_id);
+        if (r < 0) {
+                log_error("Failed to retrieve machine ID: %s", strerror(-r));
+                return r;
+        }
+
+        if (sd_id128_equal(machine_id, this_id)) {
+                log_full(arg_link_journal == LINK_AUTO ? LOG_WARNING : LOG_ERR,
+                         "Host and machine ids are equal (%s): refusing to link journals", id);
+                if (arg_link_journal == LINK_AUTO)
+                        return 0;
+                return
+                        -EEXIST;
+        }
+
+        if (arg_link_journal == LINK_NO)
+                return 0;
 
         free(p);
         p = strappend("/var/log/journal/", id);
@@ -911,10 +939,8 @@ static int setup_journal(const char *directory) {
         } else if (access(p, F_OK) < 0)
                 return 0;
 
-        if (dir_is_empty(q) == 0) {
-                log_error("%s not empty.", q);
-                return -ENOTEMPTY;
-        }
+        if (dir_is_empty(q) == 0)
+                log_warning("%s is not empty, proceeding anyway.", q);
 
         r = mkdir_p(q, 0755);
         if (r < 0) {
@@ -932,248 +958,6 @@ static int setup_journal(const char *directory) {
 
 static int drop_capabilities(void) {
         return capability_bounding_set_drop(~arg_retain, false);
-}
-
-static int process_pty(int master, pid_t pid, sigset_t *mask) {
-
-        char in_buffer[LINE_MAX], out_buffer[LINE_MAX];
-        size_t in_buffer_full = 0, out_buffer_full = 0;
-        struct epoll_event stdin_ev, stdout_ev, master_ev, signal_ev;
-        bool stdin_readable = false, stdout_writable = false, master_readable = false, master_writable = false;
-        int ep = -1, signal_fd = -1, r;
-        bool tried_orderly_shutdown = false;
-
-        assert(master >= 0);
-        assert(pid > 0);
-        assert(mask);
-
-        fd_nonblock(STDIN_FILENO, 1);
-        fd_nonblock(STDOUT_FILENO, 1);
-        fd_nonblock(master, 1);
-
-        signal_fd = signalfd(-1, mask, SFD_NONBLOCK|SFD_CLOEXEC);
-        if (signal_fd < 0) {
-                log_error("signalfd(): %m");
-                r = -errno;
-                goto finish;
-        }
-
-        ep = epoll_create1(EPOLL_CLOEXEC);
-        if (ep < 0) {
-                log_error("Failed to create epoll: %m");
-                r = -errno;
-                goto finish;
-        }
-
-        /* We read from STDIN only if this is actually a TTY,
-         * otherwise we assume non-interactivity. */
-        if (isatty(STDIN_FILENO)) {
-                zero(stdin_ev);
-                stdin_ev.events = EPOLLIN|EPOLLET;
-                stdin_ev.data.fd = STDIN_FILENO;
-
-                if (epoll_ctl(ep, EPOLL_CTL_ADD, STDIN_FILENO, &stdin_ev) < 0) {
-                        log_error("Failed to register STDIN in epoll: %m");
-                        r = -errno;
-                        goto finish;
-                }
-        }
-
-        zero(stdout_ev);
-        stdout_ev.events = EPOLLOUT|EPOLLET;
-        stdout_ev.data.fd = STDOUT_FILENO;
-
-        zero(master_ev);
-        master_ev.events = EPOLLIN|EPOLLOUT|EPOLLET;
-        master_ev.data.fd = master;
-
-        zero(signal_ev);
-        signal_ev.events = EPOLLIN;
-        signal_ev.data.fd = signal_fd;
-
-        if (epoll_ctl(ep, EPOLL_CTL_ADD, STDOUT_FILENO, &stdout_ev) < 0) {
-                if (errno != EPERM) {
-                        log_error("Failed to register stdout in epoll: %m");
-                        r = -errno;
-                        goto finish;
-                }
-                /* stdout without epoll support. Likely redirected to regular file. */
-                stdout_writable = true;
-        }
-
-        if (epoll_ctl(ep, EPOLL_CTL_ADD, master, &master_ev) < 0 ||
-            epoll_ctl(ep, EPOLL_CTL_ADD, signal_fd, &signal_ev) < 0) {
-                log_error("Failed to register fds in epoll: %m");
-                r = -errno;
-                goto finish;
-        }
-
-        for (;;) {
-                struct epoll_event ev[16];
-                ssize_t k;
-                int i, nfds;
-
-                nfds = epoll_wait(ep, ev, ELEMENTSOF(ev), -1);
-                if (nfds < 0) {
-
-                        if (errno == EINTR || errno == EAGAIN)
-                                continue;
-
-                        log_error("epoll_wait(): %m");
-                        r = -errno;
-                        goto finish;
-                }
-
-                assert(nfds >= 1);
-
-                for (i = 0; i < nfds; i++) {
-                        if (ev[i].data.fd == STDIN_FILENO) {
-
-                                if (ev[i].events & (EPOLLIN|EPOLLHUP))
-                                        stdin_readable = true;
-
-                        } else if (ev[i].data.fd == STDOUT_FILENO) {
-
-                                if (ev[i].events & (EPOLLOUT|EPOLLHUP))
-                                        stdout_writable = true;
-
-                        } else if (ev[i].data.fd == master) {
-
-                                if (ev[i].events & (EPOLLIN|EPOLLHUP))
-                                        master_readable = true;
-
-                                if (ev[i].events & (EPOLLOUT|EPOLLHUP))
-                                        master_writable = true;
-
-                        } else if (ev[i].data.fd == signal_fd) {
-                                struct signalfd_siginfo sfsi;
-                                ssize_t n;
-
-                                n = read(signal_fd, &sfsi, sizeof(sfsi));
-                                if (n != sizeof(sfsi)) {
-
-                                        if (n >= 0) {
-                                                log_error("Failed to read from signalfd: invalid block size");
-                                                r = -EIO;
-                                                goto finish;
-                                        }
-
-                                        if (errno != EINTR && errno != EAGAIN) {
-                                                log_error("Failed to read from signalfd: %m");
-                                                r = -errno;
-                                                goto finish;
-                                        }
-                                } else {
-
-                                        if (sfsi.ssi_signo == SIGWINCH) {
-                                                struct winsize ws;
-
-                                                /* The window size changed, let's forward that. */
-                                                if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) >= 0)
-                                                        ioctl(master, TIOCSWINSZ, &ws);
-                                        } else if (sfsi.ssi_signo == SIGTERM && arg_boot && !tried_orderly_shutdown) {
-
-                                                log_info("Trying to halt container. Send SIGTERM again to trigger immediate termination.");
-
-                                                /* This only works for systemd... */
-                                                tried_orderly_shutdown = true;
-                                                kill(pid, SIGRTMIN+3);
-
-                                        } else {
-                                                r = 0;
-                                                goto finish;
-                                        }
-                                }
-                        }
-                }
-
-                while ((stdin_readable && in_buffer_full <= 0) ||
-                       (master_writable && in_buffer_full > 0) ||
-                       (master_readable && out_buffer_full <= 0) ||
-                       (stdout_writable && out_buffer_full > 0)) {
-
-                        if (stdin_readable && in_buffer_full < LINE_MAX) {
-
-                                k = read(STDIN_FILENO, in_buffer + in_buffer_full, LINE_MAX - in_buffer_full);
-                                if (k < 0) {
-
-                                        if (errno == EAGAIN || errno == EPIPE || errno == ECONNRESET || errno == EIO)
-                                                stdin_readable = false;
-                                        else {
-                                                log_error("read(): %m");
-                                                r = -errno;
-                                                goto finish;
-                                        }
-                                } else
-                                        in_buffer_full += (size_t) k;
-                        }
-
-                        if (master_writable && in_buffer_full > 0) {
-
-                                k = write(master, in_buffer, in_buffer_full);
-                                if (k < 0) {
-
-                                        if (errno == EAGAIN || errno == EPIPE || errno == ECONNRESET || errno == EIO)
-                                                master_writable = false;
-                                        else {
-                                                log_error("write(): %m");
-                                                r = -errno;
-                                                goto finish;
-                                        }
-
-                                } else {
-                                        assert(in_buffer_full >= (size_t) k);
-                                        memmove(in_buffer, in_buffer + k, in_buffer_full - k);
-                                        in_buffer_full -= k;
-                                }
-                        }
-
-                        if (master_readable && out_buffer_full < LINE_MAX) {
-
-                                k = read(master, out_buffer + out_buffer_full, LINE_MAX - out_buffer_full);
-                                if (k < 0) {
-
-                                        if (errno == EAGAIN || errno == EPIPE || errno == ECONNRESET || errno == EIO)
-                                                master_readable = false;
-                                        else {
-                                                log_error("read(): %m");
-                                                r = -errno;
-                                                goto finish;
-                                        }
-                                }  else
-                                        out_buffer_full += (size_t) k;
-                        }
-
-                        if (stdout_writable && out_buffer_full > 0) {
-
-                                k = write(STDOUT_FILENO, out_buffer, out_buffer_full);
-                                if (k < 0) {
-
-                                        if (errno == EAGAIN || errno == EPIPE || errno == ECONNRESET || errno == EIO)
-                                                stdout_writable = false;
-                                        else {
-                                                log_error("write(): %m");
-                                                r = -errno;
-                                                goto finish;
-                                        }
-
-                                } else {
-                                        assert(out_buffer_full >= (size_t) k);
-                                        memmove(out_buffer, out_buffer + k, out_buffer_full - k);
-                                        out_buffer_full -= k;
-                                }
-                        }
-                }
-        }
-
-finish:
-        if (ep >= 0)
-                close_nointr_nofail(ep);
-
-        if (signal_fd >= 0)
-                close_nointr_nofail(signal_fd);
-
-        return r;
 }
 
 static int register_machine(void) {
@@ -1202,10 +986,64 @@ static int register_machine(void) {
                         "container",
                         (uint32_t) 0,
                         strempty(arg_directory),
-                        1, "Slice", "s", strempty(arg_slice));
+                        !isempty(arg_slice), "Slice", "s", arg_slice);
         if (r < 0) {
-                log_error("Failed to register machine: %s", error.message ? error.message : strerror(-r));
+                log_error("Failed to register machine: %s", bus_error_message(&error, r));
                 return r;
+        }
+
+        return 0;
+}
+
+static int terminate_machine(pid_t pid) {
+        _cleanup_bus_error_free_ sd_bus_error error = SD_BUS_ERROR_NULL;
+        _cleanup_bus_message_unref_ sd_bus_message *reply = NULL;
+        _cleanup_bus_unref_ sd_bus *bus = NULL;
+        const char *path;
+        int r;
+
+        r = sd_bus_open_system(&bus);
+        if (r < 0) {
+                log_error("Failed to open system bus: %s", strerror(-r));
+                return r;
+        }
+
+        r = sd_bus_call_method(
+                        bus,
+                        "org.freedesktop.machine1",
+                        "/org/freedesktop/machine1",
+                        "org.freedesktop.machine1.Manager",
+                        "GetMachineByPID",
+                        &error,
+                        &reply,
+                        "u",
+                        (uint32_t) pid);
+        if (r < 0) {
+                /* Note that the machine might already have been
+                 * cleaned up automatically, hence don't consider it a
+                 * failure if we cannot get the machine object. */
+                log_debug("Failed to get machine: %s", bus_error_message(&error, r));
+                return 0;
+        }
+
+        r = sd_bus_message_read(reply, "o", &path);
+        if (r < 0) {
+                log_error("Failed to parse GetMachineByPID() reply: %s", bus_error_message(&error, r));
+                return r;
+        }
+
+        r = sd_bus_call_method(
+                        bus,
+                        "org.freedesktop.machine1",
+                        path,
+                        "org.freedesktop.machine1.Machine",
+                        "Terminate",
+                        &error,
+                        NULL,
+                        NULL);
+        if (r < 0) {
+                log_debug("Failed to terminate machine: %s", bus_error_message(&error, r));
+                return 0;
         }
 
         return 0;
@@ -1216,7 +1054,7 @@ static bool audit_enabled(void) {
 
         fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_AUDIT);
         if (fd >= 0) {
-                close_nointr_nofail(fd);
+                safe_close(fd);
                 return true;
         }
         return false;
@@ -1388,7 +1226,7 @@ int main(int argc, char *argv[]) {
                         gid_t gid = (gid_t) -1;
                         unsigned n_env = 2;
                         const char *envp[] = {
-                                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                                "PATH=" DEFAULT_PATH_SPLIT_USR,
                                 "container=systemd-nspawn", /* LXC sets container=lxc, so follow the scheme here */
                                 NULL, /* TERM */
                                 NULL, /* HOME */
@@ -1405,12 +1243,11 @@ int main(int argc, char *argv[]) {
                                 n_env ++;
 
                         /* Wait for the parent process to log our PID */
-                        close_nointr_nofail(pipefd[1]);
+                        safe_close(pipefd[1]);
                         fd_wait_for_event(pipefd[0], POLLHUP, -1);
-                        close_nointr_nofail(pipefd[0]);
+                        safe_close(pipefd[0]);
 
-                        close_nointr_nofail(master);
-                        master = -1;
+                        master = safe_close(master);
 
                         if (saved_attr_valid) {
                                 if (tcsetattr(STDIN_FILENO, TCSANOW, &raw_attr) < 0) {
@@ -1423,8 +1260,7 @@ int main(int argc, char *argv[]) {
                         close_nointr(STDOUT_FILENO);
                         close_nointr(STDERR_FILENO);
 
-                        close_nointr_nofail(kmsg_socket_pair[0]);
-                        kmsg_socket_pair[0] = -1;
+                        kmsg_socket_pair[0] = safe_close(kmsg_socket_pair[0]);
 
                         reset_all_signal_handlers();
 
@@ -1434,7 +1270,7 @@ int main(int argc, char *argv[]) {
                         k = open_terminal(console, O_RDWR);
                         if (k != STDIN_FILENO) {
                                 if (k >= 0) {
-                                        close_nointr_nofail(k);
+                                        safe_close(k);
                                         k = -EINVAL;
                                 }
 
@@ -1501,8 +1337,7 @@ int main(int argc, char *argv[]) {
                         if (setup_kmsg(arg_directory, kmsg_socket_pair[1]) < 0)
                                 goto child_fail;
 
-                        close_nointr_nofail(kmsg_socket_pair[1]);
-                        kmsg_socket_pair[1] = -1;
+                        kmsg_socket_pair[1] = safe_close(kmsg_socket_pair[1]);
 
                         if (setup_boot_id(arg_directory) < 0)
                                 goto child_fail;
@@ -1615,7 +1450,9 @@ int main(int argc, char *argv[]) {
                         }
 
                         if (!sd_id128_equal(arg_uuid, SD_ID128_NULL)) {
-                                if (asprintf((char**)(envp + n_env++), "container_uuid=" SD_ID128_FORMAT_STR, SD_ID128_FORMAT_VAL(arg_uuid)) < 0) {
+                                char as_uuid[37];
+
+                                if (asprintf((char**)(envp + n_env++), "container_uuid=%s", id128_format_as_uuid(arg_uuid, as_uuid)) < 0) {
                                         log_oom();
                                         goto child_fail;
                                 }
@@ -1660,6 +1497,7 @@ int main(int argc, char *argv[]) {
                         else {
                                 chdir(home ? home : "/root");
                                 execle("/bin/bash", "-bash", NULL, (char**) envp);
+                                execle("/bin/sh", "-sh", NULL, (char**) envp);
                         }
 
                         log_error("execv() failed: %m");
@@ -1669,22 +1507,28 @@ int main(int argc, char *argv[]) {
                 }
 
                 log_info("Init process in the container running as PID %lu.", (unsigned long) pid);
-                close_nointr_nofail(pipefd[0]);
-                close_nointr_nofail(pipefd[1]);
+                safe_close(pipefd[0]);
+                safe_close(pipefd[1]);
 
                 /* Wait for the child process to establish cgroup hierarchy */
-                close_nointr_nofail(pipefd2[1]);
+                safe_close(pipefd2[1]);
                 fd_wait_for_event(pipefd2[0], POLLHUP, -1);
-                close_nointr_nofail(pipefd2[0]);
+                safe_close(pipefd2[0]);
 
                 fdset_free(fds);
                 fds = NULL;
 
-                if (process_pty(master, pid, &mask) < 0)
+                if (process_pty(master, &mask, arg_boot ? pid : 0, SIGRTMIN+3) < 0)
                         goto finish;
 
                 if (saved_attr_valid)
                         tcsetattr(STDIN_FILENO, TCSANOW, &saved_attr);
+
+                /* Kill if it is not dead yet anyway */
+                terminate_machine(pid);
+
+                /* Redundant, but better safe than sorry */
+                kill(pid, SIGKILL);
 
                 k = wait_for_terminate(pid, &status);
                 if (k < 0) {

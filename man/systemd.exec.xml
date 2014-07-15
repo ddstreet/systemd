@@ -248,7 +248,7 @@
                                 <listitem><para>Controls the CPU
                                 affinity of the executed
                                 processes. Takes a space-separated
-                                list of CPU indexes. This option may
+                                list of CPU indices. This option may
                                 be specified more than once in which
                                 case the specificed CPU affinity masks
                                 are merged. If the empty string is
@@ -295,9 +295,11 @@
                                 for the assignment.</para>
 
                                 <para>Example:
-                                <programlisting>Environment="VAR1=word1 word2" VAR2=word3 "VAR3=word 5 6"</programlisting>
+                                <programlisting>Environment="VAR1=word1 word2" VAR2=word3 "VAR3=$word 5 6"</programlisting>
                                 gives three variables <literal>VAR1</literal>,
-                                <literal>VAR2</literal>, <literal>VAR3</literal>.
+                                <literal>VAR2</literal>, <literal>VAR3</literal>
+                                with the values <literal>word1 word2</literal>,
+                                <literal>word3</literal>, <literal>$word 5 6</literal>.
                                 </para>
 
                                 <para>
@@ -338,9 +340,14 @@
 
                                 <para>The files listed with this
                                 directive will be read shortly before
-                                the process is executed. Settings from
-                                these files override settings made
-                                with
+                                the process is executed (more
+                                specifically, this means after all
+                                processes from a previous unit state
+                                terminated. This means you can
+                                generate these files in one unit
+                                state, and read it with this option in
+                                the next). Settings from these files
+                                override settings made with
                                 <varname>Environment=</varname>. If
                                 the same variable is set twice from
                                 these files, the files will be read in
@@ -470,9 +477,9 @@
                         <varlistentry>
                                 <term><varname>StandardError=</varname></term>
                                 <listitem><para>Controls where file
-                                descriptor 2 (STDERR) of the executed
-                                processes is connected to. The
-                                available options are identical to
+                                descriptor 2 (STDERR) of the
+                                executed processes is connected to.
+                                The available options are identical to
                                 those of
                                 <varname>StandardOutput=</varname>,
                                 with one exception: if set to
@@ -489,8 +496,8 @@
                         <varlistentry>
                                 <term><varname>TTYPath=</varname></term>
                                 <listitem><para>Sets the terminal
-                                device node to use if standard input,
-                                output or stderr are connected to a
+                                device node to use if standard input, output,
+                                or error are connected to a
                                 TTY (see above). Defaults to
                                 <filename>/dev/console</filename>.</para></listitem>
                         </varlistentry>
@@ -1021,10 +1028,13 @@
 
                         <varlistentry>
                                 <term><varname>$USER</varname></term>
+                                <term><varname>$LOGNAME</varname></term>
                                 <term><varname>$HOME</varname></term>
+                                <term><varname>$SHELL</varname></term>
 
-                                <listitem><para>User name and home
-                                directory.  Set for the units which
+                                <listitem><para>User name (twice), home
+                                directory, and the login shell.
+                                Set for the units which
                                 have <varname>User=</varname> set,
                                 which includes user
                                 <command>systemd</command> instances.
@@ -1062,6 +1072,17 @@
                         </varlistentry>
 
                         <varlistentry>
+                                <term><varname>$MAINPID</varname></term>
+
+                                <listitem><para>The PID of the units
+                                main process if it is known. This is
+                                only set for control processes as
+                                invoked by
+                                <varname>ExecReload=</varname> and
+                                similar.  </para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
                                 <term><varname>$MANAGERPID</varname></term>
 
                                 <listitem><para>The PID of the user
@@ -1078,6 +1099,20 @@
                                 descriptors passed to a service for
                                 socket activation.  See
                                 <citerefentry><refentrytitle>sd_listen_fds</refentrytitle><manvolnum>3</manvolnum></citerefentry>.
+                                </para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
+                                <term><varname>$TERM</varname></term>
+
+                                <listitem><para>Terminal type, set
+                                only for units connected to a terminal
+                                (<varname>StandardInput=tty</varname>,
+                                <varname>StandardOutput=tty</varname>,
+                                or
+                                <varname>StandardError=tty</varname>).
+                                See
+                                <citerefentry><refentrytitle>termcap</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
                                 </para></listitem>
                         </varlistentry>
                 </variablelist>

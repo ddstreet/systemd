@@ -22,6 +22,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "log.h"
 #include "util.h"
@@ -76,7 +77,7 @@ static int add_serial_getty(const char *tty) {
 
         log_debug("Automatically adding serial getty for /dev/%s.", tty);
 
-        n = unit_name_replace_instance("serial-getty@.service", tty);
+        n = unit_name_from_path_instance("serial-getty", tty, ".service");
         if (!n)
                 return log_oom();
 
@@ -86,12 +87,38 @@ static int add_serial_getty(const char *tty) {
         return r;
 }
 
+static int verify_tty(const char *name) {
+        _cleanup_close_ int fd = -1;
+        const char *p;
+
+        /* Some TTYs are weird and have been enumerated but don't work
+         * when you try to use them, such as classic ttyS0 and
+         * friends. Let's check that and open the device and run
+         * isatty() on it. */
+
+        p = strappenda("/dev/", name);
+
+        /* O_NONBLOCK is essential here, to make sure we don't wait
+         * for DCD */
+        fd = open(p, O_RDWR|O_NONBLOCK|O_NOCTTY|O_CLOEXEC|O_NOFOLLOW);
+        if (fd < 0)
+                return -errno;
+
+        errno = 0;
+        if (isatty(fd) <= 0)
+                return errno ? -errno : -EIO;
+
+        return 0;
+}
+
 int main(int argc, char *argv[]) {
 
         static const char virtualization_consoles[] =
                 "hvc0\0"
                 "xvc0\0"
-                "hvsi0\0";
+                "hvsi0\0"
+                "sclp_line0\0"
+                "ttysclp0\0";
 
         int r = EXIT_SUCCESS;
         char *active;
@@ -143,6 +170,9 @@ int main(int argc, char *argv[]) {
                                 free(tty);
                                 continue;
                         }
+
+                        if (verify_tty(tty) < 0)
+                                continue;
 
                         /* We assume that gettys on virtual terminals are
                          * started via manual configuration and do this magic

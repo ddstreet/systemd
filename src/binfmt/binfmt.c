@@ -85,7 +85,7 @@ static int apply_file(const char *path, bool ignore_enoent) {
 
         assert(path);
 
-        r = search_and_fopen_nulstr(path, "re", conf_file_dirs, &f);
+        r = search_and_fopen_nulstr(path, "re", NULL, conf_file_dirs, &f);
         if (r < 0) {
                 if (ignore_enoent && r == -ENOENT)
                         return 0;
@@ -94,7 +94,7 @@ static int apply_file(const char *path, bool ignore_enoent) {
                 return r;
         }
 
-        log_debug("apply: %s\n", path);
+        log_debug("apply: %s", path);
         for (;;) {
                 char l[LINE_MAX], *p;
                 int k;

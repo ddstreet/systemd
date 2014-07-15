@@ -466,7 +466,7 @@ static int bus_manager_append_progress(DBusMessageIter *i, const char *property,
 
 static int bus_manager_append_virt(DBusMessageIter *i, const char *property, void *data) {
         Manager *m = data;
-        const char *id = "";
+        const char *id = NULL;
 
         assert(i);
         assert(property);
@@ -474,6 +474,8 @@ static int bus_manager_append_virt(DBusMessageIter *i, const char *property, voi
 
         detect_virtualization(&id);
 
+        if (!id)
+                id = "";
         if (!dbus_message_iter_append_basic(i, DBUS_TYPE_STRING, &id))
                 return -ENOMEM;
 
@@ -1102,7 +1104,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                 dbus_bool_t cleanup;
                 Snapshot *s;
 
-                SELINUX_ACCESS_CHECK(connection, message, "start");
+                SELINUX_RUNTIME_UNIT_ACCESS_CHECK(connection, message, "start");
 
                 if (!dbus_message_get_args(
                                     message,
@@ -1155,7 +1157,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                         return bus_send_error_reply(connection, message, &error, -ENOENT);
                 }
 
-                SELINUX_UNIT_ACCESS_CHECK(u, connection, message, "stop");
+                SELINUX_RUNTIME_UNIT_ACCESS_CHECK(connection, message, "stop");
                 snapshot_remove(SNAPSHOT(u));
 
                 reply = dbus_message_new_method_return(message);
@@ -1397,7 +1399,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                 _cleanup_strv_free_ char **l = NULL;
                 char **e = NULL;
 
-                SELINUX_ACCESS_CHECK(connection, message, "reboot");
+                SELINUX_ACCESS_CHECK(connection, message, "reload");
 
                 r = bus_parse_strv(message, &l);
                 if (r == -ENOMEM)
@@ -1424,7 +1426,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                 _cleanup_strv_free_ char **l = NULL;
                 char **e = NULL;
 
-                SELINUX_ACCESS_CHECK(connection, message, "reboot");
+                SELINUX_ACCESS_CHECK(connection, message, "reload");
 
                 r = bus_parse_strv(message, &l);
                 if (r == -ENOMEM)
@@ -1452,7 +1454,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                 char **f = NULL;
                 DBusMessageIter iter;
 
-                SELINUX_ACCESS_CHECK(connection, message, "reboot");
+                SELINUX_ACCESS_CHECK(connection, message, "reload");
 
                 if (!dbus_message_iter_init(message, &iter))
                         goto oom;
@@ -1765,7 +1767,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                 if (r < 0)
                         return bus_send_error_reply(connection, message, &error, r);
 
-                SELINUX_UNIT_ACCESS_CHECK(u, connection, message, "start");
+                SELINUX_RUNTIME_UNIT_ACCESS_CHECK(connection, message, "start");
 
                 if (u->load_state != UNIT_NOT_FOUND || set_size(u->dependencies[UNIT_REFERENCED_BY]) > 0) {
                         dbus_set_error(&error, BUS_ERROR_UNIT_EXISTS, "Unit %s already exists.", name);

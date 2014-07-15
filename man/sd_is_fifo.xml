@@ -48,6 +48,7 @@
                 <refname>sd_is_socket_inet</refname>
                 <refname>sd_is_socket_unix</refname>
                 <refname>sd_is_mq</refname>
+                <refname>sd_is_special</refname>
                 <refpurpose>Check the type of a file descriptor</refpurpose>
         </refnamediv>
 
@@ -89,6 +90,12 @@
 
                         <funcprototype>
                                 <funcdef>int <function>sd_is_mq</function></funcdef>
+                                <paramdef>int <parameter>fd</parameter></paramdef>
+                                <paramdef>const char *<parameter>path</parameter></paramdef>
+                        </funcprototype>
+
+                        <funcprototype>
+                                <funcdef>int <function>sd_is_special</function></funcdef>
                                 <paramdef>int <parameter>fd</parameter></paramdef>
                                 <paramdef>const char *<parameter>path</parameter></paramdef>
                         </funcprototype>
@@ -153,6 +160,16 @@
                 <parameter>path</parameter> parameter is not
                 <constant>NULL</constant>, it is checked whether the
                 message queue is bound to the specified name.</para>
+
+                <para><function>sd_is_special()</function> may be
+                called to check whether the specified file descriptor
+                refers to a special file. If the
+                <parameter>path</parameter> parameter is not
+                <constant>NULL</constant>, it is checked whether the file
+                descriptor is bound to the specified file
+                name. Special files in this context are character
+                device nodes and files in <filename>/proc</filename>
+                or <filename>/sys</filename>.</para>
         </refsect1>
 
         <refsect1>
@@ -191,13 +208,13 @@
                 related functions are implemented in the reference
                 implementation's <filename>sd-daemon.c</filename> and
                 <filename>sd-daemon.h</filename> files. These
-                interfaces are available as shared library, which can
+                interfaces are available as a shared library, which can
                 be compiled and linked to with the
                 <constant>libsystemd-daemon</constant> <citerefentry><refentrytitle>pkg-config</refentrytitle><manvolnum>1</manvolnum></citerefentry>
                 file. Alternatively, applications consuming these APIs
                 may copy the implementation into their source
                 tree. For more details about the reference
-                implementation see
+                implementation, see
                 <citerefentry><refentrytitle>sd-daemon</refentrytitle><manvolnum>3</manvolnum></citerefentry>.</para>
 
                 <para>These functions continue to work as described,

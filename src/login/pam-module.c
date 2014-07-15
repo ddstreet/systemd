@@ -86,31 +86,24 @@ static int get_user_data(
 
         const char *username = NULL;
         struct passwd *pw = NULL;
-        uid_t uid;
         int r;
 
         assert(handle);
         assert(ret_username);
         assert(ret_pw);
 
-        r = audit_loginuid_from_pid(0, &uid);
-        if (r >= 0)
-                pw = pam_modutil_getpwuid(handle, uid);
-        else {
-                r = pam_get_user(handle, &username, NULL);
-                if (r != PAM_SUCCESS) {
-                        pam_syslog(handle, LOG_ERR, "Failed to get user name.");
-                        return r;
-                }
-
-                if (isempty(username)) {
-                        pam_syslog(handle, LOG_ERR, "User name not valid.");
-                        return PAM_AUTH_ERR;
-                }
-
-                pw = pam_modutil_getpwnam(handle, username);
+        r = pam_get_user(handle, &username, NULL);
+        if (r != PAM_SUCCESS) {
+                pam_syslog(handle, LOG_ERR, "Failed to get user name.");
+                return r;
         }
 
+        if (isempty(username)) {
+                pam_syslog(handle, LOG_ERR, "User name not valid.");
+                return PAM_AUTH_ERR;
+        }
+
+        pw = pam_modutil_getpwnam(handle, username);
         if (!pw) {
                 pam_syslog(handle, LOG_ERR, "Failed to get user data.");
                 return PAM_USER_UNKNOWN;
@@ -123,16 +116,14 @@ static int get_user_data(
 }
 
 static int get_seat_from_display(const char *display, const char **seat, uint32_t *vtnr) {
-        _cleanup_free_ char *p = NULL;
-        int r;
-        _cleanup_close_ int fd = -1;
         union sockaddr_union sa = {
                 .un.sun_family = AF_UNIX,
         };
+         _cleanup_free_ char *p = NULL, *tty = NULL;
+         _cleanup_close_ int fd = -1;
         struct ucred ucred;
         socklen_t l;
-        _cleanup_free_ char *tty = NULL;
-        int v;
+        int v, r;
 
         assert(display);
         assert(vtnr);
@@ -194,13 +185,11 @@ _public_ PAM_EXTERN int pam_sm_open_session(
         dbus_bool_t remote, existing;
         int r;
         uint32_t vtnr = 0;
-        struct stat st;
+        uid_t original_uid;
 
         assert(handle);
 
         dbus_error_init(&error);
-
-        /* pam_syslog(handle, LOG_INFO, "pam-systemd initializing"); */
 
         /* Make this a NOP on non-logind systems */
         if (!logind_running())
@@ -213,6 +202,9 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                 r = PAM_SESSION_ERR;
                 goto finish;
         }
+
+        if (debug)
+                pam_syslog(handle, LOG_DEBUG, "pam-systemd initializing");
 
         r = get_user_data(handle, &username, &pw);
         if (r != PAM_SUCCESS)
@@ -335,6 +327,12 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                         get_seat_from_display(display, NULL, &vtnr);
         }
 
+        if (seat && !streq(seat, "seat0") && vtnr != 0) {
+                pam_syslog(handle, LOG_DEBUG,
+                      "Ignoring vtnr %d for %s which is not seat0", vtnr, seat);
+                vtnr = 0;
+        }
+
         if (!type)
                 type = !isempty(display) ? "x11" :
                         !isempty(tty) ? "tty" : "unspecified";
@@ -375,7 +373,11 @@ _public_ PAM_EXTERN int pam_sm_open_session(
         if (debug)
                 pam_syslog(handle, LOG_DEBUG, "Asking logind to create session: "
                            "uid=%u pid=%u service=%s type=%s class=%s seat=%s vtnr=%u tty=%s display=%s remote=%s remote_user=%s remote_host=%s",
-                           uid, pid, service, type, class, seat, vtnr, tty, display, yes_no(remote), remote_user, remote_host);
+                              pw->pw_uid, pid,
+                              strempty(service),
+                              type, class,
+                              seat, vtnr, tty, display,
+                              yes_no(remote), remote_user, remote_host);
 
         reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
         if (!reply) {
@@ -389,6 +391,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                                    DBUS_TYPE_OBJECT_PATH, &object_path,
                                    DBUS_TYPE_STRING, &runtime_path,
                                    DBUS_TYPE_UNIX_FD, &session_fd,
+                                   DBUS_TYPE_UINT32, &original_uid,
                                    DBUS_TYPE_STRING, &seat,
                                    DBUS_TYPE_UINT32, &vtnr,
                                    DBUS_TYPE_BOOLEAN, &existing,
@@ -400,8 +403,8 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         if (debug)
                 pam_syslog(handle, LOG_DEBUG, "Reply from logind: "
-                           "id=%s object_path=%s runtime_path=%s session_fd=%d seat=%s vtnr=%u",
-                           id, object_path, runtime_path, session_fd, seat, vtnr);
+                           "id=%s object_path=%s runtime_path=%s session_fd=%d seat=%s vtnr=%u original_uid=%u",
+                           id, object_path, runtime_path, session_fd, seat, vtnr, original_uid);
 
         r = pam_misc_setenv(handle, "XDG_SESSION_ID", id, 0);
         if (r != PAM_SUCCESS) {
@@ -409,24 +412,18 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                 goto finish;
         }
 
-        /* only set $XDG_RUNTIME_DIR if it is owned by the target user, as per
-         * XDG basedir-spec; this avoids su sessions to scribble over a runtime
-         * dir of a different user */
-        r = lstat(runtime_path, &st);
-        if (r != 0) {
-                pam_syslog(handle, LOG_ERR, "Failed to stat runtime dir: %s", strerror(errno));
-                r = PAM_SYSTEM_ERR;
-                goto finish;
-        }
-        if (st.st_uid == uid) {
+        if (original_uid == pw->pw_uid) {
+                /* Don't set $XDG_RUNTIME_DIR if the user we now
+                 * authenticated for does not match the original user
+                 * of the session. We do this in order not to result
+                 * in privileged apps clobbering the runtime directory
+                 * unnecessarily. */
+
                 r = pam_misc_setenv(handle, "XDG_RUNTIME_DIR", runtime_path, 0);
                 if (r != PAM_SUCCESS) {
-                        pam_syslog(handle, LOG_ERR, "Failed to set runtime dir.");
-                        goto finish;
+                         pam_syslog(handle, LOG_ERR, "Failed to set runtime dir.");
+                         goto finish;
                 }
-        } else if (debug) {
-                pam_syslog(handle, LOG_DEBUG, "Runtime dir %s is not owned by the target uid %u, ignoring.",
-                           runtime_path, uid);
         }
 
         if (!isempty(seat)) {
@@ -481,8 +478,7 @@ finish:
         if (reply)
                 dbus_message_unref(reply);
 
-        if (session_fd >= 0)
-                close_nointr_nofail(session_fd);
+        safe_close(session_fd);
 
         return r;
 }
@@ -492,7 +488,7 @@ _public_ PAM_EXTERN int pam_sm_close_session(
                 int flags,
                 int argc, const char **argv) {
 
-        const void *p = NULL, *existing = NULL;
+        const void *existing = NULL;
         const char *id;
         DBusConnection *bus = NULL;
         DBusMessage *m = NULL, *reply = NULL;
@@ -549,12 +545,15 @@ _public_ PAM_EXTERN int pam_sm_close_session(
                 }
         }
 
+
+        /* Note that we are knowingly leaking the FIFO fd here. This
+         * way, logind can watch us die. If we closed it here it would
+         * not have any clue when that is completed. Given that one
+         * cannot really have multiple PAM sessions open from the same
+         * process this means we will leak one FD at max. */
         r = PAM_SUCCESS;
 
 finish:
-        pam_get_data(handle, "systemd.session-fd", &p);
-        if (p)
-                close_nointr(PTR_TO_INT(p) - 1);
 
         dbus_error_free(&error);
 

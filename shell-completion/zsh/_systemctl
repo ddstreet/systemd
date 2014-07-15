@@ -24,7 +24,6 @@
     "status:Show runtime status of one or more units"
     "show:Show properties of one or more units/jobs or the manager"
     "reset-failed:Reset failed state for all, one, or more units"
-    "load:Load one or more units"
     "list-unit-files:List installed unit files"
     "enable:Enable one or more unit files"
     "disable:Disable one or more unit files"
@@ -38,7 +37,6 @@
     "is-enabled:Check whether unit files are enabled"
     "list-jobs:List jobs"
     "cancel:Cancel all, one, or more jobs"
-    "dump:Dump server status"
     "snapshot:Create a snapshot"
     "delete:Remove one or more snapshots"
     "show-environment:Dump environment"
@@ -264,10 +262,10 @@ done
 (( $+functions[_systemctl_link] )) || _systemctl_link() { _files }
 
 # no systemctl completion for:
-#    [STANDALONE]='daemon-reexec daemon-reload default dump
+#    [STANDALONE]='daemon-reexec daemon-reload default
 #                  emergency exit halt kexec list-jobs list-units
 #                  list-unit-files poweroff reboot rescue show-environment'
-#         [NAME]='snapshot load'
+#         [NAME]='snapshot'
 
 _systemctl_caching_policy()
 {

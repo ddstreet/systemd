@@ -249,9 +249,6 @@ int unit_set_description(Unit *u, const char *description) {
 bool unit_check_gc(Unit *u) {
         assert(u);
 
-        if (u->load_state == UNIT_STUB)
-                return true;
-
         if (UNIT_VTABLE(u)->no_gc)
                 return true;
 
@@ -471,6 +468,8 @@ void unit_free(Unit *u) {
         free(u->instance);
 
         set_free_free(u->names);
+
+        unit_unwatch_all_pids(u);
 
         condition_free_list(u->conditions);
 
@@ -1239,8 +1238,11 @@ int unit_reload(Unit *u) {
         if (state == UNIT_RELOADING)
                 return -EALREADY;
 
-        if (state != UNIT_ACTIVE)
+        if (state != UNIT_ACTIVE) {
+                log_warning_unit(u->id, "Unit %s cannot be reloaded because it is inactive.",
+                                 u->id);
                 return -ENOEXEC;
+        }
 
         if ((following = unit_following(u))) {
                 log_debug_unit(u->id, "Redirecting reload request from %s to %s.",
@@ -1446,15 +1448,20 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
         if (UNIT_IS_INACTIVE_OR_FAILED(ns))
                 unit_destroy_cgroup(u);
 
+        /* Note that this doesn't apply to RemainAfterExit services exiting
+         * sucessfully, since there's no change of state in that case. Which is
+         * why it is handled in service_set_state() */
         if (UNIT_IS_INACTIVE_OR_FAILED(os) != UNIT_IS_INACTIVE_OR_FAILED(ns)) {
-                ExecContext *ec = unit_get_exec_context(u);
+                ExecContext *ec;
+
+                ec = unit_get_exec_context(u);
                 if (ec && exec_context_may_touch_console(ec)) {
                         if (UNIT_IS_INACTIVE_OR_FAILED(ns)) {
                                 m->n_on_console --;
 
                                 if (m->n_on_console == 0)
                                         /* unset no_console_output flag, since the console is free */
-                                        m->no_console_output = 0;
+                                        m->no_console_output = false;
                         } else
                                 m->n_on_console ++;
                 }
@@ -1543,12 +1550,11 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                 }
 
                 /* stop unneeded units regardless if going down was expected or not */
-                if (UNIT_IS_ACTIVE_OR_ACTIVATING(os) && UNIT_IS_INACTIVE_OR_DEACTIVATING(ns))
+                if (UNIT_IS_INACTIVE_OR_DEACTIVATING(ns))
                         check_unneeded_dependencies(u);
 
                 if (ns != os && ns == UNIT_FAILED) {
-                        log_notice_unit(u->id,
-                                        "Unit %s entered failed state.", u->id);
+                        log_notice_unit(u->id, "Unit %s entered failed state.", u->id);
                         unit_start_on_failure(u);
                 }
         }
@@ -1652,20 +1658,137 @@ void unit_unwatch_fd(Unit *u, Watch *w) {
 }
 
 int unit_watch_pid(Unit *u, pid_t pid) {
+        int q, r;
+
         assert(u);
         assert(pid >= 1);
 
-        /* Watch a specific PID. We only support one unit watching
-         * each PID for now. */
+        /* Watch a specific PID. We only support one or two units
+         * watching each PID for now, not more. */
 
-        return hashmap_put(u->manager->watch_pids, LONG_TO_PTR(pid), u);
+        r = set_ensure_allocated(&u->pids, trivial_hash_func, trivial_compare_func);
+        if (r < 0)
+                return r;
+
+        r = hashmap_ensure_allocated(&u->manager->watch_pids1, trivial_hash_func, trivial_compare_func);
+        if (r < 0)
+                return r;
+
+        r = hashmap_put(u->manager->watch_pids1, LONG_TO_PTR(pid), u);
+        if (r == -EEXIST) {
+                r = hashmap_ensure_allocated(&u->manager->watch_pids2, trivial_hash_func, trivial_compare_func);
+                if (r < 0)
+                        return r;
+
+                r = hashmap_put(u->manager->watch_pids2, LONG_TO_PTR(pid), u);
+        }
+
+        q = set_put(u->pids, LONG_TO_PTR(pid));
+        if (q < 0)
+                return q;
+
+        return r;
 }
 
 void unit_unwatch_pid(Unit *u, pid_t pid) {
         assert(u);
         assert(pid >= 1);
 
-        hashmap_remove_value(u->manager->watch_pids, LONG_TO_PTR(pid), u);
+        hashmap_remove_value(u->manager->watch_pids1, LONG_TO_PTR(pid), u);
+        hashmap_remove_value(u->manager->watch_pids2, LONG_TO_PTR(pid), u);
+        set_remove(u->pids, LONG_TO_PTR(pid));
+}
+
+void unit_unwatch_all_pids(Unit *u) {
+        assert(u);
+
+        while (!set_isempty(u->pids))
+                unit_unwatch_pid(u, PTR_TO_LONG(set_first(u->pids)));
+
+        set_free(u->pids);
+        u->pids = NULL;
+}
+
+static int unit_watch_pids_in_path(Unit *u, const char *path) {
+        _cleanup_closedir_ DIR *d = NULL;
+        _cleanup_fclose_ FILE *f = NULL;
+        int ret = 0, r;
+
+        assert(u);
+        assert(path);
+
+        /* Adds all PIDs from a specific cgroup path to the set of PIDs we watch. */
+
+        r = cg_enumerate_processes(SYSTEMD_CGROUP_CONTROLLER, path, &f);
+        if (r >= 0) {
+                pid_t pid;
+
+                while ((r = cg_read_pid(f, &pid)) > 0) {
+                        r = unit_watch_pid(u, pid);
+                        if (r < 0 && ret >= 0)
+                                ret = r;
+                }
+                if (r < 0 && ret >= 0)
+                        ret = r;
+
+        } else if (ret >= 0)
+                ret = r;
+
+        r = cg_enumerate_subgroups(SYSTEMD_CGROUP_CONTROLLER, path, &d);
+        if (r >= 0) {
+                char *fn;
+
+                while ((r = cg_read_subgroup(d, &fn)) > 0) {
+                        _cleanup_free_ char *p = NULL;
+
+                        p = strjoin(path, "/", fn, NULL);
+                        free(fn);
+
+                        if (!p)
+                                return -ENOMEM;
+
+                        r = unit_watch_pids_in_path(u, p);
+                        if (r < 0 && ret >= 0)
+                                ret = r;
+                }
+                if (r < 0 && ret >= 0)
+                        ret = r;
+
+        } else if (ret >= 0)
+                ret = r;
+
+        return ret;
+}
+
+
+int unit_watch_all_pids(Unit *u) {
+        assert(u);
+
+        /* Adds all PIDs from our cgroup to the set of PIDs we watch */
+
+        if (!u->cgroup_path)
+                return -ENOENT;
+
+        return unit_watch_pids_in_path(u, u->cgroup_path);
+}
+
+void unit_tidy_watch_pids(Unit *u, pid_t except1, pid_t except2) {
+        Iterator i;
+        void *e;
+
+        assert(u);
+
+        /* Cleans dead PIDs from our list */
+
+        SET_FOREACH(e, u->pids, i) {
+                pid_t pid = PTR_TO_LONG(e);
+
+                if (pid == except1 || pid == except2)
+                        continue;
+
+                if (kill(pid, 0) < 0 && errno == ESRCH)
+                        unit_unwatch_pid(u, pid);
+        }
 }
 
 int unit_watch_timer(Unit *u, clockid_t clock_id, bool relative, usec_t usec, Watch *w) {
@@ -1728,7 +1851,7 @@ int unit_watch_timer(Unit *u, clockid_t clock_id, bool relative, usec_t usec, Wa
 
 fail:
         if (ours)
-                close_nointr_nofail(fd);
+                safe_close(fd);
 
         return -errno;
 }
@@ -1745,7 +1868,7 @@ void unit_unwatch_timer(Unit *u, Watch *w) {
         assert(w->fd >= 0);
 
         assert_se(epoll_ctl(u->manager->epoll_fd, EPOLL_CTL_DEL, w->fd, NULL) >= 0);
-        close_nointr_nofail(w->fd);
+        safe_close(w->fd);
 
         w->fd = -1;
         w->type = WATCH_INVALID;
@@ -2170,24 +2293,10 @@ int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
         assert(f);
         assert(fds);
 
-        if (!unit_can_serialize(u))
-                return 0;
-
-        r = UNIT_VTABLE(u)->serialize(u, f, fds);
-        if (r < 0)
-                return r;
-
-
-        if (serialize_jobs) {
-                if (u->job) {
-                        fprintf(f, "job\n");
-                        job_serialize(u->job, f, fds);
-                }
-
-                if (u->nop_job) {
-                        fprintf(f, "job\n");
-                        job_serialize(u->nop_job, f, fds);
-                }
+        if (unit_can_serialize(u)) {
+                r = UNIT_VTABLE(u)->serialize(u, f, fds);
+                if (r < 0)
+                        return r;
         }
 
         dual_timestamp_serialize(f, "inactive-exit-timestamp", &u->inactive_exit_timestamp);
@@ -2203,6 +2312,18 @@ int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
 
         if (u->cgroup_path)
                 unit_serialize_item(u, f, "cgroup", u->cgroup_path);
+
+        if (serialize_jobs) {
+                if (u->job) {
+                        fprintf(f, "job\n");
+                        job_serialize(u->job, f, fds);
+                }
+
+                if (u->nop_job) {
+                        fprintf(f, "job\n");
+                        job_serialize(u->nop_job, f, fds);
+                }
+        }
 
         /* End marker */
         fputc('\n', f);
@@ -2242,9 +2363,6 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
         assert(u);
         assert(f);
         assert(fds);
-
-        if (!unit_can_serialize(u))
-                return 0;
 
         for (;;) {
                 char line[LINE_MAX], *l, *v;
@@ -2358,9 +2476,11 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
                         continue;
                 }
 
-                r = UNIT_VTABLE(u)->deserialize_item(u, l, v, fds);
-                if (r < 0)
-                        return r;
+                if (unit_can_serialize(u)) {
+                        r = UNIT_VTABLE(u)->deserialize_item(u, l, v, fds);
+                        if (r < 0)
+                                return r;
+                }
         }
 }
 
@@ -2778,7 +2898,6 @@ static int drop_in_file(Unit *u, UnitSetPropertiesMode mode, const char *name, c
         assert(name);
         assert(_p);
         assert(_q);
-        assert(mode & (UNIT_PERSISTENT|UNIT_RUNTIME));
 
         b = xescape(name, "/.");
         if (!b)
@@ -2797,7 +2916,7 @@ static int drop_in_file(Unit *u, UnitSetPropertiesMode mode, const char *name, c
                         return -ENOENT;
 
                 p = strjoin(c, "/", u->id, ".d", NULL);
-        } else if (mode & UNIT_PERSISTENT)
+        } else if (mode == UNIT_PERSISTENT && !u->transient)
                 p = strjoin("/etc/systemd/system/", u->id, ".d", NULL);
         else
                 p = strjoin("/run/systemd/system/", u->id, ".d", NULL);
@@ -2823,7 +2942,7 @@ int unit_write_drop_in(Unit *u, UnitSetPropertiesMode mode, const char *name, co
         assert(name);
         assert(data);
 
-        if (!(mode & (UNIT_PERSISTENT|UNIT_RUNTIME)))
+        if (!IN_SET(mode, UNIT_PERSISTENT, UNIT_RUNTIME))
                 return 0;
 
         r = drop_in_file(u, mode, name, &p, &q);
@@ -2843,7 +2962,7 @@ int unit_write_drop_in_format(Unit *u, UnitSetPropertiesMode mode, const char *n
         assert(name);
         assert(format);
 
-        if (!(mode & (UNIT_PERSISTENT|UNIT_RUNTIME)))
+        if (!IN_SET(mode, UNIT_PERSISTENT, UNIT_RUNTIME))
                 return 0;
 
         va_start(ap, format);
@@ -2866,7 +2985,7 @@ int unit_write_drop_in_private(Unit *u, UnitSetPropertiesMode mode, const char *
         if (!UNIT_VTABLE(u)->private_section)
                 return -EINVAL;
 
-        if (!(mode & (UNIT_PERSISTENT|UNIT_RUNTIME)))
+        if (!IN_SET(mode, UNIT_PERSISTENT, UNIT_RUNTIME))
                 return 0;
 
         ndata = strjoin("[", UNIT_VTABLE(u)->private_section, "]\n", data, NULL);
@@ -2885,7 +3004,7 @@ int unit_write_drop_in_private_format(Unit *u, UnitSetPropertiesMode mode, const
         assert(name);
         assert(format);
 
-        if (!(mode & (UNIT_PERSISTENT|UNIT_RUNTIME)))
+        if (!IN_SET(mode, UNIT_PERSISTENT, UNIT_RUNTIME))
                 return 0;
 
         va_start(ap, format);
@@ -2904,10 +3023,13 @@ int unit_remove_drop_in(Unit *u, UnitSetPropertiesMode mode, const char *name) {
 
         assert(u);
 
-        if (!(mode & (UNIT_PERSISTENT|UNIT_RUNTIME)))
+        if (!IN_SET(mode, UNIT_PERSISTENT, UNIT_RUNTIME))
                 return 0;
 
         r = drop_in_file(u, mode, name, &p, &q);
+        if (r < 0)
+                return r;
+
         if (unlink(q) < 0)
                 r = errno == ENOENT ? 0 : -errno;
         else

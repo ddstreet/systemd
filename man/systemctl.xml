@@ -63,6 +63,19 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
     introspect and control the state of the
     <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>
     system and service manager.</para>
+
+    <para>For Unit Commands the <replaceable>NAME</replaceable> represents full name of unit.
+    <programlisting>
+systemctl start foo.service
+    </programlisting>
+    For Unit File Commands the <replaceable>NAME</replaceable> represents full name of the unit file, or absolute path to the unit file.
+    <programlisting>
+systemctl start /path/to/foo.service
+    </programlisting>
+    While working with services/service files, <command>systemctl</command> is able to append .service suffix when it is missing.
+    <programlisting>
+systemctl start foo
+    </programlisting></para>
   </refsect1>
 
   <refsect1>
@@ -160,12 +173,27 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
 
       <varlistentry>
         <term><option>--after</option></term>
+
+        <listitem>
+          <para>With <command>list-dependencies</command>, show the
+          units that are ordered before the specified unit. In other
+          words, list the units that are in the <varname>After=</varname>
+          directive of the specified unit, have the specified unit in
+          their <varname>Before=</varname> directive, or are otherwise
+          implicit dependencies of the specified unit.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--before</option></term>
 
         <listitem>
-          <para>Show which units are started after or before
-          with <command>list-dependencies</command>, respectively.
-          </para>
+          <para>With <command>list-dependencies</command>, show the
+          units that are ordered after the specified unit. In other
+          words, list the units that are in the <varname>Before=</varname>
+          directive of the specified unit, have the specified unit in
+          their <varname>After=</varname> directive, or otherwise depend
+          on the specified unit.</para>
         </listitem>
       </varlistentry>
 
@@ -237,7 +265,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           sleep state. Any user may take these locks and privileged
           users may override these locks. If any locks are taken,
           shutdown and sleep state requests will normally fail
-          (regardless if privileged or not) and a list of active locks
+          (regardless of whether privileged or not) and a list of active locks
           is printed. However, if <option>--ignore-inhibitors</option>
           is specified, the locks are ignored and not printed, and the
           operation attempted anyway, possibly requiring additional
@@ -361,11 +389,36 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
 
         <listitem>
           <para>When used with <command>kill</command>, choose which
-          processes to kill. Must be one of <option>main</option>,
-          <option>control</option> or <option>all</option> to select
-          whether to kill only the main process of the unit, the
-          control process or all processes of the unit. If omitted,
-          defaults to <option>all</option>.</para>
+          processes to send a signal to. Must be one of
+          <option>main</option>, <option>control</option> or
+          <option>all</option> to select whether to kill only the main
+          process, the control process or all processes of the
+          unit. The main process of the unit is the one that defines
+          the life-time of it. A control process of a unit is one that
+          is invoked by the manager to induce state changes of it. For
+          example, all processes started due to the
+          <varname>ExecStartPre=</varname>,
+          <varname>ExecStop=</varname> or
+          <varname>ExecReload=</varname> settings of service units are
+          control processes. Note that there is only one control
+          process per unit at a time, as only one state change is
+          executed at a time. For services of type
+          <varname>Type=forking</varname> the initial process started
+          by the manager for <varname>ExecStart=</varname> is a
+          control process, while the process ultimately forked off by
+          that one is then considered the main process of the unit (if
+          it can be determined). This is different for service units
+          of other types, where the process forked off by the manager
+          for <varname>ExecStart=</varname> is always the main process
+          itself. A service unit consists of no or one main process,
+          no or one control process plus any number of additional
+          processes. Not all unit types manage processes of these
+          types however. For example for mount units control processes
+          are defined (which are the invocations of
+          <filename>/usr/bin/mount</filename> and
+          <filename>/usr/bin/umount</filename>), but no main process
+          is defined. If omitted, defaults to
+          <option>all</option>.</para>
         </listitem>
 
       </varlistentry>
@@ -424,7 +477,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
 
         <listitem>
           <para>When used with <command>enable</command>,
-          <command>disable</command>, <command>is-enabled</command>
+          <command>disable</command>,
           (and related commands), make changes only temporarily, so
           that they are lost on the next reboot. This will have the
           effect that changes are not made in subdirectories of
@@ -432,7 +485,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           with identical immediate effects, however, since the latter
           is lost on reboot, the changes are lost too.</para>
 
-          <para>Similar, when used with
+          <para>Similarly, when used with
           <command>set-property</command>, make changes only
           temporarily, so that they are lost on the next
           reboot.</para>
@@ -531,8 +584,7 @@ LISTEN           UNIT                        ACTIVATES
 [::]:22          sshd.socket                 sshd.service
 kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
 
-5 sockets listed.
-            </programlisting>
+5 sockets listed.</programlisting>
             Note: because the addresses might contains spaces, this output
             is not suitable for programmatic consumption.
             </para>
@@ -644,9 +696,8 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
           <listitem>
             <para>Send a signal to one or more processes of the
             unit. Use <option>--kill-who=</option> to select which
-            process to kill. Use <option>--kill-mode=</option> to select
-            the kill mode and <option>--signal=</option> to select the
-            signal to send.</para>
+            process to kill. Use <option>--signal=</option> to select
+            the signal to send.</para>
           </listitem>
         </varlistentry>
         <varlistentry>
@@ -654,21 +705,23 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
 
           <listitem>
             <para>Check whether any of the specified units are active
-            (i.e. running). Returns an exit code 0 if at least one is
-            active, non-zero otherwise. Unless <option>--quiet</option>
-            is specified, this will also print the current unit state to
-            STDOUT.</para>
+            (i.e. running). Returns an exit code
+            <constant>0</constant> if at least one is active, or
+            non-zero otherwise. Unless <option>--quiet</option> is
+            specified, this will also print the current unit state to
+            standard output.</para>
           </listitem>
         </varlistentry>
         <varlistentry>
           <term><command>is-failed <replaceable>NAME</replaceable>...</command></term>
 
           <listitem>
-            <para>Check whether any of the specified units are in a "failed" state.
-            Returns an exit code 0 if at least one has failed, non-zero
-            otherwise. Unless <option>--quiet</option> is specified, this
-            will also print the current unit state to
-            STDOUT.</para>
+            <para>Check whether any of the specified units are in a
+            "failed" state. Returns an exit code
+            <constant>0</constant> if at least one has failed,
+            non-zero otherwise. Unless <option>--quiet</option> is
+            specified, this will also print the current unit state to
+            standard output.</para>
           </listitem>
         </varlistentry>
         <varlistentry>
@@ -872,10 +925,64 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
 
           <listitem>
             <para>Checks whether any of the specified unit files are
-            enabled (as with <command>enable</command>). Returns an exit
-            code of 0 if at least one is enabled, non-zero
-            otherwise. Prints the current enable status. To suppress
-            this output, use <option>--quiet</option>.</para>
+            enabled (as with <command>enable</command>). Returns an
+            exit code of 0 if at least one is enabled, non-zero
+            otherwise. Prints the current enable status (see table).
+            To suppress this output, use <option>--quiet</option>.
+            </para>
+
+            <table>
+              <title>
+                <command>is-enabled</command> output
+              </title>
+
+              <tgroup cols='3'>
+                <thead>
+                  <row>
+                    <entry>Printed string</entry>
+                    <entry>Meaning</entry>
+                    <entry>Return value</entry>
+                  </row>
+                </thead>
+                <tbody>
+                  <row>
+                    <entry><literal>enabled</literal></entry>
+                    <entry morerows='1'>Enabled through a symlink in <filename>.wants</filename> directory (permanently or just in <filename>/run</filename>)</entry>
+                    <entry morerows='1'>0</entry>
+                  </row>
+                  <row>
+                    <entry><literal>enabled-runtime</literal></entry>
+                  </row>
+                  <row>
+                    <entry><literal>linked</literal></entry>
+                    <entry morerows='1'>Made available through a symlink to the unit file (permanently or just in <filename>/run</filename>)</entry>
+                    <entry morerows='1'>1</entry>
+                  </row>
+                  <row>
+                    <entry><literal>linked-runtime</literal></entry>
+                  </row>
+                  <row>
+                    <entry><literal>masked</literal></entry>
+                    <entry morerows='1'>Disabled entirely (permanently or just in <filename>/run</filename>)</entry>
+                    <entry morerows='1'>1</entry>
+                  </row>
+                  <row>
+                    <entry><literal>masked-runtime</literal></entry>
+                  </row>
+                  <row>
+                    <entry><literal>static</literal></entry>
+                    <entry>Unit is not enabled, but has no provisions for enabling in [Install] section</entry>
+                    <entry>0</entry>
+                  </row>
+                  <row>
+                    <entry><literal>disabled</literal></entry>
+                    <entry>Unit is not enabled</entry>
+                    <entry>1</entry>
+                  </row>
+                </tbody>
+              </tgroup>
+            </table>
+
           </listitem>
         </varlistentry>
 
@@ -1003,9 +1110,10 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
           <listitem>
             <para>Create a snapshot. If a snapshot name is specified,
             the new snapshot will be named after it. If none is
-            specified, an automatic snapshot name is generated. In either
-            case, the snapshot name used is printed to STDOUT, unless
-            <option>--quiet</option> is specified.</para>
+            specified, an automatic snapshot name is generated. In
+            either case, the snapshot name used is printed to standard
+            output, unless <option>--quiet</option> is specified.
+            </para>
 
             <para>A snapshot refers to a saved state of the systemd
             manager. It is implemented itself as a unit that is

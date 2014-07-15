@@ -41,7 +41,7 @@
         "   <arg name=\"who\" type=\"s\"/>\n"                           \
         "   <arg name=\"signal\" type=\"s\"/>\n"                        \
         "  </method>\n"                                                 \
-        "  <method name=\"TakeControl\"/>\n"                            \
+        "  <method name=\"TakeControl\">\n"                             \
         "   <arg name=\"force\" type=\"b\"/>\n"                         \
         "  </method>\n"                                                 \
         "  <method name=\"ReleaseControl\"/>\n"                         \
@@ -755,6 +755,7 @@ int session_send_create_reply(Session *s, DBusError *error) {
                                     DBUS_TYPE_OBJECT_PATH, &path,
                                     DBUS_TYPE_STRING, &s->user->runtime_path,
                                     DBUS_TYPE_UNIX_FD, &fifo_fd,
+                                    DBUS_TYPE_UINT32, &s->user->uid,
                                     DBUS_TYPE_STRING, &cseat,
                                     DBUS_TYPE_UINT32, &vtnr,
                                     DBUS_TYPE_BOOLEAN, &exists,

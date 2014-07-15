@@ -130,6 +130,14 @@
                         </varlistentry>
 
                         <varlistentry>
+                                <term><option>--no-legend</option></term>
+
+                                <listitem><para>Do not print the legend,
+                                        i.e. the column headers and the
+                                        footer.</para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
                                 <term><option>--no-ask-password</option></term>
 
                                 <listitem><para>Do not query the user
@@ -141,7 +149,7 @@
                                 <term><option>--kill-who=</option></term>
 
                                 <listitem><para>When used with
-                                <command>kill-machine</command>,
+                                <command>kill</command>,
                                 choose which processes to kill. Must
                                 be one of <option>leader</option>, or
                                 <option>all</option> to select whether
@@ -156,7 +164,7 @@
                                 <term><option>--signal=</option></term>
 
                                 <listitem><para>When used with
-                                <command>kill-machine</command>, choose
+                                <command>kill</command>, choose
                                 which signal to send to selected
                                 processes. Must be one of the
                                 well-known signal specifiers, such as

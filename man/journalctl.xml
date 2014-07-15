@@ -370,7 +370,7 @@
                                                         terse output only
                                                         showing the actual
                                                         message of each journal
-                                                        entry with no meta data,
+                                                        entry with no metadata,
                                                         not even a timestamp.
                                                         </para>
                                                 </listitem>
@@ -478,6 +478,17 @@
                         </varlistentry>
 
                         <varlistentry>
+                                <term><option>--list-boots</option></term>
+
+                                <listitem><para>Show a tabular list of
+                                boot numbers (relative to current
+                                boot), their IDs, and the timestamps
+                                of the first and last message
+                                pertaining to the boot.
+                                </para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
                                 <term><option>-k</option></term>
                                 <term><option>--dmesg</option></term>
 
@@ -498,6 +509,7 @@
                                 and additional matches for messages
                                 from systemd and messages about
                                 coredumps for the specified unit.</para>
+
                                 <para>This parameter can be specified multiple times.
                                 </para></listitem>
                         </varlistentry>
@@ -565,11 +577,23 @@
                         <varlistentry>
                                 <term><option>--after-cursor=</option></term>
 
-                                <listitem><para>Start showing entries from the
-                                location in the journal
-                                <emphasis>after</emphasis> the location
-                                specified by the this cursor.
-                                </para></listitem>
+                                <listitem><para>Start showing entries
+                                from the location in the journal
+                                <emphasis>after</emphasis> the
+                                location specified by the this cursor.
+                                The cursor is shown when the
+                                <option>--show-cursor</option> option
+                                is used.</para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
+                                <term><option>--show-cursor</option></term>
+
+                                <listitem><para>The cursor is shown after the last
+                                entry after two dashes:</para>
+                                <programlisting>-- cursor: s=0639...</programlisting>
+                                <para>The format of this the cursor is private
+                                and subject ot change.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
@@ -702,7 +726,7 @@
 
                         <varlistentry>
                                 <term><option>--list-catalog
-                                <optional><replaceable>ID128...</replaceable></optional>
+                                <optional><replaceable>128-bit-ID...</replaceable></optional>
                                 </option></term>
 
                                 <listitem><para>List the contents of
@@ -711,7 +735,7 @@
                                 description strings.</para>
 
                                 <para>If any
-                                <replaceable>ID128</replaceable>s are
+                                <replaceable>128-bit-ID</replaceable>s are
                                 specified, only those entries are shown.
                                 </para>
                                 </listitem>
@@ -719,7 +743,7 @@
 
                         <varlistentry>
                                 <term><option>--dump-catalog
-                                <optional><replaceable>ID128...</replaceable></optional>
+                                <optional><replaceable>128-bit-ID...</replaceable></optional>
                                 </option></term>
 
                                 <listitem><para>Show the contents of
@@ -730,7 +754,7 @@
                                 files.</para>
 
                                 <para>If any
-                                <replaceable>ID128</replaceable>s are
+                                <replaceable>128-bit-ID</replaceable>s are
                                 specified, only those entries are shown.
                                 </para>
                                 </listitem>
@@ -758,10 +782,14 @@
                                 sealing key is stored in the journal
                                 data directory and shall remain on the
                                 host. The verification key should be
-                                stored externally. Also see the
+                                stored externally. Refer to the
                                 <option>Seal=</option> option in
                                 <citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>
-                                for details.</para></listitem>
+                                for information on Forward Secure
+                                Sealing and for a link to a refereed
+                                scholarly paper detailing the
+                                cryptographic theory it is based on.
+                                </para></listitem>
                         </varlistentry>
 
                         <varlistentry>

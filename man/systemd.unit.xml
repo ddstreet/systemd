@@ -120,6 +120,17 @@
                 <citerefentry><refentrytitle>systemd.scope</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
                 </para>
 
+                <para>Various settings are allowed to be specified
+                more than once, in which case the interpretation
+                depends on the setting. Often, multiple settings form
+                a list, and setting to an empty value "resets", which
+                means that previous assignments are ignored. When this
+                is allowed, it is mentioned in the description of the
+                setting. Note that using multiple assignments to the
+                same value makes the unit file incompatible with
+                parsers for the XDG <filename>.desktop</filename> file
+                format.</para>
+
                 <para>Unit files are loaded from a set of paths
                 determined during compilation, described in the next section.
                 </para>
@@ -221,7 +232,7 @@
                 multiple units from a single configuration file. If
                 systemd looks for a unit configuration file, it will
                 first search for the literal unit name in the
-                filesystem. If that yields no success and the unit
+                file system. If that yields no success and the unit
                 name contains an <literal>@</literal> character, systemd will look for a
                 unit template that shares the same name but with the
                 instance string (i.e. the part between the <literal>@</literal> character
@@ -410,10 +421,12 @@
                                 of the other units gets deactivated or
                                 its activation fails, this unit will
                                 be deactivated. This option may be
-                                specified more than once, in which
-                                case requirement dependencies for all
-                                listed names are created. Note that
-                                requirement dependencies do not
+                                specified more than once or multiple
+                                space-separated units may be specified
+                                in one option in which case
+                                requirement dependencies for all
+                                listed names will be created. Note
+                                that requirement dependencies do not
                                 influence the order in which services
                                 are started or stopped. This has to be
                                 configured independently with the
@@ -476,22 +489,23 @@
                                 <term><varname>RequisiteOverridable=</varname></term>
 
                                 <listitem><para>Similar to
-                                <varname>Requires=</varname>
-                                and <varname>RequiresOverridable=</varname>, respectively. However,
-                                if a unit listed here is not started
-                                already it will not be started and the
-                                transaction fails
-                                immediately.</para></listitem>
+                                <varname>Requires=</varname> and
+                                <varname>RequiresOverridable=</varname>,
+                                respectively. However, if the units
+                                listed here are not started already
+                                they will not be started and the
+                                transaction will fail immediately.
+                                </para></listitem>
                         </varlistentry>
 
                         <varlistentry>
                                 <term><varname>Wants=</varname></term>
 
                                 <listitem><para>A weaker version of
-                                <varname>Requires=</varname>. A unit
+                                <varname>Requires=</varname>. Units
                                 listed in this option will be started
                                 if the configuring unit is. However,
-                                if the listed unit fails to start up
+                                if the listed units fail to start
                                 or cannot be added to the transaction
                                 this has no impact on the validity of
                                 the transaction as a whole. This is
@@ -501,8 +515,8 @@
 
                                 <para>Note that dependencies of this
                                 type may also be configured outside of
-                                the unit configuration file by
-                                adding a symlink to a
+                                the unit configuration file by adding
+                                symlinks to a
                                 <filename>.wants/</filename> directory
                                 accompanying the unit file. For
                                 details see above.</para></listitem>
@@ -534,7 +548,7 @@
                                 of units. When systemd stops or restarts
                                 the units listed here, the action is
                                 propagated to this unit.
-                                Note that this is a one way dependency -
+                                Note that this is a one-way dependency —
                                 changes to this unit do not affect the
                                 listed units.
                                 </para></listitem>
@@ -543,12 +557,12 @@
                         <varlistentry>
                                 <term><varname>Conflicts=</varname></term>
 
-                                <listitem><para>Configures negative
+                                <listitem><para>A space-separated list
+                                of unit names. Configures negative
                                 requirement dependencies. If a unit
-                                has a
-                                <varname>Conflicts=</varname> setting
-                                on another unit, starting the former
-                                will stop the latter and vice
+                                has a <varname>Conflicts=</varname>
+                                setting on another unit, starting the
+                                former will stop the latter and vice
                                 versa. Note that this setting is
                                 independent of and orthogonal to the
                                 <varname>After=</varname> and
@@ -575,7 +589,8 @@
                                 <term><varname>Before=</varname></term>
                                 <term><varname>After=</varname></term>
 
-                                <listitem><para>Configures ordering
+                                <listitem><para>A space-separated list
+                                of unit names. Configures ordering
                                 dependencies between units. If a unit
                                 <filename>foo.service</filename>
                                 contains a setting
@@ -619,23 +634,23 @@
                                 dependency on another unit is shut
                                 down while the latter is started up,
                                 the shut down is ordered before the
-                                start-up regardless whether the
+                                start-up regardless of whether the
                                 ordering dependency is actually of
                                 type <varname>After=</varname> or
                                 <varname>Before=</varname>. If two
                                 units have no ordering dependencies
-                                between them, they are shut down
-                                or started up simultaneously, and
-                                no ordering takes
+                                between them, they are shut down or
+                                started up simultaneously, and no
+                                ordering takes
                                 place. </para></listitem>
                         </varlistentry>
 
                         <varlistentry>
                                 <term><varname>OnFailure=</varname></term>
 
-                                <listitem><para>Lists one or more
-                                units that are activated when this
-                                unit enters the
+                                <listitem><para>A space-separated list
+                                of one or more units that are
+                                activated when this unit enters the
                                 <literal>failed</literal>
                                 state.</para></listitem>
                         </varlistentry>
@@ -644,28 +659,42 @@
                                 <term><varname>PropagatesReloadTo=</varname></term>
                                 <term><varname>ReloadPropagatedFrom=</varname></term>
 
-                                <listitem><para>Lists one or more
-                                units where reload requests on the
-                                unit will be propagated to/on the
-                                other unit will be propagated
-                                from. Issuing a reload request on a
-                                unit will automatically also enqueue a
-                                reload request on all units that the
-                                reload request shall be propagated to
-                                via these two
-                                settings.</para></listitem>
+                                <listitem><para>A space-separated list
+                                of one or more units where reload
+                                requests on this unit will be
+                                propagated to, or reload requests on
+                                the other unit will be propagated to
+                                this unit, respectively. Issuing a
+                                reload request on a unit will
+                                automatically also enqueue a reload
+                                request on all units that the reload
+                                request shall be propagated to via
+                                these two settings.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
                                 <term><varname>RequiresMountsFor=</varname></term>
 
-                                <listitem><para>Takes a space-separated
-                                list of absolute paths. Automatically
-                                adds dependencies of type
-                                <varname>Requires=</varname> and
-                                <varname>After=</varname> for all
+                                <listitem><para>Takes a
+                                space-separated list of absolute
+                                paths. Automatically adds dependencies
+                                of type <varname>Requires=</varname>
+                                and <varname>After=</varname> for all
                                 mount units required to access the
-                                specified path.</para></listitem>
+                                specified path.</para>
+
+                                <para>Mount points marked with
+                                <option>noauto</option> are not
+                                mounted automatically and will be
+                                ignored for the purposes of this
+                                option. If such a mount should be a
+                                requirement for this unit,
+                                direct dependencies on the mount
+                                units may be added
+                                (<varname>Requires=</varname> and
+                                <varname>After=</varname> or
+                                some other combination).
+                                </para></listitem>
                         </varlistentry>
 
                         <varlistentry>
@@ -922,7 +951,7 @@
                                 exists, is a regular file and marked
                                 executable.</para>
 
-                                <para>Similar,
+                                <para>Similarly,
                                 <varname>ConditionKernelCommandLine=</varname>
                                 may be used to check whether a
                                 specific kernel command line option is
@@ -1089,32 +1118,34 @@
                         <varlistentry>
                                 <term><varname>Alias=</varname></term>
 
-                                <listitem><para>Additional names this
-                                unit shall be installed under. The
-                                names listed here must have the same
-                                suffix (i.e. type) as the unit file
-                                name. This option may be specified
-                                more than once, in which case all
-                                listed names are used. At installation
-                                time,
-                                <command>systemctl enable</command>
-                                will create symlinks from these names
-                                to the unit filename.</para></listitem>
+                                <listitem><para>A space-seperated list
+                                of additional names this unit shall be
+                                installed under. The names listed here
+                                must have the same suffix (i.e. type)
+                                as the unit file name. This option may
+                                be specified more than once, in which
+                                case all listed names are used. At
+                                installation time, <command>systemctl
+                                enable</command> will create symlinks
+                                from these names to the unit
+                                filename.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
                                 <term><varname>WantedBy=</varname></term>
                                 <term><varname>RequiredBy=</varname></term>
 
-                                <listitem><para>A symbolic link is
-                                created in the
-                                <filename>.wants/</filename> or
-                                <filename>.requires/</filename> directory
-                                of the listed unit when this unit is
-                                activated by <command>systemctl
-                                enable</command>.  This has the effect
-                                that a dependency of type
-                                <varname>Wants=</varname> or
+                                <listitem><para>This option may be
+                                used more than once, or a
+                                space-separated list of unit names may
+                                be given. A symbolic link is created
+                                in the <filename>.wants/</filename> or
+                                <filename>.requires/</filename>
+                                directory of each of the listed units
+                                when this unit is installed by
+                                <command>systemctl enable</command>.
+                                This has the effect that a dependency
+                                of type <varname>Wants=</varname> or
                                 <varname>Requires=</varname> is added
                                 from the listed unit to the current
                                 unit. The primary result is that the
@@ -1160,7 +1191,12 @@
                                 and <command>systemctl
                                 disable</command> will automatically
                                 install/uninstall units listed in this option as
-                                well.</para></listitem>
+                                well.</para>
+
+                                <para>This option may be used more
+                                than once, or a space-separated list
+                                of unit names may be
+                                given.</para></listitem>
                         </varlistentry>
                 </variablelist>
 

@@ -27,6 +27,9 @@
 #define DEFAULT_RESTART_USEC (100*USEC_PER_MSEC)
 #define DEFAULT_CONFIRM_USEC (30*USEC_PER_SEC)
 
+#define DEFAULT_START_LIMIT_INTERVAL (10*USEC_PER_SEC)
+#define DEFAULT_START_LIMIT_BURST 5
+
 #define DEFAULT_EXIT_USEC (5*USEC_PER_MINUTE)
 
 #define SYSTEMD_CGROUP_CONTROLLER "name=systemd"
@@ -38,3 +41,16 @@
 #define LOWERCASE_LETTERS "abcdefghijklmnopqrstuvwxyz"
 #define UPPERCASE_LETTERS "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 #define LETTERS LOWERCASE_LETTERS UPPERCASE_LETTERS
+
+#ifdef HAVE_SPLIT_USR
+#define KBD_KEYMAP_DIRS                         \
+        "/usr/share/keymaps/\0"                 \
+        "/usr/share/kbd/keymaps/\0"             \
+        "/usr/lib/kbd/keymaps/\0"               \
+        "/lib/kbd/keymaps/\0"
+#else
+#define KBD_KEYMAP_DIRS                         \
+        "/usr/share/keymaps/\0"                 \
+        "/usr/share/kbd/keymaps/\0"             \
+        "/usr/lib/kbd/keymaps/\0"
+#endif

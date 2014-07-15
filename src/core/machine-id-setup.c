@@ -73,7 +73,7 @@ static int generate(char id[34]) {
         fd = open("/var/lib/dbus/machine-id", O_RDONLY|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW);
         if (fd >= 0) {
                 k = loop_read(fd, id, 33, false);
-                close_nointr_nofail(fd);
+                safe_close(fd);
 
                 if (k == 33 && id[32] == '\n') {
 
@@ -84,29 +84,6 @@ static int generate(char id[34]) {
 
                                 log_info("Initializing machine ID from D-Bus machine ID.");
                                 return 0;
-                        }
-                }
-        }
-
-        /* If that didn't work, see if we are running in qemu/kvm and a
-         * machine ID was passed in via -uuid on the qemu/kvm command
-         * line */
-
-        r = detect_vm(&vm_id);
-        if (r > 0 && streq(vm_id, "kvm")) {
-                char uuid[37];
-
-                fd = open("/sys/class/dmi/id/product_uuid", O_RDONLY|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW);
-                if (fd >= 0) {
-                        k = loop_read(fd, uuid, 36, false);
-                        close_nointr_nofail(fd);
-
-                        if (k >= 36) {
-                                r = shorten_uuid(id, uuid);
-                                if (r >= 0) {
-                                        log_info("Initializing machine ID from KVM UUID.");
-                                        return 0;
-                                }
                         }
                 }
         }
@@ -125,6 +102,30 @@ static int generate(char id[34]) {
                                 if (r >= 0) {
                                         log_info("Initializing machine ID from container UUID.");
                                         return 0;
+                                }
+                        }
+                }
+
+        } else {
+                /* If we are not running in a container, see if we are
+                 * running in qemu/kvm and a machine ID was passed in
+                 * via -uuid on the qemu/kvm command line */
+
+                r = detect_vm(&vm_id);
+                if (r > 0 && streq(vm_id, "kvm")) {
+                        char uuid[37];
+
+                        fd = open("/sys/class/dmi/id/product_uuid", O_RDONLY|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW);
+                        if (fd >= 0) {
+                                k = loop_read(fd, uuid, 36, false);
+                                safe_close(fd);
+
+                                if (k >= 36) {
+                                        r = shorten_uuid(id, uuid);
+                                        if (r >= 0) {
+                                                log_info("Initializing machine ID from KVM UUID.");
+                                                return 0;
+                                        }
                                 }
                         }
                 }
@@ -204,8 +205,7 @@ int machine_id_setup(void) {
                         return 0;
         }
 
-        close_nointr_nofail(fd);
-        fd = -1;
+        fd = safe_close(fd);
 
         /* Hmm, we couldn't write it? So let's write it to
          * /run/machine-id as a replacement */

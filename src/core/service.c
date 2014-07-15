@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <sys/reboot.h>
 
+#include "async.h"
 #include "manager.h"
 #include "unit.h"
 #include "service.h"
@@ -130,9 +131,9 @@ static void service_init(Unit *u) {
         assert(u);
         assert(u->load_state == UNIT_STUB);
 
-        s->timeout_start_usec = DEFAULT_TIMEOUT_USEC;
-        s->timeout_stop_usec = DEFAULT_TIMEOUT_USEC;
-        s->restart_usec = DEFAULT_RESTART_USEC;
+        s->timeout_start_usec = u->manager->default_timeout_start_usec;
+        s->timeout_stop_usec = u->manager->default_timeout_stop_usec;
+        s->restart_usec = u->manager->default_restart_usec;
         s->type = _SERVICE_TYPE_INVALID;
 
         watch_init(&s->watchdog_watch);
@@ -149,7 +150,9 @@ static void service_init(Unit *u) {
         kill_context_init(&s->kill_context);
         cgroup_context_init(&s->cgroup_context);
 
-        RATELIMIT_INIT(s->start_limit, 10*USEC_PER_SEC, 5);
+        RATELIMIT_INIT(s->start_limit,
+                       u->manager->default_start_limit_interval,
+                       u->manager->default_start_limit_burst);
 
         s->control_command_id = _SERVICE_EXEC_COMMAND_INVALID;
 }
@@ -226,8 +229,7 @@ static void service_close_socket_fd(Service *s) {
         if (s->socket_fd < 0)
                 return;
 
-        close_nointr_nofail(s->socket_fd);
-        s->socket_fd = -1;
+        s->socket_fd = asynchronous_close(s->socket_fd);
 }
 
 static void service_connection_unref(Service *s) {
@@ -362,11 +364,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
         static const char * const table[] = {
                 /* LSB defined facilities */
                 "local_fs",             SPECIAL_LOCAL_FS_TARGET,
-                /* Due to unfortunate name selection in Mandriva,
-                 * $network is provided by network-up which is ordered
-                 * after network which actually starts interfaces.
-                 * To break the loop, just ignore it */
-                "network",              SPECIAL_NETWORK_TARGET,
+                "network",              SPECIAL_NETWORK_ONLINE_TARGET,
                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
                 "portmap",              SPECIAL_RPCBIND_TARGET,
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
@@ -840,7 +838,11 @@ if (startswith_no_case(t, "description:")) {
                                         if (r == 0)
                                                 continue;
 
-                                        r = unit_add_dependency_by_name(u, startswith_no_case(t, "X-Start-Before:") ? UNIT_BEFORE : UNIT_AFTER, m, NULL, true);
+                                        if (streq(m, SPECIAL_NETWORK_ONLINE_TARGET) && !startswith_no_case(t, "X-Start-Before:"))
+                                                /* the network-online target is special, as it needs to be actively pulled in */
+                                                r = unit_add_two_dependencies_by_name(u, UNIT_AFTER, UNIT_WANTS, m, NULL, true);
+                                        else
+                                                r = unit_add_dependency_by_name(u, startswith_no_case(t, "X-Start-Before:") ? UNIT_BEFORE : UNIT_AFTER, m, NULL, true);
 
                                         if (r < 0)
                                                 log_error_unit(u->id, "[%s:%u] Failed to add dependency on %s, ignoring: %s",
@@ -1448,6 +1450,20 @@ static int service_load_pid_file(Service *s, bool may_warn) {
                 return -ESRCH;
         }
 
+        r = get_process_state(pid);
+        if (r < 0) {
+                if (may_warn)
+                        log_info_unit(UNIT(s)->id, "Failed to read /proc/%d/stat: %s",
+                                      pid, strerror(-r));
+                return r;
+        } else if (r == 'Z') {
+                if (may_warn)
+                        log_info_unit(UNIT(s)->id,
+                                      "PID %lu read from file %s is a zombie.",
+                                      (unsigned long) pid, s->pid_file);
+                return -ESRCH;
+        }
+
         if (s->main_pid_known) {
                 if (pid == s->main_pid)
                         return 0;
@@ -1565,6 +1581,11 @@ static void service_set_state(Service *s, ServiceState state) {
                 s->control_command_id = _SERVICE_EXEC_COMMAND_INVALID;
         }
 
+        if (state == SERVICE_DEAD ||
+            state == SERVICE_FAILED ||
+            state == SERVICE_AUTO_RESTART)
+                unit_unwatch_all_pids(UNIT(s));
+
         if (state != SERVICE_START_PRE &&
             state != SERVICE_START &&
             state != SERVICE_START_POST &&
@@ -1588,6 +1609,22 @@ static void service_set_state(Service *s, ServiceState state) {
          * but for exit we have to do that ourselves... */
         if (state == SERVICE_EXITED && UNIT(s)->manager->n_reloading <= 0)
                 unit_destroy_cgroup(UNIT(s));
+
+        /* For remain_after_exit services, let's see if we can "release" the
+         * hold on the console, since unit_notify() only does that in case of
+         * change of state */
+        if (state == SERVICE_EXITED && s->remain_after_exit &&
+            UNIT(s)->manager->n_on_console > 0) {
+                ExecContext *ec = unit_get_exec_context(UNIT(s));
+                if (ec && exec_context_may_touch_console(ec)) {
+                        Manager *m = UNIT(s)->manager;
+
+                        m->n_on_console --;
+                        if (m->n_on_console == 0)
+                                /* unset no_console_output flag, since the console is free */
+                                m->no_console_output = false;
+                }
+        }
 
         if (old_state != state)
                 log_debug_unit(UNIT(s)->id,
@@ -1664,8 +1701,14 @@ static int service_coldplug(Unit *u) {
                                         return r;
                         }
 
+                if (s->deserialized_state != SERVICE_DEAD &&
+                    s->deserialized_state != SERVICE_FAILED &&
+                    s->deserialized_state != SERVICE_AUTO_RESTART)
+                        unit_watch_all_pids(UNIT(s));
+
                 if (s->deserialized_state == SERVICE_START_POST ||
-                    s->deserialized_state == SERVICE_RUNNING)
+                    s->deserialized_state == SERVICE_RUNNING ||
+                    s->deserialized_state == SERVICE_RELOAD)
                         service_handle_watchdog(s);
 
                 service_set_state(s, s->deserialized_state);
@@ -1973,6 +2016,7 @@ static void service_enter_stop_post(Service *s, ServiceResult f) {
                 s->result = f;
 
         service_unwatch_control_pid(s);
+        unit_watch_all_pids(UNIT(s));
 
         s->control_command = s->exec_command[SERVICE_EXEC_STOP_POST];
         if (s->control_command) {
@@ -2012,6 +2056,8 @@ static void service_enter_signal(Service *s, ServiceState state, ServiceResult f
 
         if (f != SERVICE_SUCCESS)
                 s->result = f;
+
+        unit_watch_all_pids(UNIT(s));
 
         r = unit_kill_context(
                         UNIT(s),
@@ -2058,6 +2104,7 @@ static void service_enter_stop(Service *s, ServiceResult f) {
                 s->result = f;
 
         service_unwatch_control_pid(s);
+        unit_watch_all_pids(UNIT(s));
 
         s->control_command = s->exec_command[SERVICE_EXEC_STOP];
         if (s->control_command) {
@@ -2672,6 +2719,9 @@ static int service_serialize(Unit *u, FILE *f, FDSet *fds) {
         if (s->exec_context.var_tmp_dir)
                 unit_serialize_item(u, f, "var-tmp-dir", s->exec_context.var_tmp_dir);
 
+        if (s->forbid_restart)
+                unit_serialize_item(u, f, "forbid-restart", yes_no(s->forbid_restart));
+
         return 0;
 }
 
@@ -2761,8 +2811,7 @@ static int service_deserialize_item(Unit *u, const char *key, const char *value,
                         log_debug_unit(u->id, "Failed to parse socket-fd value %s", value);
                 else {
 
-                        if (s->socket_fd >= 0)
-                                close_nointr_nofail(s->socket_fd);
+                        asynchronous_close(s->socket_fd);
                         s->socket_fd = fdset_remove(fds, fd);
                 }
         } else if (streq(key, "main-exec-status-pid")) {
@@ -2808,6 +2857,14 @@ static int service_deserialize_item(Unit *u, const char *key, const char *value,
                         return log_oom();
 
                 s->exec_context.var_tmp_dir = t;
+        } else if (streq(key, "forbid-restart")) {
+                int b;
+
+                b = parse_boolean(value);
+                if (b < 0)
+                        log_debug_unit(u->id, "Failed to parse forbid-restart value %s", value);
+                else
+                        s->forbid_restart = b;
         } else
                 log_debug_unit(u->id, "Unknown serialization key '%s'", key);
 
@@ -2951,6 +3008,62 @@ static void service_fd_event(Unit *u, int fd, uint32_t events, Watch *w) {
 fail:
         service_unwatch_pid_file(s);
         service_enter_signal(s, SERVICE_STOP_SIGTERM, SERVICE_FAILURE_RESOURCES);
+}
+
+static void service_notify_cgroup_empty_event(Unit *u) {
+        Service *s = SERVICE(u);
+
+        assert(u);
+
+        log_debug_unit(u->id, "%s: cgroup is empty", u->id);
+
+        switch (s->state) {
+
+                /* Waiting for SIGCHLD is usually more interesting,
+                 * because it includes return codes/signals. Which is
+                 * why we ignore the cgroup events for most cases,
+                 * except when we don't know pid which to expect the
+                 * SIGCHLD for. */
+
+        case SERVICE_START:
+        case SERVICE_START_POST:
+                /* If we were hoping for the daemon to write its PID file,
+                 * we can give up now. */
+                if (s->pid_file_pathspec) {
+                        log_warning_unit(u->id,
+                                         "%s never wrote its PID file. Failing.", UNIT(s)->id);
+                        service_unwatch_pid_file(s);
+                        if (s->state == SERVICE_START)
+                                service_enter_signal(s, SERVICE_FINAL_SIGTERM, SERVICE_FAILURE_RESOURCES);
+                        else
+                                service_enter_stop(s, SERVICE_FAILURE_RESOURCES);
+                }
+                break;
+
+        case SERVICE_RUNNING:
+                /* service_enter_running() will figure out what to do */
+                service_enter_running(s, SERVICE_SUCCESS);
+                break;
+
+        case SERVICE_STOP_SIGTERM:
+        case SERVICE_STOP_SIGKILL:
+
+                if (main_pid_good(s) <= 0 && !control_pid_good(s))
+                        service_enter_stop_post(s, SERVICE_SUCCESS);
+
+                break;
+
+        case SERVICE_STOP_POST:
+        case SERVICE_FINAL_SIGTERM:
+        case SERVICE_FINAL_SIGKILL:
+                if (main_pid_good(s) <= 0 && !control_pid_good(s))
+                        service_enter_dead(s, SERVICE_SUCCESS, true);
+
+                break;
+
+        default:
+                ;
+        }
 }
 
 static void service_sigchld_event(Unit *u, pid_t pid, int code, int status) {
@@ -3221,6 +3334,18 @@ static void service_sigchld_event(Unit *u, pid_t pid, int code, int status) {
 
         /* Notify clients about changed exit status */
         unit_add_to_dbus_queue(u);
+
+        /* We got one SIGCHLD for the service, let's watch all
+         * processes that are now running of the service, and watch
+         * that. Among the PIDs we then watch will be children
+         * reassigned to us, which hopefully allows us to identify
+         * when all children are gone */
+        unit_tidy_watch_pids(u, s->main_pid, s->control_pid);
+        unit_watch_all_pids(u);
+
+        /* If the PID set is empty now, then let's finish this off */
+        if (set_isempty(u->pids))
+                service_notify_cgroup_empty_event(u);
 }
 
 static void service_timer_event(Unit *u, uint64_t elapsed, Watch* w) {
@@ -3324,61 +3449,6 @@ static void service_timer_event(Unit *u, uint64_t elapsed, Watch* w) {
         }
 }
 
-static void service_notify_cgroup_empty_event(Unit *u) {
-        Service *s = SERVICE(u);
-
-        assert(u);
-
-        log_debug_unit(u->id, "%s: cgroup is empty", u->id);
-
-        switch (s->state) {
-
-                /* Waiting for SIGCHLD is usually more interesting,
-                 * because it includes return codes/signals. Which is
-                 * why we ignore the cgroup events for most cases,
-                 * except when we don't know pid which to expect the
-                 * SIGCHLD for. */
-
-        case SERVICE_START:
-        case SERVICE_START_POST:
-                /* If we were hoping for the daemon to write its PID file,
-                 * we can give up now. */
-                if (s->pid_file_pathspec) {
-                        log_warning_unit(u->id,
-                                         "%s never wrote its PID file. Failing.", UNIT(s)->id);
-                        service_unwatch_pid_file(s);
-                        if (s->state == SERVICE_START)
-                                service_enter_signal(s, SERVICE_FINAL_SIGTERM, SERVICE_FAILURE_RESOURCES);
-                        else
-                                service_enter_stop(s, SERVICE_FAILURE_RESOURCES);
-                }
-                break;
-
-        case SERVICE_RUNNING:
-                /* service_enter_running() will figure out what to do */
-                service_enter_running(s, SERVICE_SUCCESS);
-                break;
-
-        case SERVICE_STOP_SIGTERM:
-        case SERVICE_STOP_SIGKILL:
-
-                if (main_pid_good(s) <= 0 && !control_pid_good(s))
-                        service_enter_stop_post(s, SERVICE_SUCCESS);
-
-                break;
-
-        case SERVICE_FINAL_SIGTERM:
-        case SERVICE_FINAL_SIGKILL:
-                if (main_pid_good(s) <= 0 && !control_pid_good(s))
-                        service_enter_dead(s, SERVICE_SUCCESS, true);
-
-                break;
-
-        default:
-                ;
-        }
-}
-
 static void service_notify_message(Unit *u, pid_t pid, char **tags) {
         Service *s = SERVICE(u);
         const char *e;
@@ -3392,7 +3462,7 @@ static void service_notify_message(Unit *u, pid_t pid, char **tags) {
                 return;
         }
 
-        if (s->notify_access == NOTIFY_MAIN && pid != s->main_pid) {
+        if (s->notify_access == NOTIFY_MAIN && s->main_pid != 0 && pid != s->main_pid) {
                 log_warning_unit(u->id,
                                  "%s: Got notification message from PID %lu, but reception only permitted for PID %lu",
                                  u->id, (unsigned long) pid, (unsigned long) s->main_pid);

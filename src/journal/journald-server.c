@@ -158,9 +158,18 @@ static uint64_t available_space(Server *s, bool verbose) {
         }
 
         ss_avail = ss.f_bsize * ss.f_bavail;
-        avail = ss_avail > m->keep_free ? ss_avail - m->keep_free : 0;
 
-        s->cached_available_space = MIN(m->max_use, avail) > sum ? MIN(m->max_use, avail) - sum : 0;
+        /* If we reached a high mark, we will always allow this much
+         * again, unless usage goes above max_use. This watermark
+         * value is cached so that we don't give up space on pressure,
+         * but hover below the maximum usage. */
+
+        if (m->use < sum)
+                m->use = sum;
+
+        avail = LESS_BY(ss_avail, m->keep_free);
+
+        s->cached_available_space = LESS_BY(MIN(m->max_use, avail), sum);
         s->cached_available_space_timestamp = ts;
 
         if (verbose) {
@@ -168,13 +177,14 @@ static uint64_t available_space(Server *s, bool verbose) {
                         fb4[FORMAT_BYTES_MAX], fb5[FORMAT_BYTES_MAX];
 
                 server_driver_message(s, SD_MESSAGE_JOURNAL_USAGE,
-                                      "%s journal is using %s (max %s, leaving %s of free %s, current limit %s).",
+                                      "%s journal is using %s (max allowed %s, "
+                                      "trying to leave %s free of %s available → current limit %s).",
                                       s->system_journal ? "Permanent" : "Runtime",
                                       format_bytes(fb1, sizeof(fb1), sum),
                                       format_bytes(fb2, sizeof(fb2), m->max_use),
                                       format_bytes(fb3, sizeof(fb3), m->keep_free),
                                       format_bytes(fb4, sizeof(fb4), ss_avail),
-                                      format_bytes(fb5, sizeof(fb5), MIN(m->max_use, avail)));
+                                      format_bytes(fb5, sizeof(fb5), s->cached_available_space + sum));
         }
 
         return s->cached_available_space;
@@ -321,8 +331,10 @@ void server_rotate(Server *s) {
                 if (r < 0)
                         if (f)
                                 log_error("Failed to rotate %s: %s", f->path, strerror(-r));
-                        else
+                        else {
                                 log_error("Failed to create user journal: %s", strerror(-r));
+                                hashmap_remove(s->user_journals, k);
+                        }
                 else {
                         hashmap_replace(s->user_journals, k, f);
                         server_fix_perms(s, f, PTR_TO_UINT32(k));
@@ -376,7 +388,7 @@ void server_vacuum(Server *s) {
         if (s->system_journal) {
                 char *p = strappenda("/var/log/journal/", ids);
 
-                r = journal_directory_vacuum(p, s->system_metrics.max_use, s->system_metrics.keep_free, s->max_retention_usec, &s->oldest_file_usec);
+                r = journal_directory_vacuum(p, s->system_metrics.max_use, s->max_retention_usec, &s->oldest_file_usec);
                 if (r < 0 && r != -ENOENT)
                         log_error("Failed to vacuum %s: %s", p, strerror(-r));
         }
@@ -384,7 +396,7 @@ void server_vacuum(Server *s) {
         if (s->runtime_journal) {
                 char *p = strappenda("/run/log/journal/", ids);
 
-                r = journal_directory_vacuum(p, s->runtime_metrics.max_use, s->runtime_metrics.keep_free, s->max_retention_usec, &s->oldest_file_usec);
+                r = journal_directory_vacuum(p, s->runtime_metrics.max_use, s->max_retention_usec, &s->oldest_file_usec);
                 if (r < 0 && r != -ENOENT)
                         log_error("Failed to vacuum %s: %s", p, strerror(-r));
         }
@@ -624,6 +636,9 @@ static void dispatch_message_real(
                         }
 
                         free(c);
+                } else if (unit_id) {
+                        x = strappenda("_SYSTEMD_UNIT=", unit_id);
+                        IOVEC_SET_STRING(iovec[n++], x);
                 }
 
 #ifdef HAVE_SELINUX
@@ -966,9 +981,12 @@ static int system_journal_open(Server *s) {
 }
 
 int server_flush_to_var(Server *s) {
-        int r;
         sd_id128_t machine;
         sd_journal *j = NULL;
+        char ts[FORMAT_TIMESPAN_MAX];
+        usec_t start;
+        unsigned n = 0;
+        int r;
 
         assert(s);
 
@@ -985,6 +1003,8 @@ int server_flush_to_var(Server *s) {
                 return 0;
 
         log_debug("Flushing to /var...");
+
+        start = now(CLOCK_MONOTONIC);
 
         r = sd_id128_get_machine(&machine);
         if (r < 0)
@@ -1004,6 +1024,8 @@ int server_flush_to_var(Server *s) {
 
                 f = j->current_file;
                 assert(f && f->current_offset > 0);
+
+                n++;
 
                 r = journal_file_move_to_object(f, OBJECT_ENTRY, f->current_offset, &o);
                 if (r < 0) {
@@ -1047,6 +1069,8 @@ finish:
                 rm_rf("/run/log/journal", false, true, false);
 
         sd_journal_close(j);
+
+        server_driver_message(s, SD_ID128_NULL, "Time spent on flushing to /var is %s for %u entries.", format_timespan(ts, sizeof(ts), now(CLOCK_MONOTONIC) - start, 0), n);
 
         return r;
 }
@@ -1614,26 +1638,13 @@ void server_done(Server *s) {
 
         hashmap_free(s->user_journals);
 
-        if (s->epoll_fd >= 0)
-                close_nointr_nofail(s->epoll_fd);
-
-        if (s->signal_fd >= 0)
-                close_nointr_nofail(s->signal_fd);
-
-        if (s->syslog_fd >= 0)
-                close_nointr_nofail(s->syslog_fd);
-
-        if (s->native_fd >= 0)
-                close_nointr_nofail(s->native_fd);
-
-        if (s->stdout_fd >= 0)
-                close_nointr_nofail(s->stdout_fd);
-
-        if (s->dev_kmsg_fd >= 0)
-                close_nointr_nofail(s->dev_kmsg_fd);
-
-        if (s->sync_timer_fd >= 0)
-                close_nointr_nofail(s->sync_timer_fd);
+        safe_close(s->epoll_fd);
+        safe_close(s->signal_fd);
+        safe_close(s->syslog_fd);
+        safe_close(s->native_fd);
+        safe_close(s->stdout_fd);
+        safe_close(s->dev_kmsg_fd);
+        safe_close(s->sync_timer_fd);
 
         if (s->rate_limit)
                 journal_rate_limit_free(s->rate_limit);

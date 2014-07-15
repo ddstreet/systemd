@@ -523,6 +523,7 @@ static int bus_manager_create_session(Manager *m, DBusMessage *message) {
                                 DBUS_TYPE_OBJECT_PATH, &path,
                                 DBUS_TYPE_STRING, &session->user->runtime_path,
                                 DBUS_TYPE_UNIX_FD, &fifo_fd,
+                                DBUS_TYPE_UINT32, &session->user->uid,
                                 DBUS_TYPE_STRING, &cseat,
                                 DBUS_TYPE_UINT32, &vtnr,
                                 DBUS_TYPE_BOOLEAN, &exists,
@@ -794,7 +795,7 @@ static int bus_manager_inhibit(
                 goto fail;
         }
 
-        close_nointr_nofail(fifo_fd);
+        safe_close(fifo_fd);
         *_reply = reply;
         reply = NULL;
 
@@ -806,8 +807,7 @@ fail:
         if (i)
                 inhibitor_free(i);
 
-        if (fifo_fd >= 0)
-                close_nointr_nofail(fifo_fd);
+        safe_close(fifo_fd);
 
         return r;
 }
@@ -1301,18 +1301,24 @@ static int bus_manager_do_shutdown_or_sleep(
                 r = verify_polkit(connection, message, action_multiple_sessions, interactive, NULL, error);
                 if (r < 0)
                         return r;
+                if (r == 0)
+                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
         }
 
         if (blocked) {
                 r = verify_polkit(connection, message, action_ignore_inhibit, interactive, NULL, error);
                 if (r < 0)
                         return r;
+                if (r == 0)
+                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
         }
 
         if (!multiple_sessions && !blocked) {
                 r = verify_polkit(connection, message, action, interactive, NULL, error);
                 if (r < 0)
                         return r;
+                if (r == 0)
+                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
         }
 
         r = bus_manager_shutdown_or_sleep_now_or_later(m, unit_name, w, error);
@@ -1745,13 +1751,7 @@ static DBusHandlerResult manager_message_handler(
                 if (!session)
                         return bus_send_error_reply(connection, message, &error, -ENOENT);
 
-                /* We use the FIFO to detect stray sessions where the
-                process invoking PAM dies abnormally. We need to make
-                sure that that process is not killed if at the clean
-                end of the session it closes the FIFO. Hence, with
-                this call explicitly turn off the FIFO logic, so that
-                the PAM code can finish clean up on its own */
-                session_remove_fifo(session);
+                session_release(session);
 
                 reply = dbus_message_new_method_return(message);
                 if (!reply)
@@ -2549,14 +2549,13 @@ int manager_start_scope(
                 const char *slice,
                 const char *description,
                 const char *after,
-                const char *kill_mode,
+                const char *after2,
                 DBusError *error,
                 char **job) {
 
-        const char *timeout_stop_property = "TimeoutStopUSec", *send_sighup_property = "SendSIGHUP", *pids_property = "PIDs";
+        const char *send_sighup_property = "SendSIGHUP", *pids_property = "PIDs", *after_property = "After";
         _cleanup_dbus_message_unref_ DBusMessage *m = NULL, *reply = NULL;
         DBusMessageIter iter, sub, sub2, sub3, sub4;
-        uint64_t timeout = 500 * USEC_PER_MSEC;
         dbus_bool_t send_sighup = true;
         const char *fail = "fail";
         uint32_t u;
@@ -2608,8 +2607,6 @@ int manager_start_scope(
         }
 
         if (!isempty(after)) {
-                const char *after_property = "After";
-
                 if (!dbus_message_iter_open_container(&sub, DBUS_TYPE_STRUCT, NULL, &sub2) ||
                     !dbus_message_iter_append_basic(&sub2, DBUS_TYPE_STRING, &after_property) ||
                     !dbus_message_iter_open_container(&sub2, DBUS_TYPE_VARIANT, "as", &sub3) ||
@@ -2621,13 +2618,13 @@ int manager_start_scope(
                         return log_oom();
         }
 
-        if (!isempty(kill_mode)) {
-                const char *kill_mode_property = "KillMode";
-
+        if (!isempty(after2)) {
                 if (!dbus_message_iter_open_container(&sub, DBUS_TYPE_STRUCT, NULL, &sub2) ||
-                    !dbus_message_iter_append_basic(&sub2, DBUS_TYPE_STRING, &kill_mode_property) ||
-                    !dbus_message_iter_open_container(&sub2, DBUS_TYPE_VARIANT, "s", &sub3) ||
-                    !dbus_message_iter_append_basic(&sub3, DBUS_TYPE_STRING, &kill_mode) ||
+                    !dbus_message_iter_append_basic(&sub2, DBUS_TYPE_STRING, &after_property) ||
+                    !dbus_message_iter_open_container(&sub2, DBUS_TYPE_VARIANT, "as", &sub3) ||
+                    !dbus_message_iter_open_container(&sub3, DBUS_TYPE_ARRAY, "s", &sub4) ||
+                    !dbus_message_iter_append_basic(&sub4, DBUS_TYPE_STRING, &after2) ||
+                    !dbus_message_iter_close_container(&sub3, &sub4) ||
                     !dbus_message_iter_close_container(&sub2, &sub3) ||
                     !dbus_message_iter_close_container(&sub, &sub2))
                         return log_oom();
@@ -2637,14 +2634,6 @@ int manager_start_scope(
          * currently. To make this less problematic, let's shorten the
          * stop timeout for sessions, so that we don't wait
          * forever. */
-
-        if (!dbus_message_iter_open_container(&sub, DBUS_TYPE_STRUCT, NULL, &sub2) ||
-            !dbus_message_iter_append_basic(&sub2, DBUS_TYPE_STRING, &timeout_stop_property) ||
-            !dbus_message_iter_open_container(&sub2, DBUS_TYPE_VARIANT, "t", &sub3) ||
-            !dbus_message_iter_append_basic(&sub3, DBUS_TYPE_UINT64, &timeout) ||
-            !dbus_message_iter_close_container(&sub2, &sub3) ||
-            !dbus_message_iter_close_container(&sub, &sub2))
-                return log_oom();
 
         /* Make sure that the session shells are terminated with
          * SIGHUP since bash and friends tend to ignore SIGTERM */
@@ -2791,6 +2780,36 @@ int manager_stop_unit(Manager *manager, const char *unit, DBusError *error, char
         return 1;
 }
 
+int manager_abandon_scope(Manager *manager, const char *scope, DBusError *error) {
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
+        _cleanup_free_ char *path = NULL;
+        int r;
+
+        assert(manager);
+        assert(scope);
+
+        path = unit_dbus_path_from_name(scope);
+        if (!path)
+                return -ENOMEM;
+
+        r = bus_method_call_with_reply(
+                manager->bus,
+                "org.freedesktop.systemd1",
+                path,
+                "org.freedesktop.systemd1.Scope",
+                "Abandon",
+                &reply,
+                error,
+                DBUS_TYPE_INVALID);
+
+        if (r < 0) {
+                log_error("Failed to abandon scope %s", scope);
+                return r;
+        }
+
+        return 1;
+}
+
 int manager_kill_unit(Manager *manager, const char *unit, KillWho who, int signo, DBusError *error) {
         _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         const char *w;
@@ -2799,7 +2818,7 @@ int manager_kill_unit(Manager *manager, const char *unit, KillWho who, int signo
         assert(manager);
         assert(unit);
 
-        w = who == KILL_LEADER ? "process" : "cgroup";
+        w = who == KILL_LEADER ? "control" : "all";
         assert_cc(sizeof(signo) == sizeof(int32_t));
 
         r = bus_method_call_with_reply(
@@ -2815,7 +2834,7 @@ int manager_kill_unit(Manager *manager, const char *unit, KillWho who, int signo
                         DBUS_TYPE_INT32, &signo,
                         DBUS_TYPE_INVALID);
         if (r < 0) {
-                log_error("Failed to stop unit %s: %s", unit, bus_error(error, r));
+                log_error("Failed to kill unit %s: %s", unit, bus_error(error, r));
                 return r;
         }
 

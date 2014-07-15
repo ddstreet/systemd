@@ -192,8 +192,7 @@ static int manager_watch_jobs_in_progress(Manager *m) {
         return 0;
 
 err:
-        if (m->jobs_in_progress_watch.fd >= 0)
-                close_nointr_nofail(m->jobs_in_progress_watch.fd);
+        safe_close(m->jobs_in_progress_watch.fd);
         watch_init(&m->jobs_in_progress_watch);
         return r;
 }
@@ -203,7 +202,7 @@ static void manager_unwatch_jobs_in_progress(Manager *m) {
                 return;
 
         assert_se(epoll_ctl(m->epoll_fd, EPOLL_CTL_DEL, m->jobs_in_progress_watch.fd, NULL) >= 0);
-        close_nointr_nofail(m->jobs_in_progress_watch.fd);
+        safe_close(m->jobs_in_progress_watch.fd);
         watch_init(&m->jobs_in_progress_watch);
         m->jobs_in_progress_iteration = 0;
 
@@ -306,8 +305,7 @@ static int manager_watch_idle_pipe(Manager *m) {
         return 0;
 
 err:
-        if (m->idle_pipe_watch.fd >= 0)
-                close_nointr_nofail(m->idle_pipe_watch.fd);
+        safe_close(m->idle_pipe_watch.fd);
         watch_init(&m->idle_pipe_watch);
         return r;
 }
@@ -349,7 +347,7 @@ static int manager_setup_time_change(Manager *m) {
 
         if (timerfd_settime(m->time_change_watch.fd, TFD_TIMER_ABSTIME|TFD_TIMER_CANCEL_ON_SET, &its, NULL) < 0) {
                 log_debug("Failed to set up TFD_TIMER_CANCEL_ON_SET, ignoring: %m");
-                close_nointr_nofail(m->time_change_watch.fd);
+                m->time_change_watch.fd = safe_close(m->time_change_watch.fd);
                 watch_init(&m->time_change_watch);
                 return 0;
         }
@@ -385,7 +383,7 @@ static int enable_special_signals(Manager *m) {
                 if (ioctl(fd, KDSIGACCEPT, SIGWINCH) < 0)
                         log_warning("Failed to enable kbrequest handling: %s", strerror(errno));
 
-                close_nointr_nofail(fd);
+                safe_close(fd);
         }
 
         return 0;
@@ -495,7 +493,7 @@ int manager_new(SystemdRunningAs running_as, bool reexecuting, Manager **_m) {
                 return -ENOMEM;
 
 #ifdef ENABLE_EFI
-        if (detect_container(NULL) <= 0)
+        if (running_as == SYSTEMD_SYSTEM && detect_container(NULL) <= 0)
                 boot_timestamps(&m->userspace_timestamp, &m->firmware_timestamp, &m->loader_timestamp);
 #endif
 
@@ -525,7 +523,10 @@ int manager_new(SystemdRunningAs running_as, bool reexecuting, Manager **_m) {
         if (!(m->jobs = hashmap_new(trivial_hash_func, trivial_compare_func)))
                 goto fail;
 
-        if (!(m->watch_pids = hashmap_new(trivial_hash_func, trivial_compare_func)))
+        if (!(m->watch_pids1 = hashmap_new(trivial_hash_func, trivial_compare_func)))
+                goto fail;
+
+        if (!(m->watch_pids2 = hashmap_new(trivial_hash_func, trivial_compare_func)))
                 goto fail;
 
         m->cgroup_unit = hashmap_new(string_hash_func, string_compare_func);
@@ -740,19 +741,15 @@ void manager_free(Manager *m) {
 
         hashmap_free(m->units);
         hashmap_free(m->jobs);
-        hashmap_free(m->watch_pids);
+        hashmap_free(m->watch_pids1);
+        hashmap_free(m->watch_pids2);
         hashmap_free(m->watch_bus);
 
-        if (m->epoll_fd >= 0)
-                close_nointr_nofail(m->epoll_fd);
-        if (m->signal_watch.fd >= 0)
-                close_nointr_nofail(m->signal_watch.fd);
-        if (m->notify_watch.fd >= 0)
-                close_nointr_nofail(m->notify_watch.fd);
-        if (m->time_change_watch.fd >= 0)
-                close_nointr_nofail(m->time_change_watch.fd);
-        if (m->jobs_in_progress_watch.fd >= 0)
-                close_nointr_nofail(m->jobs_in_progress_watch.fd);
+        safe_close(m->epoll_fd);
+        safe_close(m->signal_watch.fd);
+        safe_close(m->notify_watch.fd);
+        safe_close(m->time_change_watch.fd);
+        safe_close(m->jobs_in_progress_watch.fd);
 
         free(m->notify_socket);
 
@@ -886,6 +883,7 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
 
         r = lookup_paths_init(
                         &m->lookup_paths, m->running_as, true,
+                        NULL,
                         m->generator_unit_path,
                         m->generator_unit_path_early,
                         m->generator_unit_path_late);
@@ -1287,6 +1285,26 @@ unsigned manager_dispatch_dbus_queue(Manager *m) {
         return n;
 }
 
+static void manager_invoke_notify_message(Manager *m, Unit *u, pid_t pid, char *buf, size_t n) {
+        _cleanup_strv_free_ char **tags = NULL;
+
+        assert(m);
+        assert(u);
+        assert(buf);
+        assert(n > 0);
+
+        tags = strv_split(buf, "\n\r");
+        if (!tags) {
+                log_oom();
+                return;
+        }
+
+        log_debug_unit(u->id, "Got notification message for unit %s", u->id);
+
+        if (UNIT_VTABLE(u)->notify_message)
+                UNIT_VTABLE(u)->notify_message(u, pid, tags);
+}
+
 static int manager_process_notify_fd(Manager *m) {
         ssize_t n;
 
@@ -1298,6 +1316,8 @@ static int manager_process_notify_fd(Manager *m) {
                         .iov_base = buf,
                         .iov_len = sizeof(buf)-1,
                 };
+
+                bool found = false;
 
                 union {
                         struct cmsghdr cmsghdr;
@@ -1312,7 +1332,6 @@ static int manager_process_notify_fd(Manager *m) {
                 };
                 struct ucred *ucred;
                 Unit *u;
-                _cleanup_strv_free_ char **tags = NULL;
 
                 n = recvmsg(m->notify_watch.fd, &msghdr, MSG_DONTWAIT);
                 if (n <= 0) {
@@ -1335,105 +1354,105 @@ static int manager_process_notify_fd(Manager *m) {
 
                 ucred = (struct ucred*) CMSG_DATA(&control.cmsghdr);
 
-                u = hashmap_get(m->watch_pids, LONG_TO_PTR(ucred->pid));
-                if (!u) {
-                        u = manager_get_unit_by_pid(m, ucred->pid);
-                        if (!u) {
-                                log_warning("Cannot find unit for notify message of PID %lu.", (unsigned long) ucred->pid);
-                                continue;
-                        }
-                }
-
                 assert((size_t) n < sizeof(buf));
                 buf[n] = 0;
-                tags = strv_split(buf, "\n\r");
-                if (!tags)
-                        return log_oom();
 
-                log_debug_unit(u->id, "Got notification message for unit %s", u->id);
+                u = manager_get_unit_by_pid(m, ucred->pid);
+                if (u) {
+                        manager_invoke_notify_message(m, u, ucred->pid, buf, n);
+                        found = true;
+                }
 
-                if (UNIT_VTABLE(u)->notify_message)
-                        UNIT_VTABLE(u)->notify_message(u, ucred->pid, tags);
+                u = hashmap_get(m->watch_pids1, LONG_TO_PTR(ucred->pid));
+                if (u) {
+                        manager_invoke_notify_message(m, u, ucred->pid, buf, n);
+                        found = true;
+                }
+
+                u = hashmap_get(m->watch_pids2, LONG_TO_PTR(ucred->pid));
+                if (u) {
+                        manager_invoke_notify_message(m, u, ucred->pid, buf, n);
+                        found = true;
+                }
+
+                if (!found)
+                        log_warning("Cannot find unit for notify message of PID %lu.",(long unsigned) ucred->pid);
         }
 
         return 0;
 }
 
-static int manager_dispatch_sigchld(Manager *m) {
+static void invoke_sigchld_event(Manager *m, Unit *u, siginfo_t *si) {
         assert(m);
+        assert(u);
+        assert(si);
 
-        for (;;) {
-                siginfo_t si = {};
-                Unit *u;
-                int r;
+        log_debug_unit(u->id, "Child %lu belongs to %s",(long unsigned) si->si_pid, u->id);
 
-                /* First we call waitd() for a PID and do not reap the
-                 * zombie. That way we can still access /proc/$PID for
-                 * it while it is a zombie. */
-                if (waitid(P_ALL, 0, &si, WEXITED|WNOHANG|WNOWAIT) < 0) {
+        unit_unwatch_pid(u, si->si_pid);
+        UNIT_VTABLE(u)->sigchld_event(u, si->si_pid, si->si_code, si->si_status);
+}
 
-                        if (errno == ECHILD)
-                                break;
+static int manager_dispatch_sigchld(Manager *m) {
+    assert(m);
 
-                        if (errno == EINTR)
-                                continue;
+    for (;;) {
+            siginfo_t si = {};
 
-                        return -errno;
-                }
+            /* First we call waitd() for a PID and do not reap the
+             * zombie. That way we can still access /proc/$PID for
+             * it while it is a zombie. */
+            if (waitid(P_ALL, 0, &si, WEXITED|WNOHANG|WNOWAIT) < 0) {
 
-                if (si.si_pid <= 0)
-                        break;
+                    if (errno == ECHILD)
+                            break;
 
-                if (si.si_code == CLD_EXITED || si.si_code == CLD_KILLED || si.si_code == CLD_DUMPED) {
-                        _cleanup_free_ char *name = NULL;
+                    if (errno == EINTR)
+                            continue;
 
-                        get_process_comm(si.si_pid, &name);
-                        log_debug("Got SIGCHLD for process %lu (%s)", (unsigned long) si.si_pid, strna(name));
-                }
+                    return -errno;
+            }
 
-                /* Let's flush any message the dying child might still
-                 * have queued for us. This ensures that the process
-                 * still exists in /proc so that we can figure out
-                 * which cgroup and hence unit it belongs to. */
-                r = manager_process_notify_fd(m);
-                if (r < 0)
-                        return r;
+            if (si.si_pid <= 0)
+                    break;
 
-                /* And now figure out the unit this belongs to */
-                u = hashmap_get(m->watch_pids, LONG_TO_PTR(si.si_pid));
-                if (!u)
-                        u = manager_get_unit_by_pid(m, si.si_pid);
+            if (si.si_code == CLD_EXITED || si.si_code == CLD_KILLED || si.si_code == CLD_DUMPED) {
+                    _cleanup_free_ char *name = NULL;
+                    Unit *u;
 
-                /* And now, we actually reap the zombie. */
-                if (waitid(P_PID, si.si_pid, &si, WEXITED) < 0) {
-                        if (errno == EINTR)
-                                continue;
+                    get_process_comm(si.si_pid, &name);
 
-                        return -errno;
-                }
+                    log_debug("Child %lu (%s) died (code=%s, status=%i/%s)",
+                              (long unsigned) si.si_pid, strna(name),
+                              sigchld_code_to_string(si.si_code),
+                              si.si_status,
+                              strna(si.si_code == CLD_EXITED
+                                    ? exit_status_to_string(si.si_status, EXIT_STATUS_FULL)
+                                    : signal_to_string(si.si_status)));
 
-                if (si.si_code != CLD_EXITED && si.si_code != CLD_KILLED && si.si_code != CLD_DUMPED)
-                        continue;
+                    /* And now figure out the unit this belongs
+                     * to, it might be multiple... */
+                    u = manager_get_unit_by_pid(m, si.si_pid);
+                    if (u)
+                            invoke_sigchld_event(m, u, &si);
+                    u = hashmap_get(m->watch_pids1, LONG_TO_PTR(si.si_pid));
+                    if (u)
+                            invoke_sigchld_event(m, u, &si);
+                    u = hashmap_get(m->watch_pids2, LONG_TO_PTR(si.si_pid));
+                    if (u)
+                            invoke_sigchld_event(m, u, &si);
+            }
 
-                log_debug("Child %lu died (code=%s, status=%i/%s)",
-                          (long unsigned) si.si_pid,
-                          sigchld_code_to_string(si.si_code),
-                          si.si_status,
-                          strna(si.si_code == CLD_EXITED
-                                ? exit_status_to_string(si.si_status, EXIT_STATUS_FULL)
-                                : signal_to_string(si.si_status)));
+            /* And now, we actually reap the zombie. */
+            if (waitid(P_PID, si.si_pid, &si, WEXITED) < 0) {
+                    if (errno == EINTR)
+                            continue;
 
-                if (!u)
-                        continue;
+                    return -errno;
+            }
+    }
 
-                log_debug_unit(u->id,
-                               "Child %lu belongs to %s", (long unsigned) si.si_pid, u->id);
-
-                hashmap_remove(m->watch_pids, LONG_TO_PTR(si.si_pid));
-                UNIT_VTABLE(u)->sigchld_event(u, si.si_pid, si.si_code, si.si_status);
-        }
-
-        return 0;
+    return 0;
 }
 
 static int manager_start_target(Manager *m, const char *name, JobMode mode) {
@@ -1475,16 +1494,22 @@ static int manager_process_signal_fd(Manager *m) {
                 }
 
                 if (sfsi.ssi_pid > 0) {
-                        char *p = NULL;
+                        _cleanup_free_ char *p = NULL;
 
                         get_process_comm(sfsi.ssi_pid, &p);
 
-                        log_debug("Received SIG%s from PID %lu (%s).",
-                                  signal_to_string(sfsi.ssi_signo),
-                                  (unsigned long) sfsi.ssi_pid, strna(p));
-                        free(p);
+                        log_full(sfsi.ssi_signo == SIGCHLD ||
+                                 (sfsi.ssi_signo == SIGTERM && m->running_as == SYSTEMD_USER)
+                                 ? LOG_DEBUG : LOG_INFO,
+                                 "Received SIG%s from PID %lu (%s).",
+                                 signal_to_string(sfsi.ssi_signo),
+                                 (unsigned long) sfsi.ssi_pid, strna(p));
                 } else
-                        log_debug("Received SIG%s.", signal_to_string(sfsi.ssi_signo));
+                        log_full(sfsi.ssi_signo == SIGCHLD ||
+                                 (sfsi.ssi_signo == SIGTERM && m->running_as == SYSTEMD_USER)
+                                 ? LOG_DEBUG : LOG_INFO,
+                                 "Received SIG%s.",
+                                 signal_to_string(sfsi.ssi_signo));
 
                 switch (sfsi.ssi_signo) {
 
@@ -1778,7 +1803,7 @@ static int process_event(Manager *m, struct epoll_event *ev) {
                 /* Restart the watch */
                 epoll_ctl(m->epoll_fd, EPOLL_CTL_DEL, m->time_change_watch.fd,
                           NULL);
-                close_nointr_nofail(m->time_change_watch.fd);
+                safe_close(m->time_change_watch.fd);
                 watch_init(&m->time_change_watch);
                 manager_setup_time_change(m);
 
@@ -1801,7 +1826,7 @@ static int process_event(Manager *m, struct epoll_event *ev) {
         }
 
         case WATCH_IDLE_PIPE: {
-                m->no_console_output = true;
+                m->no_console_output = m->n_on_console > 0;
 
                 manager_unwatch_idle_pipe(m);
                 close_idle_pipe(m);
@@ -2006,6 +2031,9 @@ void manager_send_unit_plymouth(Manager *m, Unit *u) {
         if (m->running_as != SYSTEMD_SYSTEM)
                 return;
 
+        if (detect_container(NULL) > 0)
+                return;
+
         if (u->type != UNIT_SERVICE &&
             u->type != UNIT_MOUNT &&
             u->type != UNIT_SWAP)
@@ -2055,8 +2083,7 @@ void manager_send_unit_plymouth(Manager *m, Unit *u) {
         }
 
 finish:
-        if (fd >= 0)
-                close_nointr_nofail(fd);
+        safe_close(fd);
 
         free(message);
 }
@@ -2177,9 +2204,6 @@ int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool switching_root) {
 
         HASHMAP_FOREACH_KEY(u, t, m->units, i) {
                 if (u->id != t)
-                        continue;
-
-                if (!unit_can_serialize(u))
                         continue;
 
                 /* Start marker */
@@ -2322,10 +2346,8 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
         }
 
 finish:
-        if (ferror(f)) {
+        if (ferror(f))
                 r = -EIO;
-                goto finish;
-        }
 
         assert(m->n_reloading > 0);
         m->n_reloading --;
@@ -2398,6 +2420,7 @@ int manager_reload(Manager *m) {
 
         q = lookup_paths_init(
                         &m->lookup_paths, m->running_as, true,
+                        NULL,
                         m->generator_unit_path,
                         m->generator_unit_path_early,
                         m->generator_unit_path_late);
@@ -2669,9 +2692,8 @@ void manager_run_generators(Manager *m) {
         argv[3] = m->generator_unit_path_late;
         argv[4] = NULL;
 
-        RUN_WITH_UMASK(0022) {
-                execute_directory(generator_path, d, (char**) argv);
-        }
+        RUN_WITH_UMASK(0022)
+                execute_directory(generator_path, d, DEFAULT_TIMEOUT_USEC, (char**) argv);
 
         trim_generator_dir(m, &m->generator_unit_path);
         trim_generator_dir(m, &m->generator_unit_path_early);
