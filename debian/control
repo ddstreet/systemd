@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: optional
-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
 Uploaders: Tollef Fog Heen <tfheen@debian.org>, Michael Biebl <biebl@debian.org>, Marco d'Itri <md@linux.it>, Michael Stapelberg <stapelberg@debian.org>
 Standards-Version: 3.9.5
 Vcs-Git: git://anonscm.debian.org/pkg-systemd/systemd.git
@@ -22,6 +23,7 @@ Build-Depends: debhelper (>= 9),
                intltool,
                gperf,
                libcap-dev,
+               libcgmanager-dev,
                libpam0g-dev,
                libaudit-dev,
                libdbus-1-dev (>= 1.3.2),
@@ -59,7 +61,9 @@ Depends: ${shlibs:Depends},
          libcap2-bin
 Breaks: lvm2 (<< 2.02.84-1),
         lsb-base (<< 4.1+Debian4)
-Conflicts: klogd
+Conflicts: klogd, systemd-services
+Replaces: systemd-services
+Provides: systemd-services
 Description: system and service manager
  systemd is a replacement for sysvinit.  It is dependency-based and
  able to read the LSB init script headers in addition to parsing rcN.d
