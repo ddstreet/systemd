@@ -376,23 +376,23 @@ static CGroupControllerMask unit_get_siblings_mask(Unit *u) {
 }
 
 static int unit_create_cgroups(Unit *u, CGroupControllerMask mask) {
-        char *path = NULL;
+        _cleanup_free_ char *path;
         int r;
-        bool is_in_hash = false;
+        bool was_in_hash = false;
 
         assert(u);
 
         path = unit_default_cgroup_path(u);
         if (!path)
-                return -ENOMEM;
+                return log_oom();
 
         r = hashmap_put(u->manager->cgroup_unit, path, u);
         if (r == 0)
-                is_in_hash = true;
-
-        if (r < 0) {
-                log_error("cgroup %s exists already: %s", path, strerror(-r));
-                free(path);
+                was_in_hash = true;
+        else if (r < 0) {
+                log_error(r == -EEXIST ?
+                          "cgroup %s exists already: %s" : "hashmap_put failed for %s: %s",
+                          path, strerror(-r));
                 return r;
         }
 
@@ -405,13 +405,15 @@ static int unit_create_cgroups(Unit *u, CGroupControllerMask mask) {
         if (u->cgroup_path) {
                 r = cg_migrate_everywhere(u->manager->cgroup_supported, u->cgroup_path, path);
                 if (r < 0)
-                        log_error("Failed to migrate cgroup %s: %s", path, strerror(-r));
+                        log_error("Failed to migrate cgroup from %s to %s: %s",
+                                  u->cgroup_path, path, strerror(-r));
         }
 
-        if (!is_in_hash) {
-                /* And remember the new data */
+        if (!was_in_hash) {
+                /* Remember the new data */
                 free(u->cgroup_path);
                 u->cgroup_path = path;
+                path = NULL;
         }
 
         u->cgroup_realized = true;
@@ -589,8 +591,8 @@ pid_t unit_search_main_pid(Unit *u) {
 
 int manager_setup_cgroup(Manager *m) {
         _cleanup_free_ char *path = NULL;
+        char *e;
         int r;
-        char *e, *a;
 
         assert(m);
 
@@ -610,9 +612,13 @@ int manager_setup_cgroup(Manager *m) {
                 return r;
         }
 
-        /* Already in /system.slice? If so, let's cut this off again */
+        /* LEGACY: Already in /system.slice? If so, let's cut this
+         * off. This is to support live upgrades from older systemd
+         * versions where PID 1 was moved there. */
         if (m->running_as == SYSTEMD_SYSTEM) {
                 e = endswith(m->cgroup_root, "/" SPECIAL_SYSTEM_SLICE);
+                if (!e)
+                        e = endswith(m->cgroup_root, "/system");
                 if (e)
                         *e = 0;
         }
@@ -643,23 +649,18 @@ int manager_setup_cgroup(Manager *m) {
                         log_debug("Release agent already installed.");
         }
 
-        /* 4. Realize the system slice and put us in there */
-        if (m->running_as == SYSTEMD_SYSTEM) {
-                a = strappenda(m->cgroup_root, "/" SPECIAL_SYSTEM_SLICE);
-                r = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, a, 0);
-        } else
-                r = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_root, 0);
+        /* 4. Make sure we are in the root cgroup */
+        r = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_root, 0);
         if (r < 0) {
                 log_error("Failed to create root cgroup hierarchy: %s", strerror(-r));
                 return r;
         }
 
         /* 5. And pin it, so that it cannot be unmounted */
-        if (m->pin_cgroupfs_fd >= 0)
-                close_nointr_nofail(m->pin_cgroupfs_fd);
+        safe_close(m->pin_cgroupfs_fd);
 
         m->pin_cgroupfs_fd = open(path, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY|O_NONBLOCK);
-        if (r < 0) {
+        if (m->pin_cgroupfs_fd < 0) {
                 log_error("Failed to open pin file: %m");
                 return -errno;
         }
@@ -681,10 +682,7 @@ void manager_shutdown_cgroup(Manager *m, bool delete) {
         if (delete && m->cgroup_root)
                 cg_trim(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_root, false);
 
-        if (m->pin_cgroupfs_fd >= 0) {
-                close_nointr_nofail(m->pin_cgroupfs_fd);
-                m->pin_cgroupfs_fd = -1;
-        }
+        m->pin_cgroupfs_fd = safe_close(m->pin_cgroupfs_fd);
 
         free(m->cgroup_root);
         m->cgroup_root = NULL;

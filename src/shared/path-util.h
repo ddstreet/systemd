@@ -25,10 +25,13 @@
 
 #include "macro.h"
 
+#define DEFAULT_PATH_NORMAL "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+#define DEFAULT_PATH_SPLIT_USR DEFAULT_PATH_NORMAL ":/sbin:/bin"
+
 #ifdef HAVE_SPLIT_USR
-#  define DEFAULT_PATH "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+#  define DEFAULT_PATH DEFAULT_PATH_SPLIT_USR
 #else
-#  define DEFAULT_PATH "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+#  define DEFAULT_PATH DEFAULT_PATH_NORMAL
 #endif
 
 bool is_path(const char *p) _pure_;
@@ -43,8 +46,8 @@ char* path_startswith(const char *path, const char *prefix) _pure_;
 bool path_equal(const char *a, const char *b) _pure_;
 
 char** path_strv_make_absolute_cwd(char **l);
-char** path_strv_canonicalize(char **l);
-char** path_strv_canonicalize_uniq(char **l);
+char** path_strv_canonicalize_absolute(char **l, const char *prefix);
+char** path_strv_canonicalize_absolute_uniq(char **l, const char *prefix);
 
 int path_is_mount_point(const char *path, bool allow_symlink);
 int path_is_read_only_fs(const char *path);

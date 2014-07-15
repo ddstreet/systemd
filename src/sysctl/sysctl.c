@@ -48,12 +48,26 @@ static const char conf_file_dirs[] =
 #endif
         ;
 
-static char *normalize_sysctl(char *s) {
+static char* normalize_sysctl(char *s) {
         char *n;
 
-        for (n = s; *n; n++)
+        n = strpbrk(s, "/.");
+        /* If the first separator is a slash, the path is
+         * assumed to be normalized and slashes remain slashes
+         * and dots remains dots. */
+        if (!n || *n == '/')
+                return s;
+
+        /* Otherwise, dots become slashes and slashes become
+         * dots. Fun. */
+        while (n) {
                 if (*n == '.')
                         *n = '/';
+                else
+                        *n = '.';
+
+                n = strpbrk(n + 1, "/.");
+        }
 
         return s;
 }
@@ -123,7 +137,7 @@ static int parse_file(Hashmap *sysctl_options, const char *path, bool ignore_eno
 
         assert(path);
 
-        r = search_and_fopen_nulstr(path, "re", conf_file_dirs, &f);
+        r = search_and_fopen_nulstr(path, "re", NULL, conf_file_dirs, &f);
         if (r < 0) {
                 if (ignore_enoent && r == -ENOENT)
                         return 0;
@@ -132,7 +146,7 @@ static int parse_file(Hashmap *sysctl_options, const char *path, bool ignore_eno
                 return r;
         }
 
-        log_debug("parse: %s\n", path);
+        log_debug("parse: %s", path);
         while (!feof(f)) {
                 char l[LINE_MAX], *p, *value, *new_value, *property, *existing;
                 void *v;

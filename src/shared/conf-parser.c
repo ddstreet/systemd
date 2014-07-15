@@ -320,8 +320,8 @@ int config_parse(const char *unit,
         if (!f) {
                 f = ours = fopen(filename, "re");
                 if (!f) {
-                        log_error("Failed to open configuration file '%s': %m", filename);
-                        return -errno;
+                        log_full(errno == ENOENT ? LOG_DEBUG : LOG_ERR, "Failed to open configuration file '%s': %m", filename);
+                        return errno == ENOENT ? 0 : -errno;
                 }
         }
 
@@ -607,8 +607,7 @@ int config_parse_path(const char *unit,
         assert(data);
 
         if (!utf8_is_valid(rvalue)) {
-                log_syntax(unit, LOG_ERR, filename, line, EINVAL,
-                           "Path is not UTF-8 clean, ignoring assignment: %s", rvalue);
+                log_invalid_utf8(unit, LOG_ERR, filename, line, EINVAL, rvalue);
                 return 0;
         }
 
@@ -670,13 +669,12 @@ int config_parse_strv(const char *unit,
         FOREACH_WORD_QUOTED(w, l, rvalue, state) {
                 _cleanup_free_ char *n;
 
-                n = cunescape_length(w, l);
+                n = strndup(w, l);
                 if (!n)
                         return log_oom();
 
                 if (!utf8_is_valid(n)) {
-                        log_syntax(unit, LOG_ERR, filename, line, EINVAL,
-                                   "String is not UTF-8 clean, ignoring: %s", rvalue);
+                        log_invalid_utf8(unit, LOG_ERR, filename, line, EINVAL, rvalue);
                         continue;
                 }
 

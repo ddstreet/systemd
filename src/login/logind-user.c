@@ -529,6 +529,8 @@ int user_stop(User *u) {
         if (k < 0)
                 r = k;
 
+        u->stopping = true;
+
         user_save(u);
 
         return r;
@@ -629,6 +631,12 @@ int user_check_gc(User *u, bool drop_not_started) {
         if (u->slice_job || u->service_job)
                 return 1;
 
+        if (u->slice && manager_unit_is_active(u->manager, u->slice) != 0)
+                return 1;
+
+        if (u->service && manager_unit_is_active(u->manager, u->service) != 0)
+                return 1;
+
         return 0;
 }
 
@@ -644,25 +652,27 @@ void user_add_to_gc_queue(User *u) {
 
 UserState user_get_state(User *u) {
         Session *i;
-        bool all_closing = true;
 
         assert(u);
 
-        if (u->closing)
+        if (u->stopping)
                 return USER_CLOSING;
 
         if (u->slice_job || u->service_job)
                 return USER_OPENING;
 
-        LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                if (session_is_active(i))
-                        return USER_ACTIVE;
-                if (session_get_state(i) != SESSION_CLOSING)
-                        all_closing = false;
-        }
+        if (u->sessions) {
+                bool all_closing = true;
 
-        if (u->sessions)
+                LIST_FOREACH(sessions_by_user, i, u->sessions) {
+                        if (session_is_active(i))
+                                return USER_ACTIVE;
+                        if (session_get_state(i) != SESSION_CLOSING)
+                                all_closing = false;
+                }
+
                 return all_closing ? USER_CLOSING : USER_ONLINE;
+        }
 
         if (user_check_linger_file(u) > 0)
                 return USER_LINGERING;

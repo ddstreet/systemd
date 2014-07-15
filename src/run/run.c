@@ -61,6 +61,7 @@ static int parse_argv(int argc, char *argv[]) {
         enum {
                 ARG_VERSION = 0x100,
                 ARG_USER,
+                ARG_SYSTEM,
                 ARG_SCOPE,
                 ARG_UNIT,
                 ARG_DESCRIPTION,
@@ -72,6 +73,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "help",              no_argument,       NULL, 'h'             },
                 { "version",           no_argument,       NULL, ARG_VERSION     },
                 { "user",              no_argument,       NULL, ARG_USER        },
+                { "system",            no_argument,       NULL, ARG_SYSTEM      },
                 { "scope",             no_argument,       NULL, ARG_SCOPE       },
                 { "unit",              required_argument, NULL, ARG_UNIT        },
                 { "description",       required_argument, NULL, ARG_DESCRIPTION },
@@ -101,6 +103,10 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case ARG_USER:
                         arg_user = true;
+                        break;
+
+                case ARG_SYSTEM:
+                        arg_user = false;
                         break;
 
                 case ARG_SCOPE:
@@ -309,6 +315,14 @@ static int start_transient_scope(
         if (r < 0)
                 return r;
 
+        {
+                const char *unique_id;
+                sd_bus_get_unique_name(bus, &unique_id);
+                r = sd_bus_message_append(m, "(sv)", "Controller", "s", unique_id);
+                if (r < 0)
+                        return r;
+        }
+
         r = sd_bus_message_append(m, "(sv)", "PIDs", "au", 1, (uint32_t) getpid());
         if (r < 0)
                 return r;
@@ -333,12 +347,12 @@ int main(int argc, char* argv[]) {
 
         r = parse_argv(argc, argv);
         if (r <= 0)
-                goto fail;
+                goto finish;
 
         r = find_binary(argv[optind], &command);
         if (r < 0) {
                 log_error("Failed to find executable %s: %s", argv[optind], strerror(-r));
-                goto fail;
+                goto finish;
         }
         argv[optind] = command;
 
@@ -346,7 +360,7 @@ int main(int argc, char* argv[]) {
                 description = strv_join(argv + optind, " ");
                 if (!description) {
                         r = log_oom();
-                        goto fail;
+                        goto finish;
                 }
 
                 arg_description = description;
@@ -357,8 +371,8 @@ int main(int argc, char* argv[]) {
         else
                 r = sd_bus_open_system(&bus);
         if (r < 0) {
-                log_error("Failed to create new bus connection: %s", strerror(-r));
-                goto fail;
+                log_error("Failed to create bus connection: %s", strerror(-r));
+                goto finish;
         }
 
         if (arg_scope)
@@ -368,9 +382,9 @@ int main(int argc, char* argv[]) {
         if (r < 0) {
                 log_error("Failed start transient unit: %s", error.message ? error.message : strerror(-r));
                 sd_bus_error_free(&error);
-                goto fail;
+                goto finish;
         }
 
-fail:
+finish:
         return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }

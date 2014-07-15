@@ -110,7 +110,7 @@ void job_free(Job *j) {
                 assert(j->timer_watch.fd >= 0);
 
                 assert_se(epoll_ctl(j->manager->epoll_fd, EPOLL_CTL_DEL, j->timer_watch.fd, NULL) >= 0);
-                close_nointr_nofail(j->timer_watch.fd);
+                safe_close(j->timer_watch.fd);
         }
 
         while ((cl = j->bus_client_list)) {
@@ -528,7 +528,7 @@ int job_run_and_invalidate(Job *j) {
                         else if (t == UNIT_ACTIVATING)
                                 r = -EAGAIN;
                         else
-                                r = -ENOEXEC;
+                                r = -EBADR;
                         break;
                 }
 
@@ -557,8 +557,10 @@ int job_run_and_invalidate(Job *j) {
         if (j) {
                 if (r == -EALREADY)
                         r = job_finish_and_invalidate(j, JOB_DONE, true);
-                else if (r == -ENOEXEC)
+                else if (r == -EBADR)
                         r = job_finish_and_invalidate(j, JOB_SKIPPED, true);
+                else if (r == -ENOEXEC)
+                        r = job_finish_and_invalidate(j, JOB_INVALID, true);
                 else if (r == -EAGAIN) {
                         j->state = JOB_WAITING;
                         m->n_running_jobs--;
@@ -784,7 +786,7 @@ int job_finish_and_invalidate(Job *j, JobResult result, bool recursive) {
                 goto finish;
         }
 
-        if (result == JOB_FAILED)
+        if (result == JOB_FAILED || result == JOB_INVALID)
                 j->manager->n_failed_jobs ++;
 
         job_uninstall(j);
@@ -897,8 +899,7 @@ int job_start_timer(Job *j) {
         return 0;
 
 fail:
-        if (fd >= 0)
-                close_nointr_nofail(fd);
+        safe_close(fd);
 
         return r;
 }
@@ -1052,7 +1053,7 @@ int job_deserialize(Job *j, FILE *f, FDSet *fds) {
                                 log_debug("Failed to parse job-timer-watch-fd value %s", v);
                         else {
                                 if (j->timer_watch.type == WATCH_JOB_TIMER)
-                                        close_nointr_nofail(j->timer_watch.fd);
+                                        safe_close(j->timer_watch.fd);
 
                                 j->timer_watch.type = WATCH_JOB_TIMER;
                                 j->timer_watch.fd = fdset_remove(fds, fd);
@@ -1067,6 +1068,9 @@ int job_coldplug(Job *j) {
                 .data.ptr = &j->timer_watch,
                 .events = EPOLLIN,
         };
+
+        if (j->state == JOB_WAITING)
+                job_add_to_run_queue(j);
 
         if (j->timer_watch.type != WATCH_JOB_TIMER)
                 return 0;
@@ -1096,6 +1100,9 @@ void job_shutdown_magic(Job *j) {
 
         if (!unit_has_name(j->unit, SPECIAL_SHUTDOWN_TARGET))
                 return;
+
+        /* In case messages on console has been disabled on boot */
+        j->unit->manager->no_console_output = false;
 
         if (detect_container(NULL) > 0)
                 return;
@@ -1140,7 +1147,8 @@ static const char* const job_result_table[_JOB_RESULT_MAX] = {
         [JOB_TIMEOUT] = "timeout",
         [JOB_FAILED] = "failed",
         [JOB_DEPENDENCY] = "dependency",
-        [JOB_SKIPPED] = "skipped"
+        [JOB_SKIPPED] = "skipped",
+        [JOB_INVALID] = "invalid",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(job_result, JobResult);

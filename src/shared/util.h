@@ -22,6 +22,7 @@
 ***/
 
 #include <alloca.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <time.h>
 #include <sys/time.h>
@@ -39,6 +40,7 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <locale.h>
+#include <mntent.h>
 
 #include "macro.h"
 #include "time-util.h"
@@ -123,7 +125,8 @@ char *endswith(const char *s, const char *postfix) _pure_;
 bool first_word(const char *s, const char *word) _pure_;
 
 int close_nointr(int fd);
-void close_nointr_nofail(int fd);
+int safe_close(int fd);
+
 void close_many(const int fds[], unsigned n_fd);
 
 int parse_boolean(const char *v) _pure_;
@@ -215,6 +218,7 @@ char *file_in_same_dir(const char *path, const char *filename);
 
 int rmdir_parents(const char *path, const char *stop);
 
+int get_process_state(pid_t pid);
 int get_process_comm(pid_t pid, char **name);
 int get_process_cmdline(pid_t pid, size_t max_length, bool comm_fallback, char **line);
 int get_process_exe(pid_t pid, char **name);
@@ -401,6 +405,8 @@ static inline const char *ansi_highlight_off(void) {
         return on_tty() ? ANSI_HIGHLIGHT_OFF : "";
 }
 
+int files_same(const char *filea, const char *fileb);
+
 int running_in_chroot(void);
 
 char *ellipsize(const char *s, size_t length, unsigned percent);
@@ -430,7 +436,7 @@ bool tty_is_console(const char *tty) _pure_;
 int vtnr_from_tty(const char *tty);
 const char *default_term_for_tty(const char *tty);
 
-void execute_directory(const char *directory, DIR *_d, char *argv[]);
+void execute_directory(const char *directory, DIR *_d, usec_t timeout, char *argv[]);
 
 int kill_and_sigcont(pid_t pid, int sig);
 
@@ -471,7 +477,6 @@ int glob_extend(char ***strv, const char *path);
 
 int dirent_ensure_type(DIR *d, struct dirent *de);
 
-int in_search_path(const char *path, char **search);
 int get_files_in_directory(const char *path, char ***list);
 
 char *strjoin(const char *x, ...) _sentinel_;
@@ -554,37 +559,34 @@ static inline void freep(void *p) {
         free(*(void**) p);
 }
 
-static inline void fclosep(FILE **f) {
-        if (*f)
-                fclose(*f);
-}
-
-static inline void pclosep(FILE **f) {
-        if (*f)
-                pclose(*f);
-}
+#define DEFINE_TRIVIAL_CLEANUP_FUNC(type, func)                 \
+        static inline void func##p(type *p) {                   \
+                if (*p)                                         \
+                        func(*p);                               \
+        }                                                       \
+        struct __useless_struct_to_allow_trailing_semicolon__
 
 static inline void closep(int *fd) {
-        if (*fd >= 0)
-                close_nointr_nofail(*fd);
-}
-
-static inline void closedirp(DIR **d) {
-        if (*d)
-                closedir(*d);
+        safe_close(*fd);
 }
 
 static inline void umaskp(mode_t *u) {
         umask(*u);
 }
 
+DEFINE_TRIVIAL_CLEANUP_FUNC(FILE*, fclose);
+DEFINE_TRIVIAL_CLEANUP_FUNC(FILE*, pclose);
+DEFINE_TRIVIAL_CLEANUP_FUNC(DIR*, closedir);
+DEFINE_TRIVIAL_CLEANUP_FUNC(FILE*, endmntent);
+
 #define _cleanup_free_ _cleanup_(freep)
-#define _cleanup_fclose_ _cleanup_(fclosep)
-#define _cleanup_pclose_ _cleanup_(pclosep)
 #define _cleanup_close_ _cleanup_(closep)
-#define _cleanup_closedir_ _cleanup_(closedirp)
 #define _cleanup_umask_ _cleanup_(umaskp)
 #define _cleanup_globfree_ _cleanup_(globfree)
+#define _cleanup_fclose_ _cleanup_(fclosep)
+#define _cleanup_pclose_ _cleanup_(pclosep)
+#define _cleanup_closedir_ _cleanup_(closedirp)
+#define _cleanup_endmntent_ _cleanup_(endmntentp)
 
 _malloc_  _alloc_(1, 2) static inline void *malloc_multiply(size_t a, size_t b) {
         if (_unlikely_(b == 0 || a > ((size_t) -1) / b))
@@ -627,8 +629,8 @@ char *strip_tab_ansi(char **p, size_t *l);
 
 int on_ac_power(void);
 
-int search_and_fopen(const char *path, const char *mode, const char **search, FILE **_f);
-int search_and_fopen_nulstr(const char *path, const char *mode, const char *search, FILE **_f);
+int search_and_fopen(const char *path, const char *mode, const char *root, const char **search, FILE **_f);
+int search_and_fopen_nulstr(const char *path, const char *mode, const char *root, const char *search, FILE **_f);
 int create_tmp_dir(char template[], char** dir_name);
 
 #define FOREACH_LINE(line, f, on_error)                         \
@@ -725,6 +727,19 @@ int unlink_noerrno(const char *path);
                 _c_;                                    \
         })
 
+#define strappenda3(a, b, c)                                    \
+        ({                                                      \
+                const char *_a_ = (a), *_b_ = (b), *_c_ = (c);  \
+                char *_d_;                                      \
+                size_t _x_, _y_, _z_;                           \
+                _x_ = strlen(_a_);                              \
+                _y_ = strlen(_b_);                              \
+                _z_ = strlen(_c_);                              \
+                _d_ = alloca(_x_ + _y_ + _z_ + 1);              \
+                strcpy(stpcpy(stpcpy(_d_, _a_), _b_), _c_);     \
+                _d_;                                            \
+        })
+
 #define procfs_file_alloca(pid, field)                                  \
         ({                                                              \
                 pid_t _pid_ = (pid);                                    \
@@ -764,3 +779,20 @@ bool id128_is_valid(const char *s) _pure_;
 void parse_user_at_host(char *arg, char **user, char **host);
 
 int split_pair(const char *s, const char *sep, char **l, char **r);
+
+/**
+ * Normal qsort requires base to be nonnull. Here were require
+ * that only if nmemb > 0.
+ */
+static inline void qsort_safe(void *base, size_t nmemb, size_t size,
+                              int (*compar)(const void *, const void *)) {
+        if (nmemb) {
+                assert(base);
+                qsort(base, nmemb, size, compar);
+        }
+}
+
+union file_handle_union {
+  struct file_handle handle;
+  char padding[sizeof(struct file_handle) + MAX_HANDLE_SZ];
+};

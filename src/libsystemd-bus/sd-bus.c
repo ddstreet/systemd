@@ -49,10 +49,10 @@ static void bus_close_fds(sd_bus *b) {
         assert(b);
 
         if (b->input_fd >= 0)
-                close_nointr_nofail(b->input_fd);
+                safe_close(b->input_fd);
 
         if (b->output_fd >= 0 && b->output_fd != b->input_fd)
-                close_nointr_nofail(b->output_fd);
+                safe_close(b->output_fd);
 
         b->input_fd = b->output_fd = -1;
 }
@@ -972,8 +972,8 @@ int sd_bus_open_system(sd_bus **ret) {
                         goto fail;
         } else {
                 b->sockaddr.un.sun_family = AF_UNIX;
-                strncpy(b->sockaddr.un.sun_path, "/run/dbus/system_bus_socket", sizeof(b->sockaddr.un.sun_path));
-                b->sockaddr_size = offsetof(struct sockaddr_un, sun_path) + sizeof("/run/dbus/system_bus_socket") - 1;
+                strncpy(b->sockaddr.un.sun_path, "/var/run/dbus/system_bus_socket", sizeof(b->sockaddr.un.sun_path));
+                b->sockaddr_size = offsetof(struct sockaddr_un, sun_path) + strlen("/var/run/dbus/system_bus_socket");
         }
 
         b->bus_client = true;
@@ -1215,11 +1215,11 @@ static int dispatch_rqueue(sd_bus *bus, sd_bus_message **m) {
                 if (r == 0)
                         return ret;
 
-                r = 1;
+                ret = 1;
         } while (!z);
 
         *m = z;
-        return 1;
+        return ret;
 }
 
 int sd_bus_send(sd_bus *bus, sd_bus_message *m, uint64_t *serial) {

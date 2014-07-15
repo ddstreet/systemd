@@ -934,7 +934,7 @@ int bus_parse_strv_iter(DBusMessageIter *iter, char ***_l) {
 int bus_parse_strv_pairs_iter(DBusMessageIter *iter, char ***_l) {
         DBusMessageIter sub, sub2;
         unsigned n = 0, i = 0;
-        char **l;
+        _cleanup_strv_free_ char **l = NULL;
 
         assert(iter);
         assert(_l);
@@ -953,6 +953,7 @@ int bus_parse_strv_pairs_iter(DBusMessageIter *iter, char ***_l) {
         l = new(char*, n*2+1);
         if (!l)
                 return -ENOMEM;
+        l[0] = NULL; /* make sure that l is properly terminated at all times */
 
         dbus_message_iter_recurse(iter, &sub);
 
@@ -968,26 +969,25 @@ int bus_parse_strv_pairs_iter(DBusMessageIter *iter, char ***_l) {
                         return -EINVAL;
 
                 l[i] = strdup(a);
-                if (!l[i]) {
-                        strv_free(l);
+                if (!l[i])
                         return -ENOMEM;
-                }
-
-                l[++i] = strdup(b);
-                if (!l[i]) {
-                        strv_free(l);
-                        return -ENOMEM;
-                }
-
                 i++;
+
+                l[i] = strdup(b);
+                if (!l[i])
+                        return -ENOMEM;
+                i++;
+
                 dbus_message_iter_next(&sub);
         }
 
         assert(i == n*2);
         l[i] = NULL;
 
-        if (_l)
+        if (_l) {
                 *_l = l;
+                l = NULL; /* avoid freeing */
+        }
 
         return 0;
 }
@@ -1427,4 +1427,46 @@ const char *bus_message_get_sender_with_fallback(DBusMessage *m) {
          * message will have no sender. We fix that here. */
 
         return ":no-sender";
+}
+
+bool bus_service_name_is_valid(const char *p) {
+        const char *q;
+        bool dot, found_dot = false, unique;
+
+        if (isempty(p))
+                return false;
+
+        unique = p[0] == ':';
+
+        for (dot = true, q = unique ? p+1 : p; *q; q++)
+                if (*q == '.') {
+                        if (dot)
+                                return false;
+
+                        found_dot = dot = true;
+                } else {
+                        bool good;
+
+                        good =
+                                (*q >= 'a' && *q <= 'z') ||
+                                (*q >= 'A' && *q <= 'Z') ||
+                                ((!dot || unique) && *q >= '0' && *q <= '9') ||
+                                *q == '_' || *q == '-';
+
+                        if (!good)
+                                return false;
+
+                        dot = false;
+                }
+
+        if (q - p > 255)
+                return false;
+
+        if (dot)
+                return false;
+
+        if (!found_dot)
+                return false;
+
+        return true;
 }

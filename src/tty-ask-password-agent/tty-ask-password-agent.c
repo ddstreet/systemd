@@ -234,11 +234,8 @@ static int ask_password_plymouth(
         r = 0;
 
 finish:
-        if (notify >= 0)
-                close_nointr_nofail(notify);
-
-        if (fd >= 0)
-                close_nointr_nofail(fd);
+        safe_close(notify);
+        safe_close(fd);
 
         free(packet);
 
@@ -374,7 +371,7 @@ static int parse_password(const char *filename, char **wall) {
                         r = ask_password_tty(message, not_after, filename, &password);
 
                         if (arg_console) {
-                                close_nointr_nofail(tty_fd);
+                                safe_close(tty_fd);
                                 release_terminal();
                         }
 
@@ -421,8 +418,7 @@ static int parse_password(const char *filename, char **wall) {
 finish:
         fclose(f);
 
-        if (socket_fd >= 0)
-                close_nointr_nofail(socket_fd);
+        safe_close(socket_fd);
 
         free(packet);
         free(socket_name);
@@ -438,7 +434,7 @@ static int wall_tty_block(void) {
 
         r = get_ctty_devnr(0, &devnr);
         if (r < 0)
-                return -r;
+                return r;
 
         if (asprintf(&p, "/run/systemd/ask-password-block/%u:%u", major(devnr), minor(devnr)) < 0)
                 return -ENOMEM;
@@ -494,7 +490,7 @@ static bool wall_tty_match(const char *path) {
                 return true;
 
         /* What, we managed to open the pipe? Then this tty is filtered. */
-        close_nointr_nofail(fd);
+        safe_close(fd);
         return false;
 }
 
@@ -507,7 +503,7 @@ static int show_passwords(void) {
                 if (errno == ENOENT)
                         return 0;
 
-                log_error("opendir(): %m");
+                log_error("opendir(/run/systemd/ask-password): %m");
                 return -errno;
         }
 
@@ -616,14 +612,9 @@ static int watch_passwords(void) {
         r = 0;
 
 finish:
-        if (notify >= 0)
-                close_nointr_nofail(notify);
-
-        if (signal_fd >= 0)
-                close_nointr_nofail(signal_fd);
-
-        if (tty_block_fd >= 0)
-                close_nointr_nofail(tty_block_fd);
+        safe_close(notify);
+        safe_close(signal_fd);
+        safe_close(tty_block_fd);
 
         return r;
 }

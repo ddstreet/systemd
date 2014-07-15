@@ -184,26 +184,29 @@ static int make_read_only(BindMount *m) {
         return 0;
 }
 
-int setup_tmpdirs(char **tmp_dir,
+int setup_tmpdirs(const char *unit_id,
+                  char **tmp_dir,
                   char **var_tmp_dir) {
         int r = 0;
-        char tmp_dir_template[] = "/tmp/systemd-private-XXXXXX",
-             var_tmp_dir_template[] = "/var/tmp/systemd-private-XXXXXX";
+        _cleanup_free_ char *tmp = NULL, *var = NULL;
 
         assert(tmp_dir);
         assert(var_tmp_dir);
 
-        r = create_tmp_dir(tmp_dir_template, tmp_dir);
+        tmp = strjoin("/tmp/systemd-", unit_id, "-XXXXXXX", NULL);
+        var = strjoin("/var/tmp/systemd-", unit_id, "-XXXXXXX", NULL);
+
+        r = create_tmp_dir(tmp, tmp_dir);
         if (r < 0)
                 return r;
 
-        r = create_tmp_dir(var_tmp_dir_template, var_tmp_dir);
+        r = create_tmp_dir(var, var_tmp_dir);
         if (r == 0)
                 return 0;
 
         /* failure */
         rmdir(*tmp_dir);
-        rmdir(tmp_dir_template);
+        rmdir(tmp);
         free(*tmp_dir);
         *tmp_dir = NULL;
 
@@ -222,7 +225,7 @@ int setup_namespace(char** read_write_dirs,
                      strv_length(read_only_dirs) +
                      strv_length(inaccessible_dirs) +
                      (private_tmp ? 2 : 0);
-        BindMount *m, *mounts;
+        BindMount *m, *mounts = NULL;
         int r = 0;
 
         if (!mount_flags)
@@ -231,26 +234,28 @@ int setup_namespace(char** read_write_dirs,
         if (unshare(CLONE_NEWNS) < 0)
                 return -errno;
 
-        m = mounts = (BindMount *) alloca(n * sizeof(BindMount));
-        if ((r = append_mounts(&m, read_write_dirs, READWRITE)) < 0 ||
-                (r = append_mounts(&m, read_only_dirs, READONLY)) < 0 ||
-                (r = append_mounts(&m, inaccessible_dirs, INACCESSIBLE)) < 0)
-                return r;
+        if (n) {
+                m = mounts = (BindMount *) alloca(n * sizeof(BindMount));
+                if ((r = append_mounts(&m, read_write_dirs, READWRITE)) < 0 ||
+                    (r = append_mounts(&m, read_only_dirs, READONLY)) < 0 ||
+                    (r = append_mounts(&m, inaccessible_dirs, INACCESSIBLE)) < 0)
+                        return r;
 
-        if (private_tmp) {
-                m->path = "/tmp";
-                m->mode = PRIVATE_TMP;
-                m++;
+                if (private_tmp) {
+                        m->path = "/tmp";
+                        m->mode = PRIVATE_TMP;
+                        m++;
 
-                m->path = "/var/tmp";
-                m->mode = PRIVATE_VAR_TMP;
-                m++;
+                        m->path = "/var/tmp";
+                        m->mode = PRIVATE_VAR_TMP;
+                        m++;
+                }
+
+                assert(mounts + n == m);
+
+                qsort(mounts, n, sizeof(BindMount), mount_path_compare);
+                drop_duplicates(mounts, &n);
         }
-
-        assert(mounts + n == m);
-
-        qsort(mounts, n, sizeof(BindMount), mount_path_compare);
-        drop_duplicates(mounts, &n);
 
         /* Remount / as SLAVE so that nothing now mounted in the namespace
            shows up in the parent */

@@ -34,10 +34,6 @@
 #include "compress.h"
 #include "fsprg.h"
 
-/* Use six characters to cover the offsets common in smallish journal
- * files without adding to many zeros. */
-#define OFSfmt "%06"PRIx64
-
 static int journal_file_object_verify(JournalFile *f, uint64_t offset, Object *o) {
         uint64_t i;
 
@@ -249,12 +245,12 @@ static int journal_file_object_verify(JournalFile *f, uint64_t offset, Object *o
                 }
 
                 for (i = 0; i < journal_file_entry_array_n_items(o); i++)
-                        if (o->entry_array.items[i] != 0 &&
-                            !VALID64(o->entry_array.items[i])) {
+                        if (le64toh(o->entry_array.items[i]) != 0 &&
+                            !VALID64(le64toh(o->entry_array.items[i]))) {
                                 log_error(OFSfmt": invalid object entry array item (%"PRIu64"/%"PRIu64"): "OFSfmt,
                                           offset,
                                           i, journal_file_entry_array_n_items(o),
-                                          o->entry_array.items[i]);
+                                          le64toh(o->entry_array.items[i]));
                                 return -EBADMSG;
                         }
 
@@ -1232,9 +1228,9 @@ int journal_file_verify(
         mmap_cache_close_fd(f->mmap, entry_fd);
         mmap_cache_close_fd(f->mmap, entry_array_fd);
 
-        close_nointr_nofail(data_fd);
-        close_nointr_nofail(entry_fd);
-        close_nointr_nofail(entry_array_fd);
+        safe_close(data_fd);
+        safe_close(entry_fd);
+        safe_close(entry_array_fd);
 
         if (first_contained)
                 *first_contained = le64toh(f->header->head_entry_realtime);
@@ -1257,17 +1253,17 @@ fail:
 
         if (data_fd >= 0) {
                 mmap_cache_close_fd(f->mmap, data_fd);
-                close_nointr_nofail(data_fd);
+                safe_close(data_fd);
         }
 
         if (entry_fd >= 0) {
                 mmap_cache_close_fd(f->mmap, entry_fd);
-                close_nointr_nofail(entry_fd);
+                safe_close(entry_fd);
         }
 
         if (entry_array_fd >= 0) {
                 mmap_cache_close_fd(f->mmap, entry_array_fd);
-                close_nointr_nofail(entry_array_fd);
+                safe_close(entry_array_fd);
         }
 
         return r;

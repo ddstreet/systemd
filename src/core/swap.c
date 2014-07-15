@@ -86,7 +86,7 @@ static void swap_init(Unit *u) {
         assert(s);
         assert(UNIT(s)->load_state == UNIT_STUB);
 
-        s->timeout_usec = DEFAULT_TIMEOUT_USEC;
+        s->timeout_usec = u->manager->default_timeout_start_usec;
 
         exec_context_init(&s->exec_context);
         s->exec_context.std_output = u->manager->default_std_output;
@@ -959,10 +959,7 @@ static void swap_sigchld_event(Unit *u, pid_t pid, int code, int status) {
         case SWAP_DEACTIVATING_SIGKILL:
         case SWAP_DEACTIVATING_SIGTERM:
 
-                if (f == SWAP_SUCCESS)
-                        swap_enter_dead(s, f);
-                else
-                        swap_enter_dead(s, f);
+                swap_enter_dead(s, f);
                 break;
 
         default:
@@ -1068,13 +1065,39 @@ static int swap_load_proc_swaps(Manager *m, bool set_flags) {
         return r;
 }
 
+static int open_proc_swaps(Manager *m) {
+        if (!m->proc_swaps) {
+                struct epoll_event ev = {
+                        .events = EPOLLPRI,
+                        .data.ptr = &m->swap_watch,
+                };
+
+                m->proc_swaps = fopen("/proc/swaps", "re");
+                if (!m->proc_swaps)
+                        return -errno;
+
+                m->swap_watch.type = WATCH_SWAP;
+                m->swap_watch.fd = fileno(m->proc_swaps);
+
+                if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->swap_watch.fd, &ev) < 0)
+                        return -errno;
+        }
+
+        return 0;
+}
+
 int swap_dispatch_reload(Manager *m) {
         /* This function should go as soon as the kernel properly notifies us */
+        int r;
 
         if (_likely_(!m->request_reload))
                 return 0;
 
         m->request_reload = false;
+
+        r = open_proc_swaps(m);
+        if (r < 0)
+                return (r == -ENOENT) ? 0 : r;
 
         return swap_fd_event(m, EPOLLPRI);
 }
@@ -1225,22 +1248,9 @@ static int swap_enumerate(Manager *m) {
         int r;
         assert(m);
 
-        if (!m->proc_swaps) {
-                struct epoll_event ev = {
-                        .events = EPOLLPRI,
-                        .data.ptr = &m->swap_watch,
-                };
-
-                m->proc_swaps = fopen("/proc/swaps", "re");
-                if (!m->proc_swaps)
-                        return (errno == ENOENT) ? 0 : -errno;
-
-                m->swap_watch.type = WATCH_SWAP;
-                m->swap_watch.fd = fileno(m->proc_swaps);
-
-                if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->swap_watch.fd, &ev) < 0)
-                        return -errno;
-        }
+        r = open_proc_swaps(m);
+        if (r < 0)
+                return (r == -ENOENT) ? 0 : r;
 
         r = swap_load_proc_swaps(m, false);
         if (r < 0)

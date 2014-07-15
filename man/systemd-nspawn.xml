@@ -304,6 +304,16 @@
                         </varlistentry>
 
                         <varlistentry>
+                                <term><option>--drop-capability=</option></term>
+
+                                <listitem><para>Specify one or more
+                                additional capabilities to drop for
+                                the container. This allows running the
+                                container with fewer capabilities than
+                                the default (see above).</para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
                                 <term><option>--link-journal=</option></term>
 
                                 <listitem><para>Control whether the
@@ -425,6 +435,18 @@
                 <ulink url="https://github.com/karelzak/util-linux">util-linux</ulink>.
                 Kernel support for entering namespaces was added in
                 Linux 3.8.</para>
+        </refsect1>
+
+        <refsect1>
+                <title>Example 4</title>
+
+                <programlisting># mv ~/arch-tree /var/lib/container/arch
+# systemctl enable systemd-nspawn@arch.service
+# systemctl start systemd-nspawn@arch.service</programlisting>
+
+                <para>This makes the Arch Linux container part of the
+                <filename>multi-user.target</filename> on the host.
+                </para>
         </refsect1>
 
         <refsect1>

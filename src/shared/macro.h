@@ -114,6 +114,13 @@ static inline size_t ALIGN_TO(size_t l, size_t ali) {
                         _a < _b ? _a : _b;      \
                 })
 
+#define LESS_BY(A,B)                            \
+        __extension__ ({                        \
+                        typeof(A) _A = (A);     \
+                        typeof(B) _B = (B);     \
+                        _A > _B ? _A - _B : 0;  \
+                })
+
 #ifndef CLAMP
 #define CLAMP(x, low, high)                                             \
         __extension__ ({                                                \
@@ -286,5 +293,18 @@ do {                                                                    \
 
 #define SET_FLAG(v, flag, b) \
         (v) = (b) ? ((v) | (flag)) : ((v) & ~(flag))
+
+#define IN_SET(x, ...) ({                                               \
+        typeof(x) _x = (x);                                             \
+        unsigned _i;                                                    \
+        bool _found = false;                                            \
+        for (_i = 0; _i < sizeof((typeof(_x)[]) { __VA_ARGS__ })/sizeof(typeof(_x)); _i++) \
+                if (((typeof(_x)[]) { __VA_ARGS__ })[_i] == _x) {       \
+                        _found = true;                                  \
+                        break;                                          \
+                }                                                       \
+        _found;                                                         \
+        })
+
 
 #include "log.h"

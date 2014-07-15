@@ -126,10 +126,11 @@ static int add_match(Set *set, const char *match) {
                 goto fail;
 
         log_debug("Adding pattern: %s", pattern);
-        r = set_consume(set, pattern);
+        r = set_put(set, pattern);
         if (r < 0) {
                 log_error("Failed to add pattern '%s': %s",
                           pattern, strerror(-r));
+                free(pattern);
                 goto fail;
         }
 
@@ -417,7 +418,7 @@ static int dump_core(sd_journal* j) {
 
         r = sd_journal_previous(j);
         if (r >= 0)
-                log_warning("More than one entry matches, ignoring rest.\n");
+                log_warning("More than one entry matches, ignoring rest.");
 
         return 0;
 }
@@ -490,8 +491,7 @@ static int run_gdb(sd_journal *j) {
                 goto finish;
         }
 
-        close_nointr_nofail(fd);
-        fd = -1;
+        fd = safe_close(fd);
 
         pid = fork();
         if (pid < 0) {

@@ -78,7 +78,8 @@
                 <citerefentry><refentrytitle>sd_journal_add_match</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                 <citerefentry><refentrytitle>sd_journal_seek_head</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                 <citerefentry><refentrytitle>sd_journal_get_cursor</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
-                <citerefentry><refentrytitle>sd_journal_cutoff_realtime_usec</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
+                <citerefentry><refentrytitle>sd_journal_get_cutoff_realtime_usec</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
+                <citerefentry><refentrytitle>sd_journal_get_cutoff_monotonic_usec</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                 <citerefentry><refentrytitle>sd_journal_get_usage</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                 <citerefentry><refentrytitle>sd_journal_get_catalog</refentrytitle><manvolnum>3</manvolnum></citerefentry>
                 and
@@ -98,7 +99,7 @@
         <refsect1>
                 <title>Notes</title>
 
-                <para>These APIs are implemented as shared library,
+                <para>These APIs are implemented as a shared library,
                 which can be compiled and linked to with the
                 <constant>libsystemd-journal</constant> <citerefentry><refentrytitle>pkg-config</refentrytitle><manvolnum>1</manvolnum></citerefentry>
                 file.</para>
@@ -117,7 +118,8 @@
                         <citerefentry><refentrytitle>sd_journal_add_match</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>sd_journal_seek_head</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>sd_journal_get_cursor</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
-                        <citerefentry><refentrytitle>sd_journal_cutoff_realtime_usec</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
+                        <citerefentry><refentrytitle>sd_journal_get_cutoff_realtime_usec</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
+                        <citerefentry><refentrytitle>sd_journal_get_cutoff_monotonic_usec</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>sd_journal_get_usage</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>sd_journal_get_fd</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>sd_journal_query_unique</refentrytitle><manvolnum>3</manvolnum></citerefentry>,

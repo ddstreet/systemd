@@ -64,7 +64,7 @@ static void test_close_many(void) {
         assert_se(fcntl(fds[1], F_GETFD) == -1);
         assert_se(fcntl(fds[2], F_GETFD) >= 0);
 
-        close_nointr_nofail(fds[2]);
+        safe_close(fds[2]);
 
         unlink(name0);
         unlink(name1);
@@ -591,6 +591,16 @@ static void test_get_files_in_directory(void) {
         assert_se(get_files_in_directory(".", NULL) >= 0);
 }
 
+static void test_in_set(void) {
+        assert_se(IN_SET(1, 1));
+        assert_se(IN_SET(1, 1, 2, 3, 4));
+        assert_se(IN_SET(2, 1, 2, 3, 4));
+        assert_se(IN_SET(3, 1, 2, 3, 4));
+        assert_se(IN_SET(4, 1, 2, 3, 4));
+        assert_se(!IN_SET(0, 1));
+        assert_se(!IN_SET(0, 1, 2, 3, 4));
+}
+
 int main(int argc, char *argv[]) {
         test_streq_ptr();
         test_first_word();
@@ -628,6 +638,7 @@ int main(int argc, char *argv[]) {
         test_split_pair();
         test_fstab_node_to_udev_node();
         test_get_files_in_directory();
+        test_in_set();
 
         return 0;
 }

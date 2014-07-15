@@ -75,6 +75,8 @@
 /* This assumes there is a 'tty' group */
 #define TTY_MODE 0620
 
+#define SNDBUF_SIZE (8*1024*1024)
+
 static int shift_fds(int fds[], unsigned n_fds) {
         int start, restart_from;
 
@@ -101,7 +103,7 @@ static int shift_fds(int fds[], unsigned n_fds) {
                         if ((nfd = fcntl(fds[i], F_DUPFD, i+3)) < 0)
                                 return -errno;
 
-                        close_nointr_nofail(fds[i]);
+                        safe_close(fds[i]);
                         fds[i] = nfd;
 
                         /* Hmm, the fd we wanted isn't free? Then
@@ -198,7 +200,7 @@ static int open_null_as(int flags, int nfd) {
 
         if (fd != nfd) {
                 r = dup2(fd, nfd) < 0 ? -errno : nfd;
-                close_nointr_nofail(fd);
+                safe_close(fd);
         } else
                 r = nfd;
 
@@ -223,14 +225,16 @@ static int connect_logger_as(const ExecContext *context, ExecOutput output, cons
 
         r = connect(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + strlen(sa.un.sun_path));
         if (r < 0) {
-                close_nointr_nofail(fd);
+                safe_close(fd);
                 return -errno;
         }
 
         if (shutdown(fd, SHUT_RD) < 0) {
-                close_nointr_nofail(fd);
+                safe_close(fd);
                 return -errno;
         }
+
+        fd_inc_sndbuf(fd, SNDBUF_SIZE);
 
         dprintf(fd,
                 "%s\n"
@@ -250,7 +254,7 @@ static int connect_logger_as(const ExecContext *context, ExecOutput output, cons
 
         if (fd != nfd) {
                 r = dup2(fd, nfd) < 0 ? -errno : nfd;
-                close_nointr_nofail(fd);
+                safe_close(fd);
         } else
                 r = nfd;
 
@@ -267,7 +271,7 @@ static int open_terminal_as(const char *path, mode_t mode, int nfd) {
 
         if (fd != nfd) {
                 r = dup2(fd, nfd) < 0 ? -errno : nfd;
-                close_nointr_nofail(fd);
+                safe_close(fd);
         } else
                 r = nfd;
 
@@ -317,17 +321,17 @@ static int setup_input(const ExecContext *context, int socket_fd, bool apply_tty
         case EXEC_INPUT_TTY_FAIL: {
                 int fd, r;
 
-                if ((fd = acquire_terminal(
-                                     tty_path(context),
-                                     i == EXEC_INPUT_TTY_FAIL,
-                                     i == EXEC_INPUT_TTY_FORCE,
-                                     false,
-                                     (usec_t) -1)) < 0)
+                fd = acquire_terminal(tty_path(context),
+                                      i == EXEC_INPUT_TTY_FAIL,
+                                      i == EXEC_INPUT_TTY_FORCE,
+                                      false,
+                                      (usec_t) -1);
+                if (fd < 0)
                         return fd;
 
                 if (fd != STDIN_FILENO) {
                         r = dup2(fd, STDIN_FILENO) < 0 ? -errno : STDIN_FILENO;
-                        close_nointr_nofail(fd);
+                        safe_close(fd);
                 } else
                         r = STDIN_FILENO;
 
@@ -491,7 +495,7 @@ static int setup_confirm_stdio(int *_saved_stdin,
         }
 
         if (fd >= 2)
-                close_nointr_nofail(fd);
+                safe_close(fd);
 
         *_saved_stdin = saved_stdin;
         *_saved_stdout = saved_stdout;
@@ -499,20 +503,15 @@ static int setup_confirm_stdio(int *_saved_stdin,
         return 0;
 
 fail:
-        if (saved_stdout >= 0)
-                close_nointr_nofail(saved_stdout);
-
-        if (saved_stdin >= 0)
-                close_nointr_nofail(saved_stdin);
-
-        if (fd >= 0)
-                close_nointr_nofail(fd);
+        safe_close(saved_stdout);
+        safe_close(saved_stdin);
+        safe_close(fd);
 
         return r;
 }
 
 _printf_attr_(1, 2) static int write_confirm_message(const char *format, ...) {
-        int fd;
+        _cleanup_close_ int fd = -1;
         va_list ap;
 
         assert(format);
@@ -524,8 +523,6 @@ _printf_attr_(1, 2) static int write_confirm_message(const char *format, ...) {
         va_start(ap, format);
         vdprintf(fd, format, ap);
         va_end(ap);
-
-        close_nointr_nofail(fd);
 
         return 0;
 }
@@ -548,11 +545,8 @@ static int restore_confirm_stdio(int *saved_stdin,
                 if (dup2(*saved_stdout, STDOUT_FILENO) < 0)
                         r = -errno;
 
-        if (*saved_stdin >= 0)
-                close_nointr_nofail(*saved_stdin);
-
-        if (*saved_stdout >= 0)
-                close_nointr_nofail(*saved_stdout);
+        safe_close(*saved_stdin);
+        safe_close(*saved_stdout);
 
         return r;
 }
@@ -748,6 +742,7 @@ static int setup_pam(
         char **e = NULL;
         bool close_session = false;
         pid_t pam_pid = 0, parent_pid;
+        int flags = 0;
 
         assert(name);
         assert(user);
@@ -759,6 +754,9 @@ static int setup_pam(
          * session again. The parent process will exec() the actual
          * daemon. We do things this way to ensure that the main PID
          * of the daemon is the one we initially fork()ed. */
+
+        if (log_get_max_level() < LOG_PRI(LOG_DEBUG))
+                flags |= PAM_SILENT;
 
         pam_code = pam_start(name, user, &conv, &handle);
         if (pam_code != PAM_SUCCESS) {
@@ -772,11 +770,11 @@ static int setup_pam(
                         goto fail;
         }
 
-        pam_code = pam_acct_mgmt(handle, PAM_SILENT);
+        pam_code = pam_acct_mgmt(handle, flags);
         if (pam_code != PAM_SUCCESS)
                 goto fail;
 
-        pam_code = pam_open_session(handle, PAM_SILENT);
+        pam_code = pam_open_session(handle, flags);
         if (pam_code != PAM_SUCCESS)
                 goto fail;
 
@@ -850,7 +848,7 @@ static int setup_pam(
 
                 /* If our parent died we'll end the session */
                 if (getppid() != parent_pid) {
-                        pam_code = pam_close_session(handle, PAM_DATA_SILENT);
+                        pam_code = pam_close_session(handle, flags);
                         if (pam_code != PAM_SUCCESS)
                                 goto child_finish;
                 }
@@ -858,7 +856,7 @@ static int setup_pam(
                 r = 0;
 
         child_finish:
-                pam_end(handle, pam_code | PAM_DATA_SILENT);
+                pam_end(handle, pam_code | flags);
                 _exit(r);
         }
 
@@ -880,16 +878,19 @@ static int setup_pam(
         return 0;
 
 fail:
-        if (pam_code != PAM_SUCCESS)
+        if (pam_code != PAM_SUCCESS) {
+                log_error("PAM failed: %s", pam_strerror(handle, pam_code));
                 err = -EPERM;  /* PAM errors do not map to errno */
-        else
+        } else {
+                log_error("PAM failed: %m");
                 err = -errno;
+        }
 
         if (handle) {
                 if (close_session)
-                        pam_code = pam_close_session(handle, PAM_DATA_SILENT);
+                        pam_code = pam_close_session(handle, flags);
 
-                pam_end(handle, pam_code | PAM_DATA_SILENT);
+                pam_end(handle, pam_code | flags);
         }
 
         strv_free(e);
@@ -991,10 +992,9 @@ static int apply_seccomp(uint32_t *syscall_filter) {
 static void do_idle_pipe_dance(int idle_pipe[4]) {
         assert(idle_pipe);
 
-        if (idle_pipe[1] >= 0)
-                close_nointr_nofail(idle_pipe[1]);
-        if (idle_pipe[2] >= 0)
-                close_nointr_nofail(idle_pipe[2]);
+
+        safe_close(idle_pipe[1]);
+        safe_close(idle_pipe[2]);
 
         if (idle_pipe[0] >= 0) {
                 int r;
@@ -1009,12 +1009,11 @@ static void do_idle_pipe_dance(int idle_pipe[4]) {
                         fd_wait_for_event(idle_pipe[0], POLLHUP, IDLE_TIMEOUT2_USEC);
                 }
 
-                close_nointr_nofail(idle_pipe[0]);
+                safe_close(idle_pipe[0]);
 
         }
 
-        if (idle_pipe[3] >= 0)
-                close_nointr_nofail(idle_pipe[3]);
+        safe_close(idle_pipe[3]);
 }
 
 int exec_spawn(ExecCommand *command,
@@ -1082,7 +1081,7 @@ int exec_spawn(ExecCommand *command,
         free(line);
 
         if (context->private_tmp && !context->tmp_dir && !context->var_tmp_dir) {
-                r = setup_tmpdirs(&context->tmp_dir, &context->var_tmp_dir);
+                r = setup_tmpdirs(unit_id, &context->tmp_dir, &context->var_tmp_dir);
                 if (r < 0)
                         return r;
         }
@@ -1094,7 +1093,7 @@ int exec_spawn(ExecCommand *command,
         if (pid == 0) {
                 int i, err;
                 sigset_t ss;
-                const char *username = NULL, *home = NULL;
+                const char *username = NULL, *home = NULL, *shell = NULL;
                 uid_t uid = (uid_t) -1;
                 gid_t gid = (gid_t) -1;
                 _cleanup_strv_free_ char **our_env = NULL, **pam_env = NULL,
@@ -1277,7 +1276,7 @@ int exec_spawn(ExecCommand *command,
 
                 if (context->user) {
                         username = context->user;
-                        err = get_user_creds(&username, &uid, &gid, &home, NULL);
+                        err = get_user_creds(&username, &uid, &gid, &home, &shell);
                         if (err < 0) {
                                 r = EXIT_USER;
                                 goto fail_child;
@@ -1462,46 +1461,28 @@ int exec_spawn(ExecCommand *command,
                         }
                 }
 
-                our_env = new0(char*, 7);
-                if (!our_env) {
+                our_env = new(char*, 8);
+                if (!our_env ||
+                    (n_fds > 0 && (
+                            asprintf(our_env + n_env++, "LISTEN_PID=%lu", (unsigned long) getpid()) < 0 ||
+                            asprintf(our_env + n_env++, "LISTEN_FDS=%u", n_fds) < 0)) ||
+                    (home && asprintf(our_env + n_env++, "HOME=%s", home) < 0) ||
+                    (username && (
+                            asprintf(our_env + n_env++, "LOGNAME=%s", username) < 0 ||
+                            asprintf(our_env + n_env++, "USER=%s", username) < 0)) ||
+                    (shell && asprintf(our_env + n_env++, "SHELL=%s", shell) < 0) ||
+                    ((is_terminal_input(context->std_input) ||
+                      context->std_output == EXEC_OUTPUT_TTY ||
+                      context->std_error == EXEC_OUTPUT_TTY) && (
+                              !(our_env[n_env++] = strdup(default_term_for_tty(tty_path(context))))))) {
+
                         err = -ENOMEM;
                         r = EXIT_MEMORY;
                         goto fail_child;
                 }
 
-                if (n_fds > 0)
-                        if (asprintf(our_env + n_env++, "LISTEN_PID=%lu", (unsigned long) getpid()) < 0 ||
-                            asprintf(our_env + n_env++, "LISTEN_FDS=%u", n_fds) < 0) {
-                                err = -ENOMEM;
-                                r = EXIT_MEMORY;
-                                goto fail_child;
-                        }
-
-                if (home)
-                        if (asprintf(our_env + n_env++, "HOME=%s", home) < 0) {
-                                err = -ENOMEM;
-                                r = EXIT_MEMORY;
-                                goto fail_child;
-                        }
-
-                if (username)
-                        if (asprintf(our_env + n_env++, "LOGNAME=%s", username) < 0 ||
-                            asprintf(our_env + n_env++, "USER=%s", username) < 0) {
-                                err = -ENOMEM;
-                                r = EXIT_MEMORY;
-                                goto fail_child;
-                        }
-
-                if (is_terminal_input(context->std_input) ||
-                    context->std_output == EXEC_OUTPUT_TTY ||
-                    context->std_error == EXEC_OUTPUT_TTY)
-                        if (!(our_env[n_env++] = strdup(default_term_for_tty(tty_path(context))))) {
-                                err = -ENOMEM;
-                                r = EXIT_MEMORY;
-                                goto fail_child;
-                        }
-
-                assert(n_env <= 7);
+                our_env[n_env++] = NULL;
+                assert(n_env <= 8);
 
                 final_env = strv_env_merge(5,
                                            environment,
@@ -1618,10 +1599,16 @@ void exec_context_tmp_dirs_done(ExecContext *c) {
                         c->tmp_dir ? c->var_tmp_dir : NULL,
                         NULL};
         char **dirp;
+        int r;
 
         for(dirp = dirs; *dirp; dirp++) {
                 log_debug("Spawning thread to nuke %s", *dirp);
-                asynchronous_job(remove_tmpdir_thread, *dirp);
+
+                r = asynchronous_job(remove_tmpdir_thread, *dirp);
+                if (r < 0) {
+                        log_warning("Failed to nuke %s: %s", *dirp, strerror(-r));
+                        free(*dirp);
+                }
         }
 
         c->tmp_dir = c->var_tmp_dir = NULL;

@@ -59,13 +59,79 @@ static const UnitActiveState state_translation_table[_MOUNT_STATE_MAX] = {
         [MOUNT_FAILED] = UNIT_FAILED
 };
 
+static char* mount_test_option(const char *haystack, const char *needle) {
+        struct mntent me = { .mnt_opts = (char*) haystack };
+
+        assert(needle);
+
+        /* Like glibc's hasmntopt(), but works on a string, not a
+         * struct mntent */
+
+        if (!haystack)
+                return NULL;
+
+        return hasmntopt(&me, needle);
+}
+
+static bool mount_is_network(MountParameters *p) {
+        assert(p);
+
+        if (mount_test_option(p->options, "_netdev"))
+                return true;
+
+        if (p->fstype && fstype_is_network(p->fstype))
+                return true;
+
+        return false;
+}
+
+static bool mount_is_bind(MountParameters *p) {
+        assert(p);
+
+        if (mount_test_option(p->options, "bind"))
+                return true;
+
+        if (p->fstype && streq(p->fstype, "bind"))
+                return true;
+
+        if (mount_test_option(p->options, "rbind"))
+                return true;
+
+        if (p->fstype && streq(p->fstype, "rbind"))
+                return true;
+
+        return false;
+}
+
+static bool mount_is_auto(MountParameters *p) {
+        assert(p);
+
+        return !mount_test_option(p->options, "noauto");
+}
+
+static bool needs_quota(MountParameters *p) {
+        assert(p);
+
+        if (mount_is_network(p))
+                return false;
+
+        if (mount_is_bind(p))
+                return false;
+
+        return mount_test_option(p->options, "usrquota") ||
+                mount_test_option(p->options, "grpquota") ||
+                mount_test_option(p->options, "quota") ||
+                mount_test_option(p->options, "usrjquota") ||
+                mount_test_option(p->options, "grpjquota");
+}
+
 static void mount_init(Unit *u) {
         Mount *m = MOUNT(u);
 
         assert(u);
         assert(u->load_state == UNIT_STUB);
 
-        m->timeout_usec = DEFAULT_TIMEOUT_USEC;
+        m->timeout_usec = u->manager->default_timeout_start_usec;
         m->directory_mode = 0755;
 
         exec_context_init(&m->exec_context);
@@ -182,7 +248,10 @@ static int mount_add_mount_links(Mount *m) {
          * for the source path (if this is a bind mount) to be
          * available. */
         pm = get_mount_parameters_fragment(m);
-        if (pm && path_is_absolute(pm->what)) {
+        if (pm && pm->what &&
+            path_is_absolute(pm->what) &&
+            !mount_is_network(pm)) {
+
                 r = unit_require_mounts_for(UNIT(m), pm->what);
                 if (r < 0)
                         return r;
@@ -212,72 +281,6 @@ static int mount_add_mount_links(Mount *m) {
         }
 
         return 0;
-}
-
-static char* mount_test_option(const char *haystack, const char *needle) {
-        struct mntent me = { .mnt_opts = (char*) haystack };
-
-        assert(needle);
-
-        /* Like glibc's hasmntopt(), but works on a string, not a
-         * struct mntent */
-
-        if (!haystack)
-                return NULL;
-
-        return hasmntopt(&me, needle);
-}
-
-static bool mount_is_network(MountParameters *p) {
-        assert(p);
-
-        if (mount_test_option(p->options, "_netdev"))
-                return true;
-
-        if (p->fstype && fstype_is_network(p->fstype))
-                return true;
-
-        return false;
-}
-
-static bool mount_is_bind(MountParameters *p) {
-        assert(p);
-
-        if (mount_test_option(p->options, "bind"))
-                return true;
-
-        if (p->fstype && streq(p->fstype, "bind"))
-                return true;
-
-        if (mount_test_option(p->options, "rbind"))
-                return true;
-
-        if (p->fstype && streq(p->fstype, "rbind"))
-                return true;
-
-        return false;
-}
-
-static bool mount_is_auto(MountParameters *p) {
-        assert(p);
-
-        return !mount_test_option(p->options, "noauto");
-}
-
-static bool needs_quota(MountParameters *p) {
-        assert(p);
-
-        if (mount_is_network(p))
-                return false;
-
-        if (mount_is_bind(p))
-                return false;
-
-        return mount_test_option(p->options, "usrquota") ||
-                mount_test_option(p->options, "grpquota") ||
-                mount_test_option(p->options, "quota") ||
-                mount_test_option(p->options, "usrjquota") ||
-                mount_test_option(p->options, "grpjquota");
 }
 
 static int mount_add_device_links(Mount *m) {
@@ -1409,9 +1412,10 @@ static int mount_add_one(
                 const char *fstype,
                 int passno,
                 bool set_flags) {
+
         int r;
         Unit *u;
-        bool delete;
+        bool delete, changed = false;
         char *e, *w = NULL, *o = NULL, *f = NULL;
         MountParameters *p;
         bool load_extras = false;
@@ -1480,6 +1484,7 @@ static int mount_add_one(
                 }
 
                 unit_add_to_load_queue(u);
+                changed = true;
         } else {
                 delete = false;
                 free(e);
@@ -1499,6 +1504,7 @@ static int mount_add_one(
                         /* Load in the extras later on, after we
                          * finished initialization of the unit */
                         load_extras = true;
+                        changed = true;
                 }
         }
 
@@ -1510,10 +1516,16 @@ static int mount_add_one(
         }
 
         p = &MOUNT(u)->parameters_proc_self_mountinfo;
+
+        changed = changed ||
+                !streq_ptr(p->options, options) ||
+                !streq_ptr(p->what, what) ||
+                !streq_ptr(p->fstype, fstype);
+
         if (set_flags) {
                 MOUNT(u)->is_mounted = true;
                 MOUNT(u)->just_mounted = !MOUNT(u)->from_proc_self_mountinfo;
-                MOUNT(u)->just_changed = !streq_ptr(p->options, o);
+                MOUNT(u)->just_changed = changed;
         }
 
         MOUNT(u)->from_proc_self_mountinfo = true;
@@ -1535,7 +1547,8 @@ static int mount_add_one(
                         goto fail;
         }
 
-        unit_add_to_dbus_queue(u);
+        if (changed)
+                unit_add_to_dbus_queue(u);
 
         return 0;
 
@@ -1678,20 +1691,20 @@ void mount_fd_event(Manager *m, int events) {
                 Mount *mount = MOUNT(u);
 
                 if (!mount->is_mounted) {
-                        /* This has just been unmounted. */
 
                         mount->from_proc_self_mountinfo = false;
 
                         switch (mount->state) {
 
                         case MOUNT_MOUNTED:
+                                /* This has just been unmounted by
+                                 * somebody else, follow the state
+                                 * change. */
                                 mount_enter_dead(mount, MOUNT_SUCCESS);
                                 break;
 
                         default:
-                                mount_set_state(mount, mount->state);
                                 break;
-
                         }
 
                 } else if (mount->just_mounted || mount->just_changed) {
@@ -1702,6 +1715,9 @@ void mount_fd_event(Manager *m, int events) {
 
                         case MOUNT_DEAD:
                         case MOUNT_FAILED:
+                                /* This has just been mounted by
+                                 * somebody else, follow the state
+                                 * change. */
                                 mount_enter_mounted(mount, MOUNT_SUCCESS);
                                 break;
 

@@ -34,6 +34,10 @@
 #include <sys/prctl.h>
 #include <sys/mount.h>
 
+#ifdef HAVE_VALGRIND_VALGRIND_H
+#include <valgrind/valgrind.h>
+#endif
+
 #include "manager.h"
 #include "log.h"
 #include "load-fragment.h"
@@ -90,6 +94,11 @@ static bool arg_switched_root = false;
 static char ***arg_join_controllers = NULL;
 static ExecOutput arg_default_std_output = EXEC_OUTPUT_JOURNAL;
 static ExecOutput arg_default_std_error = EXEC_OUTPUT_INHERIT;
+static usec_t arg_default_restart_usec = DEFAULT_RESTART_USEC;
+static usec_t arg_default_timeout_start_usec = DEFAULT_TIMEOUT_USEC;
+static usec_t arg_default_timeout_stop_usec = DEFAULT_TIMEOUT_USEC;
+static usec_t arg_default_start_limit_interval = DEFAULT_START_LIMIT_INTERVAL;
+static unsigned arg_default_start_limit_burst = DEFAULT_START_LIMIT_BURST;
 static usec_t arg_runtime_watchdog = 0;
 static usec_t arg_shutdown_watchdog = 10 * USEC_PER_MINUTE;
 static char **arg_default_environment = NULL;
@@ -226,7 +235,7 @@ static int console_setup(bool do_reset) {
         if (r < 0)
                 log_error("Failed to reset /dev/console: %s", strerror(-r));
 
-        close_nointr_nofail(tty_fd);
+        safe_close(tty_fd);
         return r;
 }
 
@@ -402,12 +411,9 @@ static int parse_proc_cmdline_word(const char *word) {
         } else if (streq(word, "quiet"))
                 arg_show_status = false;
         else if (streq(word, "debug")) {
-                /* Log to kmsg, the journal socket will fill up before the
-                 * journal is started and tools running during that time
-                 * will block with every log message for for 60 seconds,
-                 * before they give up. */
                 log_set_max_level(LOG_DEBUG);
-                log_set_target(LOG_TARGET_KMSG);
+                if (detect_container(NULL) > 0)
+                        log_set_target(LOG_TARGET_KMSG);
         } else if (!in_initrd()) {
                 unsigned i;
 
@@ -636,6 +642,11 @@ static int parse_config_file(void) {
                 { "Manager", "CPUAffinity",           config_parse_cpu_affinity2, 0, NULL                    },
                 { "Manager", "DefaultStandardOutput", config_parse_output,       0, &arg_default_std_output  },
                 { "Manager", "DefaultStandardError",  config_parse_output,       0, &arg_default_std_error   },
+                { "Manager", "DefaultTimeoutStartSec", config_parse_sec,         0, &arg_default_timeout_start_usec },
+                { "Manager", "DefaultTimeoutStopSec", config_parse_sec,          0, &arg_default_timeout_stop_usec  },
+                { "Manager", "DefaultRestartSec",     config_parse_sec,          0, &arg_default_restart_usec  },
+                { "Manager", "DefaultStartLimitInterval", config_parse_sec,      0, &arg_default_start_limit_interval },
+                { "Manager", "DefaultStartLimitBurst", config_parse_unsigned,    0, &arg_default_start_limit_burst },
                 { "Manager", "JoinControllers",       config_parse_join_controllers, 0, &arg_join_controllers },
                 { "Manager", "RuntimeWatchdogSec",    config_parse_sec,          0, &arg_runtime_watchdog    },
                 { "Manager", "ShutdownWatchdogSec",   config_parse_sec,          0, &arg_shutdown_watchdog   },
@@ -1333,6 +1344,7 @@ int main(int argc, char *argv[]) {
                 /* Running inside a container, as PID 1 */
                 arg_running_as = SYSTEMD_SYSTEM;
                 log_set_target(LOG_TARGET_CONSOLE);
+                log_close_console(); /* force reopen of /dev/console */
                 log_open();
 
                 /* For the later on, see above... */
@@ -1542,6 +1554,11 @@ int main(int argc, char *argv[]) {
         m->confirm_spawn = arg_confirm_spawn;
         m->default_std_output = arg_default_std_output;
         m->default_std_error = arg_default_std_error;
+        m->default_restart_usec = arg_default_restart_usec;
+        m->default_timeout_start_usec = arg_default_timeout_start_usec;
+        m->default_timeout_stop_usec = arg_default_timeout_stop_usec;
+        m->default_start_limit_interval = arg_default_start_limit_interval;
+        m->default_start_limit_burst = arg_default_start_limit_burst;
         m->runtime_watchdog = arg_runtime_watchdog;
         m->shutdown_watchdog = arg_shutdown_watchdog;
         m->userspace_timestamp = userspace_timestamp;
@@ -1731,6 +1748,7 @@ finish:
         if (reexecute) {
                 const char **args;
                 unsigned i, args_size;
+                sigset_t ss;
 
                 /* Close and disarm the watchdog, so that the new
                  * instance can reinitialize it, but doesn't get
@@ -1814,6 +1832,13 @@ finish:
                 args[i++] = NULL;
                 assert(i <= args_size);
 
+                /* reenable any blocked signals, especially important
+                 * if we switch from initial ramdisk to init=... */
+                reset_all_signal_handlers();
+
+                assert_se(sigemptyset(&ss) == 0);
+                assert_se(sigprocmask(SIG_SETMASK, &ss, NULL) == 0);
+
                 if (switch_root_init) {
                         args[0] = switch_root_init;
                         execv(args[0], (char* const*) args);
@@ -1839,6 +1864,15 @@ finish:
 
         if (fds)
                 fdset_free(fds);
+
+#ifdef HAVE_VALGRIND_VALGRIND_H
+        /* If we are PID 1 and running under valgrind, then let's exit
+         * here explicitly. valgrind will only generate nice output on
+         * exit(), not on exec(), hence let's do the former not the
+         * latter here. */
+        if (getpid() == 1 && RUNNING_ON_VALGRIND)
+                return 0;
+#endif
 
         if (shutdown_verb) {
                 const char * command_line[] = {

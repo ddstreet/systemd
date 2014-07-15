@@ -536,6 +536,8 @@ int udev_device_read_db(struct udev_device *udev_device, const char *dbfile)
                 udev_dbg(udev_device->udev, "no db file to read %s: %m\n", dbfile);
                 return -1;
         }
+
+        /* devices with a database entry are initialized */
         udev_device->is_initialized = true;
 
         while (fgets(line, sizeof(line), f)) {
@@ -980,9 +982,8 @@ static struct udev_device *device_new_from_parent(struct udev_device *udev_devic
  * Find the next parent device, and fill in information from the sys
  * device and the udev database entry.
  *
- * The returned the device is not referenced. It is attached to the
- * child device, and will be cleaned up when the child device
- * is cleaned up.
+ * Returned device is not referenced. It is attached to the child
+ * device, and will be cleaned up when the child device is cleaned up.
  *
  * It is not necessarily just the upper level directory, empty or not
  * recognized sys directories are ignored.
@@ -1016,9 +1017,8 @@ _public_ struct udev_device *udev_device_get_parent(struct udev_device *udev_dev
  * If devtype is #NULL, only subsystem is checked, and any devtype will
  * match.
  *
- * The returned the device is not referenced. It is attached to the
- * child device, and will be cleaned up when the child device
- * is cleaned up.
+ * Returned device is not referenced. It is attached to the child
+ * device, and will be cleaned up when the child device is cleaned up.
  *
  * It can be called as many times as needed, without caring about
  * references.

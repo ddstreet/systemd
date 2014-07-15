@@ -70,7 +70,7 @@ static void device_init(Unit *u) {
          * indefinitely for plugged in devices, something which cannot
          * happen for the other units since their operations time out
          * anyway. */
-        UNIT(d)->job_timeout = DEFAULT_TIMEOUT_USEC;
+        UNIT(d)->job_timeout = u->manager->default_timeout_start_usec;
 
         UNIT(d)->ignore_on_isolate = true;
         UNIT(d)->ignore_on_snapshot = true;
@@ -275,8 +275,9 @@ static int device_update_unit(Manager *m, struct udev_device *dev, const char *p
                         }
                 }
 
-                wants = udev_device_get_property_value(dev, "SYSTEMD_WANTS");
-                if (wants) {
+                if (u->manager->running_as == SYSTEMD_SYSTEM &&
+                    (wants = udev_device_get_property_value(dev, "SYSTEMD_WANTS"))) {
+
                         char *state, *w;
                         size_t l;
 
