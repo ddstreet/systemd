@@ -140,7 +140,6 @@ char *cgm_get(const char *controller, const char *cgroup_path, const char *key)
 		log_error("cgmanager: cgm_get for controller=%s, cgroup_path=%s failed: %s",
 		          controller, cgroup_path, nerr->message);
 		nih_free(nerr);
-		nih_free(result);
 		return NULL;
 	}
 
