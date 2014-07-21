@@ -1,3 +1,10 @@
+systemd (204-5ubuntu20.4) trusty-proposed; urgency=medium
+
+  * Add HP ProLiant m800 Server Cartridge power control support. The cartridge
+    uses gpio_keys.12 to emulate shutdown. (LP: #1347776)
+
+ -- Manoj Iyer <manoj.iyer@canonical.com>  Mon, 21 Jul 2014 17:58:06 -0500
+
 systemd (204-5ubuntu20.3) trusty; urgency=medium
 
   * Fix various issues with the cgmanager integration (LP: #1309025):
