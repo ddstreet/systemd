@@ -4008,7 +4008,6 @@ static int set_environment(DBusConnection *bus, char **args) {
 static int enable_sysv_units(char **args) {
         int r = 0;
 
-#if defined(HAVE_SYSV_COMPAT) && defined(HAVE_CHKCONFIG)
         const char *verb = args[0];
         unsigned f = 1, t = 1;
         LookupPaths paths = {};
@@ -4017,8 +4016,9 @@ static int enable_sysv_units(char **args) {
                 return 0;
 
         if (!streq(verb, "enable") &&
-            !streq(verb, "disable") &&
-            !streq(verb, "is-enabled"))
+            !streq(verb, "disable"))
+            // update-rc.d currently does not provide is-enabled
+            //!streq(verb, "is-enabled"))
                 return 0;
 
         /* Processes all SysV units, and reshuffles the array so that
@@ -4034,16 +4034,13 @@ static int enable_sysv_units(char **args) {
                 _cleanup_free_ char *p = NULL, *q = NULL;
                 bool found_native = false, found_sysv;
                 unsigned c = 1;
-                const char *argv[6] = { "/sbin/chkconfig", NULL, NULL, NULL, NULL };
+                const char *argv[6] = { "/usr/sbin/update-rc.d", NULL, NULL, NULL, NULL };
                 char **k, *l;
                 int j;
                 pid_t pid;
                 siginfo_t status;
 
                 name = args[f];
-
-                if (!endswith(name, ".service"))
-                        continue;
 
                 if (path_is_absolute(name))
                         continue;
@@ -4067,9 +4064,6 @@ static int enable_sysv_units(char **args) {
                                 break;
                 }
 
-                if (found_native)
-                        continue;
-
                 if (!isempty(arg_root))
                         asprintf(&p, "%s/" SYSTEM_SYSVINIT_PATH "/%s", arg_root, name);
                 else
@@ -4079,24 +4073,22 @@ static int enable_sysv_units(char **args) {
                         goto finish;
                 }
 
-                p[strlen(p) - sizeof(".service") + 1] = 0;
+                if (endswith(name, ".service"))
+                        p[strlen(p) - sizeof(".service") + 1] = 0;
                 found_sysv = access(p, F_OK) >= 0;
 
                 if (!found_sysv)
                         continue;
 
-                /* Mark this entry, so that we don't try enabling it as native unit */
-                args[f] = (char*) "";
+                if (!found_native) {
+                        /* Mark this entry, so that we don't try enabling it as native unit */
+                        args[f] = (char*) "";
+                }
 
-                log_info("%s is not a native service, redirecting to /sbin/chkconfig.", name);
-
-                if (!isempty(arg_root))
-                        argv[c++] = q = strappend("--root=", arg_root);
+                log_info("Synchronizing state for %s with sysvinit using update-rc.d...", name);
 
                 argv[c++] = path_get_file_name(p);
-                argv[c++] =
-                        streq(verb, "enable") ? "on" :
-                        streq(verb, "disable") ? "off" : "--level=5";
+                argv[c++] = verb;
                 argv[c] = NULL;
 
                 l = strv_join((char**)argv, " ");
@@ -4162,7 +4154,6 @@ finish:
 
         args[t] = NULL;
 
-#endif
         return r;
 }
 
