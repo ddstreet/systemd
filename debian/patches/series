@@ -478,9 +478,6 @@ Reset-signal-mask-on-re-exec-to-init.patch
 core-clean-up-signal-reset-logic-when-reexec.patch
 util-treat-fuse.sshfs-as-a-network-filesystem.patch
 
-## Cherry-picked from trunk
-build-sys-use-glibc-s-xattr-support-instead-of-requi.patch
-
 ## Debian specific patches:
 Add-back-support-for-Debian-specific-config-files.patch
 Make-systemctl-enable-disable-call-update-rc.d-for-s.patch
@@ -525,5 +522,10 @@ Adjust-systemd-user-pam-config-file-for-Debian.patch
 Add-run-initctl-support-to-SysV-compat-tools.patch
 core-transaction-fix-cycle-break-attempts-outside-tr.patch
 tmpfiles-don-t-allow-read-access-to-journal-files-to.patch
-Map-rcS.d-init-script-dependencies-to-their-systemd-.patch
-Add-support-for-TuxOnIce-hibernation.patch
+
+# Ubuntu patches:
+Add-env-variable-for-machine-ID-path.patch
+Disable-tests-which-fail-on-buildds.patch
+Fix-FTBFS-against-recent-kernels-glibc.patch
+Create-disk-by-partlabel-links-for-mmcblk-partitions.patch
+Support-system-image-read-only-etc.patch

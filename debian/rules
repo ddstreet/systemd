@@ -5,6 +5,8 @@
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
+VERSION = $(shell dpkg-parsechangelog | sed -n -e '/^Version:/s/.*: //p')
+
 ifneq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
 BOOTSTRAP_DH_FLAGS := -Ngir1.2-gudev-1.0 -Nlibgudev-1.0-0 -Nlibgudev-1.0-dev
 endif
@@ -12,7 +14,6 @@ endif
 CONFFLAGS = \
 	--with-rootprefix= \
 	--with-rootlibdir=/lib/$(DEB_HOST_MULTIARCH) \
-	--with-zshcompletiondir=/usr/share/zsh/vendor-completions \
 	--with-sysvinit-path=/etc/init.d \
 	--with-sysvrcnd-path=/etc \
 	--with-firmware-path=/lib/firmware \
@@ -31,9 +32,7 @@ endif
 CONFFLAGS_deb = \
 	--enable-selinux \
 	--enable-introspection \
-	--enable-gtk-doc \
-	PYTHON=python3 \
-	$(NULL)
+	--enable-gtk-doc
 
 CONFFLAGS_udeb = \
 	--disable-selinux \
@@ -92,7 +91,7 @@ override_dh_install:
 	rm -f debian/install/*/etc/init.d/README
 	rm -f debian/install/*/usr/share/man/man8/kernel-install.8
 	rm -f debian/install/*/usr/bin/kernel-install
-	rm -f debian/install/*/usr/share/zsh/vendor-completions/_kernel-install
+	rm -f debian/install/*/usr/share/zsh/site-functions/_kernel-install
 	rm -f debian/install/*/usr/share/bash-completion/completions/kernel-install
 	rm -rf debian/install/*/usr/lib/kernel/install.d
 	rm -rf debian/install/*/etc/rpm/
@@ -138,9 +137,6 @@ override_dh_install:
 		debian/extra/rule_generator.functions \
 		debian/udev/lib/udev/
 	install -D --mode=755 \
-		debian/extra/dsl-modem.agent \
-		debian/extra/logger.agent \
-		debian/extra/net.agent \
 		debian/extra/udev-finish \
 		debian/extra/write_net_rules \
 		debian/udev/lib/udev/
@@ -193,25 +189,13 @@ endif
 	find debian/libsystemd-*-dev -name "*.3" -exec sh -c \
 		'rm debian/systemd/usr/share/man/man3/$$(basename {})' \;
 
-# use symlinked doc directories as the old udev package did
-override_dh_installdocs:
-	dh_installdocs -pudev -plibudev-dev --link-doc=libudev1
-	dh_installdocs -pgir1.2-gudev-1.0 -plibgudev-1.0-dev --link-doc=libgudev-1.0-0
-	dh_installdocs --remaining-packages
-
 override_dh_installinit:
-	dh_installinit --no-start
+	dh_installinit -R --no-start
 	dh_installinit --name=udev-finish --no-start
 	dh_installinit --name=udevtrigger --no-start
 	dh_installinit --name=udevmonitor --no-start
 	dh_installinit --name=udev-fallback-graphics --no-start
-
-# The SysV compat tools (which are symlinks to systemctl) are
-# quasi-essential, so add its dependencies to Pre-Depends
-# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=753589
-override_dh_shlibdeps:
-	dh_shlibdeps -psystemd -- -dPre-Depends -edebian/systemd/bin/systemctl -dDepends
-	dh_shlibdeps --remaining-packages
+	dh_installinit --name=lvm2 --no-start
 
 override_dh_makeshlibs:
 	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb
@@ -230,7 +214,26 @@ override_dh_strip:
 
 %:
 ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
-	dh $@ --with autoreconf,gir,python3
+	dh $@ --with autoreconf,gir,python2
 else
-	dh $@ --with autoreconf,python3 $(BOOTSTRAP_DH_FLAGS)
+	dh $@ --with autoreconf,python2 $(BOOTSTRAP_DH_FLAGS)
 endif
+
+override_dh_auto_test:
+ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+	# some tests hang under fakeroot, so disable fakeroot
+	echo "01234567890123456789012345678901" > build-deb/machine-id
+	env -u LD_PRELOAD SYSTEMD_MACHINE_ID_PATH=$(CURDIR)/build-deb/machine-id \
+		make -C build-deb check || ( \
+		cd build-deb; \
+		for f in test-*.log; do echo "==== $$f ===="; cat $$f; done; \
+		exit 1; )
+endif
+
+override_dh_gencontrol:
+	# Ubuntu has an epoch on gudev
+	dh_gencontrol -plibgudev-1.0-0 -plibgudev-1.0-dev -pgir1.2-gudev-1.0 -- "-v1:$(VERSION)"
+	dh_gencontrol -Nsystemd-sysv --remaining-packages
+
+override_dh_builddeb:
+	dh_builddeb -Nsystemd-sysv
