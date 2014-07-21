@@ -12,7 +12,8 @@ start on (startup
 	  and stopped udevtrigger
 	  and stopped udevmonitor)
 
-pre-start script
+task
+script
     # Save udev log in /var/log/udev
     if [ -e /dev/.udev.log ]
     then
