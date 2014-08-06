@@ -478,6 +478,9 @@ Reset-signal-mask-on-re-exec-to-init.patch
 core-clean-up-signal-reset-logic-when-reexec.patch
 util-treat-fuse.sshfs-as-a-network-filesystem.patch
 
+## Cherry-picked from trunk
+build-sys-use-glibc-s-xattr-support-instead-of-requi.patch
+
 ## Debian specific patches:
 Add-back-support-for-Debian-specific-config-files.patch
 Make-systemctl-enable-disable-call-update-rc.d-for-s.patch
@@ -489,7 +492,9 @@ Run-update-rc.d-defaults-before-update-rc.d-enable-d.patch
 don-t-try-to-start-autovt-units-when-not-running-wit.patch
 timedated-don-t-rely-on-usr-being-mounted-in-the-ini.patch
 fstab-generator-don-t-rely-on-usr-being-mounted-in-t.patch
-Make-hostnamed-localed-timedated-D-Bus-activatable.patch
+Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
+Launch-logind-via-a-shell-wrapper.patch
+Start-logind-on-demand-via-libpam-systemd.patch
 Update-localed-to-use-the-Debian-config-files.patch
 Add-note-to-udev.conf-that-changes-to-that-file-requ.patch
 Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
@@ -519,3 +524,6 @@ Check-for-kmod-binary.patch
 Adjust-systemd-user-pam-config-file-for-Debian.patch
 Add-run-initctl-support-to-SysV-compat-tools.patch
 core-transaction-fix-cycle-break-attempts-outside-tr.patch
+tmpfiles-don-t-allow-read-access-to-journal-files-to.patch
+Map-rcS.d-init-script-dependencies-to-their-systemd-.patch
+Add-support-for-TuxOnIce-hibernation.patch
