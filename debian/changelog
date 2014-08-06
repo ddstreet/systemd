@@ -1,3 +1,10 @@
+systemd (208-7ubuntu2) utopic; urgency=medium
+
+  * Lower initscripts dependency until the sysvinit merge lands. Until then,
+    no reliable NFS mounts under systemd for you.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 06 Aug 2014 19:44:03 +0200
+
 systemd (208-7ubuntu1) utopic; urgency=medium
 
   [ Martin Pitt]
