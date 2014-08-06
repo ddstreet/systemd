@@ -28,9 +28,7 @@
 #include <signal.h>
 #include <arpa/inet.h>
 #include <mqueue.h>
-#ifdef HAVE_XATTR
-#include <attr/xattr.h>
-#endif
+#include <sys/xattr.h>
 
 #include "unit.h"
 #include "socket.h"
