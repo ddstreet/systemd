@@ -142,9 +142,7 @@ static bool mount_is_network(struct mntent *me) {
 static bool mount_in_initrd(struct mntent *me) {
         assert(me);
 
-        return
-                hasmntopt(me, "x-initrd.mount") ||
-                streq(me->mnt_dir, "/usr");
+        return hasmntopt(me, "x-initrd.mount");
 }
 
 static int add_fsck(FILE *f, const char *what, const char *where, const char *type, int passno) {
