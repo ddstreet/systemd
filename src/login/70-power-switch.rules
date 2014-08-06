@@ -9,5 +9,6 @@ ACTION=="remove", GOTO="power_switch_end"
 
 SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="acpi", TAG+="power-switch"
 SUBSYSTEM=="input", KERNEL=="event*", KERNELS=="thinkpad_acpi", TAG+="power-switch"
+SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", KERNELS=="gpio_keys.12", ATTRS{keys}=="116", PROGRAM="/bin/cat /proc/device-tree/model", RESULT=="HP ProLiant m800 Server Cartridge", TAG+="power-switch"
 
 LABEL="power_switch_end"
