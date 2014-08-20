@@ -2698,7 +2698,6 @@ typelibs_DATA = \
 
 CLEANFILES += $(gir_DATA) $(typelibs_DATA)
 endif # HAVE_INTROSPECTION
-
 endif
 
 EXTRA_DIST += \

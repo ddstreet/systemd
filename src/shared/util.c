@@ -1492,6 +1492,7 @@ _pure_ static bool ignore_file_allow_backup(const char *filename) {
                 endswith(filename, ".rpmorig") ||
                 endswith(filename, ".dpkg-old") ||
                 endswith(filename, ".dpkg-new") ||
+                endswith(filename, ".dpkg-tmp") ||
                 endswith(filename, ".swp");
 }
 
@@ -1716,8 +1717,9 @@ int read_one_char(FILE *f, char *ret, usec_t t, bool *need_nl) {
                 if (fd_wait_for_event(fileno(f), POLLIN, t) <= 0)
                         return -ETIMEDOUT;
 
+        errno = 0;
         if (!fgets(line, sizeof(line), f))
-                return -EIO;
+                return errno ? -errno : -EIO;
 
         truncate_nl(line);
 
@@ -3630,9 +3632,6 @@ char *fstab_node_to_udev_node(const char *p) {
 bool tty_is_vc(const char *tty) {
         assert(tty);
 
-        if (startswith(tty, "/dev/"))
-                tty += 5;
-
         return vtnr_from_tty(tty) >= 0;
 }
 
@@ -5347,6 +5346,9 @@ bool string_is_safe(const char *p) {
                 if (*t > 0 && *t < ' ')
                         return false;
 
+                if (*t == 127)
+                        return false;
+
                 if (strchr("\\\"\'", *t))
                         return false;
         }
@@ -5363,9 +5365,13 @@ bool string_has_cc(const char *p) {
 
         assert(p);
 
-        for (t = p; *t; t++)
+        for (t = p; *t; t++) {
                 if (*t > 0 && *t < ' ' && *t != '\t')
                         return true;
+
+                if (*t == 127)
+                        return true;
+        }
 
         return false;
 }
