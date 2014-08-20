@@ -465,6 +465,12 @@ nodist_systemunit_DATA = \
 	units/initrd-switch-root.service \
 	units/systemd-nspawn@.service
 
+if HAVE_SYSV_COMPAT
+nodist_systemunit_DATA += \
+	units/x-display-manager.target \
+	units/mail-transport-agent.target
+endif
+
 dist_userunit_DATA = \
 	units/user/default.target \
 	units/user/exit.target
