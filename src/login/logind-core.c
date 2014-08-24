@@ -451,6 +451,11 @@ int manager_spawn_autovt(Manager *m, unsigned int vtnr) {
             vtnr != m->reserve_vt)
                 return 0;
 
+        /* It only makes sense to send a StartUnit call to systemd if this
+         * machine is actually booted with systemd. */
+        if (!sd_booted())
+                return 0;
+
         if (vtnr != m->reserve_vt) {
                 /* If this is the reserved TTY, we'll start the getty
                  * on it in any case, but otherwise only if it is not
