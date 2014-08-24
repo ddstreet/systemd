@@ -21,7 +21,8 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 -->
 
-<refentry id="hostnamectl" conditional='ENABLE_HOSTNAMED'>
+<refentry id="hostnamectl" conditional='ENABLE_HOSTNAMED'
+          xmlns:xi="http://www.w3.org/2001/XInclude">
 
         <refentryinfo>
                 <title>hostnamectl</title>
@@ -68,11 +69,9 @@
                 (e.g. "Lennart's Laptop"), the static hostname which
                 is used to initialize the kernel hostname at boot
                 (e.g. "lennarts-laptop"), and the transient hostname
-                which might be assigned temporarily due to network
-                configuration and might revert back to the static
-                hostname if network connectivity is lost and is only
-                temporarily written to the kernel hostname
-                (e.g. "dhcp-47-11").</para>
+                which is a default received from network configuration.
+                If a static hostname is set, and is valid (something other
+                than localhost) then the transient hostname is not used.</para>
 
                 <para>Note that the pretty hostname has little
                 restrictions on the characters used, while the static
@@ -95,21 +94,6 @@
 
                 <variablelist>
                         <varlistentry>
-                                <term><option>-h</option></term>
-                                <term><option>--help</option></term>
-
-                                <listitem><para>Prints a short help
-                                text and exits.</para></listitem>
-                        </varlistentry>
-
-                        <varlistentry>
-                                <term><option>--version</option></term>
-
-                                <listitem><para>Prints a short version
-                                string and exits.</para></listitem>
-                        </varlistentry>
-
-                        <varlistentry>
                                 <term><option>--no-ask-password</option></term>
 
                                 <listitem><para>Do not query the user
@@ -123,18 +107,6 @@
 
                                 <listitem><para>Acquire privileges via PolicyKit
                                 before executing the operation.</para></listitem>
-                        </varlistentry>
-
-                        <varlistentry>
-                                <term><option>-H</option></term>
-                                <term><option>--host</option></term>
-
-                                <listitem><para>Execute the operation
-                                remotely. Specify a hostname, or
-                                username and hostname separated by <literal>@</literal>,
-                                to connect to. This will use SSH to
-                                talk to a remote
-                                system.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
@@ -158,6 +130,11 @@
                                 hostnames will be updated.
                                 </para></listitem>
                         </varlistentry>
+
+                        <xi:include href="user-system-options.xml" xpointer="host" />
+
+                        <xi:include href="standard-options.xml" xpointer="help" />
+                        <xi:include href="standard-options.xml" xpointer="version" />
                 </variablelist>
 
                 <para>The following commands are understood:</para>
@@ -172,14 +149,13 @@
                         </varlistentry>
 
                         <varlistentry>
-                                <term><command>set-hostname <replaceable>NAME</replaceable></command></term>
+                                <term><command>set-hostname [NAME]</command></term>
 
                                 <listitem><para>Set the system
-                                hostname to
-                                <replaceable>NAME</replaceable>. By
-                                default, this will alter the pretty,
-                                the static, and the transient hostname
-                                alike; however, if one or more of
+                                hostname. By default, this will alter
+                                the pretty, the static, and the
+                                transient hostname alike; however, if
+                                one or more of
                                 <option>--static</option>,
                                 <option>--transient</option>,
                                 <option>--pretty</option> are used,
@@ -200,61 +176,54 @@
                                 the hostname string is not done if
                                 only the transient and/or static host
                                 names are set, and the pretty host
-                                name is left untouched.</para>
-
-                                <para>Pass the empty string
-                                <literal></literal> as the hostname to
-                                reset the selected hostnames to their
-                                default (usually
+                                name is left untouched. Pass the empty
+                                string <literal></literal> as the
+                                hostname to reset the selected
+                                hostnames to their default (usually
                                 <literal>localhost</literal>).</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
-                                <term><command>set-icon-name <replaceable>NAME</replaceable></command></term>
+                                <term><command>set-icon-name [NAME]</command></term>
 
                                 <listitem><para>Set the system icon
-                                name to
-                                <replaceable>NAME</replaceable>. The
-                                icon name is used by some graphical
-                                applications to visualize this host.
-                                The icon name should follow the <ulink
+                                name. The icon name is used by some
+                                graphical applications to visualize
+                                this host. The icon name should follow
+                                the <ulink
                                 url="http://standards.freedesktop.org/icon-naming-spec/icon-naming-spec-latest.html">Icon
-                                Naming Specification</ulink>.</para>
-
-                                <para>Pass an empty string to reset
-                                the icon name to the default value,
-                                which is determined from chassis type
-                                (see below) and possibly other
+                                Naming Specification</ulink>. Pass an
+                                empty string to this operation to
+                                reset the icon name to the default
+                                value, which is determined from chassis
+                                type (see below) and possibly other
                                 parameters.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
-                                <term><command>set-chassis <replaceable>TYPE</replaceable></command></term>
+                                <term><command>set-chassis [TYPE]</command></term>
 
-                                <listitem><para>Set the chassis type
-                                to <replaceable>TYPE</replaceable>.
-                                The chassis type is used by some
+                                <listitem><para>Set the chassis
+                                type. The chassis type is used by some
                                 graphical applications to visualize
-                                the host or alter user interaction.
-                                Currently, the following chassis types
-                                are defined:
+                                the host or alter user
+                                interaction. Currently, the following
+                                chassis types are defined:
                                 <literal>desktop</literal>,
                                 <literal>laptop</literal>,
                                 <literal>server</literal>,
                                 <literal>tablet</literal>,
-                                <literal>handset</literal>,
-                                <literal>watch</literal>, as well as
+                                <literal>handset</literal>, as well as
                                 the special chassis types
                                 <literal>vm</literal> and
                                 <literal>container</literal> for
                                 virtualized systems that lack an
-                                immediate physical chassis.</para>
-
-                                <para>Pass an empty string to reset
-                                the chassis type to the default value
-                                which is determined from the firmware
-                                and possibly other parameters.</para>
-                                </listitem>
+                                immediate physical chassis. Pass an
+                                empty string to this operation to
+                                reset the chassis type to the default
+                                value which is determined from the
+                                firmware and possibly other
+                                parameters.</para></listitem>
                         </varlistentry>
 
                 </variablelist>

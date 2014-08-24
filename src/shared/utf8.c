@@ -98,7 +98,7 @@ static int utf8_encoded_expected_len(const char *str) {
 }
 
 /* decode one unicode char */
-static int utf8_encoded_to_unichar(const char *str) {
+int utf8_encoded_to_unichar(const char *str) {
         int unichar;
         int len;
         int i;
@@ -162,7 +162,9 @@ const char *utf8_is_valid(const char *str) {
         assert(str);
 
         for (p = (const uint8_t*) str; *p; ) {
-                int len = utf8_encoded_valid_unichar((const char *)p);
+                int len;
+
+                len = utf8_encoded_valid_unichar((const char *)p);
 
                 if (len < 0)
                         return NULL;
@@ -209,27 +211,6 @@ char *ascii_is_valid(const char *str) {
                         return NULL;
 
         return (char*) str;
-}
-
-char *ascii_filter(const char *str) {
-        const char *s;
-        char *r, *d;
-        size_t l;
-
-        assert(str);
-
-        l = strlen(str);
-        r = malloc(l + 1);
-        if (!r)
-                return NULL;
-
-        for (s = str, d = r; *s; s++)
-                if ((unsigned char) *s < 128)
-                        *(d++) = *s;
-
-        *d = 0;
-
-        return r;
 }
 
 char *utf16_to_utf8(const void *s, size_t length) {

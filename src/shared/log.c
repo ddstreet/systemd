@@ -378,7 +378,7 @@ static int write_to_syslog(
         if (strftime(header_time, sizeof(header_time), "%h %e %T ", tm) <= 0)
                 return -EINVAL;
 
-        snprintf(header_pid, sizeof(header_pid), "[%lu]: ", (unsigned long) getpid());
+        snprintf(header_pid, sizeof(header_pid), "["PID_FMT"]: ", getpid());
         char_array_0(header_pid);
 
         IOVEC_SET_STRING(iovec[0], header_priority);
@@ -426,7 +426,7 @@ static int write_to_kmsg(
         snprintf(header_priority, sizeof(header_priority), "<%i>", level);
         char_array_0(header_priority);
 
-        snprintf(header_pid, sizeof(header_pid), "[%lu]: ", (unsigned long) getpid());
+        snprintf(header_pid, sizeof(header_pid), "["PID_FMT"]: ", getpid());
         char_array_0(header_pid);
 
         IOVEC_SET_STRING(iovec[0], header_priority);
@@ -688,27 +688,35 @@ int log_meta_object(
         return r;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-_noreturn_ static void log_assert(const char *text, const char *file, int line, const char *func, const char *format) {
+static void log_assert(int level, const char *text, const char *file, int line, const char *func, const char *format) {
         static char buffer[LINE_MAX];
 
+        if (_likely_(LOG_PRI(level) > log_max_level))
+                return;
+
+        DISABLE_WARNING_FORMAT_NONLITERAL;
         snprintf(buffer, sizeof(buffer), format, text, file, line, func);
+        REENABLE_WARNING;
 
         char_array_0(buffer);
         log_abort_msg = buffer;
 
-        log_dispatch(LOG_CRIT, file, line, func, NULL, NULL, buffer);
+        log_dispatch(level, file, line, func, NULL, NULL, buffer);
+}
+
+noreturn void log_assert_failed(const char *text, const char *file, int line, const char *func) {
+        log_assert(LOG_CRIT, text, file, line, func, "Assertion '%s' failed at %s:%u, function %s(). Aborting.");
         abort();
 }
-#pragma GCC diagnostic pop
 
-_noreturn_ void log_assert_failed(const char *text, const char *file, int line, const char *func) {
-        log_assert(text, file, line, func, "Assertion '%s' failed at %s:%u, function %s(). Aborting.");
+noreturn void log_assert_failed_unreachable(const char *text, const char *file, int line, const char *func) {
+        log_assert(LOG_CRIT, text, file, line, func, "Code should not be reached '%s' at %s:%u, function %s(). Aborting.");
+        abort();
 }
 
-_noreturn_ void log_assert_failed_unreachable(const char *text, const char *file, int line, const char *func) {
-        log_assert(text, file, line, func, "Code should not be reached '%s' at %s:%u, function %s(). Aborting.");
+void log_assert_failed_return(const char *text, const char *file, int line, const char *func) {
+        PROTECT_ERRNO;
+        log_assert(LOG_DEBUG, text, file, line, func, "Assertion '%s' failed at %s:%u, function %s(). Ignoring.");
 }
 
 int log_oom_internal(const char *file, int line, const char *func) {
@@ -855,7 +863,24 @@ int log_set_max_level_from_string(const char *e) {
 }
 
 void log_parse_environment(void) {
+        _cleanup_free_ char *line = NULL;
         const char *e;
+        int r;
+
+        r = proc_cmdline(&line);
+        if (r < 0)
+                log_warning("Failed to read /proc/cmdline. Ignoring: %s", strerror(-r));
+        else if (r > 0) {
+                char *w, *state;
+                size_t l;
+
+                FOREACH_WORD_QUOTED(w, l, line, state) {
+                        if (l == 5 && startswith(w, "debug")) {
+                                log_set_max_level(LOG_DEBUG);
+                                break;
+                        }
+                }
+        }
 
         e = secure_getenv("SYSTEMD_LOG_TARGET");
         if (e && log_set_target_from_string(e) < 0)
@@ -886,8 +911,16 @@ void log_show_color(bool b) {
         show_color = b;
 }
 
+bool log_get_show_color(void) {
+        return show_color;
+}
+
 void log_show_location(bool b) {
         show_location = b;
+}
+
+bool log_get_show_location(void) {
+        return show_location;
 }
 
 int log_show_color_from_string(const char *e) {
@@ -919,7 +952,7 @@ bool log_on_console(void) {
         return syslog_fd < 0 && kmsg_fd < 0 && journal_fd < 0;
 }
 
-static const char *const log_target_table[] = {
+static const char *const log_target_table[_LOG_TARGET_MAX] = {
         [LOG_TARGET_CONSOLE] = "console",
         [LOG_TARGET_KMSG] = "kmsg",
         [LOG_TARGET_JOURNAL] = "journal",
@@ -932,3 +965,20 @@ static const char *const log_target_table[] = {
 };
 
 DEFINE_STRING_TABLE_LOOKUP(log_target, LogTarget);
+
+void log_received_signal(int level, const struct signalfd_siginfo *si) {
+        if (si->ssi_pid > 0) {
+                _cleanup_free_ char *p = NULL;
+
+                get_process_comm(si->ssi_pid, &p);
+
+                log_full(level,
+                         "Received SIG%s from PID "PID_FMT" (%s).",
+                         signal_to_string(si->ssi_signo),
+                         si->ssi_pid, strna(p));
+        } else
+                log_full(level,
+                         "Received SIG%s.",
+                         signal_to_string(si->ssi_signo));
+
+}

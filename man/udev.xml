@@ -63,10 +63,10 @@
       regardless of the directories in which they live. However, files with
       identical filenames replace each other. Files in <filename>/etc</filename>
       have the highest priority, files in <filename>/run</filename> take precedence
-      over files with the same name in <filename>/lib</filename>. This can be
+      over files with the same name in <filename>/usr/lib</filename>. This can be
       used to override a system-supplied rules file with a local file if needed;
       a symlink in <filename>/etc</filename> with the same name as a rules file in
-      <filename>/lib</filename>, pointing to <filename>/dev/null</filename>,
+      <filename>/usr/lib</filename>, pointing to <filename>/dev/null</filename>,
       disables the rules file entirely. Rule files must have the extension
       <filename>.rules</filename>; other extensions are ignored.</para>
 
@@ -307,8 +307,11 @@
         <varlistentry>
           <term><varname>NAME</varname></term>
           <listitem>
-            <para>The name to use for a network interface. The name of a device node
-            cannot be changed by udev, only additional symlinks can be created.</para>
+            <para>The name to use for a network interface. See
+            <citerefentry><refentrytitle>systemd.link</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+            for a higher-level mechanism for setting the interface name.
+            The name of a device node cannot be changed by udev, only additional
+            symlinks can be created.</para>
           </listitem>
         </varlistentry>
 
@@ -339,6 +342,13 @@
           <listitem>
             <para>The permissions for the device node. Every specified value overrides
             the compiled-in default value.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><varname>SECLABEL{<replaceable>module</replaceable>}</varname></term>
+          <listitem>
+            <para>Applies the specified Linux Security Module label to the device node.</para>
           </listitem>
         </varlistentry>
 
@@ -726,10 +736,10 @@
       regardless of the directories in which they live. However, files with
       identical filenames replace each other. Files in <filename>/etc</filename>
       have the highest priority, files in <filename>/run</filename> take precedence
-      over files with the same name in <filename>/lib</filename>. This can be
+      over files with the same name in <filename>/usr/lib</filename>. This can be
       used to override a system-supplied hwdb file with a local file if needed;
       a symlink in <filename>/etc</filename> with the same name as a hwdb file in
-      <filename>/lib</filename>, pointing to <filename>/dev/null</filename>,
+      <filename>/usr/lib</filename>, pointing to <filename>/dev/null</filename>,
       disables the hwdb file entirely. hwdb files must have the extension
       <filename>.hwdb</filename>; other extensions are ignored.</para>
 
@@ -760,6 +770,9 @@
       </citerefentry>,
       <citerefentry>
         <refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum>
+      </citerefentry>
+      <citerefentry>
+        <refentrytitle>systemd.link</refentrytitle><manvolnum>5</manvolnum>
       </citerefentry>
     </para>
   </refsect1>

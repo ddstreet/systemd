@@ -32,6 +32,7 @@
 
 #include "udev.h"
 
+_printf_(2,3)
 static int path_prepend(char **path, const char *fmt, ...)
 {
         va_list va;
@@ -70,9 +71,9 @@ static int format_lun_number(struct udev_device *dev, char **path)
 
         /* address method 0, peripheral device addressing with bus id of zero */
         if (lun < 256)
-                return path_prepend(path, "lun-%d", lun);
+                return path_prepend(path, "lun-%lu", lun);
         /* handle all other lun addressing methods by using a variant of the original lun format */
-        return path_prepend(path, "lun-0x%04x%04x00000000", (lun & 0xffff), (lun >> 16) & 0xffff);
+        return path_prepend(path, "lun-0x%04lx%04lx00000000", lun & 0xffff, (lun >> 16) & 0xffff);
 }
 
 static struct udev_device *skip_subsystem(struct udev_device *dev, const char *subsys)
@@ -541,9 +542,6 @@ static int builtin_path_id(struct udev_device *dev, int argc, char *argv[], bool
                 } else if (streq(subsys, "xen")) {
                         path_prepend(&path, "xen-%s", udev_device_get_sysname(parent));
                         parent = skip_subsystem(parent, "xen");
-                } else if (streq(subsys, "virtio")) {
-                        path_prepend(&path, "virtio-pci-%s", udev_device_get_sysname(parent));
-                        parent = skip_subsystem(parent, "virtio");
                 } else if (streq(subsys, "scm")) {
                         path_prepend(&path, "scm-%s", udev_device_get_sysname(parent));
                         parent = skip_subsystem(parent, "scm");

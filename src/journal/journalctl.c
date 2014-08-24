@@ -21,6 +21,7 @@
 
 #include <locale.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <errno.h>
 #include <stddef.h>
 #include <string.h>
@@ -48,8 +49,8 @@
 #include "fileio.h"
 #include "build.h"
 #include "pager.h"
-#include "logs-show.h"
 #include "strv.h"
+#include "set.h"
 #include "journal-internal.h"
 #include "journal-def.h"
 #include "journal-verify.h"
@@ -64,7 +65,7 @@
 static OutputMode arg_output = OUTPUT_SHORT;
 static bool arg_pager_end = false;
 static bool arg_follow = false;
-static bool arg_full = false;
+static bool arg_full = true;
 static bool arg_all = false;
 static bool arg_no_pager = false;
 static int arg_lines = -1;
@@ -95,6 +96,7 @@ static bool arg_catalog = false;
 static bool arg_reverse = false;
 static int arg_journal_type = 0;
 static const char *arg_root = NULL;
+static const char *arg_machine = NULL;
 
 static enum {
         ACTION_SHOW,
@@ -167,6 +169,7 @@ static int help(void) {
                "Flags:\n"
                "     --system              Show only the system journal\n"
                "     --user                Show only the user journal for the current user\n"
+               "  -M --machine=CONTAINER   Operate on local container\n"
                "     --since=DATE          Start showing entries on or newer than the specified date\n"
                "     --until=DATE          Stop showing entries on or older than the specified date\n"
                "  -c --cursor=CURSOR       Start showing entries from the specified cursor\n"
@@ -187,7 +190,7 @@ static int help(void) {
                "                                   short-precise, short-monotonic, verbose,\n"
                "                                   export, json, json-pretty, json-sse, cat)\n"
                "  -x --catalog             Add message explanations where available\n"
-               "  -l --full                Do not ellipsize fields\n"
+               "     --no-full             Ellipsize fields\n"
                "  -a --all                 Show all fields, including long and unprintable\n"
                "  -q --quiet               Do not show privilege warning\n"
                "     --no-pager            Do not pipe output into a pager\n"
@@ -224,6 +227,7 @@ static int parse_argv(int argc, char *argv[]) {
         enum {
                 ARG_VERSION = 0x100,
                 ARG_NO_PAGER,
+                ARG_NO_FULL,
                 ARG_NO_TAIL,
                 ARG_NEW_ID128,
                 ARG_LIST_BOOTS,
@@ -258,6 +262,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "output",         required_argument, NULL, 'o'                },
                 { "all",            no_argument,       NULL, 'a'                },
                 { "full",           no_argument,       NULL, 'l'                },
+                { "no-full",        no_argument,       NULL, ARG_NO_FULL        },
                 { "lines",          optional_argument, NULL, 'n'                },
                 { "no-tail",        no_argument,       NULL, ARG_NO_TAIL        },
                 { "new-id128",      no_argument,       NULL, ARG_NEW_ID128      },
@@ -292,7 +297,8 @@ static int parse_argv(int argc, char *argv[]) {
                 { "dump-catalog",   no_argument,       NULL, ARG_DUMP_CATALOG   },
                 { "update-catalog", no_argument,       NULL, ARG_UPDATE_CATALOG },
                 { "reverse",        no_argument,       NULL, 'r'                },
-                { NULL,             0,                 NULL, 0                  }
+                { "machine",        required_argument, NULL, 'M'                },
+                {}
         };
 
         int c, r;
@@ -300,13 +306,12 @@ static int parse_argv(int argc, char *argv[]) {
         assert(argc >= 0);
         assert(argv);
 
-        while ((c = getopt_long(argc, argv, "hefo:aln::qmb::kD:p:c:u:F:xr", options, NULL)) >= 0) {
+        while ((c = getopt_long(argc, argv, "hefo:aln::qmb::kD:p:c:u:F:xrM:", options, NULL)) >= 0) {
 
                 switch (c) {
 
                 case 'h':
-                        help();
-                        return 0;
+                        return help();
 
                 case ARG_VERSION:
                         puts(PACKAGE_STRING);
@@ -347,6 +352,10 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case 'l':
                         arg_full = true;
+                        break;
+
+                case ARG_NO_FULL:
+                        arg_full = false;
                         break;
 
                 case 'a':
@@ -436,6 +445,10 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case ARG_USER:
                         arg_journal_type |= SD_JOURNAL_CURRENT_USER;
+                        break;
+
+                case 'M':
+                        arg_machine = optarg;
                         break;
 
                 case 'D':
@@ -590,9 +603,6 @@ static int parse_argv(int argc, char *argv[]) {
                                 return log_oom();
                         break;
 
-                case '?':
-                        return -EINVAL;
-
                 case 'F':
                         arg_field = optarg;
                         break;
@@ -617,17 +627,19 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_reverse = true;
                         break;
 
-                default:
-                        log_error("Unknown option code %c", c);
+                case '?':
                         return -EINVAL;
+
+                default:
+                        assert_not_reached("Unhandled option");
                 }
         }
 
         if (arg_follow && !arg_no_tail && arg_lines < 0)
                 arg_lines = 10;
 
-        if (arg_directory && arg_file) {
-                log_error("Please specify either -D/--directory= or --file=, not both.");
+        if (!!arg_directory + !!arg_file + !!arg_machine > 1) {
+                log_error("Please specify either -D/--directory= or --file= or -M/--machine=, not more than one.");
                 return -EINVAL;
         }
 
@@ -713,7 +725,7 @@ static int add_matches(sd_journal *j, char **args) {
                                 if (executable_is_script(path, &interpreter) > 0) {
                                         _cleanup_free_ char *comm;
 
-                                        comm = strndup(path_get_file_name(path), 15);
+                                        comm = strndup(basename(path), 15);
                                         if (!comm)
                                                 return log_oom();
 
@@ -931,7 +943,7 @@ static int add_boot(sd_journal *j) {
                 return 0;
 
         if (arg_boot_offset == 0 && sd_id128_equal(arg_boot_id, SD_ID128_NULL))
-                return add_match_this_boot(j);
+                return add_match_this_boot(j, arg_machine);
 
         r = get_relative_boot_id(j, &arg_boot_id, arg_boot_offset);
         if (r < 0) {
@@ -978,39 +990,176 @@ static int add_dmesg(sd_journal *j) {
         return 0;
 }
 
-static int add_units(sd_journal *j) {
-        _cleanup_free_ char *u = NULL;
+static int get_possible_units(sd_journal *j,
+                              const char *fields,
+                              char **patterns,
+                              Set **units) {
+        _cleanup_set_free_free_ Set *found;
+        const char *field;
         int r;
+
+        found = set_new(string_hash_func, string_compare_func);
+        if (!found)
+                return log_oom();
+
+        NULSTR_FOREACH(field, fields) {
+                const void *data;
+                size_t size;
+
+                r = sd_journal_query_unique(j, field);
+                if (r < 0)
+                        return r;
+
+                SD_JOURNAL_FOREACH_UNIQUE(j, data, size) {
+                        char **pattern, *eq;
+                        size_t prefix;
+                        _cleanup_free_ char *u = NULL;
+
+                        eq = memchr(data, '=', size);
+                        if (eq)
+                                prefix = eq - (char*) data + 1;
+                        else
+                                prefix = 0;
+
+                        u = strndup((char*) data + prefix, size - prefix);
+                        if (!u)
+                                return log_oom();
+
+                        STRV_FOREACH(pattern, patterns)
+                                if (fnmatch(*pattern, u, FNM_NOESCAPE) == 0) {
+                                        log_debug("Matched %s with pattern %s=%s", u, field, *pattern);
+
+                                        r = set_consume(found, u);
+                                        u = NULL;
+                                        if (r < 0 && r != -EEXIST)
+                                                return r;
+
+                                        break;
+                                }
+                }
+        }
+
+        *units = found;
+        found = NULL;
+        return 0;
+}
+
+/* This list is supposed to return the superset of unit names
+ * possibly matched by rules added with add_matches_for_unit... */
+#define SYSTEM_UNITS                 \
+        "_SYSTEMD_UNIT\0"            \
+        "COREDUMP_UNIT\0"            \
+        "UNIT\0"                     \
+        "OBJECT_SYSTEMD_UNIT\0"      \
+        "_SYSTEMD_SLICE\0"
+
+/* ... and add_matches_for_user_unit */
+#define USER_UNITS                   \
+        "_SYSTEMD_USER_UNIT\0"       \
+        "USER_UNIT\0"                \
+        "COREDUMP_USER_UNIT\0"       \
+        "OBJECT_SYSTEMD_USER_UNIT\0"
+
+static int add_units(sd_journal *j) {
+        _cleanup_strv_free_ char **patterns = NULL;
+        int r, count = 0;
         char **i;
 
         assert(j);
 
         STRV_FOREACH(i, arg_system_units) {
-                u = unit_name_mangle(*i);
+                _cleanup_free_ char *u = NULL;
+
+                u = unit_name_mangle(*i, MANGLE_GLOB);
                 if (!u)
                         return log_oom();
-                r = add_matches_for_unit(j, u);
-                if (r < 0)
-                        return r;
-                r = sd_journal_add_disjunction(j);
-                if (r < 0)
-                        return r;
+
+                if (string_is_glob(u)) {
+                        r = strv_push(&patterns, u);
+                        if (r < 0)
+                                return r;
+                        u = NULL;
+                } else {
+                        r = add_matches_for_unit(j, u);
+                        if (r < 0)
+                                return r;
+                        r = sd_journal_add_disjunction(j);
+                        if (r < 0)
+                                return r;
+                        count ++;
+                }
         }
+
+        if (!strv_isempty(patterns)) {
+                _cleanup_set_free_free_ Set *units = NULL;
+                Iterator it;
+                char *u;
+
+                r = get_possible_units(j, SYSTEM_UNITS, patterns, &units);
+                if (r < 0)
+                        return r;
+
+                SET_FOREACH(u, units, it) {
+                        r = add_matches_for_unit(j, u);
+                        if (r < 0)
+                                return r;
+                        r = sd_journal_add_disjunction(j);
+                        if (r < 0)
+                                return r;
+                        count ++;
+                }
+        }
+
+        strv_free(patterns);
+        patterns = NULL;
 
         STRV_FOREACH(i, arg_user_units) {
-                u = unit_name_mangle(*i);
+                _cleanup_free_ char *u = NULL;
+
+                u = unit_name_mangle(*i, MANGLE_GLOB);
                 if (!u)
                         return log_oom();
 
-                r = add_matches_for_user_unit(j, u, getuid());
-                if (r < 0)
-                        return r;
-
-                r = sd_journal_add_disjunction(j);
-                if (r < 0)
-                        return r;
-
+                if (string_is_glob(u)) {
+                        r = strv_push(&patterns, u);
+                        if (r < 0)
+                                return r;
+                        u = NULL;
+                } else {
+                        r = add_matches_for_user_unit(j, u, getuid());
+                        if (r < 0)
+                                return r;
+                        r = sd_journal_add_disjunction(j);
+                        if (r < 0)
+                                return r;
+                        count ++;
+                }
         }
+
+        if (!strv_isempty(patterns)) {
+                _cleanup_set_free_free_ Set *units = NULL;
+                Iterator it;
+                char *u;
+
+                r = get_possible_units(j, USER_UNITS, patterns, &units);
+                if (r < 0)
+                        return r;
+
+                SET_FOREACH(u, units, it) {
+                        r = add_matches_for_user_unit(j, u, getuid());
+                        if (r < 0)
+                                return r;
+                        r = sd_journal_add_disjunction(j);
+                        if (r < 0)
+                                return r;
+                        count ++;
+                }
+        }
+
+        /* Complain if the user request matches but nothing whatsoever was
+         * found, since otherwise everything would be matched. */
+        if (!(strv_isempty(arg_system_units) && strv_isempty(arg_user_units)) && count == 0)
+                return -ENODATA;
 
         r = sd_journal_add_conjunction(j);
         if (r < 0)
@@ -1142,7 +1291,7 @@ static int setup_keys(void) {
         n /= arg_interval;
 
         safe_close(fd);
-        fd = mkostemp(k, O_WRONLY|O_CLOEXEC|O_NOCTTY);
+        fd = mkostemp_safe(k, O_WRONLY|O_CLOEXEC);
         if (fd < 0) {
                 log_error("Failed to open %s: %m", k);
                 r = -errno;
@@ -1480,6 +1629,8 @@ int main(int argc, char *argv[]) {
                 r = sd_journal_open_directory(&j, arg_directory, arg_journal_type);
         else if (arg_file)
                 r = sd_journal_open_files(&j, (const char**) arg_file, 0);
+        else if (arg_machine)
+                r = sd_journal_open_container(&j, arg_machine, 0);
         else
                 r = sd_journal_open(&j, !arg_merge*SD_JOURNAL_LOCAL_ONLY + arg_journal_type);
         if (r < 0) {
@@ -1504,7 +1655,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (arg_action == ACTION_DISK_USAGE) {
-                uint64_t bytes;
+                uint64_t bytes = 0;
                 char sbytes[FORMAT_BYTES_MAX];
 
                 r = sd_journal_get_usage(j, &bytes);
@@ -1535,16 +1686,22 @@ int main(int argc, char *argv[]) {
         strv_free(arg_system_units);
         strv_free(arg_user_units);
 
-        if (r < 0)
+        if (r < 0) {
+                log_error("Failed to add filter for units: %s", strerror(-r));
                 return EXIT_FAILURE;
+        }
 
         r = add_priorities(j);
-        if (r < 0)
+        if (r < 0) {
+                log_error("Failed to add filter for priorities: %s", strerror(-r));
                 return EXIT_FAILURE;
+        }
 
         r = add_matches(j, argv + optind);
-        if (r < 0)
+        if (r < 0) {
+                log_error("Failed to add filters: %s", strerror(-r));
                 return EXIT_FAILURE;
+        }
 
         if (_unlikely_(log_get_max_level() >= LOG_PRI(LOG_DEBUG))) {
                 _cleanup_free_ char *filter;
@@ -1740,7 +1897,7 @@ int main(int argc, char *argv[]) {
 
                         flags =
                                 arg_all * OUTPUT_SHOW_ALL |
-                                (arg_full || !on_tty() || pager_have()) * OUTPUT_FULL_WIDTH |
+                                arg_full * OUTPUT_FULL_WIDTH |
                                 on_tty() * OUTPUT_COLOR |
                                 arg_catalog * OUTPUT_CATALOG;
 

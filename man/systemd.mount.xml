@@ -148,12 +148,12 @@
                 <filename>local-fs.target</filename> or
                 <filename>remote-fs.target</filename>, depending
                 whether the file system is local or remote. If
-                <option>comment=systemd.automount</option> is set, an
+                <option>x-systemd.automount</option> is set, an
                 automount unit will be created for the file
                 system. See
                 <citerefentry><refentrytitle>systemd.automount</refentrytitle><manvolnum>5</manvolnum></citerefentry>
                 for details. If
-                <option>comment=systemd.device-timeout=</option> is
+                <option>x-systemd.device-timeout=</option> is
                 specified, it may be used to configure how long systemd
                 should wait for a device to show up before giving up
                 on an entry from
@@ -278,8 +278,8 @@
                                 Takes a unit-less value in seconds, or
                                 a time span value such as "5min
                                 20s". Pass 0 to disable the timeout
-                                logic. Default value is setted up in manager configuration
-                                file via <varname>DefaultTimeoutStart=</varname>.</para></listitem>
+                                logic. The default value is set from the manager configuration
+                                file's <varname>DefaultTimeoutStart=</varname> variable.</para></listitem>
                         </varlistentry>
                 </variablelist>
 
@@ -288,28 +288,6 @@
                 and
                 <citerefentry><refentrytitle>systemd.kill</refentrytitle><manvolnum>5</manvolnum></citerefentry>
                 for more settings.</para>
-        </refsect1>
-
-        <refsect1>
-                <title>Compatibility Options</title>
-
-                <para>The following option is also available in the
-                <literal>[Mount]</literal> section, but exists purely
-                for compatibility reasons and should not be used in
-                newly written mount files.</para>
-
-                <variablelist class='unit-directives'>
-                        <varlistentry>
-                                <term><varname>FsckPassNo=</varname></term>
-
-                                <listitem><para>The pass number for
-                                the file system checking service for
-                                this mount. See
-                                <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>
-                                for more information on this setting.
-                                </para></listitem>
-                        </varlistentry>
-                </variablelist>
         </refsect1>
 
         <refsect1>

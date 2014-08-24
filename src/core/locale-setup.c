@@ -120,24 +120,25 @@ int locale_setup(char ***environment) {
                         log_warning("Failed to read /etc/locale.conf: %s", strerror(-r));
         }
 
-        if (r <= 0 &&
-            (r = parse_env_file("/etc/default/locale", NEWLINE,
-                                "LANG",              &variables[VARIABLE_LANG],
-                                "LC_CTYPE",          &variables[VARIABLE_LC_CTYPE],
-                                "LC_NUMERIC",        &variables[VARIABLE_LC_NUMERIC],
-                                "LC_TIME",           &variables[VARIABLE_LC_TIME],
-                                "LC_COLLATE",        &variables[VARIABLE_LC_COLLATE],
-                                "LC_MONETARY",       &variables[VARIABLE_LC_MONETARY],
-                                "LC_MESSAGES",       &variables[VARIABLE_LC_MESSAGES],
-                                "LC_PAPER",          &variables[VARIABLE_LC_PAPER],
-                                "LC_NAME",           &variables[VARIABLE_LC_NAME],
-                                "LC_ADDRESS",        &variables[VARIABLE_LC_ADDRESS],
-                                "LC_TELEPHONE",      &variables[VARIABLE_LC_TELEPHONE],
-                                "LC_MEASUREMENT",    &variables[VARIABLE_LC_MEASUREMENT],
-                                "LC_IDENTIFICATION", &variables[VARIABLE_LC_IDENTIFICATION],
-                                NULL)) < 0) {
+        if (r <= 0) {
+                r = parse_env_file("/etc/default/locale", NEWLINE,
+                                   "LANG",              &variables[VARIABLE_LANG],
+                                   "LANGUAGE",          &variables[VARIABLE_LANGUAGE],
+                                   "LC_CTYPE",          &variables[VARIABLE_LC_CTYPE],
+                                   "LC_NUMERIC",        &variables[VARIABLE_LC_NUMERIC],
+                                   "LC_TIME",           &variables[VARIABLE_LC_TIME],
+                                   "LC_COLLATE",        &variables[VARIABLE_LC_COLLATE],
+                                   "LC_MONETARY",       &variables[VARIABLE_LC_MONETARY],
+                                   "LC_MESSAGES",       &variables[VARIABLE_LC_MESSAGES],
+                                   "LC_PAPER",          &variables[VARIABLE_LC_PAPER],
+                                   "LC_NAME",           &variables[VARIABLE_LC_NAME],
+                                   "LC_ADDRESS",        &variables[VARIABLE_LC_ADDRESS],
+                                   "LC_TELEPHONE",      &variables[VARIABLE_LC_TELEPHONE],
+                                   "LC_MEASUREMENT",    &variables[VARIABLE_LC_MEASUREMENT],
+                                   "LC_IDENTIFICATION", &variables[VARIABLE_LC_IDENTIFICATION],
+                                   NULL);
 
-                if (r != -ENOENT)
+                if (r < 0 && r != -ENOENT)
                         log_warning("Failed to read /etc/default/locale: %s", strerror(-r));
         }
 
@@ -154,8 +155,7 @@ int locale_setup(char ***environment) {
                         goto finish;
                 }
 
-                if (strv_push(&add, s) < 0) {
-                        free(s);
+                if (strv_consume(&add, s) < 0) {
                         r = -ENOMEM;
                         goto finish;
                 }

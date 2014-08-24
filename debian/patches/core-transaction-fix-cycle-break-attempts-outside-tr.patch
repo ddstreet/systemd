@@ -24,10 +24,10 @@ https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=752259
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/core/transaction.c b/src/core/transaction.c
-index 10d7602..c8ab491 100644
+index d23a45c..805d40a 100644
 --- a/src/core/transaction.c
 +++ b/src/core/transaction.c
-@@ -374,7 +374,7 @@ static int transaction_verify_order_one(Transaction *tr, Job *j, Job *from, unsi
+@@ -381,7 +381,7 @@ static int transaction_verify_order_one(Transaction *tr, Job *j, Job *from, unsi
                                        "Found dependency on %s/%s",
                                        k->unit->id, job_type_to_string(k->type));
  

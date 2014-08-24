@@ -81,8 +81,7 @@ out:
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
         _cleanup_udev_unref_ struct udev *udev = NULL;
         _cleanup_udev_event_unref_ struct udev_event *event = NULL;
         _cleanup_udev_device_unref_ struct udev_device *dev = NULL;
@@ -156,7 +155,7 @@ int main(int argc, char *argv[])
                 }
         }
 
-        err = udev_event_execute_rules(event, rules, &sigmask_orig);
+        udev_event_execute_rules(event, rules, &sigmask_orig);
         udev_event_execute_run(event, NULL);
 out:
         if (event != NULL && event->fd_signal >= 0)

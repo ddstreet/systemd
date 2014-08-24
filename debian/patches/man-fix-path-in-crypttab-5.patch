@@ -9,10 +9,10 @@ https://bugs.freedesktop.org/show_bug.cgi?id=75816
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/man/crypttab.xml b/man/crypttab.xml
-index 4b6d12e..af41ef4 100644
+index 668e51d..9030015 100644
 --- a/man/crypttab.xml
 +++ b/man/crypttab.xml
-@@ -376,7 +376,7 @@
+@@ -369,7 +369,7 @@
                          <programlisting>luks       UUID=2505567a-9e27-4efe-a4d5-15ad146c258b
  swap       /dev/sda7       /dev/urandom             swap
  truecrypt  /dev/sda2       /etc/container_password  tcrypt

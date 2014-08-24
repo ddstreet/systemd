@@ -58,34 +58,34 @@
 
                         <funcprototype>
                                 <funcdef>int <function>sd_journal_next</function></funcdef>
-                                <paramdef>sd_journal* <parameter>j</parameter></paramdef>
+                                <paramdef>sd_journal *<parameter>j</parameter></paramdef>
                         </funcprototype>
 
                         <funcprototype>
                                 <funcdef>int <function>sd_journal_previous</function></funcdef>
-                                <paramdef>sd_journal* <parameter>j</parameter></paramdef>
+                                <paramdef>sd_journal *<parameter>j</parameter></paramdef>
                         </funcprototype>
 
                         <funcprototype>
                                 <funcdef>int <function>sd_journal_next_skip</function></funcdef>
-                                <paramdef>sd_journal* <parameter>j</parameter></paramdef>
+                                <paramdef>sd_journal *<parameter>j</parameter></paramdef>
                                 <paramdef>uint64_t <parameter>skip</parameter></paramdef>
                         </funcprototype>
 
                         <funcprototype>
                                 <funcdef>int <function>sd_journal_previous_skip</function></funcdef>
-                                <paramdef>sd_journal* <parameter>j</parameter></paramdef>
+                                <paramdef>sd_journal *<parameter>j</parameter></paramdef>
                                 <paramdef>uint64_t <parameter>skip</parameter></paramdef>
                         </funcprototype>
 
                         <funcprototype>
                                 <funcdef><function>SD_JOURNAL_FOREACH</function></funcdef>
-                                <paramdef>sd_journal* <parameter>j</parameter></paramdef>
+                                <paramdef>sd_journal *<parameter>j</parameter></paramdef>
                         </funcprototype>
 
                         <funcprototype>
                                 <funcdef><function>SD_JOURNAL_FOREACH_BACKWARDS</function></funcdef>
-                                <paramdef>sd_journal* <parameter>j</parameter></paramdef>
+                                <paramdef>sd_journal *<parameter>j</parameter></paramdef>
                         </funcprototype>
                 </funcsynopsis>
         </refsynopsisdiv>
@@ -158,7 +158,7 @@
                 <function>sd_journal_previous_skip()</function> interfaces are
                 available as a shared library, which can be compiled and
                 linked to with the
-                <constant>libsystemd-journal</constant> <citerefentry><refentrytitle>pkg-config</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+                <constant>libsystemd</constant> <citerefentry><refentrytitle>pkg-config</refentrytitle><manvolnum>1</manvolnum></citerefentry>
                 file.</para>
         </refsect1>
 
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
                 const char *d;
                 size_t l;
 
-                r = sd_journal_get_data(j, "MESSAGE", (const void **)&amp;d, &amp;l);
+                r = sd_journal_get_data(j, "MESSAGE", &amp;d, &amp;l);
                 if (r &lt; 0) {
                         fprintf(stderr, "Failed to read message field: %s\n", strerror(-r));
                         continue;

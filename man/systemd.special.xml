@@ -73,6 +73,7 @@
                 <filename>multi-user.target</filename>,
                 <filename>network.target</filename>,
                 <filename>network-online.target</filename>,
+                <filename>network-pre.target</filename>,
                 <filename>nss-lookup.target</filename>,
                 <filename>nss-user-lookup.target</filename>,
                 <filename>paths.target</filename>,
@@ -98,7 +99,6 @@
                 <filename>swap.target</filename>,
                 <filename>sysinit.target</filename>,
                 <filename>syslog.socket</filename>,
-                <filename>syslog.target</filename>,
                 <filename>system-update.target</filename>,
                 <filename>time-sync.target</filename>,
                 <filename>timers.target</filename>,
@@ -372,24 +372,12 @@
 
                                         <para>systemd automatically
                                         adds dependencies of type
-                                        After for this target unit to
-                                        all SysV init script service
-                                        units with an LSB header
-                                        referring to the
+                                        <varname>After=</varname> for
+                                        this target unit to all SysV
+                                        init script service units with
+                                        an LSB header referring to the
                                         <literal>$local_fs</literal>
                                         facility.</para>
-                                </listitem>
-                        </varlistentry>
-                        <varlistentry>
-                                <term><filename>local-fs-pre.target</filename></term>
-                                <listitem>
-                                        <para>This target unit is
-                                        automatically ordered before
-                                        all local mount points marked
-                                        with <option>auto</option>
-                                        (see above). It can be used to
-                                        execute certain units before
-                                        all local mounts.</para>
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
@@ -698,19 +686,6 @@
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
-                                <term><filename>syslog.target</filename></term>
-                                <listitem>
-                                        <para>systemd automatically
-                                        adds dependencies of type
-                                        After for this target unit to
-                                        all SysV init script service
-                                        units with an LSB header
-                                        referring to the
-                                        <literal>$syslog</literal>
-                                        facility.</para>
-                                </listitem>
-                        </varlistentry>
-                        <varlistentry>
                                 <term><filename>system-update.target</filename></term>
                                 <listitem>
                                         <para>A special target unit
@@ -948,6 +923,20 @@
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
+                                <term><filename>network-pre.target</filename></term>
+                                <listitem>
+                                        <para>This passive target unit
+                                        may be pulled in by services
+                                        that want to run before any
+                                        network is set up, for example
+                                        for the purpose of setting up a
+                                        firewall. All network
+                                        management software orders
+                                        itself after this target, but
+                                        does not pull it in.</para>
+                                </listitem>
+                        </varlistentry>
+                        <varlistentry>
                                 <term><filename>nss-lookup.target</filename></term>
                                 <listitem>
                                         <para>A target that should be
@@ -1157,7 +1146,7 @@
                         <varlistentry>
                                 <term><filename>machine.slice</filename></term>
                                 <listitem>
-                                        <para>By defalt, all virtual
+                                        <para>By default, all virtual
                                         machines and containers
                                         registered with
                                         <command>systemd-machined</command>

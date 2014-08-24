@@ -55,7 +55,7 @@ void server_forward_console(
         struct timespec ts;
         char tbuf[4 + DECIMAL_STR_MAX(ts.tv_sec) + DECIMAL_STR_MAX(ts.tv_nsec)-3 + 1];
         int n = 0, fd;
-        char *ident_buf = NULL;
+        _cleanup_free_ char *ident_buf = NULL;
         const char *tty;
 
         assert(s);
@@ -67,9 +67,9 @@ void server_forward_console(
         /* First: timestamp */
         if (prefix_timestamp()) {
                 assert_se(clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
-                snprintf(tbuf, sizeof(tbuf), "[%5llu.%06llu] ",
-                         (unsigned long long) ts.tv_sec,
-                         (unsigned long long) ts.tv_nsec / 1000);
+                snprintf(tbuf, sizeof(tbuf), "[%5"PRI_TIME".%06ld] ",
+                         ts.tv_sec,
+                         ts.tv_nsec / 1000);
                 IOVEC_SET_STRING(iovec[n++], tbuf);
         }
 
@@ -80,7 +80,7 @@ void server_forward_console(
                         identifier = ident_buf;
                 }
 
-                snprintf(header_pid, sizeof(header_pid), "[%lu]: ", (unsigned long) ucred->pid);
+                snprintf(header_pid, sizeof(header_pid), "["PID_FMT"]: ", ucred->pid);
                 char_array_0(header_pid);
 
                 if (identifier)
@@ -100,15 +100,12 @@ void server_forward_console(
 
         fd = open_terminal(tty, O_WRONLY|O_NOCTTY|O_CLOEXEC);
         if (fd < 0) {
-                log_debug("Failed to open %s for logging: %s", tty, strerror(errno));
-                goto finish;
+                log_debug("Failed to open %s for logging: %m", tty);
+                return;
         }
 
         if (writev(fd, iovec, n) < 0)
-                log_debug("Failed to write to %s for logging: %s", tty, strerror(errno));
+                log_debug("Failed to write to %s for logging: %m", tty);
 
         safe_close(fd);
-
-finish:
-        free(ident_buf);
 }

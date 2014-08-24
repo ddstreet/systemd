@@ -238,10 +238,12 @@ static void font_copy_to_all_vcs(int fd) {
 
 int main(int argc, char **argv) {
         const char *vc;
-        _cleanup_free_ char
-                *vc_keymap = NULL, *vc_keymap_toggle = NULL,
-                *vc_font = NULL, *vc_font_map = NULL, *vc_font_unimap = NULL;
-        _cleanup_close_ int fd = -1;
+        char *vc_keymap = NULL;
+        char *vc_keymap_toggle = NULL;
+        char *vc_font = NULL;
+        char *vc_font_map = NULL;
+        char *vc_font_unimap = NULL;
+        int fd = -1;
         bool utf8;
         pid_t font_pid = 0, keymap_pid = 0;
         bool font_copy = false;
@@ -263,12 +265,12 @@ int main(int argc, char **argv) {
         fd = open_terminal(vc, O_RDWR|O_CLOEXEC);
         if (fd < 0) {
                 log_error("Failed to open %s: %m", vc);
-                return EXIT_FAILURE;
+                goto finish;
         }
 
         if (!is_vconsole(fd)) {
                 log_error("Device %s is not a virtual console.", vc);
-                return EXIT_FAILURE;
+                goto finish;
         }
 
         utf8 = is_locale_utf8();
@@ -303,27 +305,27 @@ int main(int argc, char **argv) {
         else
                 disable_utf8(fd);
 
-        r = font_load(vc, vc_font, vc_font_map, vc_font_unimap, &font_pid);
-        if (r < 0) {
-                log_error("Failed to start " KBD_SETFONT ": %s", strerror(-r));
-                return EXIT_FAILURE;
-        }
+        r = EXIT_FAILURE;
+        if (keymap_load(vc, vc_keymap, vc_keymap_toggle, utf8, &keymap_pid) >= 0 &&
+            font_load(vc, vc_font, vc_font_map, vc_font_unimap, &font_pid) >= 0)
+                r = EXIT_SUCCESS;
 
-        if (font_pid > 0)
-                wait_for_terminate_and_warn(KBD_SETFONT, font_pid);
-
-        r = keymap_load(vc, vc_keymap, vc_keymap_toggle, utf8, &keymap_pid);
-        if (r < 0) {
-                log_error("Failed to start " KBD_LOADKEYS ": %s", strerror(-r));
-                return EXIT_FAILURE;
-        }
-
+finish:
         if (keymap_pid > 0)
                 wait_for_terminate_and_warn(KBD_LOADKEYS, keymap_pid);
 
-        /* Only copy the font when we started setfont successfully */
-        if (font_copy && font_pid > 0)
-                font_copy_to_all_vcs(fd);
+        if (font_pid > 0) {
+                wait_for_terminate_and_warn(KBD_SETFONT, font_pid);
+                if (font_copy)
+                        font_copy_to_all_vcs(fd);
+        }
 
-        return EXIT_SUCCESS;
+        free(vc_keymap);
+        free(vc_font);
+        free(vc_font_map);
+        free(vc_font_unimap);
+
+        safe_close(fd);
+
+        return r;
 }

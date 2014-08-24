@@ -30,6 +30,7 @@
 #include <sys/types.h>
 
 #include "udev.h"
+#include "smack-util.h"
 
 static int node_symlink(struct udev_device *dev, const char *node, const char *slink)
 {
@@ -252,11 +253,13 @@ void udev_node_update_old_links(struct udev_device *dev, struct udev_device *dev
         }
 }
 
-static int node_permissions_apply(struct udev_device *dev, bool apply, mode_t mode, uid_t uid, gid_t gid)
-{
+static int node_permissions_apply(struct udev_device *dev, bool apply,
+                                  mode_t mode, uid_t uid, gid_t gid,
+                                  struct udev_list *seclabel_list) {
         const char *devnode = udev_device_get_devnode(dev);
         dev_t devnum = udev_device_get_devnum(dev);
         struct stat stats;
+        struct udev_list_entry *entry;
         int err = 0;
 
         if (streq(udev_device_get_subsystem(dev), "block"))
@@ -278,6 +281,9 @@ static int node_permissions_apply(struct udev_device *dev, bool apply, mode_t mo
         }
 
         if (apply) {
+                bool selinux = false;
+                bool smack = false;
+
                 if ((stats.st_mode & 0777) != (mode & 0777) || stats.st_uid != uid || stats.st_gid != gid) {
                         log_debug("set permissions %s, %#o, uid=%u, gid=%u", devnode, mode, uid, gid);
                         chmod(devnode, mode);
@@ -285,7 +291,37 @@ static int node_permissions_apply(struct udev_device *dev, bool apply, mode_t mo
                 } else {
                         log_debug("preserve permissions %s, %#o, uid=%u, gid=%u", devnode, mode, uid, gid);
                 }
-                label_fix(devnode, true, false);
+
+                /* apply SECLABEL{$module}=$label */
+                udev_list_entry_foreach(entry, udev_list_get_entry(seclabel_list)) {
+                        const char *name, *label;
+
+                        name = udev_list_entry_get_name(entry);
+                        label = udev_list_entry_get_value(entry);
+
+                        if (streq(name, "selinux")) {
+                                selinux = true;
+                                if (label_apply(devnode, label) < 0)
+                                        log_error("SECLABEL: failed to set SELinux label '%s'", label);
+                                else
+                                        log_debug("SECLABEL: set SELinux label '%s'", label);
+
+                        } else if (streq(name, "smack")) {
+                                smack = true;
+                                if (smack_label_path(devnode, label) < 0)
+                                        log_error("SECLABEL: failed to set SMACK label '%s'", label);
+                                else
+                                        log_debug("SECLABEL: set SMACK label '%s'", label);
+
+                        } else
+                                log_error("SECLABEL: unknown subsystem, ignoring '%s'='%s'", name, label);
+                }
+
+                /* set the defaults */
+                if (!selinux)
+                        label_fix(devnode, true, false);
+                if (!smack)
+                        smack_label_path(devnode, NULL);
         }
 
         /* always update timestamp when we re-use the node, like on media change events */
@@ -294,15 +330,16 @@ out:
         return err;
 }
 
-void udev_node_add(struct udev_device *dev, bool apply, mode_t mode, uid_t uid, gid_t gid)
-{
+void udev_node_add(struct udev_device *dev, bool apply,
+                   mode_t mode, uid_t uid, gid_t gid,
+                   struct udev_list *seclabel_list) {
         char filename[UTIL_PATH_SIZE];
         struct udev_list_entry *list_entry;
 
         log_debug("handling device node '%s', devnum=%s, mode=%#o, uid=%d, gid=%d",
                   udev_device_get_devnode(dev), udev_device_get_id_filename(dev), mode, uid, gid);
 
-        if (node_permissions_apply(dev, apply, mode, uid, gid) < 0)
+        if (node_permissions_apply(dev, apply, mode, uid, gid, seclabel_list) < 0)
                 return;
 
         /* always add /dev/{block,char}/$major:$minor */
