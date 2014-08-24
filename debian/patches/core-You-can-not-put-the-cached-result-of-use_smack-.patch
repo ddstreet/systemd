@@ -11,10 +11,10 @@ https://bugs.freedesktop.org/show_bug.cgi?id=77646
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/src/core/mount-setup.c b/src/core/mount-setup.c
-index cff83d3..5c6edfd 100644
+index ae8447c..991bfdf 100644
 --- a/src/core/mount-setup.c
 +++ b/src/core/mount-setup.c
-@@ -69,10 +69,10 @@ typedef struct MountPoint {
+@@ -67,10 +67,10 @@ typedef struct MountPoint {
  #define N_EARLY_MOUNT 5
  
  static const MountPoint mount_table[] = {

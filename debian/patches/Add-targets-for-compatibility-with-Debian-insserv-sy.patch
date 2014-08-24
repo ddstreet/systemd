@@ -25,8 +25,8 @@ index cdd412e..0bbd79a 100644
 +endif
 +
  dist_userunit_DATA = \
+ 	units/user/basic.target \
  	units/user/default.target \
- 	units/user/exit.target
 diff --git a/units/mail-transport-agent.target b/units/mail-transport-agent.target
 new file mode 100644
 index 0000000..4d74ec7
