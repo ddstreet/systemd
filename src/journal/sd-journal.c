@@ -41,6 +41,7 @@
 #include "missing.h"
 #include "catalog.h"
 #include "replace-var.h"
+#include "fileio.h"
 
 #define JOURNAL_FILES_MAX 1024
 
@@ -188,7 +189,7 @@ static Match *match_new(Match *p, MatchType t) {
 
         if (p) {
                 m->parent = p;
-                LIST_PREPEND(Match, matches, p->matches, m);
+                LIST_PREPEND(matches, p->matches, m);
         }
 
         return m;
@@ -201,7 +202,7 @@ static void match_free(Match *m) {
                 match_free(m->matches);
 
         if (m->parent)
-                LIST_REMOVE(Match, matches, m->parent->matches, m);
+                LIST_REMOVE(matches, m->parent->matches, m);
 
         free(m->data);
         free(m);
@@ -218,19 +219,14 @@ _public_ int sd_journal_add_match(sd_journal *j, const void *data, size_t size) 
         Match *l3, *l4, *add_here = NULL, *m;
         le64_t le_hash;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-
-        if (!data)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(data, -EINVAL);
 
         if (size == 0)
                 size = strlen(data);
 
-        if (!match_is_valid(data, size))
-                return -EINVAL;
+        assert_return(match_is_valid(data, size), -EINVAL);
 
         /* level 0: AND term
          * level 1: OR terms
@@ -316,10 +312,8 @@ fail:
 }
 
 _public_ int sd_journal_add_conjunction(sd_journal *j) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         if (!j->level0)
                 return 0;
@@ -337,10 +331,8 @@ _public_ int sd_journal_add_conjunction(sd_journal *j) {
 }
 
 _public_ int sd_journal_add_disjunction(sd_journal *j) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         if (!j->level0)
                 return 0;
@@ -881,15 +873,13 @@ static int next_beyond_location(sd_journal *j, JournalFile *f, direction_t direc
 static int real_journal_next(sd_journal *j, direction_t direction) {
         JournalFile *f, *new_file = NULL;
         uint64_t new_offset = 0;
-        Object *o;
-        uint64_t p;
+        uint64_t p = 0;
         Iterator i;
+        Object *o;
         int r;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         HASHMAP_FOREACH(f, j->files, i) {
                 bool found;
@@ -941,10 +931,8 @@ _public_ int sd_journal_previous(sd_journal *j) {
 static int real_journal_next_skip(sd_journal *j, direction_t direction, uint64_t skip) {
         int c = 0, r;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         if (skip == 0) {
                 /* If this is not a discrete skip, then at least
@@ -983,12 +971,9 @@ _public_ int sd_journal_get_cursor(sd_journal *j, char **cursor) {
         int r;
         char bid[33], sid[33];
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!cursor)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(cursor, -EINVAL);
 
         if (!j->current_file || j->current_file->current_offset <= 0)
                 return -EADDRNOTAVAIL;
@@ -1024,12 +1009,9 @@ _public_ int sd_journal_seek_cursor(sd_journal *j, const char *cursor) {
                 xor_hash_set = false;
         sd_id128_t seqnum_id, boot_id;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (isempty(cursor))
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(!isempty(cursor), -EINVAL);
 
         FOREACH_WORD_SEPARATOR(w, l, cursor, ";", state) {
                 char *item;
@@ -1125,12 +1107,9 @@ _public_ int sd_journal_test_cursor(sd_journal *j, const char *cursor) {
         size_t l;
         Object *o;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (isempty(cursor))
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(!isempty(cursor), -EINVAL);
 
         if (!j->current_file || j->current_file->current_offset <= 0)
                 return -EADDRNOTAVAIL;
@@ -1205,10 +1184,8 @@ _public_ int sd_journal_test_cursor(sd_journal *j, const char *cursor) {
 
 
 _public_ int sd_journal_seek_monotonic_usec(sd_journal *j, sd_id128_t boot_id, uint64_t usec) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         reset_location(j);
         j->current_location.type = LOCATION_SEEK;
@@ -1220,10 +1197,8 @@ _public_ int sd_journal_seek_monotonic_usec(sd_journal *j, sd_id128_t boot_id, u
 }
 
 _public_ int sd_journal_seek_realtime_usec(sd_journal *j, uint64_t usec) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         reset_location(j);
         j->current_location.type = LOCATION_SEEK;
@@ -1234,10 +1209,8 @@ _public_ int sd_journal_seek_realtime_usec(sd_journal *j, uint64_t usec) {
 }
 
 _public_ int sd_journal_seek_head(sd_journal *j) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         reset_location(j);
         j->current_location.type = LOCATION_HEAD;
@@ -1246,10 +1219,8 @@ _public_ int sd_journal_seek_head(sd_journal *j) {
 }
 
 _public_ int sd_journal_seek_tail(sd_journal *j) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         reset_location(j);
         j->current_location.type = LOCATION_TAIL;
@@ -1302,7 +1273,7 @@ static bool file_type_wanted(int flags, const char *filename) {
         if (flags & SD_JOURNAL_CURRENT_USER) {
                 char prefix[5 + DECIMAL_STR_MAX(uid_t) + 1];
 
-                assert_se(snprintf(prefix, sizeof(prefix), "user-%lu", (unsigned long) getuid())
+                assert_se(snprintf(prefix, sizeof(prefix), "user-"UID_FMT, getuid())
                           < (int) sizeof(prefix));
 
                 if (file_has_type_prefix(prefix, filename))
@@ -1313,7 +1284,7 @@ static bool file_type_wanted(int flags, const char *filename) {
 }
 
 static int add_any_file(sd_journal *j, const char *path) {
-        JournalFile *f;
+        JournalFile *f = NULL;
         int r;
 
         assert(j);
@@ -1479,10 +1450,15 @@ static int add_directory(sd_journal *j, const char *prefix, const char *dirname)
 
         for (;;) {
                 struct dirent *de;
-                union dirent_storage buf;
 
-                r = readdir_r(d, &buf.de, &de);
-                if (r != 0 || !de)
+                errno = 0;
+                de = readdir(d);
+                if (!de && errno != 0) {
+                        r = -errno;
+                        log_debug("Failed to read directory %s: %m", m->path);
+                        return r;
+                }
+                if (!de)
                         break;
 
                 if (dirent_is_file_with_suffix(de, ".journal") ||
@@ -1514,6 +1490,9 @@ static int add_root_directory(sd_journal *j, const char *p) {
         if ((j->flags & SD_JOURNAL_RUNTIME_ONLY) &&
             !path_startswith(p, "/run"))
                 return -EINVAL;
+
+        if (j->prefix)
+                p = strappenda(j->prefix, p);
 
         d = opendir(p);
         if (!d)
@@ -1560,11 +1539,16 @@ static int add_root_directory(sd_journal *j, const char *p) {
 
         for (;;) {
                 struct dirent *de;
-                union dirent_storage buf;
                 sd_id128_t id;
 
-                r = readdir_r(d, &buf.de, &de);
-                if (r != 0 || !de)
+                errno = 0;
+                de = readdir(d);
+                if (!de && errno != 0) {
+                        r = -errno;
+                        log_debug("Failed to read directory %s: %m", m->path);
+                        return r;
+                }
+                if (!de)
                         break;
 
                 if (dirent_is_file_with_suffix(de, ".journal") ||
@@ -1650,8 +1634,8 @@ static int add_current_paths(sd_journal *j) {
          * treat them as fatal. */
 
         HASHMAP_FOREACH(f, j->files, i) {
-                int r;
                 _cleanup_free_ char *dir;
+                int r;
 
                 dir = dirname_malloc(f->path);
                 if (!dir)
@@ -1721,14 +1705,8 @@ _public_ int sd_journal_open(sd_journal **ret, int flags) {
         sd_journal *j;
         int r;
 
-        if (!ret)
-                return -EINVAL;
-
-        if (flags & ~(SD_JOURNAL_LOCAL_ONLY|
-                      SD_JOURNAL_RUNTIME_ONLY|
-                      SD_JOURNAL_SYSTEM|
-                      SD_JOURNAL_CURRENT_USER))
-                return -EINVAL;
+        assert_return(ret, -EINVAL);
+        assert_return((flags & ~(SD_JOURNAL_LOCAL_ONLY|SD_JOURNAL_RUNTIME_ONLY|SD_JOURNAL_SYSTEM|SD_JOURNAL_CURRENT_USER)) == 0, -EINVAL);
 
         j = journal_new(flags, NULL);
         if (!j)
@@ -1747,18 +1725,55 @@ fail:
         return r;
 }
 
+_public_ int sd_journal_open_container(sd_journal **ret, const char *machine, int flags) {
+        _cleanup_free_ char *root = NULL, *class = NULL;
+        sd_journal *j;
+        char *p;
+        int r;
+
+        assert_return(machine, -EINVAL);
+        assert_return(ret, -EINVAL);
+        assert_return((flags & ~(SD_JOURNAL_LOCAL_ONLY|SD_JOURNAL_SYSTEM)) == 0, -EINVAL);
+        assert_return(filename_is_safe(machine), -EINVAL);
+
+        p = strappenda("/run/systemd/machines/", machine);
+        r = parse_env_file(p, NEWLINE, "ROOT", &root, "CLASS", &class, NULL);
+        if (r == -ENOENT)
+                return -EHOSTDOWN;
+        if (r < 0)
+                return r;
+        if (!root)
+                return -ENODATA;
+
+        if (!streq_ptr(class, "container"))
+                return -EIO;
+
+        j = journal_new(flags, NULL);
+        if (!j)
+                return -ENOMEM;
+
+        j->prefix = root;
+        root = NULL;
+
+        r = add_search_paths(j);
+        if (r < 0)
+                goto fail;
+
+        *ret = j;
+        return 0;
+
+fail:
+        sd_journal_close(j);
+        return r;
+}
+
 _public_ int sd_journal_open_directory(sd_journal **ret, const char *path, int flags) {
         sd_journal *j;
         int r;
 
-        if (!ret)
-                return -EINVAL;
-
-        if (!path)
-                return -EINVAL;
-
-        if (flags != 0)
-                return -EINVAL;
+        assert_return(ret, -EINVAL);
+        assert_return(path, -EINVAL);
+        assert_return(flags == 0, -EINVAL);
 
         j = journal_new(flags, path);
         if (!j)
@@ -1784,11 +1799,8 @@ _public_ int sd_journal_open_files(sd_journal **ret, const char **paths, int fla
         const char **path;
         int r;
 
-        if (!ret)
-                return -EINVAL;
-
-        if (flags != 0)
-                return -EINVAL;
+        assert_return(ret, -EINVAL);
+        assert_return(flags == 0, -EINVAL);
 
         j = journal_new(flags, NULL);
         if (!j)
@@ -1844,6 +1856,7 @@ _public_ void sd_journal_close(sd_journal *j) {
         }
 
         free(j->path);
+        free(j->prefix);
         free(j->unique_field);
         set_free(j->errors);
         free(j);
@@ -1854,12 +1867,9 @@ _public_ int sd_journal_get_realtime_usec(sd_journal *j, uint64_t *ret) {
         JournalFile *f;
         int r;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!ret)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(ret, -EINVAL);
 
         f = j->current_file;
         if (!f)
@@ -1882,10 +1892,8 @@ _public_ int sd_journal_get_monotonic_usec(sd_journal *j, uint64_t *ret, sd_id12
         int r;
         sd_id128_t id;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         f = j->current_file;
         if (!f)
@@ -1950,19 +1958,12 @@ _public_ int sd_journal_get_data(sd_journal *j, const char *field, const void **
         int r;
         Object *o;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!field)
-                return -EINVAL;
-        if (!data)
-                return -EINVAL;
-        if (!size)
-                return -EINVAL;
-
-        if (!field_is_valid(field))
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(field, -EINVAL);
+        assert_return(data, -EINVAL);
+        assert_return(size, -EINVAL);
+        assert_return(field_is_valid(field), -EINVAL);
 
         f = j->current_file;
         if (!f)
@@ -2078,14 +2079,10 @@ _public_ int sd_journal_enumerate_data(sd_journal *j, const void **data, size_t 
         int r;
         Object *o;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!data)
-                return -EINVAL;
-        if (!size)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(data, -EINVAL);
+        assert_return(size, -EINVAL);
 
         f = j->current_file;
         if (!f)
@@ -2130,10 +2127,8 @@ _public_ void sd_journal_restart_data(sd_journal *j) {
 _public_ int sd_journal_get_fd(sd_journal *j) {
         int r;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         if (j->inotify_fd >= 0)
                 return j->inotify_fd;
@@ -2159,10 +2154,8 @@ _public_ int sd_journal_get_fd(sd_journal *j) {
 _public_ int sd_journal_get_events(sd_journal *j) {
         int fd;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         fd = sd_journal_get_fd(j);
         if (fd < 0)
@@ -2174,12 +2167,9 @@ _public_ int sd_journal_get_events(sd_journal *j) {
 _public_ int sd_journal_get_timeout(sd_journal *j, uint64_t *timeout_usec) {
         int fd;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!timeout_usec)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(timeout_usec, -EINVAL);
 
         fd = sd_journal_get_fd(j);
         if (fd < 0)
@@ -2276,10 +2266,8 @@ _public_ int sd_journal_process(sd_journal *j) {
         uint8_t buffer[sizeof(struct inotify_event) + FILENAME_MAX] _alignas_(struct inotify_event);
         bool got_something = false;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         j->last_process_usec = now(CLOCK_MONOTONIC);
 
@@ -2310,18 +2298,14 @@ _public_ int sd_journal_process(sd_journal *j) {
                         l -= step;
                 }
         }
-
-        return determine_change(j);
 }
 
 _public_ int sd_journal_wait(sd_journal *j, uint64_t timeout_usec) {
         int r;
         uint64_t t;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         if (j->inotify_fd < 0) {
 
@@ -2369,14 +2353,10 @@ _public_ int sd_journal_get_cutoff_realtime_usec(sd_journal *j, uint64_t *from, 
         uint64_t fmin = 0, tmax = 0;
         int r;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!from && !to)
-                return -EINVAL;
-        if (from == to)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(from || to, -EINVAL);
+        assert_return(from != to, -EINVAL);
 
         HASHMAP_FOREACH(f, j->files, i) {
                 usec_t fr, t;
@@ -2413,14 +2393,10 @@ _public_ int sd_journal_get_cutoff_monotonic_usec(sd_journal *j, sd_id128_t boot
         bool first = true;
         int r;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!from && !to)
-                return -EINVAL;
-        if (from == to)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(from || to, -EINVAL);
+        assert_return(from != to, -EINVAL);
 
         HASHMAP_FOREACH(f, j->files, i) {
                 usec_t fr, t;
@@ -2472,12 +2448,9 @@ _public_ int sd_journal_get_usage(sd_journal *j, uint64_t *bytes) {
         JournalFile *f;
         uint64_t sum = 0;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!bytes)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(bytes, -EINVAL);
 
         HASHMAP_FOREACH(f, j->files, i) {
                 struct stat st;
@@ -2495,14 +2468,10 @@ _public_ int sd_journal_get_usage(sd_journal *j, uint64_t *bytes) {
 _public_ int sd_journal_query_unique(sd_journal *j, const char *field) {
         char *f;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (isempty(field))
-                return -EINVAL;
-        if (!field_is_valid(field))
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(!isempty(field), -EINVAL);
+        assert_return(field_is_valid(field), -EINVAL);
 
         f = strdup(field);
         if (!f)
@@ -2519,16 +2488,11 @@ _public_ int sd_journal_query_unique(sd_journal *j, const char *field) {
 _public_ int sd_journal_enumerate_unique(sd_journal *j, const void **data, size_t *l) {
         size_t k;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!data)
-                return -EINVAL;
-        if (!l)
-                return -EINVAL;
-        if (!j->unique_field)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(data, -EINVAL);
+        assert_return(l, -EINVAL);
+        assert_return(j->unique_field, -EINVAL);
 
         k = strlen(j->unique_field);
 
@@ -2647,10 +2611,8 @@ _public_ void sd_journal_restart_unique(sd_journal *j) {
 }
 
 _public_ int sd_journal_reliable_fd(sd_journal *j) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         return !j->on_network;
 }
@@ -2682,12 +2644,9 @@ _public_ int sd_journal_get_catalog(sd_journal *j, char **ret) {
         char *t;
         int r;
 
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!ret)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(ret, -EINVAL);
 
         r = sd_journal_get_data(j, "MESSAGE_ID", &data, &size);
         if (r < 0)
@@ -2714,29 +2673,23 @@ _public_ int sd_journal_get_catalog(sd_journal *j, char **ret) {
 }
 
 _public_ int sd_journal_get_catalog_for_message_id(sd_id128_t id, char **ret) {
-        if (!ret)
-                return -EINVAL;
+        assert_return(ret, -EINVAL);
 
         return catalog_get(CATALOG_DATABASE, id, ret);
 }
 
 _public_ int sd_journal_set_data_threshold(sd_journal *j, size_t sz) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
 
         j->data_threshold = sz;
         return 0;
 }
 
 _public_ int sd_journal_get_data_threshold(sd_journal *j, size_t *sz) {
-        if (!j)
-                return -EINVAL;
-        if (journal_pid_changed(j))
-                return -ECHILD;
-        if (!sz)
-                return -EINVAL;
+        assert_return(j, -EINVAL);
+        assert_return(!journal_pid_changed(j), -ECHILD);
+        assert_return(sz, -EINVAL);
 
         *sz = j->data_threshold;
         return 0;

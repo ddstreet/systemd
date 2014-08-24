@@ -33,6 +33,8 @@
  *   ww -- wwan
  *
  * Type of names:
+ *   b<number>                             -- BCMA bus core number
+ *   ccw<name>                             -- CCW bus group name
  *   o<index>                              -- on-board device index number
  *   s<slot>[f<function>][d<dev_id>]       -- hotplug slot index number
  *   x<MAC>                                -- MAC address
@@ -92,6 +94,7 @@
 #include <string.h>
 #include <errno.h>
 #include <net/if.h>
+#include <net/if_arp.h>
 #include <linux/pci_regs.h>
 
 #include "udev.h"
@@ -102,6 +105,7 @@ enum netname_type{
         NET_PCI,
         NET_USB,
         NET_BCMA,
+        NET_VIRTIO,
         NET_CCWGROUP,
 };
 
@@ -118,10 +122,8 @@ struct netnames {
         const char *pci_onboard_label;
 
         char usb_ports[IFNAMSIZ];
-
         char bcma_core[IFNAMSIZ];
-
-        char ccw_core[IFNAMSIZ];
+        char ccw_group[IFNAMSIZ];
 };
 
 /* retrieve on-board index number and label from firmware */
@@ -163,7 +165,7 @@ static bool is_pci_multifunction(struct udev_device *dev) {
         if ((config[PCI_HEADER_TYPE] & 0x80) != 0)
                 multi = true;
 out:
-        if(f)
+        if (f)
                 fclose(f);
         return multi;
 }
@@ -380,8 +382,8 @@ static int names_ccw(struct  udev_device *dev, struct netnames *names) {
                 return -EINVAL;
 
         /* Store the CCW bus-ID for use as network device name */
-        rc = snprintf(names->ccw_core, sizeof(names->ccw_core), "ccw%s", bus_id);
-        if (rc >= 0 && rc < (int)sizeof(names->ccw_core))
+        rc = snprintf(names->ccw_group, sizeof(names->ccw_group), "ccw%s", bus_id);
+        if (rc >= 0 && rc < (int)sizeof(names->ccw_group))
                 names->type = NET_CCWGROUP;
         return 0;
 }
@@ -450,10 +452,10 @@ static int builtin_net_id(struct udev_device *dev, int argc, char *argv[], bool 
                 return EXIT_FAILURE;
         i = strtoul(s, NULL, 0);
         switch (i) {
-        case 1: /* ARPHRD_ETHER */
+        case ARPHRD_ETHER:
                 prefix = "en";
                 break;
-        case 256: /* ARPHRD_SLIP */
+        case ARPHRD_SLIP:
                 prefix = "sl";
                 break;
         default:
@@ -495,7 +497,7 @@ static int builtin_net_id(struct udev_device *dev, int argc, char *argv[], bool 
         if (err >= 0 && names.type == NET_CCWGROUP) {
                 char str[IFNAMSIZ];
 
-                if (snprintf(str, sizeof(str), "%s%s", prefix, names.ccw_core) < (int)sizeof(str))
+                if (snprintf(str, sizeof(str), "%s%s", prefix, names.ccw_group) < (int)sizeof(str))
                         udev_builtin_add_property(dev, test, "ID_NET_NAME_PATH", str);
                 goto out;
         }
@@ -556,7 +558,6 @@ static int builtin_net_id(struct udev_device *dev, int argc, char *argv[], bool 
                                 udev_builtin_add_property(dev, test, "ID_NET_NAME_SLOT", str);
                 goto out;
         }
-
 out:
         return EXIT_SUCCESS;
 }

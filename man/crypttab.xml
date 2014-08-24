@@ -304,15 +304,8 @@
                                 <term><varname>tcrypt-system</varname></term>
 
                                 <listitem><para>Use TrueCrypt in system
-                                encryption mode. This implies
-                                <varname>tcrypt</varname>.</para>
-
-                                <para>Please note that when using this mode, the
-                                whole device needs to be given in the second
-                                field instead of the partition. For example: if
-                                <literal>/dev/sda2</literal> is the system
-                                encrypted TrueCrypt patition, <literal>/dev/sda</literal>
-                                has to be given.</para></listitem>
+                                encryption mode. This option implies
+                                <varname>tcrypt</varname>.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>

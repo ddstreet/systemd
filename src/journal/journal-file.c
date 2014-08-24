@@ -68,7 +68,7 @@
 /* How much to increase the journal file size at once each time we allocate something new. */
 #define FILE_SIZE_INCREASE (8ULL*1024ULL*1024ULL)              /* 8MB */
 
-int journal_file_set_online(JournalFile *f) {
+static int journal_file_set_online(JournalFile *f) {
         assert(f);
 
         if (!f->writable)
@@ -269,6 +269,12 @@ static int journal_file_verify_header(JournalFile *f) {
             !VALID64(le64toh(f->header->field_hash_table_offset)) ||
             !VALID64(le64toh(f->header->tail_object_offset)) ||
             !VALID64(le64toh(f->header->entry_array_offset)))
+                return -ENODATA;
+
+        if (le64toh(f->header->data_hash_table_offset) < le64toh(f->header->header_size) ||
+            le64toh(f->header->field_hash_table_offset) < le64toh(f->header->header_size) ||
+            le64toh(f->header->tail_object_offset) < le64toh(f->header->header_size) ||
+            le64toh(f->header->entry_array_offset) < le64toh(f->header->header_size))
                 return -ENODATA;
 
         if (f->writable) {
@@ -549,7 +555,7 @@ static int journal_file_setup_data_hash_table(JournalFile *f) {
         if (r < 0)
                 return r;
 
-        memset(o->hash_table.items, 0, s);
+        memzero(o->hash_table.items, s);
 
         f->header->data_hash_table_offset = htole64(p + offsetof(Object, hash_table.items));
         f->header->data_hash_table_size = htole64(s);
@@ -575,7 +581,7 @@ static int journal_file_setup_field_hash_table(JournalFile *f) {
         if (r < 0)
                 return r;
 
-        memset(o->hash_table.items, 0, s);
+        memzero(o->hash_table.items, s);
 
         f->header->field_hash_table_offset = htole64(p + offsetof(Object, hash_table.items));
         f->header->field_hash_table_size = htole64(s);
@@ -1001,8 +1007,8 @@ static int journal_file_append_data(
         else
                 eq = memchr(data, '=', size);
         if (eq && eq > data) {
+                Object *fo = NULL;
                 uint64_t fp;
-                Object *fo;
 
                 /* Create field object ... */
                 r = journal_file_append_field(f, data, (uint8_t*) eq - (uint8_t*) data, &fo, &fp);
@@ -2213,8 +2219,6 @@ int journal_file_move_to_entry_by_monotonic_for_data(
 
                 z = q;
         }
-
-        return 0;
 }
 
 int journal_file_move_to_entry_by_seqnum_for_data(
@@ -2619,7 +2623,7 @@ fail:
 }
 
 int journal_file_rotate(JournalFile **f, bool compress, bool seal) {
-        char *p;
+        _cleanup_free_ char *p = NULL;
         size_t l;
         JournalFile *old_file, *new_file = NULL;
         int r;
@@ -2636,22 +2640,15 @@ int journal_file_rotate(JournalFile **f, bool compress, bool seal) {
                 return -EINVAL;
 
         l = strlen(old_file->path);
-
-        p = new(char, l + 1 + 32 + 1 + 16 + 1 + 16 + 1);
-        if (!p)
+        r = asprintf(&p, "%.*s@" SD_ID128_FORMAT_STR "-%016"PRIx64"-%016"PRIx64".journal",
+                     (int) l - 8, old_file->path,
+                     SD_ID128_FORMAT_VAL(old_file->header->seqnum_id),
+                     le64toh((*f)->header->head_entry_seqnum),
+                     le64toh((*f)->header->head_entry_realtime));
+        if (r < 0)
                 return -ENOMEM;
 
-        memcpy(p, old_file->path, l - 8);
-        p[l-8] = '@';
-        sd_id128_to_string(old_file->header->seqnum_id, p + l - 8 + 1);
-        snprintf(p + l - 8 + 1 + 32, 1 + 16 + 1 + 16 + 8 + 1,
-                 "-%016"PRIx64"-%016"PRIx64".journal",
-                 le64toh((*f)->header->head_entry_seqnum),
-                 le64toh((*f)->header->head_entry_realtime));
-
         r = rename(old_file->path, p);
-        free(p);
-
         if (r < 0)
                 return -errno;
 
@@ -2701,10 +2698,10 @@ int journal_file_open_reliably(
         /* The file is corrupted. Rotate it away and try it again (but only once) */
 
         l = strlen(fname);
-        if (asprintf(&p, "%.*s@%016llx-%016llx.journal~",
-                     (int) (l-8), fname,
+        if (asprintf(&p, "%.*s@%016llx-%016" PRIx64 ".journal~",
+                     (int) l - 8, fname,
                      (unsigned long long) now(CLOCK_REALTIME),
-                     random_ull()) < 0)
+                     random_u64()) < 0)
                 return -ENOMEM;
 
         r = rename(fname, p);

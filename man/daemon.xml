@@ -74,8 +74,8 @@
 
                         <orderedlist>
                                 <listitem><para>Close all open file
-                                descriptors except stdin, stdout,
-                                stderr (i.e. the first three file
+                                descriptors except standard input, output,
+                                and error (i.e. the first three file
                                 descriptors 0, 1, 2). This ensures
                                 that no accidentally passed file
                                 descriptor stays around in the daemon
@@ -149,7 +149,7 @@
                                 write the daemon PID (as returned by
                                 <function>getpid()</function>) to a
                                 PID file, for example
-                                <filename>/var/run/foobar.pid</filename>
+                                <filename>/run/foobar.pid</filename>
                                 (for a hypothetical daemon "foobar")
                                 to ensure that the daemon cannot be
                                 started more than once. This must be
@@ -764,7 +764,7 @@
 
                         <programlisting>PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdsystemunitdir],
-     AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),,
+     [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
      [with_systemdsystemunitdir=auto])
 AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
      def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -773,10 +773,10 @@ AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitd
          [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
                 [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
           with_systemdsystemunitdir=no],
-         [with_systemdsystemunitdir=$def_systemdsystemunitdir])])
+         [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
 AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
       [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
-AM_CONDITIONAL(HAVE_SYSTEMD, [test "x$with_systemdsystemunitdir" != "xno"])</programlisting>
+AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$with_systemdsystemunitdir" != "xno"])</programlisting>
 
                         <para>This snippet allows automatic
                         installation of the unit files on systemd

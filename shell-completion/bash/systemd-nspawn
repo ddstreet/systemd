@@ -41,7 +41,8 @@ _systemd_nspawn() {
         local -A OPTS=(
                [STANDALONE]='-h --help --version --private-network -b --boot --read-only -q --quiet --share-system --keep-unit --network-veth -j'
                       [ARG]='-D --directory -u --user --uuid --capability --drop-capability --link-journal --bind --bind-ro -M --machine
-                             -S --slice'
+                             -S --slice --setenv -Z --selinux-context -L --selinux-apifs-context --register --network-interface --network-bridge
+                             --personality -i --image'
         )
 
         _init_completion || return
@@ -78,6 +79,30 @@ _systemd_nspawn() {
                         ;;
                         --slice|-S)
                                 comps=$( __get_slices )
+                        ;;
+                        --setenv)
+                                comps=''
+                        ;;
+                        --selinux-context|-Z)
+                                comps=''
+                        ;;
+                        --selinux-apifs-context|-L)
+                                comps=''
+                        ;;
+                        --register)
+                                comps='yes no'
+                        ;;
+                        --network-interface)
+                                comps=''
+                        ;;
+                        --network-bridge)
+                                comps=''
+                        ;;
+                        --personality)
+                                comps='x86 x86-64'
+                        ;;
+                        --image|-i)
+                                comps=$( compgen -A file -- "$cur" )
                         ;;
                 esac
                 COMPREPLY=( $(compgen -W '$comps' -- "$cur") )

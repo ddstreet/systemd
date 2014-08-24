@@ -39,6 +39,7 @@
 
 static bool debug;
 
+_printf_(6,0)
 static void log_fn(struct udev *udev, int priority,
                    const char *file, int line, const char *fn,
                    const char *format, va_list args)
@@ -154,7 +155,7 @@ struct scsi_cmd {
 
 static void scsi_cmd_init(struct udev *udev, struct scsi_cmd *cmd)
 {
-        memset(cmd, 0x00, sizeof(struct scsi_cmd));
+        memzero(cmd, sizeof(struct scsi_cmd));
         cmd->cgc.quiet = 1;
         cmd->cgc.sense = &cmd->_sense.s;
         cmd->sg_io.interface_id = 'S';
@@ -929,7 +930,7 @@ int main(int argc, char *argv[])
         for (cnt = 20; cnt > 0; cnt--) {
                 struct timespec duration;
 
-                fd = open(node, O_RDONLY|O_NONBLOCK|(is_mounted(node) ? 0 : O_EXCL));
+                fd = open(node, O_RDONLY|O_NONBLOCK|O_CLOEXEC|(is_mounted(node) ? 0 : O_EXCL));
                 if (fd >= 0 || errno != EBUSY)
                         break;
                 duration.tv_sec = 0;

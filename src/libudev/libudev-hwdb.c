@@ -305,7 +305,7 @@ _public_ struct udev_hwdb *udev_hwdb_new(struct udev *udev) {
 
         udev_dbg(udev, "=== trie on-disk ===\n");
         udev_dbg(udev, "tool version:          %"PRIu64, le64toh(hwdb->head->tool_version));
-        udev_dbg(udev, "file size:        %8llu bytes\n", (unsigned long long) hwdb->st.st_size);
+        udev_dbg(udev, "file size:        %8zu bytes\n", hwdb->st.st_size);
         udev_dbg(udev, "header size       %8"PRIu64" bytes\n", le64toh(hwdb->head->header_size));
         udev_dbg(udev, "strings           %8"PRIu64" bytes\n", le64toh(hwdb->head->strings_len));
         udev_dbg(udev, "nodes             %8"PRIu64" bytes\n", le64toh(hwdb->head->nodes_len));
@@ -334,14 +334,14 @@ _public_ struct udev_hwdb *udev_hwdb_ref(struct udev_hwdb *hwdb) {
  * Drop a reference of a hwdb context. If the refcount reaches zero,
  * all resources of the hwdb context will be released.
  *
- * Returns: the passed hwdb context if it has still an active reference, or #NULL otherwise.
+ * Returns: #NULL
  **/
 _public_ struct udev_hwdb *udev_hwdb_unref(struct udev_hwdb *hwdb) {
         if (!hwdb)
                 return NULL;
         hwdb->refcount--;
         if (hwdb->refcount > 0)
-                return hwdb;
+                return NULL;
         if (hwdb->map)
                 munmap((void *)hwdb->map, hwdb->st.st_size);
         if (hwdb->f)

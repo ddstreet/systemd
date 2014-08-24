@@ -73,7 +73,7 @@ _systemctl () {
         local -A OPTS=(
                [STANDALONE]='--all -a --reverse --after --before --defaults --fail --ignore-dependencies --failed --force -f --full -l --global
                              --help -h --no-ask-password --no-block --no-legend --no-pager --no-reload --no-wall
-                             --quiet -q --privileged -P --system --user --version --runtime'
+                             --quiet -q --privileged -P --system --user --version --runtime --recursive -r'
                       [ARG]='--host -H --kill-who --property -p --signal -s --type -t --state --root'
         )
 
@@ -120,7 +120,7 @@ _systemctl () {
         fi
 
         local -A VERBS=(
-                [ALL_UNITS]='is-active is-failed is-enabled status show mask preset help list-dependencies'
+                [ALL_UNITS]='is-active is-failed is-enabled status show cat mask preset help list-dependencies'
             [ENABLED_UNITS]='disable'
            [DISABLED_UNITS]='enable'
         [REENABLABLE_UNITS]='reenable'
@@ -136,8 +136,8 @@ _systemctl () {
                      [ENVS]='set-environment unset-environment'
                [STANDALONE]='daemon-reexec daemon-reload default
                              emergency exit halt hibernate hybrid-sleep kexec list-jobs
-                             list-sockets list-units list-unit-files poweroff reboot rescue
-                             show-environment suspend get-default'
+                             list-sockets list-timers list-units list-unit-files poweroff
+                             reboot rescue show-environment suspend get-default'
                      [NAME]='snapshot'
                      [FILE]='link'
                   [TARGETS]='set-default'
@@ -151,7 +151,7 @@ _systemctl () {
                 fi
         done
 
-        if   [[ -z $verb ]]; then
+        if [[ -z $verb ]]; then
                 comps="${VERBS[*]}"
 
         elif __contains_word "$verb" ${VERBS[ALL_UNITS]}; then

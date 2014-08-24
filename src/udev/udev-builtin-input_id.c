@@ -38,8 +38,6 @@
 #define LONG(x) ((x)/BITS_PER_LONG)
 #define test_bit(bit, array)    ((array[LONG(bit)] >> OFF(bit)) & 1)
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
 /*
  * Read a capability attribute and return bitmask.
  * @param dev udev_device
@@ -59,7 +57,7 @@ static void get_cap_mask(struct udev_device *dev,
         snprintf(text, sizeof(text), "%s", udev_device_get_sysattr_value(pdev, attr));
         log_debug("%s raw kernel attribute: %s", attr, text);
 
-        memset (bitmask, 0, bitmask_size);
+        memzero(bitmask, bitmask_size);
         i = 0;
         while ((word = strrchr(text, ' ')) != NULL) {
                 val = strtoul (word+1, NULL, 16);
@@ -84,11 +82,13 @@ static void get_cap_mask(struct udev_device *dev,
                 /* skip over leading zeros */
                 while (bitmask[val-1] == 0 && val > 0)
                         --val;
-                for (i = 0; i < val; ++i)
+                for (i = 0; i < val; ++i) {
+                        DISABLE_WARNING_FORMAT_NONLITERAL;
                         log_debug(text, i * BITS_PER_LONG, bitmask[i]);
+                        REENABLE_WARNING;
+                }
         }
 }
-#pragma GCC diagnostic pop
 
 /* pointer devices */
 static void test_pointers (struct udev_device *dev,

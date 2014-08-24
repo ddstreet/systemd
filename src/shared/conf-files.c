@@ -55,13 +55,13 @@ static int files_add(Hashmap *h, const char *root, const char *path, const char 
 
         for (;;) {
                 struct dirent *de;
-                union dirent_storage buf;
                 char *p;
                 int r;
 
-                r = readdir_r(dir, &buf.de, &de);
-                if (r != 0)
-                        return -r;
+                errno = 0;
+                de = readdir(dir);
+                if (!de && errno != 0)
+                        return -errno;
 
                 if (!de)
                         break;
@@ -73,7 +73,7 @@ static int files_add(Hashmap *h, const char *root, const char *path, const char 
                 if (!p)
                         return -ENOMEM;
 
-                r = hashmap_put(h, path_get_file_name(p), p);
+                r = hashmap_put(h, basename(p), p);
                 if (r == -EEXIST) {
                         log_debug("Skipping overridden file: %s.", p);
                         free(p);
@@ -94,7 +94,7 @@ static int base_cmp(const void *a, const void *b) {
 
         s1 = *(char * const *)a;
         s2 = *(char * const *)b;
-        return strcmp(path_get_file_name(s1), path_get_file_name(s2));
+        return strcmp(basename(s1), basename(s2));
 }
 
 static int conf_files_list_strv_internal(char ***strv, const char *suffix, const char *root, char **dirs) {
@@ -106,7 +106,7 @@ static int conf_files_list_strv_internal(char ***strv, const char *suffix, const
         assert(suffix);
 
         /* This alters the dirs string array */
-        if (!path_strv_canonicalize_absolute_uniq(dirs, root))
+        if (!path_strv_resolve_uniq(dirs, root))
                 return -ENOMEM;
 
         fh = hashmap_new(string_hash_func, string_compare_func);

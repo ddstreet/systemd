@@ -65,7 +65,7 @@ static struct udev_device *find_pci_or_platform_parent(struct udev_device *devic
 
                 value = udev_device_get_sysattr_value(parent, "class");
                 if (value) {
-                        unsigned long class;
+                        unsigned long class = 0;
 
                         if (safe_atolu(value, &class) < 0) {
                                 log_warning("Cannot parse PCI class %s of device %s:%s.",
@@ -205,14 +205,18 @@ static unsigned get_max_brightness(struct udev_device *device) {
 
         max_brightness_str = udev_device_get_sysattr_value(device, "max_brightness");
         if (!max_brightness_str) {
-                log_warning("Failed to read 'max_brightness' attribute");
+                log_warning("Failed to read 'max_brightness' attribute.");
                 return 0;
         }
 
         r = safe_atou(max_brightness_str, &max_brightness);
         if (r < 0) {
-                log_warning("Failed to parse 'max_brightness' \"%s\": %s",
-                            max_brightness_str, strerror(-r));
+                log_warning("Failed to parse 'max_brightness' \"%s\": %s", max_brightness_str, strerror(-r));
+                return 0;
+        }
+
+        if (max_brightness <= 0) {
+                log_warning("Maximum brightness is 0, ignoring device.");
                 return 0;
         }
 
@@ -363,12 +367,12 @@ int main(int argc, char *argv[]) {
          * their probing at boot-time might happen in any order. This
          * means the validity checking of the device then is not
          * reliable, since it might not see other devices conflicting
-         * with a specific backlight. To deal with this we will
+         * with a specific backlight. To deal with this, we will
          * actively delete backlight state files at shutdown (where
          * device probing should be complete), so that the validity
          * check at boot time doesn't have to be reliable. */
 
-        if (streq(argv[1], "load")) {
+        if (streq(argv[1], "load") && shall_restore_state()) {
                 _cleanup_free_ char *value = NULL;
 
                 if (!validate_device(udev, device))

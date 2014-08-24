@@ -14,7 +14,7 @@ Conflicts:
  1 file changed, 12 insertions(+), 7 deletions(-)
 
 diff --git a/src/core/snapshot.c b/src/core/snapshot.c
-index d11239d..e1267a9 100644
+index d914af2..5eed615 100644
 --- a/src/core/snapshot.c
 +++ b/src/core/snapshot.c
 @@ -51,10 +51,11 @@ static void snapshot_set_state(Snapshot *s, SnapshotState state) {
@@ -60,7 +60,7 @@ index d11239d..e1267a9 100644
  
          return 0;
  }
-@@ -263,6 +264,8 @@ int snapshot_create(Manager *m, const char *name, bool cleanup, DBusError *e, Sn
+@@ -257,6 +258,8 @@ int snapshot_create(Manager *m, const char *name, bool cleanup, sd_bus_error *e,
          SNAPSHOT(u)->cleanup = cleanup;
          *_s = SNAPSHOT(u);
  
@@ -69,7 +69,7 @@ index d11239d..e1267a9 100644
          return 0;
  
  fail:
-@@ -275,6 +278,8 @@ fail:
+@@ -269,6 +272,8 @@ fail:
  void snapshot_remove(Snapshot *s) {
          assert(s);
  

@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
                         "N_CPUS=%li", sysconf(_SC_NPROCESSORS_ONLN),
                         NULL);
 
-        sleep(1);
+        sleep(10);
 
         return 0;
 }

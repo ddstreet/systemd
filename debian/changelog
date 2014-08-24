@@ -1,3 +1,57 @@
+systemd (214-1) experimental; urgency=medium
+
+  * New upstream release v214.
+   (Closes: #750793, #749268, #747939)
+
+  [ Jon Severinsson ]
+  * Import upstream v214-stable patch series.
+    - Rebase remaining Debian patches on top of v214-stable.
+    - Drop modifications to the now-removed built-in sysvinit support.
+  * Install the new combined libsystemd0 library, this library combines all
+    functionality of the various libsystemd-* libraries.
+    - Deprecate the old libsystemd-* libraries as they've been bundled into
+      libsystemd0. The old -dev files now just carry a transitional .pc file.
+    - Add new symbols file for libsystemd0.
+  * Update symbols file for libgudev-1.0-0.
+  * Remove pre-generated rules and unit files in debian/rules clean target.
+  * Add new systemd service users in systemd postinst (systemd-timesync,
+    systemd-network, systemd-resolve)
+  * Add new system group "input" used by udev rules in udev postinst.
+  * Try-restart networkd, resolved, and timesyncd after an upgrade.
+  * Do not force-enable default-on services on every upgrade.
+  * Add support for rcS.d init scripts to the sysv-generator.
+    - Do not order rcS.d services after local-fs.target if they do not
+      explicitly depend on $local_fs.
+    - Map rcS.d init script dependencies to their systemd equivalent.
+    - Special-case some dependencies for sysv init scripts for better
+      backwards compatibility. (Closes: #726027, #738965).
+  * Add systemd depends on new mount. (Closes: #754411)
+  * Update /run/initctl symlink target in debian/tmpfiles.d/debian.conf.
+  * Remove stored backlog state, rfkill state, random-seed and clock
+    information from /var/lib/systemd on systemd purge.
+
+  [ Sjoerd Simons ]
+  * debian/patches/shared-include-stdbool.h-in-mkdir.h.patch
+    + Added. Include stdbool before using bool in function prototypes. Fixes
+      build of the insserv generator
+  * Add python-lxml to build-depends for python-systemd
+  * Turn on parallel build support
+  * Install the new busctl binary and translations
+  * Explicitly disable microhttp so the package build doesn't fail if the
+    required dependencies for it happen to be installed.
+  * debian/control: Make udev break plymouth (<< 0.9.0-7) as older plymouths
+    assume udev implementation details that have changed slightly since v213
+  * debian/control: Remove b-d on librwap0-dev
+  * debian/control: Bump libkmod-dev b-d to >= 15
+  * debian/rules: Drop outdated --enable-tcpwrap
+  * debian/rules: Explicitely turn off rfkill, networkd, timesyncd and resolved
+    for the udeb build
+  * debian/rules: Use the debian ntp pool as default ntp servers
+  * debian/rules: explicitely configure the maximum system uid/gids instead of
+    relying on autodetection
+
+ -- Sjoerd Simons <sjoerd@debian.org>  Sun, 24 Aug 2014 14:54:27 +0200
+
 systemd (208-8) unstable; urgency=medium
 
   [ Martin Pitt ]

@@ -41,6 +41,8 @@ static const UnitActiveState state_translation_table[_SCOPE_STATE_MAX] = {
         [SCOPE_FAILED] = UNIT_FAILED
 };
 
+static int scope_dispatch_timer(sd_event_source *source, usec_t usec, void *userdata);
+
 static void scope_init(Unit *u) {
         Scope *s = SCOPE(u);
 
@@ -48,11 +50,6 @@ static void scope_init(Unit *u) {
         assert(u->load_state == UNIT_STUB);
 
         s->timeout_stop_usec = u->manager->default_timeout_stop_usec;
-
-        watch_init(&s->timer_watch);
-
-        cgroup_context_init(&s->cgroup_context);
-        kill_context_init(&s->kill_context);
 
         UNIT(s)->ignore_on_isolate = true;
         UNIT(s)->ignore_on_snapshot = true;
@@ -63,12 +60,35 @@ static void scope_done(Unit *u) {
 
         assert(u);
 
-        cgroup_context_done(&s->cgroup_context);
-
         free(s->controller);
-        s->controller = NULL;
 
-        unit_unwatch_timer(u, &s->timer_watch);
+        s->timer_event_source = sd_event_source_unref(s->timer_event_source);
+}
+
+static int scope_arm_timer(Scope *s) {
+        int r;
+
+        assert(s);
+
+        if (s->timeout_stop_usec <= 0) {
+                s->timer_event_source = sd_event_source_unref(s->timer_event_source);
+                return 0;
+        }
+
+        if (s->timer_event_source) {
+                r = sd_event_source_set_time(s->timer_event_source, now(CLOCK_MONOTONIC) + s->timeout_stop_usec);
+                if (r < 0)
+                        return r;
+
+                return sd_event_source_set_enabled(s->timer_event_source, SD_EVENT_ONESHOT);
+        }
+
+        return sd_event_add_time(
+                        UNIT(s)->manager->event,
+                        &s->timer_event_source,
+                        CLOCK_MONOTONIC,
+                        now(CLOCK_MONOTONIC) + s->timeout_stop_usec, 0,
+                        scope_dispatch_timer, s);
 }
 
 static void scope_set_state(Scope *s, ScopeState state) {
@@ -78,18 +98,14 @@ static void scope_set_state(Scope *s, ScopeState state) {
         old_state = s->state;
         s->state = state;
 
-        if (state != SCOPE_STOP_SIGTERM &&
-            state != SCOPE_STOP_SIGKILL)
-                unit_unwatch_timer(UNIT(s), &s->timer_watch);
+        if (!IN_SET(state, SCOPE_STOP_SIGTERM, SCOPE_STOP_SIGKILL))
+                s->timer_event_source = sd_event_source_unref(s->timer_event_source);
 
-        if (state == SCOPE_DEAD || state == SCOPE_FAILED)
+        if (IN_SET(state, SCOPE_DEAD, SCOPE_FAILED))
                 unit_unwatch_all_pids(UNIT(s));
 
         if (state != old_state)
-                log_debug("%s changed %s -> %s",
-                          UNIT(s)->id,
-                          scope_state_to_string(old_state),
-                          scope_state_to_string(state));
+                log_debug("%s changed %s -> %s", UNIT(s)->id, scope_state_to_string(old_state), scope_state_to_string(state));
 
         unit_notify(UNIT(s), state_translation_table[old_state], state_translation_table[state], true);
 }
@@ -116,7 +132,7 @@ static int scope_verify(Scope *s) {
         if (UNIT(s)->load_state != UNIT_LOADED)
                 return 0;
 
-        if (set_size(UNIT(s)->pids) <= 0 && UNIT(s)->manager->n_reloading <= 0) {
+        if (set_isempty(UNIT(s)->pids) && UNIT(s)->manager->n_reloading <= 0) {
                 log_error_unit(UNIT(s)->id, "Scope %s has no PIDs. Refusing.", UNIT(s)->id);
                 return -EINVAL;
         }
@@ -140,7 +156,11 @@ static int scope_load(Unit *u) {
         if (r < 0)
                 return r;
 
-        r = unit_add_default_slice(u);
+        r = unit_patch_contexts(u);
+        if (r < 0)
+                return r;
+
+        r = unit_add_default_slice(u, &s->cgroup_context);
         if (r < 0)
                 return r;
 
@@ -162,15 +182,13 @@ static int scope_coldplug(Unit *u) {
 
         if (s->deserialized_state != s->state) {
 
-                if ((s->deserialized_state == SCOPE_STOP_SIGKILL || s->deserialized_state == SCOPE_STOP_SIGTERM)
-                    && s->timeout_stop_usec > 0) {
-                        r = unit_watch_timer(UNIT(s), CLOCK_MONOTONIC, true, s->timeout_stop_usec, &s->timer_watch);
+                if (IN_SET(s->deserialized_state, SCOPE_STOP_SIGKILL, SCOPE_STOP_SIGTERM)) {
+                        r = scope_arm_timer(s);
                         if (r < 0)
-
                                 return r;
                 }
 
-                if (s->deserialized_state != SCOPE_DEAD && s->deserialized_state != SCOPE_FAILED)
+                if (!IN_SET(s->deserialized_state, SCOPE_DEAD, SCOPE_FAILED))
                         unit_watch_all_pids(UNIT(s));
 
                 scope_set_state(s, s->deserialized_state);
@@ -223,25 +241,24 @@ static void scope_enter_signal(Scope *s, ScopeState state, ScopeResult f) {
 
         if (!skip_signal) {
                 r = unit_kill_context(
-                        UNIT(s),
-                        &s->kill_context,
-                        state != SCOPE_STOP_SIGTERM,
-                        -1, -1, false);
-
+                                UNIT(s),
+                                &s->kill_context,
+                                state != SCOPE_STOP_SIGTERM,
+                                -1, -1, false);
                 if (r < 0)
                         goto fail;
         } else
                 r = 1;
 
         if (r > 0) {
-                if (s->timeout_stop_usec > 0) {
-                        r = unit_watch_timer(UNIT(s), CLOCK_MONOTONIC, true, s->timeout_stop_usec, &s->timer_watch);
-                        if (r < 0)
-                                goto fail;
-                }
+                r = scope_arm_timer(s);
+                if (r < 0)
+                        goto fail;
 
                 scope_set_state(s, state);
-        } else
+        } else if (state == SCOPE_STOP_SIGTERM)
+                scope_enter_signal(s, SCOPE_STOP_SIGKILL, SCOPE_SUCCESS);
+        else
                 scope_enter_dead(s, SCOPE_SUCCESS);
 
         return;
@@ -314,8 +331,22 @@ static void scope_reset_failed(Unit *u) {
         s->result = SCOPE_SUCCESS;
 }
 
-static int scope_kill(Unit *u, KillWho who, int signo, DBusError *error) {
+static int scope_kill(Unit *u, KillWho who, int signo, sd_bus_error *error) {
         return unit_kill_common(u, who, signo, -1, -1, error);
+}
+
+static int scope_get_timeout(Unit *u, uint64_t *timeout) {
+        Scope *s = SCOPE(u);
+        int r;
+
+        if (!s->timer_event_source)
+                return 0;
+
+        r = sd_event_source_get_time(s->timer_event_source, timeout);
+        if (r < 0)
+                return r;
+
+        return 1;
 }
 
 static int scope_serialize(Unit *u, FILE *f, FDSet *fds) {
@@ -362,7 +393,7 @@ static bool scope_check_gc(Unit *u) {
          * even if the scope is formally dead. */
 
         if (u->cgroup_path) {
-                r = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, UNIT(s)->cgroup_path, true);
+                r = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, true);
                 if (r <= 0)
                         return true;
         }
@@ -372,17 +403,16 @@ static bool scope_check_gc(Unit *u) {
 
 static void scope_notify_cgroup_empty_event(Unit *u) {
         Scope *s = SCOPE(u);
-
         assert(u);
 
         log_debug_unit(u->id, "%s: cgroup is empty", u->id);
 
-        if (s->state == SCOPE_RUNNING || s->state == SCOPE_ABANDONED ||
-            s->state == SCOPE_STOP_SIGTERM || SCOPE_STOP_SIGKILL)
+        if (IN_SET(s->state, SCOPE_RUNNING, SCOPE_ABANDONED, SCOPE_STOP_SIGTERM, SCOPE_STOP_SIGKILL))
                 scope_enter_dead(s, SCOPE_SUCCESS);
 }
 
 static void scope_sigchld_event(Unit *u, pid_t pid, int code, int status) {
+
         /* If we get a SIGCHLD event for one of the processes we were
            interested in, then we look for others to watch, under the
            assumption that we'll sooner or later get a SIGCHLD for
@@ -397,40 +427,41 @@ static void scope_sigchld_event(Unit *u, pid_t pid, int code, int status) {
                 scope_notify_cgroup_empty_event(u);
 }
 
-static void scope_timer_event(Unit *u, uint64_t elapsed, Watch*w) {
-        Scope *s = SCOPE(u);
+static int scope_dispatch_timer(sd_event_source *source, usec_t usec, void *userdata) {
+        Scope *s = SCOPE(userdata);
 
         assert(s);
-        assert(elapsed == 1);
-        assert(w == &s->timer_watch);
+        assert(s->timer_event_source == source);
 
         switch (s->state) {
 
         case SCOPE_STOP_SIGTERM:
                 if (s->kill_context.send_sigkill) {
-                        log_warning_unit(u->id, "%s stopping timed out. Killing.", u->id);
+                        log_warning_unit(UNIT(s)->id, "%s stopping timed out. Killing.", UNIT(s)->id);
                         scope_enter_signal(s, SCOPE_STOP_SIGKILL, SCOPE_FAILURE_TIMEOUT);
                 } else {
-                        log_warning_unit(u->id, "%s stopping timed out. Skipping SIGKILL.", u->id);
+                        log_warning_unit(UNIT(s)->id, "%s stopping timed out. Skipping SIGKILL.", UNIT(s)->id);
                         scope_enter_dead(s, SCOPE_FAILURE_TIMEOUT);
                 }
 
                 break;
 
         case SCOPE_STOP_SIGKILL:
-                log_warning_unit(u->id, "%s still around after SIGKILL. Ignoring.", u->id);
+                log_warning_unit(UNIT(s)->id, "%s still around after SIGKILL. Ignoring.", UNIT(s)->id);
                 scope_enter_dead(s, SCOPE_FAILURE_TIMEOUT);
                 break;
 
         default:
                 assert_not_reached("Timeout at wrong time.");
         }
+
+        return 0;
 }
 
 int scope_abandon(Scope *s) {
         assert(s);
 
-        if (s->state != SCOPE_RUNNING && s->state != SCOPE_ABANDONED)
+        if (!IN_SET(s->state, SCOPE_RUNNING, SCOPE_ABANDONED))
                 return -ESTALE;
 
         free(s->controller);
@@ -486,13 +517,14 @@ DEFINE_STRING_TABLE_LOOKUP(scope_result, ScopeResult);
 
 const UnitVTable scope_vtable = {
         .object_size = sizeof(Scope),
+        .cgroup_context_offset = offsetof(Scope, cgroup_context),
+        .kill_context_offset = offsetof(Scope, kill_context),
+
         .sections =
                 "Unit\0"
                 "Scope\0"
                 "Install\0",
-
         .private_section = "Scope",
-        .cgroup_context_offset = offsetof(Scope, cgroup_context),
 
         .no_alias = true,
         .no_instances = true,
@@ -510,6 +542,8 @@ const UnitVTable scope_vtable = {
 
         .kill = scope_kill,
 
+        .get_timeout = scope_get_timeout,
+
         .serialize = scope_serialize,
         .deserialize_item = scope_deserialize_item,
 
@@ -520,14 +554,12 @@ const UnitVTable scope_vtable = {
 
         .sigchld_event = scope_sigchld_event,
 
-        .timer_event = scope_timer_event,
-
         .reset_failed = scope_reset_failed,
 
         .notify_cgroup_empty = scope_notify_cgroup_empty_event,
 
         .bus_interface = "org.freedesktop.systemd1.Scope",
-        .bus_message_handler = bus_scope_message_handler,
+        .bus_vtable = bus_scope_vtable,
         .bus_set_property = bus_scope_set_property,
         .bus_commit_properties = bus_scope_commit_properties,
 

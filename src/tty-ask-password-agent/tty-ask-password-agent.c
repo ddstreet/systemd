@@ -291,9 +291,7 @@ static int parse_password(const char *filename, char **wall) {
                 }
         }
 
-        if (pid > 0 &&
-            kill(pid, 0) < 0 &&
-            errno == ESRCH) {
+        if (pid > 0 && !pid_is_alive(pid)) {
                 r = 0;
                 goto finish;
         }
@@ -360,7 +358,7 @@ static int parse_password(const char *filename, char **wall) {
 
                 } else {
                         int tty_fd = -1;
-                        char *password;
+                        char *password = NULL;
 
                         if (arg_console)
                                 if ((tty_fd = acquire_terminal("/dev/console", false, false, false, (usec_t) -1)) < 0) {
@@ -536,7 +534,7 @@ static int show_passwords(void) {
                 free(p);
 
                 if (wall) {
-                        utmp_wall(wall, wall_tty_match);
+                        utmp_wall(wall, NULL, wall_tty_match);
                         free(wall);
                 }
         }
@@ -657,7 +655,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "wall",     no_argument, NULL, ARG_WALL     },
                 { "plymouth", no_argument, NULL, ARG_PLYMOUTH },
                 { "console",  no_argument, NULL, ARG_CONSOLE  },
-                { NULL,    0,           NULL, 0               }
+                {}
         };
 
         int c;
@@ -670,8 +668,7 @@ static int parse_argv(int argc, char *argv[]) {
                 switch (c) {
 
                 case 'h':
-                        help();
-                        return 0;
+                        return help();
 
                 case ARG_VERSION:
                         puts(PACKAGE_STRING);
@@ -706,8 +703,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return -EINVAL;
 
                 default:
-                        log_error("Unknown option code %c", c);
-                        return -EINVAL;
+                        assert_not_reached("Unhandled option");
                 }
         }
 

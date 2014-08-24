@@ -4,6 +4,7 @@
   This file is part of systemd.
 
   Copyright 2010 Lennart Poettering
+  Copyright 2014 Holger Hans Peter Freyther
 
   systemd is free software; you can redistribute it and/or modify it
   under the terms of the GNU Lesser General Public License as published by
@@ -27,116 +28,87 @@
 #include <fcntl.h>
 #include <sys/file.h>
 
-#include <dbus/dbus.h>
+#include "sd-bus.h"
+#include "libudev.h"
 
 #include "util.h"
-#include "dbus-common.h"
 #include "special.h"
+#include "bus-util.h"
+#include "bus-error.h"
 #include "bus-errors.h"
-#include "virt.h"
 #include "fileio.h"
-#include "libudev.h"
 #include "udev-util.h"
+#include "path-util.h"
 
 static bool arg_skip = false;
 static bool arg_force = false;
 static bool arg_show_progress = false;
+static const char *arg_repair = "-a";
 
 static void start_target(const char *target) {
-        DBusMessage *m = NULL, *reply = NULL;
-        DBusError error;
-        const char *mode = "replace", *basic_target = "basic.target";
-        DBusConnection *bus = NULL;
+        _cleanup_bus_error_free_ sd_bus_error error = SD_BUS_ERROR_NULL;
+        _cleanup_bus_unref_ sd_bus *bus = NULL;
+        int r;
 
         assert(target);
 
-        dbus_error_init(&error);
-
-        if (bus_connect(DBUS_BUS_SYSTEM, &bus, NULL, &error) < 0) {
-                log_error("Failed to get D-Bus connection: %s", bus_error_message(&error));
-                goto finish;
+        r = bus_open_system_systemd(&bus);
+        if (r < 0) {
+                log_error("Failed to get D-Bus connection: %s", strerror(-r));
+                return;
         }
 
-        log_info("Running request %s/start/%s", target, mode);
-
-        if (!(m = dbus_message_new_method_call("org.freedesktop.systemd1", "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager", "StartUnitReplace"))) {
-                log_error("Could not allocate message.");
-                goto finish;
-        }
+        log_info("Running request %s/start/replace", target);
 
         /* Start these units only if we can replace base.target with it */
+        r = sd_bus_call_method(bus,
+                               "org.freedesktop.systemd1",
+                               "/org/freedesktop/systemd1",
+                               "org.freedesktop.systemd1.Manager",
+                               "StartUnitReplace",
+                               &error,
+                               NULL,
+                               "sss", "basic.target", target, "replace");
 
-        if (!dbus_message_append_args(m,
-                                      DBUS_TYPE_STRING, &basic_target,
-                                      DBUS_TYPE_STRING, &target,
-                                      DBUS_TYPE_STRING, &mode,
-                                      DBUS_TYPE_INVALID)) {
-                log_error("Could not attach target and flag information to message.");
-                goto finish;
-        }
-
-        if (!(reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error))) {
-
-                /* Don't print a warning if we aren't called during
-                 * startup */
-                if (!dbus_error_has_name(&error, BUS_ERROR_NO_SUCH_JOB))
-                        log_error("Failed to start unit: %s", bus_error_message(&error));
-
-                goto finish;
-        }
-
-finish:
-        if (m)
-                dbus_message_unref(m);
-
-        if (reply)
-                dbus_message_unref(reply);
-
-        if (bus) {
-                dbus_connection_flush(bus);
-                dbus_connection_close(bus);
-                dbus_connection_unref(bus);
-        }
-
-        dbus_error_free(&error);
+        /* Don't print a warning if we aren't called during startup */
+        if (r < 0 && !sd_bus_error_has_name(&error, BUS_ERROR_NO_SUCH_JOB))
+                log_error("Failed to start unit: %s", bus_error_message(&error, -r));
 }
 
-static int parse_proc_cmdline(void) {
-        char *line, *w, *state;
-        int r;
-        size_t l;
+static int parse_proc_cmdline_item(const char *key, const char *value) {
 
-        if (detect_container(NULL) > 0)
-                return 0;
+        if (streq(key, "fsck.mode") && value) {
 
-        r = read_one_line_file("/proc/cmdline", &line);
-        if (r < 0) {
-                log_warning("Failed to read /proc/cmdline, ignoring: %s", strerror(-r));
-                return 0;
-        }
-
-        FOREACH_WORD_QUOTED(w, l, line, state) {
-
-                if (strneq(w, "fsck.mode=auto", l))
+                if (streq(value, "auto"))
                         arg_force = arg_skip = false;
-                else if (strneq(w, "fsck.mode=force", l))
+                else if (streq(value, "force"))
                         arg_force = true;
-                else if (strneq(w, "fsck.mode=skip", l))
+                else if (streq(value, "skip"))
                         arg_skip = true;
-                else if (startswith(w, "fsck"))
-                        log_warning("Invalid fsck parameter. Ignoring.");
-#ifdef HAVE_SYSV_COMPAT
-                else if (strneq(w, "fastboot", l)) {
-                        log_error("Please pass 'fsck.mode=skip' rather than 'fastboot' on the kernel command line.");
-                        arg_skip = true;
-                } else if (strneq(w, "forcefsck", l)) {
-                        log_error("Please pass 'fsck.mode=force' rather than 'forcefsck' on the kernel command line.");
-                        arg_force = true;
-                }
-#endif
-        }
+                else
+                        log_warning("Invalid fsck.mode= parameter. Ignoring.");
+        } else if (streq(key, "fsck.repair") && value) {
 
-        free(line);
+                if (streq(value, "preen"))
+                        arg_repair = "-a";
+                else if (streq(value, "yes"))
+                        arg_repair = "-y";
+                else if (streq(value, "no"))
+                        arg_repair = "-n";
+                else
+                        log_warning("Invalid fsck.repair= parameter. Ignoring.");
+        } else if (startswith(key, "fsck."))
+                log_warning("Invalid fsck parameter. Ignoring.");
+#ifdef HAVE_SYSV_COMPAT
+        else if (streq(key, "fastboot") && !value) {
+                log_warning("Please pass 'fsck.mode=skip' rather than 'fastboot' on the kernel command line.");
+                arg_skip = true;
+        } else if (streq(key, "forcefsck") && !value) {
+                log_warning("Please pass 'fsck.mode=force' rather than 'forcefsck' on the kernel command line.");
+                arg_force = true;
+        }
+#endif
+
         return 0;
 }
 
@@ -187,7 +159,7 @@ static int process_progress(int fd) {
                 return -errno;
         }
 
-        console = fopen("/dev/console", "w");
+        console = fopen("/dev/console", "we");
         if (!console)
                 return -ENOMEM;
 
@@ -261,7 +233,7 @@ int main(int argc, char *argv[]) {
 
         umask(0022);
 
-        parse_proc_cmdline();
+        parse_proc_cmdline(parse_proc_cmdline_item);
         test_files();
 
         if (!arg_force && arg_skip)
@@ -326,14 +298,15 @@ int main(int argc, char *argv[]) {
 
         type = udev_device_get_property_value(udev_device, "ID_FS_TYPE");
         if (type) {
-                const char *checker = strappenda("/sbin/fsck.", type);
-                r = access(checker, X_OK);
+                r = fsck_exists(type);
                 if (r < 0) {
-                        if (errno == ENOENT) {
-                                log_info("%s doesn't exist, not checking file system.", checker);
+                        if (r == -ENOENT) {
+                                log_info("fsck.%s doesn't exist, not checking file system on %s",
+                                         type, device);
                                 return EXIT_SUCCESS;
                         } else
-                                log_warning("%s cannot be used: %m", checker);
+                                log_warning("fsck.%s cannot be used for %s: %s",
+                                            type, device, strerror(-r));
                 }
         }
 
@@ -344,9 +317,20 @@ int main(int argc, char *argv[]) {
                 }
 
         cmdline[i++] = "/sbin/fsck";
-        cmdline[i++] = "-a";
+        cmdline[i++] =  arg_repair;
         cmdline[i++] = "-T";
-        cmdline[i++] = "-l";
+
+        /*
+         * Disable locking which conflict with udev's event
+         * ownershipi, until util-linux moves the flock
+         * synchronization file which prevents multiple fsck running
+         * on the same rotationg media, from the disk device
+         * node to a privately owned regular file.
+         *
+         * https://bugs.freedesktop.org/show_bug.cgi?id=79576#c5
+         *
+         * cmdline[i++] = "-l";
+         */
 
         if (!root_directory)
                 cmdline[i++] = "-M";
@@ -415,7 +399,7 @@ int main(int argc, char *argv[]) {
                 touch("/run/systemd/quotacheck");
 
 finish:
-        close_pipe(progress_pipe);
+        safe_close_pair(progress_pipe);
 
         return r;
 }

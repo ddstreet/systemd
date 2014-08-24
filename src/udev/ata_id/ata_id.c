@@ -405,6 +405,7 @@ out:
         return ret;
 }
 
+_printf_(6,0)
 static void log_fn(struct udev *udev, int priority,
                    const char *file, int line, const char *fn,
                    const char *format, va_list args)
@@ -467,7 +468,7 @@ int main(int argc, char *argv[])
                 goto exit;
         }
 
-        fd = open(node, O_RDONLY|O_NONBLOCK);
+        fd = open(node, O_RDONLY|O_NONBLOCK|O_CLOEXEC);
         if (fd < 0) {
                 log_error("unable to open '%s'", node);
                 rc = 1;

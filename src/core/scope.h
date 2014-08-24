@@ -58,7 +58,7 @@ struct Scope {
 
         char *controller;
 
-        Watch timer_watch;
+        sd_event_source *timer_event_source;
 };
 
 extern const UnitVTable scope_vtable;
