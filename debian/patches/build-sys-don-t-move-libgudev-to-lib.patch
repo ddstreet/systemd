@@ -5,16 +5,15 @@ Subject: build-sys: don't move libgudev to /lib
 It depends on libgobject and libgmodule which are installed in /usr/lib.
 
 (cherry picked from commit 5c059d2ead0787a90732d27ed1b485d236abf641)
-(cherry picked from commit c46cee9156e8785fc70e8528d6deb402bef06ca0)
 ---
  Makefile.am | 10 ----------
  1 file changed, 10 deletions(-)
 
 diff --git a/Makefile.am b/Makefile.am
-index d57d890..205ea50 100644
+index 71fc911..12d2c94 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -2682,16 +2682,6 @@ typelibs_DATA = \
+@@ -3135,16 +3135,6 @@ typelibs_DATA = \
  
  CLEANFILES += $(gir_DATA) $(typelibs_DATA)
  endif # HAVE_INTROSPECTION
