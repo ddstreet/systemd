@@ -29,6 +29,7 @@
 #include <arpa/inet.h>
 #include <mqueue.h>
 #ifdef HAVE_XATTR
+#include <sys/xattr.h>
 #include <attr/xattr.h>
 #endif
 
