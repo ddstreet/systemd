@@ -1,3 +1,9 @@
+systemd (204-5ubuntu20.6) trusty; urgency=medium
+
+  * Fix syntax of HyperV net rules (LP: #1361272).
+
+ -- Ben Howard <ben.howard@ubuntu.com>  Mon, 25 Aug 2014 11:02:20 -0600
+
 systemd (204-5ubuntu20.5) trusty; urgency=medium
 
   * Add support for HP ProLiant m400 Server Cartridge soft powerdown
