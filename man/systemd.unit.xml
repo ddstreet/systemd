@@ -74,6 +74,8 @@
 <filename>$HOME/.config/systemd/user/*</filename>
 <filename>/etc/systemd/user/*</filename>
 <filename>/run/systemd/user/*</filename>
+<filename>$XDG_DATA_HOME/systemd/user/*</filename>
+<filename>$HOME/.local/share/systemd/user/*</filename>
 <filename>/usr/lib/systemd/user/*</filename>
 <filename>...</filename>
                 </literallayout></para>
@@ -339,8 +341,16 @@
                         <entry>Runtime units</entry>
                       </row>
                       <row>
+                        <entry><filename>$XDG_DATA_HOME/systemd/user</filename></entry>
+                        <entry>Units of packages that have been installed in the home directory (only used when $XDG_DATA_HOME is set)</entry>
+                      </row>
+                      <row>
+                        <entry><filename>$HOME/.local/share/systemd/user</filename></entry>
+                        <entry>Units of packages that have been installed in the home directory (only used when $XDG_DATA_HOME is not set)</entry>
+                      </row>
+                      <row>
                         <entry><filename>/usr/lib/systemd/user</filename></entry>
-                        <entry>Units of installed packages</entry>
+                        <entry>Units of packages that have been installed system-wide</entry>
                       </row>
                     </tbody>
                   </tgroup>
@@ -900,6 +910,7 @@
                                 <term><varname>ConditionSecurity=</varname></term>
                                 <term><varname>ConditionCapability=</varname></term>
                                 <term><varname>ConditionACPower=</varname></term>
+                                <term><varname>ConditionNeedsUpdate=</varname></term>
                                 <term><varname>ConditionPathExists=</varname></term>
                                 <term><varname>ConditionPathExistsGlob=</varname></term>
                                 <term><varname>ConditionPathIsDirectory=</varname></term>
@@ -930,7 +941,9 @@
                                 <varname>x86</varname>,
                                 <varname>x86-64</varname>,
                                 <varname>ppc</varname>,
+                                <varname>ppc-le</varname>,
                                 <varname>ppc64</varname>,
+                                <varname>ppc64-le</varname>,
                                 <varname>ia64</varname>,
                                 <varname>parisc</varname>,
                                 <varname>parisc64</varname>,
@@ -939,7 +952,9 @@
                                 <varname>sparc</varname>,
                                 <varname>sparc64</varname>,
                                 <varname>mips</varname>,
+                                <varname>mips-le</varname>,
                                 <varname>mips64</varname>,
+                                <varname>mips64-le</varname>,
                                 <varname>alpha</varname>,
                                 <varname>arm</varname>,
                                 <varname>arm-be</varname>,
@@ -947,7 +962,9 @@
                                 <varname>arm64-be</varname>,
                                 <varname>sh</varname>,
                                 <varname>sh64</varname>,
-                                <varname>m86k</varname> to test
+                                <varname>m86k</varname>,
+                                <varname>tilegx</varname>,
+                                <varname>cris</varname> to test
                                 against a specific architecture. The
                                 architecture is determined from the
                                 information returned by
@@ -978,12 +995,12 @@
                                 virtualization solution, or one of
                                 <varname>qemu</varname>,
                                 <varname>kvm</varname>,
+                                <varname>zvm</varname>,
                                 <varname>vmware</varname>,
                                 <varname>microsoft</varname>,
                                 <varname>oracle</varname>,
                                 <varname>xen</varname>,
                                 <varname>bochs</varname>,
-                                <varname>chroot</varname>,
                                 <varname>uml</varname>,
                                 <varname>openvz</varname>,
                                 <varname>lxc</varname>,
@@ -1067,6 +1084,33 @@
                                 at least one AC connector known and
                                 all AC connectors are disconnected
                                 from a power source.</para>
+
+                                <para><varname>ConditionNeedsUpdate=</varname>
+                                takes one of <filename>/var</filename>
+                                or <filename>/etc</filename> as
+                                argument, possibly prefixed with a
+                                <literal>!</literal> (for inverting
+                                the condition). This condition may be
+                                used to conditionalize units on
+                                whether the specified directory
+                                requires an update because
+                                <filename>/usr</filename>'s
+                                modification time is newer than the
+                                stamp file
+                                <filename>.updated</filename> in the
+                                specified directory. This is useful to
+                                implement offline updates of the
+                                vendor operating system resources in
+                                <filename>/usr</filename> that require
+                                updating of <filename>/etc</filename>
+                                or <filename>/var</filename> on the
+                                next following boot. Units making use
+                                of this condition should order
+                                themselves before
+                                <citerefentry><refentrytitle>systemd-update-done.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
+                                to make sure they run before the stamp
+                                files's modification time gets reset
+                                indicating a completed update.</para>
 
                                 <para>With
                                 <varname>ConditionPathExists=</varname>
@@ -1181,7 +1225,7 @@
                                 useful for implementation of generator
                                 tools that convert configuration from
                                 an external configuration file format
-                                into native unit files. Thus
+                                into native unit files. This
                                 functionality should not be used in
                                 normal units.</para></listitem>
                         </varlistentry>
@@ -1285,6 +1329,19 @@
                                 than once, or a space-separated list
                                 of unit names may be
                                 given.</para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
+                                <term><varname>DefaultInstance=</varname></term>
+
+                                <listitem><para>In template unit files,
+                                this specifies for which instance the
+                                unit shall be enabled if the template
+                                is enabled without any explicitly set
+                                instance. This option has no effect in
+                                non-template unit files. The specified
+                                string must be usable as instance
+                                identifier.</para></listitem>
                         </varlistentry>
                 </variablelist>
 
@@ -1426,7 +1483,7 @@
                 <title>See Also</title>
                 <para>
                         <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
-                        <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
+                        <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
                         <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>,

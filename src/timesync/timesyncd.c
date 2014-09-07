@@ -1044,10 +1044,6 @@ static int manager_new(Manager **ret) {
         if (r < 0)
                 return r;
 
-        r = manager_clock_watch_setup(m);
-        if (r < 0)
-                return r;
-
         *ret = m;
         m = NULL;
 

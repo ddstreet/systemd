@@ -286,7 +286,8 @@ static int parse_proc_cmdline_item(const char *key, const char *value) {
 
         } else if (streq(key, "rd.systemd.unit") && value) {
 
-                return set_default_unit(value);
+                if (in_initrd())
+                        return set_default_unit(value);
 
         } else if (streq(key, "systemd.log_target") && value) {
 
@@ -373,43 +374,6 @@ static int parse_proc_cmdline_item(const char *key, const char *value) {
                                 log_warning("Setting environment variable '%s' failed, ignoring: %s", value, strerror(ENOMEM));
                 } else
                         log_warning("Environment variable name '%s' is not valid. Ignoring.", value);
-
-        } else if (!streq(key, "systemd.restore_state") &&
-                   !streq(key, "systemd.gpt_auto") &&
-                   (startswith(key, "systemd.") || startswith(key, "rd.systemd."))) {
-
-                const char *c;
-
-                /* Ignore systemd.journald.xyz and friends */
-                c = key;
-                if (startswith(c, "rd."))
-                        c += 3;
-                if (startswith(c, "systemd."))
-                        c += 8;
-                if (c[strcspn(c, ".=")] != '.')  {
-
-                        log_warning("Unknown kernel switch %s. Ignoring.", key);
-
-                        log_info("Supported kernel switches:\n"
-                                 "systemd.unit=UNIT                        Default unit to start\n"
-                                 "rd.systemd.unit=UNIT                     Default unit to start when run in initrd\n"
-                                 "systemd.dump_core=0|1                    Dump core on crash\n"
-                                 "systemd.crash_shell=0|1                  Run shell on crash\n"
-                                 "systemd.crash_chvt=N                     Change to VT #N on crash\n"
-                                 "systemd.confirm_spawn=0|1                Confirm every process spawn\n"
-                                 "systemd.show_status=0|1|auto             Show status updates on the console during bootup\n"
-                                 "systemd.log_target=console|kmsg|journal|journal-or-kmsg|syslog|syslog-or-kmsg|null\n"
-                                 "                                         Log target\n"
-                                 "systemd.log_level=LEVEL                  Log level\n"
-                                 "systemd.log_color=0|1                    Highlight important log messages\n"
-                                 "systemd.log_location=0|1                 Include code location in log messages\n"
-                                 "systemd.default_standard_output=null|tty|syslog|syslog+console|kmsg|kmsg+console|journal|journal+console\n"
-                                 "                                         Set default log output for services\n"
-                                 "systemd.default_standard_error=null|tty|syslog|syslog+console|kmsg|kmsg+console|journal|journal+console\n"
-                                 "                                         Set default log error output for services\n"
-                                 "systemd.setenv=ASSIGNMENT                Set an environment variable for all spawned processes\n"
-                                 "systemd.restore_state=0|1                Restore backlight/rfkill state at boot\n");
-                }
 
         } else if (streq(key, "quiet") && !value) {
 
@@ -1156,19 +1120,25 @@ static int bump_rlimit_nofile(struct rlimit *saved_rlimit) {
 }
 
 static void test_mtab(void) {
-        char *p;
 
-        /* Check that /etc/mtab is a symlink */
+        static const char ok[] =
+                "/proc/self/mounts\0"
+                "/proc/mounts\0"
+                "../proc/self/mounts\0"
+                "../proc/mounts\0";
 
-        if (readlink_malloc("/etc/mtab", &p) >= 0) {
-                bool b;
+        _cleanup_free_ char *p = NULL;
+        int r;
 
-                b = streq(p, "/proc/self/mounts") || streq(p, "/proc/mounts");
-                free(p);
+        /* Check that /etc/mtab is a symlink to the right place or
+         * non-existing. But certainly not a file, or a symlink to
+         * some weird place... */
 
-                if (b)
-                        return;
-        }
+        r = readlink_malloc("/etc/mtab", &p);
+        if (r == -ENOENT)
+                return;
+        if (r >= 0 && nulstr_contains(ok, p))
+                return;
 
         log_warning("/etc/mtab is not a symlink or not pointing to /proc/self/mounts. "
                     "This is not supported anymore. "
@@ -1256,9 +1226,15 @@ static int status_welcome(void) {
                            "PRETTY_NAME", &pretty_name,
                            "ANSI_COLOR", &ansi_color,
                            NULL);
+        if (r == -ENOENT) {
+                r = parse_env_file("/usr/lib/os-release", NEWLINE,
+                                   "PRETTY_NAME", &pretty_name,
+                                   "ANSI_COLOR", &ansi_color,
+                                   NULL);
+        }
 
         if (r < 0 && r != -ENOENT)
-                log_warning("Failed to read /etc/os-release: %s", strerror(-r));
+                log_warning("Failed to read os-release file: %s", strerror(-r));
 
         return status_printf(NULL, false, false,
                              "\nWelcome to \x1B[%sm%s\x1B[0m!\n",
@@ -1295,6 +1271,7 @@ int main(int argc, char *argv[]) {
         bool loaded_policy = false;
         bool arm_reboot_watchdog = false;
         bool queue_default_job = false;
+        bool empty_etc = false;
         char *switch_root_dir = NULL, *switch_root_init = NULL;
         static struct rlimit saved_rlimit_nofile = { 0, 0 };
 
@@ -1566,10 +1543,22 @@ int main(int argc, char *argv[]) {
                 if (in_initrd())
                         log_info("Running in initial RAM disk.");
 
+                /* Let's check whether /etc is already populated. We
+                 * don't actually really check for that, but use
+                 * /etc/machine-id as flag file. This allows container
+                 * managers and installers to provision a couple of
+                 * files already. If the container manager wants to
+                 * provision the machine ID itself it should pass
+                 * $container_uuid to PID 1.*/
+
+                empty_etc = access("/etc/machine-id", F_OK) < 0;
+                if (empty_etc)
+                        log_info("Running with unpopulated /etc.");
         } else {
-                _cleanup_free_ char *t = uid_to_name(getuid());
-                log_debug(PACKAGE_STRING " running in user mode for user "PID_FMT"/%s. (" SYSTEMD_FEATURES ")",
-                          getuid(), t);
+                _cleanup_free_ char *t;
+
+                t = uid_to_name(getuid());
+                log_debug(PACKAGE_STRING " running in user mode for user "UID_FMT"/%s. (" SYSTEMD_FEATURES ")", getuid(), strna(t));
         }
 
         if (arg_running_as == SYSTEMD_SYSTEM && !skip_setup) {
@@ -1577,11 +1566,10 @@ int main(int argc, char *argv[]) {
                         status_welcome();
 
 #ifdef HAVE_KMOD
-                if (detect_container(NULL) <= 0)
-                        kmod_setup();
+                kmod_setup();
 #endif
                 hostname_setup();
-                machine_id_setup("");
+                machine_id_setup(NULL);
                 loopback_setup();
 
                 test_mtab();
@@ -1623,8 +1611,17 @@ int main(int argc, char *argv[]) {
                 }
         }
 
-        if (arg_running_as == SYSTEMD_SYSTEM)
+        if (arg_running_as == SYSTEMD_SYSTEM) {
                 bump_rlimit_nofile(&saved_rlimit_nofile);
+
+                if (empty_etc) {
+                        r = unit_file_preset_all(UNIT_FILE_SYSTEM, false, NULL, UNIT_FILE_PRESET_FULL, false, NULL, 0);
+                        if (r < 0)
+                                log_warning("Failed to populate /etc with preset unit settings, ignoring: %s", strerror(-r));
+                        else
+                                log_info("Populated /etc with preset unit settings.");
+                }
+        }
 
         r = manager_new(arg_running_as, &m);
         if (r < 0) {

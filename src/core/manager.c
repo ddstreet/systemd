@@ -554,7 +554,7 @@ static int manager_setup_notify(Manager *m) {
                 strncpy(sa.un.sun_path, m->notify_socket, sizeof(sa.un.sun_path)-1);
                 r = bind(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + strlen(sa.un.sun_path));
                 if (r < 0) {
-                        log_error("bind() failed: %m");
+                        log_error("bind(@%s) failed: %m", sa.un.sun_path+1);
                         return -errno;
                 }
 
@@ -2579,7 +2579,8 @@ void manager_check_finished(Manager *m) {
         }
 
         SET_FOREACH(u, m->startup_units, i)
-                cgroup_context_apply(unit_get_cgroup_context(u), unit_get_cgroup_mask(u), u->cgroup_path, manager_state(m));
+                if (u->cgroup_path)
+                        cgroup_context_apply(unit_get_cgroup_context(u), unit_get_cgroup_mask(u), u->cgroup_path, manager_state(m));
 
         bus_manager_send_finished(m, firmware_usec, loader_usec, kernel_usec, initrd_usec, userspace_usec, total_usec);
 

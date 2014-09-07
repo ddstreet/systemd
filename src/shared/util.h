@@ -93,6 +93,12 @@
 #define COMMENTS   "#;"
 #define GLOB_CHARS "*?["
 
+/* What characters are special in the shell? */
+/* must be escaped outside and inside double-quotes */
+#define SHELL_NEED_ESCAPE "\"\\`$"
+/* can be escaped or double-quoted */
+#define SHELL_NEED_QUOTES SHELL_NEED_ESCAPE GLOB_CHARS "'()<>|&;"
+
 #define FORMAT_BYTES_MAX 8
 
 #define ANSI_HIGHLIGHT_ON "\x1B[1;39m"
@@ -515,6 +521,8 @@ bool plymouth_running(void);
 bool hostname_is_valid(const char *s) _pure_;
 char* hostname_cleanup(char *s, bool lowercase);
 
+bool machine_name_is_valid(const char *s) _pure_;
+
 char* strshorten(char *s, size_t l);
 
 int terminal_vhangup_fd(int fd);
@@ -523,6 +531,8 @@ int terminal_vhangup(const char *name);
 int vt_disallocate(const char *name);
 
 int symlink_atomic(const char *from, const char *to);
+int mknod_atomic(const char *path, mode_t mode, dev_t dev);
+int mkfifo_atomic(const char *path, mode_t mode);
 
 int fchmod_umask(int fd, mode_t mode);
 
@@ -665,14 +675,21 @@ DEFINE_TRIVIAL_CLEANUP_FUNC(FILE*, endmntent);
 #define _cleanup_close_pair_ _cleanup_(close_pairp)
 
 _malloc_  _alloc_(1, 2) static inline void *malloc_multiply(size_t a, size_t b) {
-        if (_unlikely_(b == 0 || a > ((size_t) -1) / b))
+        if (_unlikely_(b != 0 && a > ((size_t) -1) / b))
                 return NULL;
 
         return malloc(a * b);
 }
 
+_alloc_(2, 3) static inline void *realloc_multiply(void *p, size_t a, size_t b) {
+        if (_unlikely_(b != 0 && a > ((size_t) -1) / b))
+                return NULL;
+
+        return realloc(p, a * b);
+}
+
 _alloc_(2, 3) static inline void *memdup_multiply(const void *p, size_t a, size_t b) {
-        if (_unlikely_(b == 0 || a > ((size_t) -1) / b))
+        if (_unlikely_(b != 0 && a > ((size_t) -1) / b))
                 return NULL;
 
         return memdup(p, a * b);
@@ -681,7 +698,7 @@ _alloc_(2, 3) static inline void *memdup_multiply(const void *p, size_t a, size_
 bool filename_is_safe(const char *p) _pure_;
 bool path_is_safe(const char *p) _pure_;
 bool string_is_safe(const char *p) _pure_;
-bool string_has_cc(const char *p) _pure_;
+bool string_has_cc(const char *p, const char *ok) _pure_;
 
 /**
  * Check if a string contains any glob patterns.
@@ -945,3 +962,10 @@ int update_reboot_param_file(const char *param);
 int umount_recursive(const char *target, int flags);
 
 int bind_remount_recursive(const char *prefix, bool ro);
+
+int fflush_and_check(FILE *f);
+
+char *tempfn_xxxxxx(const char *p);
+char *tempfn_random(const char *p);
+
+bool is_localhost(const char *hostname);
