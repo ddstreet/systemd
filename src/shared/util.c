@@ -231,9 +231,9 @@ int unlink_noerrno(const char *path) {
 int parse_boolean(const char *v) {
         assert(v);
 
-        if (streq(v, "1") || v[0] == 'y' || v[0] == 'Y' || v[0] == 't' || v[0] == 'T' || strcaseeq(v, "on"))
+        if (streq(v, "1") || strcaseeq(v, "yes") || strcaseeq(v, "y") || strcaseeq(v, "true") || strcaseeq(v, "t") || strcaseeq(v, "on"))
                 return 1;
-        else if (streq(v, "0") || v[0] == 'n' || v[0] == 'N' || v[0] == 'f' || v[0] == 'F' || strcaseeq(v, "off"))
+        else if (streq(v, "0") || strcaseeq(v, "no") || strcaseeq(v, "n") || strcaseeq(v, "false") || strcaseeq(v, "f") || strcaseeq(v, "off"))
                 return 0;
 
         return -EINVAL;
@@ -279,6 +279,14 @@ int parse_uid(const char *s, uid_t* ret_uid) {
 
         if ((unsigned long) uid != ul)
                 return -ERANGE;
+
+        /* Some libc APIs use (uid_t) -1 as special placeholder */
+        if (uid == (uid_t) 0xFFFFFFFF)
+                return -ENXIO;
+
+        /* A long time ago UIDs where 16bit, hence explicitly avoid the 16bit -1 too */
+        if (uid == (uid_t) 0xFFFF)
+                return -ENXIO;
 
         *ret_uid = uid;
         return 0;
@@ -1248,7 +1256,7 @@ char *cunescape_length_with_prefix(const char *s, size_t length, const char *pre
                         a = unhexchar(f[1]);
                         b = unhexchar(f[2]);
 
-                        if (a < 0 || b < 0) {
+                        if (a < 0 || b < 0 || (a == 0 && b == 0)) {
                                 /* Invalid escape code, let's take it literal then */
                                 *(t++) = '\\';
                                 *(t++) = 'x';
@@ -1275,7 +1283,7 @@ char *cunescape_length_with_prefix(const char *s, size_t length, const char *pre
                         b = unoctchar(f[1]);
                         c = unoctchar(f[2]);
 
-                        if (a < 0 || b < 0 || c < 0) {
+                        if (a < 0 || b < 0 || c < 0 || (a == 0 && b == 0 && c == 0)) {
                                 /* Invalid escape code, let's take it literal then */
                                 *(t++) = '\\';
                                 *(t++) = f[0];
@@ -1369,6 +1377,7 @@ _pure_ static bool ignore_file_allow_backup(const char *filename) {
                 endswith(filename, ".rpmorig") ||
                 endswith(filename, ".dpkg-old") ||
                 endswith(filename, ".dpkg-new") ||
+                endswith(filename, ".dpkg-tmp") ||
                 endswith(filename, ".swp");
 }
 
@@ -1440,7 +1449,7 @@ _pure_ static bool fd_in_set(int fd, const int fdset[], unsigned n_fdset) {
 }
 
 int close_all_fds(const int except[], unsigned n_except) {
-        DIR *d;
+        _cleanup_closedir_ DIR *d = NULL;
         struct dirent *de;
         int r = 0;
 
@@ -1495,7 +1504,6 @@ int close_all_fds(const int except[], unsigned n_except) {
                 }
         }
 
-        closedir(d);
         return r;
 }
 
@@ -1559,8 +1567,7 @@ int chvt(int vt) {
 
 int read_one_char(FILE *f, char *ret, usec_t t, bool *need_nl) {
         struct termios old_termios, new_termios;
-        char c;
-        char line[LINE_MAX];
+        char c, line[LINE_MAX];
 
         assert(f);
         assert(ret);
@@ -1597,12 +1604,14 @@ int read_one_char(FILE *f, char *ret, usec_t t, bool *need_nl) {
                 }
         }
 
-        if (t != (usec_t) -1)
+        if (t != (usec_t) -1) {
                 if (fd_wait_for_event(fileno(f), POLLIN, t) <= 0)
                         return -ETIMEDOUT;
+        }
 
+        errno = 0;
         if (!fgets(line, sizeof(line), f))
-                return -EIO;
+                return errno ? -errno : -EIO;
 
         truncate_nl(line);
 
@@ -1617,6 +1626,7 @@ int read_one_char(FILE *f, char *ret, usec_t t, bool *need_nl) {
 }
 
 int ask(char *ret, const char *replies, const char *text, ...) {
+        int r;
 
         assert(ret);
         assert(replies);
@@ -1625,7 +1635,6 @@ int ask(char *ret, const char *replies, const char *text, ...) {
         for (;;) {
                 va_list ap;
                 char c;
-                int r;
                 bool need_nl = true;
 
                 if (on_tty())
@@ -2672,7 +2681,7 @@ finish:
 }
 
 int rm_rf_children_dangerous(int fd, bool only_dirs, bool honour_sticky, struct stat *root_dev) {
-        DIR *d;
+        _cleanup_closedir_ DIR *d = NULL;
         int ret = 0;
 
         assert(fd >= 0);
@@ -2695,14 +2704,11 @@ int rm_rf_children_dangerous(int fd, bool only_dirs, bool honour_sticky, struct 
 
                 errno = 0;
                 de = readdir(d);
-                if (!de && errno != 0) {
-                        if (ret == 0)
+                if (!de) {
+                        if (errno != 0 && ret == 0)
                                 ret = -errno;
-                        break;
+                        return ret;
                 }
-
-                if (!de)
-                        break;
 
                 if (streq(de->d_name, ".") || streq(de->d_name, ".."))
                         continue;
@@ -2759,10 +2765,6 @@ int rm_rf_children_dangerous(int fd, bool only_dirs, bool honour_sticky, struct 
                         }
                 }
         }
-
-        closedir(d);
-
-        return ret;
 }
 
 _pure_ static int is_temporary_fs(struct statfs *s) {
@@ -3482,6 +3484,17 @@ int wait_for_terminate(pid_t pid, siginfo_t *status) {
         }
 }
 
+/*
+ * Return values:
+ * < 0 : wait_for_terminate() failed to get the state of the
+ *       process, the process was terminated by a signal, or
+ *       failed for an unknown reason.
+ * >=0 : The process terminated normally, and its exit code is
+ *       returned.
+ *
+ * That is, success is indicated by a return value of zero, and an
+ * error is indicated by a non-zero value.
+ */
 int wait_for_terminate_and_warn(const char *name, pid_t pid) {
         int r;
         siginfo_t status;
@@ -3964,6 +3977,21 @@ char* hostname_cleanup(char *s, bool lowercase) {
         return s;
 }
 
+bool machine_name_is_valid(const char *s) {
+
+        if (!hostname_is_valid(s))
+                return false;
+
+        /* Machine names should be useful hostnames, but also be
+         * useful in unit names, hence we enforce a stricter length
+         * limitation. */
+
+        if (strlen(s) > 64)
+                return false;
+
+        return true;
+}
+
 int pipe_eof(int fd) {
         struct pollfd pollfd = {
                 .fd = fd,
@@ -4005,23 +4033,15 @@ int fd_wait_for_event(int fd, int event, usec_t t) {
 int fopen_temporary(const char *path, FILE **_f, char **_temp_path) {
         FILE *f;
         char *t;
-        const char *fn;
-        size_t k;
         int fd;
 
         assert(path);
         assert(_f);
         assert(_temp_path);
 
-        t = new(char, strlen(path) + 1 + 6 + 1);
+        t = tempfn_xxxxxx(path);
         if (!t)
                 return -ENOMEM;
-
-        fn = basename(path);
-        k = fn - path;
-        memcpy(t, path, k);
-        t[k] = '.';
-        stpcpy(stpcpy(t+k+1, fn), "XXXXXX");
 
         fd = mkostemp_safe(t, O_WRONLY|O_CLOEXEC);
         if (fd < 0) {
@@ -4131,42 +4151,61 @@ int vt_disallocate(const char *name) {
 }
 
 int symlink_atomic(const char *from, const char *to) {
-        char *x;
-        _cleanup_free_ char *t;
-        const char *fn;
-        size_t k;
-        uint64_t u;
-        unsigned i;
-        int r;
+        _cleanup_free_ char *t = NULL;
 
         assert(from);
         assert(to);
 
-        t = new(char, strlen(to) + 1 + 16 + 1);
+        t = tempfn_random(to);
         if (!t)
                 return -ENOMEM;
-
-        fn = basename(to);
-        k = fn-to;
-        memcpy(t, to, k);
-        t[k] = '.';
-        x = stpcpy(t+k+1, fn);
-
-        u = random_u64();
-        for (i = 0; i < 16; i++) {
-                *(x++) = hexchar(u & 0xF);
-                u >>= 4;
-        }
-
-        *x = 0;
 
         if (symlink(from, t) < 0)
                 return -errno;
 
         if (rename(t, to) < 0) {
-                r = -errno;
-                unlink(t);
-                return r;
+                unlink_noerrno(t);
+                return -errno;
+        }
+
+        return 0;
+}
+
+int mknod_atomic(const char *path, mode_t mode, dev_t dev) {
+        _cleanup_free_ char *t = NULL;
+
+        assert(path);
+
+        t = tempfn_random(path);
+        if (!t)
+                return -ENOMEM;
+
+        if (mknod(t, mode, dev) < 0)
+                return -errno;
+
+        if (rename(t, path) < 0) {
+                unlink_noerrno(t);
+                return -errno;
+        }
+
+        return 0;
+}
+
+int mkfifo_atomic(const char *path, mode_t mode) {
+        _cleanup_free_ char *t = NULL;
+
+        assert(path);
+
+        t = tempfn_random(path);
+        if (!t)
+                return -ENOMEM;
+
+        if (mkfifo(t, mode) < 0)
+                return -errno;
+
+        if (rename(t, path) < 0) {
+                unlink_noerrno(t);
+                return -errno;
         }
 
         return 0;
@@ -5204,8 +5243,8 @@ int get_home_dir(char **_h) {
         assert(_h);
 
         /* Take the user specified one */
-        e = getenv("HOME");
-        if (e) {
+        e = secure_getenv("HOME");
+        if (e && path_is_absolute(e)) {
                 h = strdup(e);
                 if (!h)
                         return -ENOMEM;
@@ -5312,13 +5351,14 @@ bool filename_is_safe(const char *p) {
 bool string_is_safe(const char *p) {
         const char *t;
 
-        assert(p);
+        if (!p)
+                return false;
 
         for (t = p; *t; t++) {
                 if (*t > 0 && *t < ' ')
                         return false;
 
-                if (strchr("\\\"\'", *t))
+                if (strchr("\\\"\'\0x7f", *t))
                         return false;
         }
 
@@ -5326,17 +5366,24 @@ bool string_is_safe(const char *p) {
 }
 
 /**
- * Check if a string contains control characters.
- * Spaces and tabs are not considered control characters.
+ * Check if a string contains control characters. If 'ok' is non-NULL
+ * it may be a string containing additional CCs to be considered OK.
  */
-bool string_has_cc(const char *p) {
+bool string_has_cc(const char *p, const char *ok) {
         const char *t;
 
         assert(p);
 
-        for (t = p; *t; t++)
-                if (*t > 0 && *t < ' ' && *t != '\t')
+        for (t = p; *t; t++) {
+                if (ok && strchr(ok, *t))
+                        continue;
+
+                if (*t > 0 && *t < ' ')
                         return true;
+
+                if (*t == 127)
+                        return true;
+        }
 
         return false;
 }
@@ -6649,4 +6696,79 @@ int bind_remount_recursive(const char *prefix, bool ro) {
 
                 }
         }
+}
+
+int fflush_and_check(FILE *f) {
+        assert(f);
+
+        errno = 0;
+        fflush(f);
+
+        if (ferror(f))
+                return errno ? -errno : -EIO;
+
+        return 0;
+}
+
+char *tempfn_xxxxxx(const char *p) {
+        const char *fn;
+        char *t;
+        size_t k;
+
+        assert(p);
+
+        t = new(char, strlen(p) + 1 + 6 + 1);
+        if (!t)
+                return NULL;
+
+        fn = basename(p);
+        k = fn - p;
+
+        strcpy(stpcpy(stpcpy(mempcpy(t, p, k), "."), fn), "XXXXXX");
+
+        return t;
+}
+
+char *tempfn_random(const char *p) {
+        const char *fn;
+        char *t, *x;
+        uint64_t u;
+        size_t k;
+        unsigned i;
+
+        assert(p);
+
+        t = new(char, strlen(p) + 1 + 16 + 1);
+        if (!t)
+                return NULL;
+
+        fn = basename(p);
+        k = fn - p;
+
+        x = stpcpy(stpcpy(mempcpy(t, p, k), "."), fn);
+
+        u = random_u64();
+        for (i = 0; i < 16; i++) {
+                *(x++) = hexchar(u & 0xF);
+                u >>= 4;
+        }
+
+        *x = 0;
+
+        return t;
+}
+
+/* make sure the hostname is not "localhost" */
+bool is_localhost(const char *hostname) {
+        assert(hostname);
+
+        /* This tries to identify local hostnames described in RFC6761
+         * plus the redhatism of .localdomain */
+
+        return streq(hostname, "localhost") ||
+               streq(hostname, "localhost.") ||
+               endswith(hostname, ".localhost") ||
+               endswith(hostname, ".localhost.") ||
+               endswith(hostname, ".localdomain") ||
+               endswith(hostname, ".localdomain.");
 }

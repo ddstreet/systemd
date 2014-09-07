@@ -69,6 +69,7 @@ static int append_mounts(BindMount **p, char **strv, MountMode mode) {
         STRV_FOREACH(i, strv) {
 
                 (*p)->ignore = false;
+                (*p)->done = false;
 
                 if ((mode == INACCESSIBLE || mode == READONLY || mode == READWRITE) && (*i)[0] == '-') {
                         (*p)->ignore = true;
@@ -333,7 +334,7 @@ static int make_read_only(BindMount *m) {
 
         if (IN_SET(m->mode, INACCESSIBLE, READONLY))
                 r = bind_remount_recursive(m->path, true);
-        else if (m->mode == READWRITE)
+        else if (IN_SET(m->mode, READWRITE, PRIVATE_TMP, PRIVATE_VAR_TMP, PRIVATE_DEV))
                 r = bind_remount_recursive(m->path, false);
         else
                 r = 0;
@@ -371,11 +372,11 @@ int setup_namespace(
                 strv_length(inaccessible_dirs) +
                 private_dev +
                 (protect_home != PROTECT_HOME_NO ? 3 : 0) +
-                (protect_system != PROTECT_SYSTEM_NO ? 2 : 0) +
+                (protect_system != PROTECT_SYSTEM_NO ? 6 : 0) +
                 (protect_system == PROTECT_SYSTEM_FULL ? 1 : 0);
 
         if (n > 0) {
-                m = mounts = (BindMount *) alloca(n * sizeof(BindMount));
+                m = mounts = (BindMount *) alloca0(n * sizeof(BindMount));
                 r = append_mounts(&m, read_write_dirs, READWRITE);
                 if (r < 0)
                         return r;
@@ -413,7 +414,7 @@ int setup_namespace(
                 }
 
                 if (protect_system != PROTECT_SYSTEM_NO) {
-                        r = append_mounts(&m, protect_system == PROTECT_SYSTEM_FULL ? STRV_MAKE("/usr", "-/boot", "/etc") : STRV_MAKE("/usr", "-/boot"), READONLY);
+                        r = append_mounts(&m, protect_system == PROTECT_SYSTEM_FULL ? STRV_MAKE("/usr", "/bin", "/sbin", "/lib", "-/lib64", "-/boot", "/etc") : STRV_MAKE("/usr", "/bin", "/sbin", "/lib", "-/lib64", "-/boot"), READONLY);
                         if (r < 0)
                                 return r;
                 }

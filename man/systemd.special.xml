@@ -322,11 +322,10 @@
                                         <filename>sysroot-usr.mount</filename>
                                         and all mount points found in
                                         <filename>/etc/fstab</filename>
-                                        that have the
-                                        <option>auto</option> and
+                                        that have
                                         <option>x-initrd.mount</option>
-                                        mount options set.
-                                        </para>
+                                        and not have <option>noauto</option>
+                                        mount options set.</para>
                                 </listitem>
                         </varlistentry>
                         <varlistentry>
@@ -862,7 +861,7 @@
                                         target has been reached. Since
                                         the shutdown order is
                                         implicitly the reverse
-                                        start-up order between units
+                                        start-up order between units,
                                         this target is particularly
                                         useful to ensure that a
                                         service is shut down only

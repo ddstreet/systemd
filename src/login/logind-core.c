@@ -34,6 +34,7 @@
 #include "bus-error.h"
 #include "udev-util.h"
 #include "logind.h"
+#include "sd-daemon.h"
 
 int manager_add_device(Manager *m, const char *sysfs, bool master, Device **_device) {
         Device *d;

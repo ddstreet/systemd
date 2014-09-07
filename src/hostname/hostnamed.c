@@ -108,6 +108,13 @@ static int context_read_data(Context *c) {
                            "PRETTY_NAME", &c->data[PROP_OS_PRETTY_NAME],
                            "CPE_NAME", &c->data[PROP_OS_CPE_NAME],
                            NULL);
+        if (r == -ENOENT) {
+                r = parse_env_file("/usr/lib/os-release", NEWLINE,
+                                   "PRETTY_NAME", &c->data[PROP_OS_PRETTY_NAME],
+                                   "CPE_NAME", &c->data[PROP_OS_CPE_NAME],
+                                   NULL);
+        }
+
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -137,7 +144,8 @@ static bool valid_chassis(const char *chassis) {
                         "laptop\0"
                         "server\0"
                         "tablet\0"
-                        "handset\0",
+                        "handset\0"
+                        "watch\0",
                         chassis);
 }
 
@@ -251,7 +259,7 @@ static char* context_fallback_icon_name(Context *c) {
 }
 
 static bool hostname_is_useful(const char *hn) {
-        return !isempty(hn) && !streq(hn, "localhost");
+        return !isempty(hn) && !is_localhost(hn);
 }
 
 static int context_update_kernel_hostname(Context *c) {
@@ -312,7 +320,7 @@ static int context_write_data_machine_info(Context *c) {
 
         assert(c);
 
-        r = load_env_file("/etc/machine-info", NULL, &l);
+        r = load_env_file(NULL, "/etc/machine-info", NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -543,8 +551,7 @@ static int set_machine_info(Context *c, sd_bus *bus, sd_bus_message *m, int prop
 
                 if (prop == PROP_ICON_NAME && !filename_is_safe(name))
                         return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid icon name '%s'", name);
-                if (prop == PROP_PRETTY_HOSTNAME &&
-                    (string_has_cc(name) || chars_intersect(name, "\t")))
+                if (prop == PROP_PRETTY_HOSTNAME && string_has_cc(name, NULL))
                         return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid pretty host name '%s'", name);
                 if (prop == PROP_CHASSIS && !valid_chassis(name))
                         return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid chassis '%s'", name);

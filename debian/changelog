@@ -1,7 +1,55 @@
+systemd (215-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Import upstream v215-stable patch series.
+  * Rebase remaining Debian patches on top of v215-stable.
+  * Drop our Debian-specific run-user.mount unit as upstream now creates a
+    per-user tmpfs via logind.
+  * Don't rely on new mount from experimental for now and re-add the patch
+    which updates the documentation accordingly.
+  * Cherry-pick upstream fix to use correct versions for the new symbols that
+    were introduced in libudev.
+  * Update symbols files
+    - Add two new symbols for libudev1.
+    - Remove private symbol from libgudev-1.0-0. This symbol was never part of
+      the public API and not used anywhere so we don't need a soname bump.
+  * Cherry-pick upstream commit to not install busname units if kdbus support
+    is disabled.
+  * Make /run/lock tmpfs an API fs so it is available during early boot.
+    (Closes: #751392)
+  * Install new systemd-path and systemd-escape binaries.
+  * Cherry-pick upstream commit which fixes the references to the systemctl
+    man page. (Closes: #760613)
+  * Use the new systemd-escape utility to properly escape the network
+    interface name when starting an ifup@.service instance for hotplugged
+    network interfaces. Make sure a recent enough systemd version is installed
+    by bumping the versioned Breaks accordingly. (Closes: #747044)
+  * Order ifup@.service after networking.service so we don't need to setup the
+    runtime directory ourselves and we have a defined point during boot when
+    hotplugged network interfaces are started.
+  * Disable factory-reset feature and remove files associated with it. This
+    feature needs more integration work first before it can be enabled in
+    Debian.
+  * Cherry-pick upstream commit to fix ProtectSystem=full and make the
+    ProtectSystem= option consider /bin, /sbin, /lib and /lib64 (if it exists)
+    on Debian systems. (Closes: #759689)
+  * Use adduser in quiet mode when creating the system users/groups to avoid
+    warning messages about the missing home directories. Those are created
+    dynamically during runtime. (Closes: #759175)
+  * Set the gecos field when creating the system users.
+  * Add systemd-bus-proxy system user so systemd-bus-proxyd can properly drop
+    its privileges.
+  * Re-exec systemd and restart services at the end of postinst.
+  * Cherry-pick upstream commit for sd-journal to properly convert
+    object->size on big endian which fixes a crash in journalctl --list-boots.
+    (Closes: #758392)
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 07 Sep 2014 09:58:48 +0200
+
 systemd (214-1) experimental; urgency=medium
 
   * New upstream release v214.
-   (Closes: #750793, #749268, #747939)
+    (Closes: #750793, #749268, #747939)
 
   [ Jon Severinsson ]
   * Import upstream v214-stable patch series.
@@ -44,7 +92,7 @@ systemd (214-1) experimental; urgency=medium
   * debian/control: Remove b-d on librwap0-dev
   * debian/control: Bump libkmod-dev b-d to >= 15
   * debian/rules: Drop outdated --enable-tcpwrap
-  * debian/rules: Explicitely turn off rfkill, networkd, timesyncd and resolved
+  * debian/rules: Explicitly turn off rfkill, networkd, timesyncd and resolved
     for the udeb build
   * debian/rules: Use the debian ntp pool as default ntp servers
   * debian/rules: explicitely configure the maximum system uid/gids instead of
