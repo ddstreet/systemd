@@ -1,3 +1,19 @@
+systemd (208-8ubuntu2) utopic; urgency=medium
+
+  [ Ben Howard ]
+  * 75-persistent-net-generator.rules: Fix matches of HyperV. (LP: #1361272)
+
+  [ Martin Pitt ]
+  * Add new autopkgtest boot_and_services which reboots the testbed with
+    systemd as init and verifies that the most critical services like lightdm,
+    D-BUS, NetworkManager, and cron work. (To be extended in the future)
+  * Fix udev path in udev(7). (LP: #1357782)
+  * path_id: suppress ID_PATH for devices with an unknown parent device type.
+    (LP: #1321816)
+  * udev-builtin-keyboard: Allow numeric key codes. (LP: #1247584)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 08 Sep 2014 14:44:35 +0200
+
 systemd (208-8ubuntu1) utopic; urgency=medium
 
   [ Martin Pitt ]
