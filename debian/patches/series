@@ -527,6 +527,8 @@ login-revert-lazy-session-activation-on-non-VT-seats.patch
 util-avoid-considering-dpkg-temporary-files-relevant.patch
 tmpfiles-don-t-allow-read-access-to-journal-files-to.patch
 logind-if-a-user-is-sitting-in-front-of-the-computer.patch
+udev-path_id-suppress-ID_PATH-for-devices-with-an-un.patch
+udev-builtin-keyboard-Allow-numeric-key-codes.patch
 
 ## Debian specific patches:
 Add-back-support-for-Debian-specific-config-files.patch
@@ -572,10 +574,11 @@ Map-rcS.d-init-script-dependencies-to-their-systemd-.patch
 Add-support-for-TuxOnIce-hibernation.patch
 Make-emergency.service-conflict-with-rescue.service.patch
 Stop-syslog.socket-when-entering-emergency-mode.patch
+Fix-udev-directory-in-udev-7.patch
 
-# Ubuntu patches:
+## Ubuntu patches:
 Add-env-variable-for-machine-ID-path.patch
 Disable-tests-which-fail-on-buildds.patch
 Create-disk-by-partlabel-links-for-mmcblk-partitions.patch
 Support-system-image-read-only-etc.patch
-ProLiant-power-button.patch
+Add-support-for-HP-ProLiant-m400-Server-Cartridge-so.patch
