@@ -1,3 +1,10 @@
+systemd (204-5ubuntu20.7) trusty; urgency=medium
+
+  * udev-fallback-graphics.conf: Avoid failure if vesafb module is compiled
+    in. (LP: #1367241).
+
+ -- Dariusz Gadomski <dariusz.gadomski@canonical.com>  Fri, 12 Sep 2014 13:31:52 +0200
+
 systemd (204-5ubuntu20.6) trusty; urgency=medium
 
   * Fix syntax of HyperV net rules (LP: #1361272).
