@@ -91,6 +91,12 @@
 #define NTP_FIELD_MODE(f)               ((f) & 7)
 #define NTP_FIELD(l, v, m)              (((l) << 6) | ((v) << 3) | (m))
 
+/* Maximum acceptable root distance in seconds. */
+#define NTP_MAX_ROOT_DISTANCE           5.0
+
+/* Maximum number of missed replies before selecting another source. */
+#define NTP_MAX_MISSED_REPLIES          2
+
 /*
  * "NTP timestamps are represented as a 64-bit unsigned fixed-point number,
  * in seconds relative to 0h on 1 January 1900."
@@ -136,16 +142,16 @@ static int manager_clock_watch_setup(Manager *m);
 static int manager_connect(Manager *m);
 static void manager_disconnect(Manager *m);
 
+static double ntp_ts_short_to_d(const struct ntp_ts_short *ts) {
+        return be16toh(ts->sec) + (be16toh(ts->frac) / 65536.0);
+}
+
 static double ntp_ts_to_d(const struct ntp_ts *ts) {
         return be32toh(ts->sec) + ((double)be32toh(ts->frac) / UINT_MAX);
 }
 
 static double ts_to_d(const struct timespec *ts) {
         return ts->tv_sec + (1.0e-9 * ts->tv_nsec);
-}
-
-static double tv_to_d(const struct timeval *tv) {
-        return tv->tv_sec + (1.0e-6 * tv->tv_usec);
 }
 
 static double square(double d) {
@@ -245,7 +251,7 @@ static int manager_send_request(Manager *m) {
          * The actual value does not matter, We do not care about the correct
          * NTP UINT_MAX fraction; we just pass the plain nanosecond value.
          */
-        assert_se(clock_gettime(CLOCK_MONOTONIC, &m->trans_time_mon) >= 0);
+        assert_se(clock_gettime(clock_boottime_or_monotonic(), &m->trans_time_mon) >= 0);
         assert_se(clock_gettime(CLOCK_REALTIME, &m->trans_time) >= 0);
         ntpmsg.trans_time.sec = htobe32(m->trans_time.tv_sec + OFFSET_1900_1970);
         ntpmsg.trans_time.frac = htobe32(m->trans_time.tv_nsec);
@@ -274,15 +280,18 @@ static int manager_send_request(Manager *m) {
                 return r;
         }
 
-        r = sd_event_add_time(
-                        m->event,
-                        &m->event_timeout,
-                        CLOCK_MONOTONIC,
-                        now(CLOCK_MONOTONIC) + TIMEOUT_USEC, 0,
-                        manager_timeout, m);
-        if (r < 0) {
-                log_error("Failed to arm timeout timer: %s", strerror(-r));
-                return r;
+        m->missed_replies++;
+        if (m->missed_replies > NTP_MAX_MISSED_REPLIES) {
+                r = sd_event_add_time(
+                                m->event,
+                                &m->event_timeout,
+                                clock_boottime_or_monotonic(),
+                                now(clock_boottime_or_monotonic()) + TIMEOUT_USEC, 0,
+                                manager_timeout, m);
+                if (r < 0) {
+                        log_error("Failed to arm timeout timer: %s", strerror(-r));
+                        return r;
+                }
         }
 
         return 0;
@@ -308,7 +317,7 @@ static int manager_arm_timer(Manager *m, usec_t next) {
         }
 
         if (m->event_timer) {
-                r = sd_event_source_set_time(m->event_timer, now(CLOCK_MONOTONIC) + next);
+                r = sd_event_source_set_time(m->event_timer, now(clock_boottime_or_monotonic()) + next);
                 if (r < 0)
                         return r;
 
@@ -318,8 +327,8 @@ static int manager_arm_timer(Manager *m, usec_t next) {
         return sd_event_add_time(
                         m->event,
                         &m->event_timer,
-                        CLOCK_MONOTONIC,
-                        now(CLOCK_MONOTONIC) + next, 0,
+                        clock_boottime_or_monotonic(),
+                        now(clock_boottime_or_monotonic()) + next, 0,
                         manager_timer, m);
 }
 
@@ -566,11 +575,11 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
                 .msg_namelen = sizeof(server_addr),
         };
         struct cmsghdr *cmsg;
-        struct timespec now_ts;
-        struct timeval *recv_time;
+        struct timespec *recv_time;
         ssize_t len;
         double origin, receive, trans, dest;
         double delay, offset;
+        double root_distance;
         bool spike;
         int leap_sec;
         int r;
@@ -610,8 +619,8 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
                         continue;
 
                 switch (cmsg->cmsg_type) {
-                case SCM_TIMESTAMP:
-                        recv_time = (struct timeval *) CMSG_DATA(cmsg);
+                case SCM_TIMESTAMPNS:
+                        recv_time = (struct timespec *) CMSG_DATA(cmsg);
                         break;
                 }
         }
@@ -624,6 +633,8 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
                 log_debug("Unexpected reply. Ignoring.");
                 return 0;
         }
+
+        m->missed_replies = 0;
 
         /* check our "time cookie" (we just stored nanoseconds in the fraction field) */
         if (be32toh(ntpmsg.origin_time.sec) != m->trans_time.tv_sec + OFFSET_1900_1970 ||
@@ -640,7 +651,8 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
                 return manager_connect(m);
         }
 
-        if (NTP_FIELD_LEAP(ntpmsg.field) == NTP_LEAP_NOTINSYNC) {
+        if (NTP_FIELD_LEAP(ntpmsg.field) == NTP_LEAP_NOTINSYNC ||
+            ntpmsg.stratum == 0 || ntpmsg.stratum >= 16) {
                 log_debug("Server is not synchronized. Disconnecting.");
                 return manager_connect(m);
         }
@@ -652,6 +664,12 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
 
         if (NTP_FIELD_MODE(ntpmsg.field) != NTP_MODE_SERVER) {
                 log_debug("Unsupported mode %d. Disconnecting.", NTP_FIELD_MODE(ntpmsg.field));
+                return manager_connect(m);
+        }
+
+        root_distance = ntp_ts_short_to_d(&ntpmsg.root_delay) / 2 + ntp_ts_short_to_d(&ntpmsg.root_dispersion);
+        if (root_distance > NTP_MAX_ROOT_DISTANCE) {
+                log_debug("Server has too large root distance. Disconnecting.");
                 return manager_connect(m);
         }
 
@@ -678,11 +696,10 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
          *  The round-trip delay, d, and system clock offset, t, are defined as:
          *  d = (T4 - T1) - (T3 - T2)     t = ((T2 - T1) + (T3 - T4)) / 2"
          */
-        assert_se(clock_gettime(CLOCK_MONOTONIC, &now_ts) >= 0);
-        origin = tv_to_d(recv_time) - (ts_to_d(&now_ts) - ts_to_d(&m->trans_time_mon)) + OFFSET_1900_1970;
+        origin = ts_to_d(&m->trans_time) + OFFSET_1900_1970;
         receive = ntp_ts_to_d(&ntpmsg.recv_time);
         trans = ntp_ts_to_d(&ntpmsg.trans_time);
-        dest = tv_to_d(recv_time) + OFFSET_1900_1970;
+        dest = ts_to_d(recv_time) + OFFSET_1900_1970;
 
         offset = ((receive - origin) + (trans - dest)) / 2;
         delay = (dest - origin) - (trans - receive);
@@ -697,6 +714,7 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
                   "  mode         : %u\n"
                   "  stratum      : %u\n"
                   "  precision    : %.6f sec (%d)\n"
+                  "  root distance: %.6f sec\n"
                   "  reference    : %.4s\n"
                   "  origin       : %.3f\n"
                   "  receive      : %.3f\n"
@@ -712,6 +730,7 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
                   NTP_FIELD_MODE(ntpmsg.field),
                   ntpmsg.stratum,
                   exp2(ntpmsg.precision), ntpmsg.precision,
+                  root_distance,
                   ntpmsg.stratum == 1 ? ntpmsg.refid : "n/a",
                   origin - OFFSET_1900_1970,
                   receive - OFFSET_1900_1970,
@@ -764,7 +783,7 @@ static int manager_listen_setup(Manager *m) {
         if (r < 0)
                 return -errno;
 
-        r = setsockopt(m->server_socket, SOL_SOCKET, SO_TIMESTAMP, &on, sizeof(on));
+        r = setsockopt(m->server_socket, SOL_SOCKET, SO_TIMESTAMPNS, &on, sizeof(on));
         if (r < 0)
                 return -errno;
 
@@ -781,7 +800,9 @@ static int manager_begin(Manager *m) {
         assert_return(m->current_server_name, -EHOSTUNREACH);
         assert_return(m->current_server_address, -EHOSTUNREACH);
 
-        m->poll_interval_usec = NTP_POLL_INTERVAL_MIN_SEC * USEC_PER_SEC;
+        m->missed_replies = NTP_MAX_MISSED_REPLIES;
+        if (m->poll_interval_usec == 0)
+                m->poll_interval_usec = NTP_POLL_INTERVAL_MIN_SEC * USEC_PER_SEC;
 
         sockaddr_pretty(&m->current_server_address->sockaddr.sa, m->current_server_address->socklen, true, &pretty);
         log_info("Using NTP server %s (%s).", strna(pretty), m->current_server_name->string);
@@ -905,7 +926,7 @@ static int manager_connect(Manager *m) {
         if (!ratelimit_test(&m->ratelimit)) {
                 log_debug("Slowing down attempts to contact servers.");
 
-                r = sd_event_add_time(m->event, &m->event_retry, CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + RETRY_USEC, 0, manager_retry, m);
+                r = sd_event_add_time(m->event, &m->event_retry, clock_boottime_or_monotonic(), now(clock_boottime_or_monotonic()) + RETRY_USEC, 0, manager_retry, m);
                 if (r < 0) {
                         log_error("Failed to create retry timer: %s", strerror(-r));
                         return r;
@@ -925,11 +946,31 @@ static int manager_connect(Manager *m) {
                 if (m->current_server_name && m->current_server_name->names_next)
                         m->current_server_name = m->current_server_name->names_next;
                 else {
+
                         if (!m->servers) {
                                 m->current_server_name = NULL;
                                 log_debug("No server found.");
                                 return 0;
                         }
+
+                        if (!m->exhausted_servers && m->poll_interval_usec) {
+                                log_debug("Waiting after exhausting servers.");
+                                r = sd_event_add_time(m->event, &m->event_retry, clock_boottime_or_monotonic(), now(clock_boottime_or_monotonic()) + m->poll_interval_usec, 0, manager_retry, m);
+                                if (r < 0) {
+                                        log_error("Failed to create retry timer: %s", strerror(-r));
+                                        return r;
+                                }
+
+                                m->exhausted_servers = true;
+
+                                /* Increase the polling interval */
+                                if (m->poll_interval_usec < NTP_POLL_INTERVAL_MAX_SEC * USEC_PER_SEC)
+                                        m->poll_interval_usec *= 2;
+
+                                return 0;
+                        }
+
+                        m->exhausted_servers = false;
 
                         m->current_server_name = m->servers;
                 }
@@ -1144,7 +1185,7 @@ static int manager_network_event_handler(sd_event_source *s, int fd, uint32_t re
         online = network_is_online();
 
         /* check if the client is currently connected */
-        connected = m->server_socket >= 0;
+        connected = (m->server_socket >= 0) || m->exhausted_servers;
 
         if (connected && !online) {
                 log_info("No network connectivity, watching for changes.");

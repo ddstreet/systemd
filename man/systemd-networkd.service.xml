@@ -50,7 +50,7 @@
 
         <refsynopsisdiv>
                 <para><filename>systemd-networkd.service</filename></para>
-                <para><filename>/usr/lib/systemd/systemd-networkd</filename></para>
+                <para><filename>/lib/systemd/systemd-networkd</filename></para>
         </refsynopsisdiv>
 
         <refsect1>
@@ -76,7 +76,7 @@
 
         <refsect1><title>Configuration Files</title>
                 <para>The configuration files are read from the files located in the
-                system network directory <filename>/usr/lib/systemd/network</filename>,
+                system network directory <filename>/lib/systemd/network</filename>,
                 the volatile runtime network directory
                 <filename>/run/systemd/network</filename> and the local administration
                 network directory <filename>/etc/systemd/network</filename>.</para>
