@@ -56,7 +56,7 @@
                 <para><filename>systemd-poweroff.service</filename></para>
                 <para><filename>systemd-reboot.service</filename></para>
                 <para><filename>systemd-kexec.service</filename></para>
-                <para><filename>/usr/lib/systemd/systemd-shutdown</filename></para>
+                <para><filename>/lib/systemd/systemd-shutdown</filename></para>
         </refsynopsisdiv>
 
         <refsect1>
@@ -76,7 +76,7 @@
 
                 <para>When these services are run, they ensure that PID
                 1 is replaced by the
-                <filename>/usr/lib/systemd/systemd-shutdown</filename>
+                <filename>/lib/systemd/systemd-shutdown</filename>
                 tool which is then responsible for the actual
                 shutdown. Before shutting down, this binary will try to
                 unmount all remaining file systems, disable all
@@ -93,7 +93,7 @@
                 halt/poweroff/reboot/kexec
                 <filename>systemd-shutdown</filename> will run all
                 executables in
-                <filename>/usr/lib/systemd/system-shutdown/</filename>
+                <filename>/lib/systemd/system-shutdown/</filename>
                 and pass one arguments to them: either
                 <literal>halt</literal>,
                 <literal>poweroff</literal>,

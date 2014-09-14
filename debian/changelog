@@ -1,3 +1,34 @@
+systemd (215-3) experimental; urgency=medium
+
+  [ Ben Howard ]
+  * 75-persistent-net-generator.rules: Fix matches of HyperV. (LP: #1361272)
+
+  [ Martin Pitt ]
+  * 75-persistent-net-generator.rules: Add new MS Azure MAC prefix 00:25:ae.
+    (LP: #1367883)
+
+  [ Michael Biebl ]
+  * Update upstream v215-stable patch series.
+  * The /dev/log socket and /dev/initctl FIFO have been moved to /run and
+    replaced by symlinks. Create the symlinks manually on upgrades as well.
+    (Closes: #761340)
+  * Fix incorrect paths in man pages. (LP: #1357782, Closes: #717491)
+  * Make systemd recommend dbus so it is installed on upgrades. The dbus
+    system bus is required to run systemd-logind and the autovt feature relies
+    on logind. (Closes: #758111)
+  * Bump dependency on systemd-shim to (>= 7-2) to ensure we have a version
+    which supports systemd >= 209.
+  * Rework bug-script to be more upfront about what kind of data is gathered
+    and ask the user for permission before attaching the information to the
+    bug report. (Closes: #756248)
+
+  [ Sjoerd Simons ]
+  * d/p/buildsys-Don-t-default-to-gold-as-the-linker.patch
+    + Don't explicitly pick gold as the default linker. Fixes FTBFS on sparc
+      (Closes: #760879)
+
+ -- Sjoerd Simons <sjoerd@debian.org>  Sun, 14 Sep 2014 20:14:49 +0200
+
 systemd (215-2) experimental; urgency=medium
 
   * debian/patches/always-check-for-__BYTE_ORDER-__BIG_ENDIAN-when-chec.patch
