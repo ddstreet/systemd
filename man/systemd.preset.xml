@@ -48,7 +48,7 @@
         <refsynopsisdiv>
                 <para><filename>/etc/systemd/system-preset/*.preset</filename></para>
                 <para><filename>/run/systemd/system-preset/*.preset</filename></para>
-                <para><filename>/usr/lib/systemd/system-preset/*.preset</filename></para>
+                <para><filename>/lib/systemd/system-preset/*.preset</filename></para>
                 <para><filename>/etc/systemd/user-preset/*.preset</filename></para>
                 <para><filename>/run/systemd/user-preset/*.preset</filename></para>
                 <para><filename>/usr/lib/systemd/user-preset/*.preset</filename></para>
@@ -144,7 +144,7 @@
                 <title>Example</title>
 
                 <example>
-                        <title>Default off example <filename>/usr/lib/systemd/system-preset/99-default.preset</filename>:</title>
+                        <title>Default off example <filename>/lib/systemd/system-preset/99-default.preset</filename>:</title>
 
                         <programlisting>disable *</programlisting>
                 </example>
@@ -155,7 +155,7 @@
                 administrator preset policy or suchlike.</para>
 
                 <example>
-                        <title>A GNOME spin example <filename>/usr/lib/systemd/system-preset/50-gnome.preset</filename>:</title>
+                        <title>A GNOME spin example <filename>/lib/systemd/system-preset/50-gnome.preset</filename>:</title>
 
                         <programlisting>enable gdm.service
 enable colord.service
