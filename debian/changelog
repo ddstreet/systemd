@@ -1,3 +1,26 @@
+systemd (215-5) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * Unblacklist hyperv_fb again, it is needed for graphical support on Hyper-V
+    platforms. Thanks Andy Whitcroft! (LP: #1359933)
+  * Bump systemd-shim Depends/Breaks to 8-2 to ensure a lockstep upgrade.
+    (Closes: #761947)
+
+  [ Sjoerd Simons ]
+  * d/p/sd-bus-Accept-no-sender-as-the-destination-field.patch
+    + Fix compatibility between systemctl v215 and v208. Resolves issue when
+      reloads of services is requested before systemd is re-execed
+      (Closes: #762146)
+
+  [ Michael Biebl ]
+  * Don't overmount existing /run/user/<UID> directories with a per-user tmpfs
+    on upgrades. (Closes: #762041)
+  * Re-enable mount propagation for udevd. This avoids that broken software
+    like laptop-mode-tools, which runs mount from within udev rules, causes
+    the root file system to end up read-only. (Closes: #762018)
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 27 Sep 2014 17:49:47 +0200
+
 systemd (215-4) unstable; urgency=medium
 
   * Upload to unstable.
