@@ -4303,7 +4303,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 log_info("Synchronizing state for %s with sysvinit using update-rc.d...", name);
 
                 argv[c++] = path_get_file_name(p);
-                argv[c++] = streq(verb, "enable") ? "defaults" : "remove";
+                argv[c++] = verb;
                 argv[c] = NULL;
 
                 l = strv_join((char**)argv, " ");
