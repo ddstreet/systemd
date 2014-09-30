@@ -4300,7 +4300,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 /* Mark this entry, so that we don't try enabling it as native unit */
                 args[f] = (char*) "";
 
-                log_info("%s is not a native service, redirecting to /usr/sbin/update-rc.d.", name);
+                log_info("Synchronizing state for %s with sysvinit using update-rc.d...", name);
 
                 argv[c++] = path_get_file_name(p);
                 argv[c++] = streq(verb, "enable") ? "defaults" : "remove";
