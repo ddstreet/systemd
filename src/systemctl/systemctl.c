@@ -5753,6 +5753,34 @@ static int talk_initctl(void) {
         return 1;
 }
 
+static int talk_upstart(void) {
+        DBusConnection *bus;
+        char rl;
+        char telinit_cmd[] = "telinit X";
+
+        /* check if we can connect to upstart; if not, fail */
+        bus = dbus_connection_open_private("unix:abstract=/com/ubuntu/upstart", NULL);
+        if (bus == NULL) {
+                log_debug("cannot connect to upstart");
+                return 0;
+        }
+        dbus_connection_close(bus);
+        dbus_connection_unref(bus);
+        log_debug("upstart is running");
+
+        rl = action_to_runlevel();
+        if (!rl)
+                return 0;
+
+        /* invoke telinit with the desired new runlevel */
+        telinit_cmd[8] = rl;
+        if (system(telinit_cmd) != 0) {
+                log_error("failed to run %s for upstart fallback", telinit_cmd);
+                return 0;
+        }
+        return 1;
+}
+
 static int systemctl_main(DBusConnection *bus, int argc, char *argv[], DBusError *error) {
 
         static const struct {
@@ -5990,9 +6018,13 @@ static int start_with_fallback(DBusConnection *bus) {
                         goto done;
         }
 
-        /* Nothing else worked, so let's try
-         * /dev/initctl */
+        /* systemd didn't work (most probably it's not the current init
+         * system), so let's try /dev/initctl for SysV init */
         if (talk_initctl() > 0)
+                goto done;
+
+        /* and now upstart */
+        if (talk_upstart() > 0)
                 goto done;
 
         log_error("Failed to talk to init daemon.");
