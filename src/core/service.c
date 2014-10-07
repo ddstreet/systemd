@@ -370,6 +370,12 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
                 "syslog",               SPECIAL_SYSLOG_TARGET,
                 "time",                 SPECIAL_TIME_SYNC_TARGET,
+                /* special rcS init scripts */
+                "cryptdisks",           "cryptsetup.target",
+                "mountall",             SPECIAL_LOCAL_FS_TARGET,
+                "mountnfs",             SPECIAL_REMOTE_FS_TARGET,
+                "checkroot",            "systemd-remount-fs.service",
+                "dbus",                 "dbus.socket",
         };
 
         unsigned i;
