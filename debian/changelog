@@ -1,3 +1,16 @@
+systemd (204-5ubuntu20.8) trusty; urgency=medium
+
+  [ Ben Howard ]
+  * 75-persistent-net-generator.rules: Add new Microsoft net rule
+    (LP: #1367883)
+
+  [ Martin Pitt ]
+  * debian/libpam-systemd.systemd-logind.upstart: Fix "PAM module installed"
+    check for the case when there is more than one library installed, which
+    can happen on multi-arch systems. Thanks Grzegorz Gutowski! (LP: #1382510)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 29 Oct 2014 08:05:16 +0100
+
 systemd (204-5ubuntu20.7) trusty; urgency=medium
 
   * udev-fallback-graphics.conf: Avoid failure if vesafb module is compiled

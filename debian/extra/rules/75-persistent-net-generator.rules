@@ -96,6 +96,7 @@ ENV{MATCHADDR}=="60:45:bd:*", ENV{MATCHADDR}=""
 ENV{MATCHADDR}=="7c:1e:52:*", ENV{MATCHADDR}=""
 ENV{MATCHADDR}=="7c:ed:8d:*", ENV{MATCHADDR}=""
 ENV{MATCHADDR}=="dc:b4:c4:*", ENV{MATCHADDR}=""
+ENV{MATCHADDR}=="00:25:ae:*", ENV{MATCHADDR}=""
 
 LABEL="globally_administered_whitelist"
 
