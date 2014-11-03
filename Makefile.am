@@ -3101,7 +3101,7 @@ INSTALL_DATA_HOOKS += \
 	hwdb-update-hook
 
 hwdb-remove-hook:
-	-test -n "$(DESTDIR)" || rm -f $(udevlibexecdir)/hwdb.bin
+	-test -n "$(DESTDIR)" || rm -f /etc/udev/hwdb.bin
 
 # ------------------------------------------------------------------------------
 TESTS += \
