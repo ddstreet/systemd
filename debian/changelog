@@ -1,3 +1,11 @@
+systemd (204-5ubuntu20.9) trusty; urgency=medium
+
+  * Pull latest keymaps from trunk, as per standing microrelease exception.
+    Amongst others, this also fixes the "micmute" key on Dell Latitudes.
+    (LP: #1339998)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 12 Nov 2014 11:16:26 +0100
+
 systemd (204-5ubuntu20.8) trusty; urgency=medium
 
   [ Ben Howard ]
