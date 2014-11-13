@@ -4295,8 +4295,10 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!found_sysv)
                         continue;
 
-                /* Mark this entry, so that we don't try enabling it as native unit */
-                args[f] = (char*) "";
+                if (!found_native) {
+                        /* Mark this entry, so that we don't try enabling it as native unit */
+                        args[f] = (char*) "";
+                }
 
                 log_info("Synchronizing state for %s with sysvinit using update-rc.d...", name);
 
