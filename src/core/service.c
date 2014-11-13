@@ -334,8 +334,7 @@ static void service_done(Unit *u) {
 static char *sysv_translate_name(const char *name) {
         char *r;
 
-        r = new(char, strlen(name) + sizeof(".service"));
-        if (!r)
+        if (!(r = new(char, strlen(name) + sizeof(".service"))))
                 return NULL;
 
         if (endswith(name, ".sh"))
@@ -358,12 +357,12 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
 
         static const char * const table[] = {
                 /* LSB defined facilities */
-                "local_fs",             NULL,
+                "local_fs",             SPECIAL_LOCAL_FS_TARGET,
                 "network",              SPECIAL_NETWORK_ONLINE_TARGET,
                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
                 "portmap",              SPECIAL_RPCBIND_TARGET,
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
-                "syslog",               NULL,
+                "syslog",               SPECIAL_SYSLOG_TARGET,
                 "time",                 SPECIAL_TIME_SYNC_TARGET,
         };
 
@@ -384,9 +383,8 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 if (!table[i+1])
                         return 0;
 
-                r = strdup(table[i+1]);
-                if (!r)
-                        return log_oom();
+                if (!(r = strdup(table[i+1])))
+                        return -ENOMEM;
 
                 goto finish;
         }
