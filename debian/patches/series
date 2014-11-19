@@ -156,3 +156,11 @@ sd-bus-Accept-no-sender-as-the-destination-field.patch
 login-don-t-overmount-run-user-UID-on-upgrades.patch
 udev-re-enable-mount-propagation-for-udevd.patch
 Add-env-variable-for-machine-ID-path.patch
+
+## Ubuntu patches:
+Create-disk-by-partlabel-links-for-mmcblk-partitions.patch
+Support-system-image-read-only-etc.patch
+Add-support-for-ProLiant-Server-Cartridge-power-butt.patch
+Provide-shutdown-fallback-for-upstart.patch
+Trigger-ifup-.service-on-network-devices.patch
+Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
