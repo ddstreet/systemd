@@ -285,7 +285,6 @@ Automount.DirectoryMode,         config_parse_mode,                  0,         
 m4_dnl
 Swap.What,                       config_parse_path,                  0,                             offsetof(Swap, parameters_fragment.what)
 Swap.Priority,                   config_parse_int,                   0,                             offsetof(Swap, parameters_fragment.priority)
-Swap.Options,                    config_parse_string,                0,                             offsetof(Swap, parameters_fragment.options)
 Swap.TimeoutSec,                 config_parse_sec,                   0,                             offsetof(Swap, timeout_usec)
 EXEC_CONTEXT_CONFIG_ITEMS(Swap)m4_dnl
 CGROUP_CONTEXT_CONFIG_ITEMS(Swap)m4_dnl
