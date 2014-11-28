@@ -1,11 +1,10 @@
+## -stable patches:
+
 ## Cherry-picked patches:
-v217-stable.patch
 nspawn-Add-try-host-guest-journal-link-modes.patch
 tmpfiles.d-Create-var-lib-container.patch
 selinux-access-fix-broken-ternary-operator.patch
 shared-add-readlink_value.patch
-hostnamectl-Exit-with-zero-on-success.patch
-delta-diff-returns-1-when-files-differ-ignore-this.patch
 
 ## Debian specific patches:
 Add-back-support-for-Debian-specific-config-files.patch
@@ -56,3 +55,15 @@ Add-env-variable-for-machine-ID-path.patch
 sysv-generator-Avoid-wrong-dependencies-for-failing-.patch
 Prefer-etc-X11-default-display-manager-if-present.patch
 Re-enable-journal-forwarding-to-syslog.patch
+hostnamectl-Exit-with-zero-on-success.patch
+
+## Ubuntu patches:
+Create-disk-by-partlabel-links-for-mmcblk-partitions.patch
+Support-system-image-read-only-etc.patch
+Add-support-for-ProLiant-Server-Cartridge-power-butt.patch
+Provide-shutdown-fallback-for-upstart.patch
+Trigger-ifup-.service-on-network-devices.patch
+Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
+cgroup-util-Add-more-well-known-controller-names.patch
+core-Put-user-slices-into-all-cgroup-controllers.patch
+cgroup-Initialize-cpuset.clone_children.patch
