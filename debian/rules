@@ -21,6 +21,7 @@ CONFFLAGS = \
 	--disable-coredump \
 	--disable-efi \
 	--disable-myhostname \
+	--disable-resolved \
 	--disable-vconsole \
 	--disable-microhttpd \
 	--disable-sysusers \
@@ -51,7 +52,6 @@ CONFFLAGS_udeb = \
 	--disable-introspection \
 	--disable-gtk-doc \
 	--disable-binfmt \
-	--disable-readahead \
 	--disable-bootchart \
 	--disable-quotacheck \
 	--disable-tmpfiles \
@@ -126,6 +126,13 @@ override_dh_install:
 		-name systemd-udev-hwdb-update.service -o \
 		-name ldconfig.service -o \
 		-name etc.conf \) -delete
+	rm -rf debian/install/*/usr/share/factory/
+	# don't ship systemd-firstboot for now; we rather want debconf, and
+	# this needs to be adjusted to Debian config files
+	rm -f debian/install/*/usr/share/man/man*/*firstboot*
+	rm -f debian/install/*/lib/systemd/system/*firstboot*
+	rm -f debian/install/*/lib/systemd/system/*.wants/*firstboot*
+	rm -f debian/install/*/bin/*firstboot*
 	# remove .so for deprecated compatibility libraries
 	rm -f debian/install/*/usr/lib/*/libsystemd-daemon.so
 	rm -f debian/install/*/usr/lib/*/libsystemd-login.so
@@ -134,6 +141,8 @@ override_dh_install:
 	# remove symlinks enabling default-on services
 	rm -rf debian/install/*/etc/systemd/system/*.target.wants/
 	dh_install -pudev-udeb -plibudev1-udeb --sourcedir=debian/install/udeb
+	# we disable machined for now, so don't ship nss-mymachines either
+	rm -f debian/install/*/usr/lib/*/libnss_mymachines*
 	dh_install $(BOOTSTRAP_DH_FLAGS) -Nudev-udeb -Nlibudev1-udeb --sourcedir=debian/install/deb --fail-missing
 	# install some files manually, --sourcedir makes that necessary
 	# udev-udeb
@@ -199,9 +208,6 @@ override_dh_install:
 	done
 	# man files for example code in /usr/share/doc
 	mkdir -p debian/systemd/usr/share/man/man3/
-	mv debian/libsystemd-dev/usr/share/man/man3/sd-readahead.3 \
-		debian/libsystemd-dev/usr/share/man/man3/sd_readahead.3 \
-		debian/systemd/usr/share/man/man3/
 	install --mode=755 debian/systemd-logind-launch \
 		debian/systemd/lib/systemd/
 	# remove duplicates
@@ -255,8 +261,8 @@ override_dh_shlibdeps:
 	dh_shlibdeps --remaining-packages
 
 override_dh_makeshlibs:
-	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb
-	dh_makeshlibs --remaining-packages
+	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb -- -c4
+	dh_makeshlibs --remaining-packages -- -c4
 
 autoreconf:
 	gtkdocize --copy --docdir docs/

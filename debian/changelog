@@ -1,3 +1,39 @@
+systemd (217-1) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * New upstream release. Drop all cherry-picked patches and port the Debian
+    specific ones.
+  * Disable systemd-resolved for now. It still needs to mature, and
+    integration into Debian should be discussed first.
+  * Bump util-linux dependency to >= 2.25 as per NEWS.
+  * Drop installation of 50-firmware.rules, not shipped upstream any more.
+    Firmware loading is now exclusively done by the kernel.
+  * Drop installation of readahead related services and code, readahead got
+    dropped in this version.
+  * Ship new networkctl CLI tool.
+  * debian/libsystemd0.symbols: Add new symbols from this release.
+  * debian/rules: Call dpkg-gensymbols with -c4 to immediately spot
+    changed/missing symbols during build.
+  * boot-and-services autopkgtest: Test AppArmor confined units (LP #1396270)
+  * Create new "systemd-journal-remote" system group, for
+    systemd-tmpfiles-setup.service.
+
+  [ Marc Deslauriers ]
+  * Build-depend on libapparmor-dev to enable AppArmor support. (LP: #1396270)
+
+  [ Didier Roche ]
+  * Handle display-manager transitions: (Closes: #748668)
+    - Add a generator to ensure /etc/X11/default-display-manager is controlling
+      which display-manager is started.
+    - Modify insserv generator to mask of sysvinit-only dms with insserv
+      $x-display-manager tag if they don't match
+      /etc/X11/default-display-manager. This avoids starting multiple dms at
+      boot.
+  * Cherry-pick Shared-add-readlink_value.patch as using that function in the
+    generator.
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 28 Nov 2014 10:53:58 +0100
+
 systemd (215-7) unstable; urgency=medium
 
   [ Martin Pitt ]
