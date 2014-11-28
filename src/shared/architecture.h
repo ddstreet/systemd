@@ -21,12 +21,14 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+#include <endian.h>
+
 #include "util.h"
 
 /* A cleaned up architecture definition. We don't want to get lost in
  * processor features, models, generations or even ABIs. Hence we
  * focus on general family, and distuignish word width and
- * endianess. */
+ * endianness. */
 
 typedef enum Architecture {
         ARCHITECTURE_X86 = 0,

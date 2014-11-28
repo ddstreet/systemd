@@ -157,8 +157,32 @@
                                 available.</para></listitem>
                         </varlistentry>
 
-                </variablelist>
+                        <varlistentry>
+                                <term><varname>DEPLOYMENT=</varname></term>
 
+                                <listitem><para>Describes the system
+                                deployment environment. One of the
+                                following is suggested:
+                                <literal>development</literal>,
+                                <literal>integration</literal>,
+                                <literal>staging</literal>,
+                                <literal>production</literal>.
+                                </para></listitem>
+                        </varlistentry>
+
+                        <varlistentry>
+                                <term><varname>LOCATION=</varname></term>
+
+                                <listitem><para>Describes the system
+                                location if applicable and
+                                known. Takes a human-friendly,
+                                free-form string. This may be as
+                                generic as <literal>Berlin,
+                                Germany</literal> or as specific as
+                                <literal>Left Rack, 2nd
+                                Shelf</literal>.</para></listitem>
+                        </varlistentry>
+                </variablelist>
         </refsect1>
 
         <refsect1>
@@ -166,7 +190,8 @@
 
                 <programlisting>PRETTY_HOSTNAME="Lennart's Tablet"
 ICON_NAME=computer-tablet
-CHASSIS=tablet</programlisting>
+CHASSIS=tablet
+DEPLOYMENT=production</programlisting>
         </refsect1>
 
         <refsect1>

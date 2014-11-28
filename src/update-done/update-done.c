@@ -22,6 +22,11 @@
 #include "util.h"
 #include "label.h"
 
+#define MESSAGE                                                         \
+        "This file was created by systemd-update-done. Its only \n"     \
+        "purpose is to hold a timestamp of the time this directory\n"   \
+        "was updated. See systemd-update-done.service(8).\n"
+
 static int apply_timestamp(const char *path, struct timespec *ts) {
         struct timespec twice[2];
         struct stat st;
@@ -56,7 +61,7 @@ static int apply_timestamp(const char *path, struct timespec *ts) {
 
                 /* The timestamp file doesn't exist yet? Then let's create it. */
 
-                r = label_context_set(path, S_IFREG);
+                r = mac_selinux_create_file_prepare(path, S_IFREG);
                 if (r < 0) {
                         log_error("Failed to set SELinux context for %s: %s",
                                   path, strerror(-r));
@@ -64,7 +69,7 @@ static int apply_timestamp(const char *path, struct timespec *ts) {
                 }
 
                 fd = open(path, O_CREAT|O_EXCL|O_WRONLY|O_TRUNC|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW, 0644);
-                label_context_clear();
+                mac_selinux_create_file_clear();
 
                 if (fd < 0) {
 
@@ -76,6 +81,8 @@ static int apply_timestamp(const char *path, struct timespec *ts) {
                         log_error("Failed to create timestamp file %s: %m", path);
                         return -errno;
                 }
+
+                (void) loop_write(fd, MESSAGE, strlen(MESSAGE), false);
 
                 twice[0] = *ts;
                 twice[1] = *ts;
@@ -105,7 +112,7 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
         }
 
-        r = label_init(NULL);
+        r = mac_selinux_init(NULL);
         if (r < 0) {
                 log_error("SELinux setup failed: %s", strerror(-r));
                 goto finish;

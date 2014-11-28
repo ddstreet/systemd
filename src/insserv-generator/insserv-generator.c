@@ -34,6 +34,8 @@
 #include "strv.h"
 
 static const char *arg_dest = "/tmp";
+static const char *arg_override = "/tmp";
+static const char *default_dm = NULL;
 
 static char *sysv_translate_name(const char *name) {
         char *r;
@@ -121,10 +123,47 @@ finish:
 }
 
 
+/* if we have a display-manager which doesn't match /etc/X11/default-display-manager, and don't have
+   an unit file, we mask it to simulate the init script behavior */
+static int mask_display_manager_init(const char *name) {
+        static const char *default_dm_file = "/etc/X11/default-display-manager";
+        _cleanup_free_ char *default_dm_path = NULL;
+        const char *in_mem_symlink = NULL;
+        int r;
+
+        if (!default_dm) {
+                r = read_full_file(default_dm_file, &default_dm_path, NULL);
+                if (r >= 0)
+                        default_dm = strstrip(basename((char *)default_dm_path));
+                else
+                       /* ensure we won't match any non systemd init. The old init script won't have started anyway */
+                       default_dm = "";
+        }
+
+        /* init script is default dm, nothing to do */
+        if (streq(default_dm, name))
+                return 0;
+
+        in_mem_symlink = strappenda(arg_override, "/", name, ".service");
+        mkdir_parents_label(in_mem_symlink, 0755);
+        if (symlink("/dev/null", in_mem_symlink) < 0) {
+                log_error("Failed to create symlink %s: %m", in_mem_symlink);
+                return -errno;
+        }
+
+        return 0;
+}
+
 
 static int parse_insserv_conf(const char* filename) {
         _cleanup_fclose_ FILE *f = NULL;
         int r;
+        const char *target_unit_path = NULL;
+
+        /* skip if we have a system a corresponding unit file */
+        target_unit_path = strappenda(SYSTEM_DATA_UNIT_PATH, "/", basename(filename), ".service");
+        if (access(target_unit_path, F_OK) >= 0)
+                return 0;
 
         if (!(f = fopen(filename, "re"))) {
                 log_debug("Failed to open file %s", filename);
@@ -204,6 +243,14 @@ static int parse_insserv_conf(const char* filename) {
                                                 if (access(initscript_sh, F_OK) < 0) {
                                                         continue;
                                                 }
+                                        }
+
+                                        if (streq(parsed[0], "$x-display-manager")) {
+                                                r = mask_display_manager_init(name);
+                                                /* we couldn't create the override symlink, with some luck, nothing else than x-display-manager
+                                                   will pull it in the dep chain */
+                                                if (r < 0)
+                                                        continue;
                                         }
 
                                         unit = strjoin(arg_dest, "/", dep, ".d/50-",basename(filename),"-",parsed[0],".conf", NULL);
@@ -309,8 +356,10 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
         }
 
-        if (argc > 1)
+        if (argc > 1) {
                 arg_dest = argv[1];
+                arg_override = argv[2];
+        }
 
         log_set_target(LOG_TARGET_SAFE);
         log_parse_environment();
