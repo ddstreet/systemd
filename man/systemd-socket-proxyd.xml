@@ -115,7 +115,7 @@ Requires=nginx.service
 After=nginx.service
 
 [Service]
-ExecStart=/usr/lib/systemd/systemd-socket-proxyd /tmp/nginx.sock
+ExecStart=/lib/systemd/systemd-socket-proxyd /tmp/nginx.sock
 PrivateTmp=yes
 PrivateNetwork=yes]]></programlisting>
                         </example>
@@ -160,7 +160,7 @@ After=nginx.service
 JoinsNamespaceOf=nginx.service
 
 [Service]
-ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:8080
+ExecStart=/lib/systemd/systemd-socket-proxyd 127.0.0.1:8080
 PrivateTmp=yes
 PrivateNetwork=yes]]></programlisting>
                         </example>
