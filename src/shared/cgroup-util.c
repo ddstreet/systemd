@@ -1595,7 +1595,13 @@ static const char mask_names[] =
         "cpuacct\0"
         "blkio\0"
         "memory\0"
-        "devices\0";
+        "devices\0"
+        "hugetlb\0"
+        "cpuset\0"
+        "net_cls\0"
+        "net_prio\0"
+        "freezer\0"
+        "perf_event\0";
 
 int cg_create_everywhere(CGroupControllerMask supported, CGroupControllerMask mask, const char *path) {
         CGroupControllerMask bit = 1;
