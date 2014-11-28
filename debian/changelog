@@ -1,3 +1,32 @@
+systemd (215-7) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * Add myself to Uploaders.
+  * Add boot-and-services autopkgtest: Check booting with systemd-sysv and
+    that the most crucial services behave as expected.
+  * logind autopkgtest: Fix stderr output in waiting loop for scsi_debug.
+  * Add nspawn test to boot-and-services autopkgtest.
+  * Make systemd-nspawn@.service work out of the box: (Closes: #770275)
+    - Pre-create /var/lib/container with a secure mode (0700) via tmpfiles.d.
+    - Add new try-{guest,host} modes for --link-journal to silently skip
+      setting up the guest journal if the host has no persistant journal.
+    - Extend boot-and-services autopkgtest to cover systemd-nspawn@.service.
+  * Cherry-pick upstream patch to fix SELinux unit access check (regression
+    in 215).
+  * sysv-generator: Avoid wrong dependencies for failing units. Thanks to
+    Michael Biebl for the patch! (Closes: #771118)
+  * Cherry-pick patches to recognize and respect the "discard" mount option
+    for swap devices. Thanks to Aurelien Jarno for finding and testing!
+    (Closes: #769734)
+
+  [ Jon Severinsson]
+  * Add /run/shm -> /dev/shm symlink in debian/tmpfiles.d/debian.conf. This
+    avoids breakage in Jessie for packages which still refer to /run/shm, and
+    while https://wiki.debian.org/ReleaseGoals/RunDirectory is still official.
+    (LP: #1320534, Closes: #674755).
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 28 Nov 2014 06:43:15 +0100
+
 systemd (215-6) unstable; urgency=medium
 
   [ Martin Pitt ]
