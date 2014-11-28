@@ -44,26 +44,27 @@ static char *arg_root_fstype = NULL;
 static char *arg_root_options = NULL;
 static int arg_root_rw = -1;
 
-
 static int mount_find_pri(struct mntent *me, int *ret) {
-        char *end, *pri;
+        char *end, *opt;
         unsigned long r;
 
         assert(me);
         assert(ret);
 
-        pri = hasmntopt(me, "pri");
-        if (!pri)
+        opt = hasmntopt(me, "pri");
+        if (!opt)
                 return 0;
 
-        pri += 4;
+        opt += strlen("pri");
+        if (*opt != '=')
+                return -EINVAL;
 
         errno = 0;
-        r = strtoul(pri, &end, 10);
+        r = strtoul(opt + 1, &end, 10);
         if (errno > 0)
                 return -errno;
 
-        if (end == pri || (*end != ',' && *end != 0))
+        if (end == opt + 1 || (*end != ',' && *end != 0))
                 return -EINVAL;
 
         *ret = (int) r;
@@ -73,6 +74,7 @@ static int mount_find_pri(struct mntent *me, int *ret) {
 static int add_swap(const char *what, struct mntent *me) {
         _cleanup_free_ char *name = NULL, *unit = NULL, *lnk = NULL;
         _cleanup_fclose_ FILE *f = NULL;
+
         bool noauto;
         int r, pri = -1;
 
@@ -87,7 +89,7 @@ static int add_swap(const char *what, struct mntent *me) {
         r = mount_find_pri(me, &pri);
         if (r < 0) {
                 log_error("Failed to parse priority");
-                return pri;
+                return r;
         }
 
         noauto = !!hasmntopt(me, "noauto");
@@ -118,15 +120,18 @@ static int add_swap(const char *what, struct mntent *me) {
                 "What=%s\n",
                 what);
 
+        /* Note that we currently pass the priority field twice, once
+         * in Priority=, and once in Options= */
         if (pri >= 0)
-                fprintf(f,
-                        "Priority=%i\n",
-                        pri);
+                fprintf(f, "Priority=%i\n", pri);
 
-        fflush(f);
-        if (ferror(f)) {
-                log_error("Failed to write unit file %s: %m", unit);
-                return -errno;
+        if (!isempty(me->mnt_opts) && !streq(me->mnt_opts, "defaults"))
+                fprintf(f, "Options=%s\n", me->mnt_opts);
+
+        r = fflush_and_check(f);
+        if (r < 0) {
+                log_error("Failed to write unit file %s: %s", unit, strerror(-r));
+                return r;
         }
 
         /* use what as where, to have a nicer error message */

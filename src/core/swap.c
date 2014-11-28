@@ -152,6 +152,9 @@ static void swap_done(Unit *u) {
         free(s->parameters_fragment.what);
         s->parameters_fragment.what = NULL;
 
+        free(s->parameters_fragment.options);
+        s->parameters_fragment.options = NULL;
+
         s->exec_runtime = exec_runtime_unref(s->exec_runtime);
         exec_command_done_array(s->exec_command, _SWAP_EXEC_COMMAND_MAX);
         s->control_command = NULL;
@@ -210,7 +213,7 @@ static int swap_add_device_links(Swap *s) {
 }
 
 static int swap_add_default_dependencies(Swap *s) {
-        bool nofail = false, noauto = false;
+        bool nofail, noauto;
         int r;
 
         assert(s);
@@ -225,23 +228,25 @@ static int swap_add_default_dependencies(Swap *s) {
         if (r < 0)
                 return r;
 
-        if (s->from_fragment) {
-                SwapParameters *p = &s->parameters_fragment;
+        if (!s->from_fragment)
+                /* The swap unit can either be for an alternative device name, in which
+                 * case we don't need to add the dependency on swap.target because this unit
+                 * is following a different unit which will have this dependency added,
+                 * or it can be derived from /proc/swaps, in which case it was started
+                 * manually, and should not become a dependency of swap.target. */
+                return 0;
 
-                nofail = p->nofail;
-                noauto = p->noauto;
-        }
+        nofail = s->parameters_fragment.nofail;
+        noauto = s->parameters_fragment.noauto;
 
         if (!noauto) {
                 if (nofail)
                         r = unit_add_dependency_by_name_inverse(UNIT(s), UNIT_WANTS, SPECIAL_SWAP_TARGET, NULL, true);
                 else
                         r = unit_add_two_dependencies_by_name_inverse(UNIT(s), UNIT_AFTER, UNIT_REQUIRES, SPECIAL_SWAP_TARGET, NULL, true);
-                if (r < 0)
-                        return r;
         }
 
-        return 0;
+        return r < 0 ? r : 0;
 }
 
 static int swap_verify(Swap *s) {
@@ -602,10 +607,12 @@ static void swap_dump(Unit *u, FILE *f, const char *prefix) {
                 fprintf(f,
                         "%sPriority: %i\n"
                         "%sNoAuto: %s\n"
-                        "%sNoFail: %s\n",
+                        "%sNoFail: %s\n"
+                        "%sOptions: %s\n",
                         prefix, p->priority,
                         prefix, yes_no(p->noauto),
-                        prefix, yes_no(p->nofail));
+                        prefix, yes_no(p->nofail),
+                        prefix, strempty(p->options));
 
         if (s->control_pid > 0)
                 fprintf(f,
@@ -732,38 +739,115 @@ fail:
         swap_enter_dead(s, SWAP_FAILURE_RESOURCES);
 }
 
+static int mount_find_pri(const char *options, int *ret) {
+        const char *opt;
+        char *end;
+        unsigned long r;
+
+        assert(ret);
+
+        if (!options)
+                return 0;
+
+        opt = mount_test_option(options, "pri");
+        if (!opt)
+                return 0;
+
+        opt += strlen("pri");
+        if (*opt != '=')
+                return -EINVAL;
+
+        errno = 0;
+        r = strtoul(opt + 1, &end, 10);
+        if (errno > 0)
+                return -errno;
+
+        if (end == opt + 1 || (*end != ',' && *end != 0))
+                return -EINVAL;
+
+        *ret = (int) r;
+        return 1;
+}
+
+static int mount_find_discard(const char *options, char **ret) {
+        const char *opt;
+        char *ans;
+        size_t len;
+
+        assert(ret);
+
+        if (!options)
+                return 0;
+
+        opt = mount_test_option(options, "discard");
+        if (!opt)
+                return 0;
+
+        opt += strlen("discard");
+        if (*opt == ',' || *opt == '\0')
+                ans = strdup("all");
+        else {
+                if (*opt != '=')
+                        return -EINVAL;
+
+                len = strcspn(opt + 1, ",");
+                if (len == 0)
+                        return -EINVAL;
+
+                ans = strndup(opt + 1, len);
+        }
+
+        if (!ans)
+                return -ENOMEM;
+
+        *ret = ans;
+        return 1;
+}
+
 static void swap_enter_activating(Swap *s) {
-        int r, priority;
+        _cleanup_free_ char *discard = NULL;
+        int r, priority = -1;
 
         assert(s);
 
         s->control_command_id = SWAP_EXEC_ACTIVATE;
         s->control_command = s->exec_command + SWAP_EXEC_ACTIVATE;
 
-        if (s->from_fragment)
+        if (s->from_fragment) {
+                mount_find_discard(s->parameters_fragment.options, &discard);
+
                 priority = s->parameters_fragment.priority;
-        else
-                priority = -1;
+                if (priority < 0)
+                        mount_find_pri(s->parameters_fragment.options, &priority);
+        }
+
+        r = exec_command_set(s->control_command, "/sbin/swapon", NULL);
+        if (r < 0)
+                goto fail;
 
         if (priority >= 0) {
                 char p[DECIMAL_STR_MAX(int)];
 
                 sprintf(p, "%i", priority);
+                r = exec_command_append(s->control_command, "-p", p, NULL);
+                if (r < 0)
+                        goto fail;
+        }
 
-                r = exec_command_set(
-                                s->control_command,
-                                "/sbin/swapon",
-                                "-p",
-                                p,
-                                s->what,
-                                NULL);
-        } else
-                r = exec_command_set(
-                                s->control_command,
-                                "/sbin/swapon",
-                                s->what,
-                                NULL);
+        if (discard && !streq(discard, "none")) {
+                const char *discard_arg;
 
+                if (streq(discard, "all"))
+                        discard_arg = "--discard";
+                else
+                        discard_arg = strappenda("--discard=", discard);
+
+                r = exec_command_append(s->control_command, discard_arg, NULL);
+                if (r < 0)
+                        goto fail;
+        }
+
+        r = exec_command_append(s->control_command, s->what, NULL);
         if (r < 0)
                 goto fail;
 
@@ -1193,11 +1277,25 @@ static Unit *swap_following(Unit *u) {
 
         assert(s);
 
-        if (streq_ptr(s->what, s->devnode))
+        /* If the user configured the swap through /etc/fstab or
+         * a device unit, follow that. */
+
+        if (s->from_fragment)
                 return NULL;
 
-        /* Make everybody follow the unit that's named after the swap
-         * device in the kernel */
+        LIST_FOREACH_AFTER(same_devnode, other, s)
+                if (other->from_fragment)
+                        return UNIT(other);
+
+        LIST_FOREACH_BEFORE(same_devnode, other, s)
+                if (other->from_fragment)
+                        return UNIT(other);
+
+        /* Otherwise make everybody follow the unit that's named after
+         * the swap device in the kernel */
+
+        if (streq_ptr(s->what, s->devnode))
+                return NULL;
 
         LIST_FOREACH_AFTER(same_devnode, other, s)
                 if (streq_ptr(other->what, other->devnode))
@@ -1210,6 +1308,7 @@ static Unit *swap_following(Unit *u) {
                 first = other;
         }
 
+        /* Fall back to the first on the list */
         return UNIT(first);
 }
 
