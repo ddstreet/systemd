@@ -275,11 +275,7 @@ int journal_directory_vacuum(
 
                 patch_realtime(directory, p, &st, &realtime);
 
-                if (!GREEDY_REALLOC(list, n_allocated, n_list + 1)) {
-                        free(p);
-                        r = -ENOMEM;
-                        goto finish;
-                }
+                GREEDY_REALLOC(list, n_allocated, n_list + 1);
 
                 list[n_list].filename = p;
                 list[n_list].usage = 512UL * (uint64_t) st.st_blocks;

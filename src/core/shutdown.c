@@ -75,9 +75,7 @@ static int parse_argv(int argc, char *argv[]) {
         assert(argc >= 1);
         assert(argv);
 
-        /* "-" prevents getopt from permuting argv[] and moving the verb away
-         * from argv[1]. Our interface to initrd promises it'll be there. */
-        while ((c = getopt_long(argc, argv, "-", options, NULL)) >= 0)
+        while ((c = getopt_long(argc, argv, "", options, NULL)) >= 0)
                 switch (c) {
 
                 case ARG_LOG_LEVEL:
@@ -115,13 +113,6 @@ static int parse_argv(int argc, char *argv[]) {
 
                         break;
 
-                case '\001':
-                        if (!arg_verb)
-                                arg_verb = optarg;
-                        else
-                                log_error("Excess arguments, ignoring");
-                        break;
-
                 case '?':
                         return -EINVAL;
 
@@ -129,11 +120,15 @@ static int parse_argv(int argc, char *argv[]) {
                         assert_not_reached("Unhandled option code.");
                 }
 
-        if (!arg_verb) {
+        if (optind >= argc) {
                 log_error("Verb argument missing.");
                 return -EINVAL;
         }
 
+        arg_verb = argv[optind];
+
+        if (optind + 1 < argc)
+                log_error("Excess arguments, ignoring");
         return 0;
 }
 
@@ -371,7 +366,7 @@ int main(int argc, char *argv[]) {
                                 execv(args[0], (char * const *) args);
                                 _exit(EXIT_FAILURE);
                         } else
-                                wait_for_terminate_and_warn("kexec", pid, true);
+                                wait_for_terminate_and_warn("kexec", pid);
                 }
 
                 cmd = RB_AUTOBOOT;

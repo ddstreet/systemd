@@ -194,7 +194,7 @@ static int found_override(const char *top, const char *bottom) {
                 _exit(1);
         }
 
-        wait_for_terminate_and_warn("diff", pid, false);
+        wait_for_terminate_and_warn("diff", pid);
         putchar('\n');
 
         return k;

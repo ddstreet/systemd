@@ -332,13 +332,9 @@ int mac_selinux_create_file_prepare(const char *path, mode_t mode) {
                 r = selabel_lookup_raw(label_hnd, &filecon, newpath, mode);
         }
 
-        /* No context specified by the policy? Proceed without setting it. */
-        if (r < 0 && errno == ENOENT)
-                return 0;
-
-        if (r < 0)
+        if (r < 0 && errno != ENOENT)
                 r = -errno;
-        else {
+        else if (r == 0) {
                 r = setfscreatecon(filecon);
                 if (r < 0) {
                         log_enforcing("Failed to set SELinux security context %s for %s: %m", filecon, path);

@@ -186,6 +186,16 @@ static int slice_start(Unit *u) {
 
         unit_realize_cgroup(u);
 
+        /* put user slices into all controllers, for LXC user containers */
+        if (startswith(u->id, "user-")) {
+                int r;
+                long uid = atol(u->id + 5); /* FIXME: Eww! Is there a better way to get the UID? */
+                CGroupControllerMask mask = cg_mask_supported();
+                r = cg_create_everywhere_uid(mask, mask, u->cgroup_path, (uid > 0) ? (uid_t) uid : (uid_t) -1);
+                if (r < 0)
+                        log_warning_unit(u->id, "Cannot create cgroup controllers for %s: %s", u->id, strerror(-r));
+        }
+
         slice_set_state(t, SLICE_ACTIVE);
         return 0;
 }

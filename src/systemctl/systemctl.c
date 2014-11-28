@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/stat.h>
 #include <stddef.h>
 #include <sys/prctl.h>
@@ -301,37 +302,21 @@ static int compare_unit_info(const void *a, const void *b) {
 }
 
 static bool output_show_unit(const UnitInfo *u, char **patterns) {
+        const char *dot;
+
         if (!strv_isempty(patterns)) {
                 char **pattern;
 
                 STRV_FOREACH(pattern, patterns)
                         if (fnmatch(*pattern, u->id, FNM_NOESCAPE) == 0)
-                                goto next;
+                                return true;
                 return false;
         }
 
-next:
-        if (arg_types) {
-                const char *dot;
-
-                dot = strrchr(u->id, '.');
-                if (!dot)
-                        return false;
-
-                if (!strv_find(arg_types, dot+1))
-                        return false;
-        }
-
-        if (arg_all)
-                return true;
-
-        if (u->job_id > 0)
-                return true;
-
-        if (streq(u->active_state, "inactive") || u->following[0])
-                return false;
-
-        return true;
+        return (!arg_types || ((dot = strrchr(u->id, '.')) &&
+                               strv_find(arg_types, dot+1))) &&
+                (arg_all || !(streq(u->active_state, "inactive")
+                              || u->following[0]) || u->job_id > 0);
 }
 
 static int output_units_list(const UnitInfo *unit_infos, unsigned c) {
@@ -1247,33 +1232,18 @@ static int compare_unit_file_list(const void *a, const void *b) {
 }
 
 static bool output_show_unit_file(const UnitFileList *u, char **patterns) {
+        const char *dot;
+
         if (!strv_isempty(patterns)) {
                 char **pattern;
 
                 STRV_FOREACH(pattern, patterns)
                         if (fnmatch(*pattern, basename(u->path), FNM_NOESCAPE) == 0)
-                                goto next;
+                                return true;
                 return false;
         }
 
-next:
-        if (!strv_isempty(arg_types)) {
-                const char *dot;
-
-                dot = strrchr(u->path, '.');
-                if (!dot)
-                        return false;
-
-                if (!strv_find(arg_types, dot+1))
-                        return false;
-        }
-
-        if (!strv_isempty(arg_states)) {
-                if (!strv_find(arg_states, unit_file_state_to_string(u->state)))
-                        return false;
-        }
-
-        return true;
+        return !arg_types || ((dot = strrchr(u->path, '.')) && strv_find(arg_types, dot+1));
 }
 
 static void output_unit_file_list(const UnitFileList *units, unsigned c) {
@@ -6741,6 +6711,41 @@ static int talk_initctl(void) {
         return 1;
 }
 
+static int talk_upstart(void) {
+        _cleanup_close_ int fd;
+        struct sockaddr_un upstart_addr = {
+                .sun_family = AF_UNIX,
+                .sun_path = "\0/com/ubuntu/upstart\0",
+        };
+        char rl;
+        char telinit_cmd[] = "telinit X";
+
+        /* check if we can connect to upstart; if not, fail */
+        fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0);
+        if (fd < 0) {
+                log_error("socket(AF_UNIX) failed: %m");
+                return -errno;
+        }
+        if (connect(fd, &upstart_addr, sizeof(upstart_addr.sun_family) + 1 +
+                                       strlen(upstart_addr.sun_path + 1)) < 0) {
+                log_debug("cannot connect to upstart");
+                return 0;
+        }
+        log_debug("upstart is running");
+
+        rl = action_to_runlevel();
+        if (!rl)
+                return 0;
+
+        /* invoke telinit with the desired new runlevel */
+        telinit_cmd[8] = rl;
+        if (system(telinit_cmd) != 0) {
+                log_error("failed to run %s for upstart fallback", telinit_cmd);
+                return 0;
+        }
+        return 1;
+}
+
 static int systemctl_main(sd_bus *bus, int argc, char *argv[], int bus_error) {
 
         static const struct {
@@ -6974,9 +6979,13 @@ static int start_with_fallback(sd_bus *bus) {
                         goto done;
         }
 
-        /* Nothing else worked, so let's try
-         * /dev/initctl */
+        /* systemd didn't work (most probably it's not the current init
+         * system), so let's try /dev/initctl for SysV init */
         if (talk_initctl() > 0)
+                goto done;
+
+        /* and now upstart */
+        if (talk_upstart() > 0)
                 goto done;
 
         log_error("Failed to talk to init daemon.");
@@ -6989,13 +6998,8 @@ done:
 
 static int halt_now(enum action a) {
 
-        /* The kernel will automaticall flush ATA disks and suchlike
-         * on reboot(), but the file systems need to be synce'd
-         * explicitly in advance. */
-        sync();
-
-        /* Make sure C-A-D is handled by the kernel from this point
-         * on... */
+/* Make sure C-A-D is handled by the kernel from this
+         * point on... */
         reboot(RB_ENABLE_CAD);
 
         switch (a) {
