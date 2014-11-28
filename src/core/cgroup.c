@@ -909,6 +909,10 @@ int manager_setup_cgroup(Manager *m) {
         /* 7. Figure out which controllers are supported */
         m->cgroup_supported = cg_mask_supported();
 
+        /* 8. Enable conf copying of cpuset attributes to children, so
+         * that we can actually attach processes to cpuset */
+        cg_set_attribute("cpuset", "/", "cgroup.clone_children", "1");
+
         return 0;
 }
 
