@@ -86,6 +86,7 @@ int cg_rmdir(const char *controller, const char *path);
 int cg_delete(const char *controller, const char *path);
 
 int cg_create(const char *controller, const char *path);
+int cg_create_uid(const char *controller, const char *path, uid_t uid);
 int cg_attach(const char *controller, const char *path, pid_t pid);
 int cg_attach_fallback(const char *controller, const char *path, pid_t pid);
 int cg_create_and_attach(const char *controller, const char *path, pid_t pid);
@@ -132,6 +133,7 @@ int cg_slice_to_path(const char *unit, char **ret);
 typedef const char* (*cg_migrate_callback_t)(CGroupControllerMask mask, void *userdata);
 
 int cg_create_everywhere(CGroupControllerMask supported, CGroupControllerMask mask, const char *path);
+int cg_create_everywhere_uid(CGroupControllerMask supported, CGroupControllerMask mask, const char *path, uid_t uid);
 int cg_attach_everywhere(CGroupControllerMask supported, const char *path, pid_t pid);
 int cg_attach_many_everywhere(CGroupControllerMask supported, const char *path, Set* pids);
 int cg_migrate_everywhere(CGroupControllerMask supported, const char *from, const char *to, cg_migrate_callback_t callback, void *userdata);
