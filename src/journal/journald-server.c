@@ -1462,6 +1462,7 @@ int server_init(Server *s) {
         s->rate_limit_interval = DEFAULT_RATE_LIMIT_INTERVAL;
         s->rate_limit_burst = DEFAULT_RATE_LIMIT_BURST;
 
+        s->forward_to_syslog = true;
         s->forward_to_wall = true;
 
         s->max_file_usec = DEFAULT_MAX_FILE_USEC;
@@ -1655,6 +1656,7 @@ void server_done(Server *s) {
         free(s->buffer);
         free(s->tty_path);
         free(s->cgroup_root);
+        free(s->hostname_field);
 
         if (s->mmap)
                 mmap_cache_unref(s->mmap);
