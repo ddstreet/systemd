@@ -555,6 +555,12 @@ nodist_systemunit_DATA += \
 	units/systemd-update-utmp-runlevel.service
 endif
 
+if HAVE_SYSV_COMPAT
+nodist_systemunit_DATA += \
+	units/x-display-manager.target \
+	units/mail-transport-agent.target
+endif
+
 dist_userunit_DATA = \
 	units/user/basic.target \
 	units/user/default.target \
