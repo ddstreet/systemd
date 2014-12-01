@@ -1,3 +1,21 @@
+systemd (217-2) experimental; urgency=medium
+
+  * Re-enable journal forwarding to syslog, until Debian's sysloggers
+    can/do all read from the journal directly.
+  * Fix hostnamectl exit code on success.
+  * Fix "diff failed with error code 1" spew with systemd-delta.
+    (Closes: #771397)
+  * Re-enable systemd-resolved. This wasn't meant to break the entire
+    networkd, just disable the new NSS module. Remove that one manually
+    instead. (Closes: #771423, LP: #1397361)
+  * Import v217-stable patches (up to commit bfb4c47 from 2014-11-07).
+  * Disable AppArmor again. This first requires moving libapparmor to /lib
+    (see #771667). (Closes: #771652)
+  * systemd.bug-script: Capture stderr of systemd-{delta,analyze}.
+    (Closes: #771498)
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 01 Dec 2014 15:09:09 +0100
+
 systemd (217-1) experimental; urgency=medium
 
   [ Martin Pitt ]

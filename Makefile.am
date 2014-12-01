@@ -1535,6 +1535,7 @@ test_util_SOURCES = \
 	src/test/test-util.c
 
 test_util_LDADD = \
+	-lm \
 	libsystemd-core.la
 
 test_uid_range_SOURCES = \
@@ -4425,6 +4426,9 @@ rootlibexec_PROGRAMS += \
 
 nodist_systemunit_DATA += \
 	units/systemd-vconsole-setup.service
+
+dist_udevrules_DATA += \
+	src/vconsole/90-vconsole.rules
 
 SYSINIT_TARGET_WANTS += \
 	systemd-vconsole-setup.service
