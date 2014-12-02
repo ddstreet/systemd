@@ -602,6 +602,13 @@ static int unit_create_cgroups(Unit *u, CGroupControllerMask mask) {
         if (!path)
                 return log_oom();
 
+        log_debug("unit_create_cgroups %s: path=%s realized %i hashmap %p", u->id, path, u->cgroup_realized, hashmap_get(u->manager->cgroup_unit, path));
+
+        if (hashmap_get(u->manager->cgroup_unit, path)) {
+                log_warning("unit_create_cgroups %s: cgroup %s exists already", u->id, u->cgroup_path);
+                return 0;
+        }
+
         r = hashmap_put(u->manager->cgroup_unit, path, u);
         if (r < 0) {
                 log_error(r == -EEXIST ? "cgroup %s exists already: %s" : "hashmap_put failed for %s: %s", path, strerror(-r));
@@ -904,6 +911,10 @@ int manager_setup_cgroup(Manager *m) {
 
                 /* 6.  Always enable hierarchial support if it exists... */
                 cg_set_attribute("memory", "/", "memory.use_hierarchy", "1");
+
+                /* 7. Enable conf copying of cpuset attributes to children, so
+                 * that we can actually attach processes to cpuset */
+                cg_set_attribute("cpuset", "/", "cgroup.clone_children", "1");
         }
 
         /* 7. Figure out which controllers are supported */
