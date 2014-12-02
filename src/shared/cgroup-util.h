@@ -30,11 +30,18 @@
 
 /* A bit mask of well known cgroup controllers */
 typedef enum CGroupControllerMask {
-        CGROUP_CPU = 1,
-        CGROUP_CPUACCT = 2,
-        CGROUP_BLKIO = 4,
-        CGROUP_MEMORY = 8,
-        CGROUP_DEVICE = 16
+        CGROUP_CPU = (1 << 0),
+        CGROUP_CPUACCT = (1 << 1),
+        CGROUP_BLKIO = (1 << 2),
+        CGROUP_MEMORY = (1 << 3),
+        CGROUP_DEVICE = (1 << 4),
+        CGROUP_HUGETLB = (1 << 5),
+        CGROUP_CPUSET = (1 << 6),
+        CGROUP_NET_CLS = (1 << 7),
+        CGROUP_NET_PRIO = (1 << 8),
+        CGROUP_FREEZER = (1 << 9),
+        CGROUP_PERF_EVENT = (1 << 10),
+        _CGROUP_CONTROLLER_MASK_ALL = (1 << 11) - 1
 } CGroupControllerMask;
 
 /*
