@@ -1,3 +1,20 @@
+systemd (217-3) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * systemd.bug-script: Really capture stderr of systemd-delta.
+    (Closes: #771498)
+  * boot-and-services autopkgtest: Give test apparmor job some time to
+    actually finish.
+
+  [ Didier Roche ]
+  * updated debian/patches/insserv.conf-generator.patch:
+    - if /etc/X11/default-display-manager doesn't match a systemd unit
+      (or doesn't exist), be less agressive about what to mask: we let
+      all sysvinit-only display-manager units enabled to fallback to previous
+      behavior and let them starting. (Closes: #771739)
+
+ -- Martin Pitt <mpitt@debian.org>  Tue, 02 Dec 2014 16:53:36 +0100
+
 systemd (217-2) experimental; urgency=medium
 
   * Re-enable journal forwarding to syslog, until Debian's sysloggers

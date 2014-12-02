@@ -122,12 +122,12 @@ finish:
         return 1;
 }
 
-
 /* if we have a display-manager which doesn't match /etc/X11/default-display-manager, and don't have
    an unit file, we mask it to simulate the init script behavior */
 static int mask_display_manager_init(const char *name) {
         static const char *default_dm_file = "/etc/X11/default-display-manager";
         _cleanup_free_ char *default_dm_path = NULL;
+        char *defaultdm_unit_path = NULL;;
         const char *in_mem_symlink = NULL;
         int r;
 
@@ -139,6 +139,11 @@ static int mask_display_manager_init(const char *name) {
                        /* ensure we won't match any non systemd init. The old init script won't have started anyway */
                        default_dm = "";
         }
+
+        /* if default dm isn't a systemd service, we roll back to previous behavior: let all non systemd units starting */
+        defaultdm_unit_path = strappenda(SYSTEM_DATA_UNIT_PATH, "/", default_dm, ".service");
+        if (access(defaultdm_unit_path, F_OK) < 0 && (errno == ENOENT))
+                return 0;
 
         /* init script is default dm, nothing to do */
         if (streq(default_dm, name))
