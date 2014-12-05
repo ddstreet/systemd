@@ -1,3 +1,42 @@
+systemd (215-8) unstable; urgency=medium
+
+  [ Didier Roche ]
+  * Cherry-pick shared-add-readlink_value.patch, we will use that function in
+    the generator.
+  * Cherry-pick util-allow-strappenda-to-take-any-number-of-args.patch, we
+    will use that function in the generator.
+  * Handle multiple display managers which don't ship a systemd unit or the
+    corresponding postinst logic for updating display-manager.service: Add a
+    generator to ensure /etc/X11/default-display-manager is controlling which
+    display-manager is started. (Closes: #771287)
+
+  [ Sjoerd Simons ]
+  * d/p/core-Fix-bind-error-message.patch:
+    + Added. Fix error message on bind failure to print the full path
+  * d/p/core-Make-binding-notify-private-dbus-socket-more-ro.patch:
+    + Added. Be more robust when binding private unix sockets (Based on current
+    upstream logic) (Closes: #761306)
+
+  [ Martin Pitt ]
+  * Clean up ...journal~ files from unclean shutdowns. (Closes: #771707)
+  * debian/systemd.postinst: Don't always restart journald, as this currently
+    can't be done without losing the current journal and breaking attached
+    processes. So only restart it from upgrades < 215-3 (where the socket
+    location got moved) as an one-time upgrade path from wheezy.
+    (Closes: #771122)
+  * journalctl: Fix help text for --until. (Closes: #766598)
+  * Bump systemd's udev dependency to >= 208-8, so that on partial upgrades we
+    make sure that the udev package has appropriate Breaks:. In particular,
+    this avoids installing current udev with kmod << 14. (Closes: #771726)
+
+  [ Michael Biebl ]
+  * systemd.postinst: Move unit enablement after restarting systemd, so that
+    we don't fail to enable units with keywords that wheezy's systemd does not
+    understand yet. Fixes enabling getty units on wheezy upgrades with
+    systemd. (Closes: #771204)
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 05 Dec 2014 10:01:24 +0100
+
 systemd (215-7) unstable; urgency=medium
 
   [ Martin Pitt ]
