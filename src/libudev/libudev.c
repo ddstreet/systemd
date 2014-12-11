@@ -119,7 +119,7 @@ _public_ struct udev *udev_new(void)
 {
         struct udev *udev;
         const char *env;
-        FILE *f;
+        _cleanup_fclose_ FILE *f = NULL;
 
         udev = new0(struct udev, 1);
         if (udev == NULL)
@@ -132,7 +132,7 @@ _public_ struct udev *udev_new(void)
         f = fopen("/etc/udev/udev.conf", "re");
         if (f != NULL) {
                 char line[UTIL_LINE_SIZE];
-                int line_nr = 0;
+                unsigned line_nr = 0;
 
                 while (fgets(line, sizeof(line), f)) {
                         size_t len;
@@ -153,7 +153,7 @@ _public_ struct udev *udev_new(void)
                         /* split key/value */
                         val = strchr(key, '=');
                         if (val == NULL) {
-                                udev_err(udev, "missing <key>=<value> in /etc/udev/udev.conf[%i]; skip line\n", line_nr);
+                                udev_err(udev, "/etc/udev/udev.conf:%u: missing assignment,  skipping line.\n", line_nr);
                                 continue;
                         }
                         val[0] = '\0';
@@ -185,7 +185,7 @@ _public_ struct udev *udev_new(void)
                         /* unquote */
                         if (val[0] == '"' || val[0] == '\'') {
                                 if (val[len-1] != val[0]) {
-                                        udev_err(udev, "inconsistent quoting in /etc/udev/udev.conf[%i]; skip line\n", line_nr);
+                                        udev_err(udev, "/etc/udev/udev.conf:%u: inconsistent quoting, skipping line.\n", line_nr);
                                         continue;
                                 }
                                 val[len-1] = '\0';
@@ -193,17 +193,29 @@ _public_ struct udev *udev_new(void)
                         }
 
                         if (streq(key, "udev_log")) {
-                                udev_set_log_priority(udev, util_log_priority(val));
+                                int prio;
+
+                                prio = util_log_priority(val);
+                                if (prio < 0)
+                                        udev_err(udev, "/etc/udev/udev.conf:%u: invalid logging level '%s', ignoring.\n", line_nr, val);
+                                else
+                                        udev_set_log_priority(udev, prio);
                                 continue;
                         }
                 }
-                fclose(f);
         }
 
         /* environment overrides config */
         env = secure_getenv("UDEV_LOG");
-        if (env != NULL)
-                udev_set_log_priority(udev, util_log_priority(env));
+        if (env != NULL) {
+                int prio;
+
+                prio = util_log_priority(env);
+                if (prio < 0)
+                        udev_err(udev, "$UDEV_LOG specifies invalid logging level '%s', ignoring.\n", env);
+                else
+                        udev_set_log_priority(udev, prio);
+        }
 
         return udev;
 }
