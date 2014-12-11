@@ -178,13 +178,13 @@ static bool enable_name_policy(void) {
                 log_warning("Failed to read /proc/cmdline, ignoring: %s",
                             strerror(-r));
         if (r <= 0)
-                return true;
+                return false;
 
         FOREACH_WORD_QUOTED(word, l, line, state)
-                if (strneq(word, "net.ifnames=0", l))
-                        return false;
+                if (strneq(word, "net.ifnames=1", l))
+                        return true;
 
-        return true;
+        return false;
 }
 
 int link_config_load(link_config_ctx *ctx) {
