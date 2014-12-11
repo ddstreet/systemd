@@ -53,10 +53,8 @@ static int generate_display_manager_alias(void) {
         default_dm = strstrip(basename(default_dm_path));
 
         r = readlink_value(dm_service_unit, &enabled_dm_unit);
-        if (r < 0) {
-                log_warning("No default display manager unit service enabled, setup is manual or a sysvinit file");
-                return 0;
-        }
+        if (r < 0)
+                enabled_dm_unit = strdup("");
 
         /* all is fine if the info matches */
         if (streq(strappenda(default_dm, ".service"), enabled_dm_unit))
