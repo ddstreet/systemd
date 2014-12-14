@@ -253,7 +253,7 @@ int user_save(User *u) {
 
 finish:
         if (r < 0)
-                log_error("Failed to save user data %s: %s", u->state_file, strerror(-r));
+                log_error_errno(r, "Failed to save user data %s: %m", u->state_file);
 
         return r;
 }
@@ -279,7 +279,7 @@ int user_load(User *u) {
                 if (r == -ENOENT)
                         return 0;
 
-                log_error("Failed to read %s: %s", u->state_file, strerror(-r));
+                log_error_errno(r, "Failed to read %s: %m", u->state_file);
                 return r;
         }
 
@@ -312,10 +312,8 @@ static int user_mkdir_runtime_path(User *u) {
         assert(u);
 
         r = mkdir_safe_label("/run/user", 0755, 0, 0);
-        if (r < 0) {
-                log_error("Failed to create /run/user: %s", strerror(-r));
-                return r;
-        }
+        if (r < 0)
+                return log_error_errno(r, "Failed to create /run/user: %m");
 
         if (!u->runtime_path) {
                 if (asprintf(&p, "/run/user/" UID_FMT, u->uid) < 0)
@@ -346,7 +344,7 @@ static int user_mkdir_runtime_path(User *u) {
 
                 r = mount("tmpfs", p, "tmpfs", MS_NODEV|MS_NOSUID, t);
                 if (r < 0) {
-                        log_error("Failed to mount per-user tmpfs directory %s: %s", p, strerror(-r));
+                        log_error_errno(r, "Failed to mount per-user tmpfs directory %s: %m", p);
                         goto fail;
                 }
         }
@@ -518,14 +516,14 @@ static int user_remove_runtime_path(User *u) {
 
         r = rm_rf(u->runtime_path, false, false, false);
         if (r < 0)
-                log_error("Failed to remove runtime directory %s: %s", u->runtime_path, strerror(-r));
+                log_error_errno(r, "Failed to remove runtime directory %s: %m", u->runtime_path);
 
         if (path_is_mount_point(u->runtime_path, false) && umount2(u->runtime_path, MNT_DETACH) < 0)
-                log_error("Failed to unmount user runtime directory %s: %m", u->runtime_path);
+                log_error_errno(errno, "Failed to unmount user runtime directory %s: %m", u->runtime_path);
 
         r = rm_rf(u->runtime_path, false, true, false);
         if (r < 0)
-                log_error("Failed to remove runtime directory %s: %s", u->runtime_path, strerror(-r));
+                log_error_errno(r, "Failed to remove runtime directory %s: %m", u->runtime_path);
 
         free(u->runtime_path);
         u->runtime_path = NULL;

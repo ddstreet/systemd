@@ -69,7 +69,7 @@
 #include "audit-fd.h"
 #include "boot-timestamps.h"
 #include "env-util.h"
-#include "bus-errors.h"
+#include "bus-common-errors.h"
 #include "bus-error.h"
 #include "bus-util.h"
 #include "dbus.h"
@@ -78,9 +78,6 @@
 #include "dbus-manager.h"
 #include "bus-kernel.h"
 #include "time-util.h"
-
-/* As soon as 5s passed since a unit was added to our GC queue, make sure to run a gc sweep */
-#define GC_QUEUE_USEC_MAX (10*USEC_PER_SEC)
 
 /* Initial delay and the interval for printing status messages about running jobs */
 #define JOBS_IN_PROGRESS_WAIT_USEC (5*USEC_PER_SEC)
@@ -241,7 +238,7 @@ static int manager_dispatch_ask_password_fd(sd_event_source *source,
         if (m->have_ask_password < 0)
                 /* Log error but continue. Negative have_ask_password
                  * is treated as unknown status. */
-                log_error("Failed to list /run/systemd/ask-password: %s", strerror(m->have_ask_password));
+                log_error_errno(m->have_ask_password, "Failed to list /run/systemd/ask-password: %m");
 
         return 0;
 }
@@ -265,13 +262,11 @@ static int manager_check_ask_password(Manager *m) {
                 mkdir_p_label("/run/systemd/ask-password", 0755);
 
                 m->ask_password_inotify_fd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC);
-                if (m->ask_password_inotify_fd < 0) {
-                        log_error("inotify_init1() failed: %m");
-                        return -errno;
-                }
+                if (m->ask_password_inotify_fd < 0)
+                        return log_error_errno(errno, "inotify_init1() failed: %m");
 
                 if (inotify_add_watch(m->ask_password_inotify_fd, "/run/systemd/ask-password", IN_CREATE|IN_DELETE|IN_MOVE) < 0) {
-                        log_error("Failed to add watch on /run/systemd/ask-password: %m");
+                        log_error_errno(errno, "Failed to add watch on /run/systemd/ask-password: %m");
                         manager_close_ask_password(m);
                         return -errno;
                 }
@@ -280,7 +275,7 @@ static int manager_check_ask_password(Manager *m) {
                                     m->ask_password_inotify_fd, EPOLLIN,
                                     manager_dispatch_ask_password_fd, m);
                 if (r < 0) {
-                        log_error("Failed to add event source for /run/systemd/ask-password: %m");
+                        log_error_errno(errno, "Failed to add event source for /run/systemd/ask-password: %m");
                         manager_close_ask_password(m);
                         return -errno;
                 }
@@ -305,10 +300,8 @@ static int manager_watch_idle_pipe(Manager *m) {
                 return 0;
 
         r = sd_event_add_io(m->event, &m->idle_pipe_event_source, m->idle_pipe[2], EPOLLIN, manager_dispatch_idle_pipe_fd, m);
-        if (r < 0) {
-                log_error("Failed to watch idle pipe: %s", strerror(-r));
-                return r;
-        }
+        if (r < 0)
+                return log_error_errno(r, "Failed to watch idle pipe: %m");
 
         return 0;
 }
@@ -339,22 +332,18 @@ static int manager_setup_time_change(Manager *m) {
          * CLOCK_REALTIME makes a jump relative to CLOCK_MONOTONIC */
 
         m->time_change_fd = timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK|TFD_CLOEXEC);
-        if (m->time_change_fd < 0) {
-                log_error("Failed to create timerfd: %m");
-                return -errno;
-        }
+        if (m->time_change_fd < 0)
+                return log_error_errno(errno, "Failed to create timerfd: %m");
 
         if (timerfd_settime(m->time_change_fd, TFD_TIMER_ABSTIME|TFD_TIMER_CANCEL_ON_SET, &its, NULL) < 0) {
-                log_debug("Failed to set up TFD_TIMER_CANCEL_ON_SET, ignoring: %m");
+                log_debug_errno(errno, "Failed to set up TFD_TIMER_CANCEL_ON_SET, ignoring: %m");
                 m->time_change_fd = safe_close(m->time_change_fd);
                 return 0;
         }
 
         r = sd_event_add_io(m->event, &m->time_change_event_source, m->time_change_fd, EPOLLIN, manager_dispatch_time_change_fd, m);
-        if (r < 0) {
-                log_error("Failed to create time change event source: %s", strerror(-r));
-                return r;
-        }
+        if (r < 0)
+                return log_error_errno(r, "Failed to create time change event source: %m");
 
         log_debug("Set up TFD_TIMER_CANCEL_ON_SET timerfd.");
 
@@ -370,17 +359,17 @@ static int enable_special_signals(Manager *m) {
          * this will fail with EPERM (older) or EINVAL (newer), so
          * ignore that. */
         if (reboot(RB_DISABLE_CAD) < 0 && errno != EPERM && errno != EINVAL)
-                log_warning("Failed to enable ctrl-alt-del handling: %m");
+                log_warning_errno(errno, "Failed to enable ctrl-alt-del handling: %m");
 
         fd = open_terminal("/dev/tty0", O_RDWR|O_NOCTTY|O_CLOEXEC);
         if (fd < 0) {
                 /* Support systems without virtual console */
                 if (fd != -ENOENT)
-                        log_warning("Failed to open /dev/tty0: %m");
+                        log_warning_errno(errno, "Failed to open /dev/tty0: %m");
         } else {
                 /* Enable that we get SIGWINCH on kbrequest */
                 if (ioctl(fd, KDSIGACCEPT, SIGWINCH) < 0)
-                        log_warning("Failed to enable kbrequest handling: %m");
+                        log_warning_errno(errno, "Failed to enable kbrequest handling: %m");
         }
 
         return 0;
@@ -395,9 +384,6 @@ static int manager_setup_signals(Manager *m) {
         int r;
 
         assert(m);
-
-        if (m->test_run)
-                return 0;
 
         assert_se(sigaction(SIGCHLD, &sa, NULL) == 0);
 
@@ -554,7 +540,7 @@ int manager_new(SystemdRunningAs running_as, bool test_run, Manager **_m) {
 
         m->idle_pipe[0] = m->idle_pipe[1] = m->idle_pipe[2] = m->idle_pipe[3] = -1;
 
-        m->pin_cgroupfs_fd = m->notify_fd = m->signal_fd = m->time_change_fd = m->dev_autofs_fd = m->private_listen_fd = m->kdbus_fd = -1;
+        m->pin_cgroupfs_fd = m->notify_fd = m->signal_fd = m->time_change_fd = m->dev_autofs_fd = m->private_listen_fd = m->kdbus_fd = m->utab_inotify_fd = -1;
         m->current_job_id = 1; /* start as id #1, so that we can leave #0 around as "null-like" value */
 
         m->ask_password_inotify_fd = -1;
@@ -657,57 +643,36 @@ static int manager_setup_notify(Manager *m) {
                 m->notify_event_source = sd_event_source_unref(m->notify_event_source);
 
                 fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
-                if (fd < 0) {
-                        log_error("Failed to allocate notification socket: %m");
-                        return -errno;
-                }
+                if (fd < 0)
+                        return log_error_errno(errno, "Failed to allocate notification socket: %m");
 
-                if (m->running_as == SYSTEMD_SYSTEM) {
+                if (m->running_as == SYSTEMD_SYSTEM)
                         m->notify_socket = strdup("/run/systemd/notify");
-                        if (!m->notify_socket)
-                                return log_oom();
-                } else {
+                else {
                         const char *e;
 
                         e = getenv("XDG_RUNTIME_DIR");
                         if (!e) {
-                                log_error("XDG_RUNTIME_DIR is not set: %m");
+                                log_error_errno(errno, "XDG_RUNTIME_DIR is not set: %m");
                                 return -EINVAL;
                         }
 
                         m->notify_socket = strappend(e, "/systemd/notify");
-                        if (!m->notify_socket)
-                                return log_oom();
-
-                        mkdir_parents_label(m->notify_socket, 0755);
                 }
+                if (!m->notify_socket)
+                        return log_oom();
+
+                (void) mkdir_parents_label(m->notify_socket, 0755);
+                (void) unlink(m->notify_socket);
 
                 strncpy(sa.un.sun_path, m->notify_socket, sizeof(sa.un.sun_path)-1);
                 r = bind(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + strlen(sa.un.sun_path));
-                if (r < 0) {
-                        log_error("bind(%s) failed: %m", sa.un.sun_path);
-                        if (errno == EADDRINUSE) {
-                                log_notice("Removing %s socket and trying again.", m->notify_socket);
-                                r = unlink(m->notify_socket);
-                                if (r < 0) {
-                                        log_error("Failed to remove %s: %m", m->notify_socket);
-                                        return -EADDRINUSE;
-                                }
-
-                                r = bind(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + strlen(sa.un.sun_path));
-                                if (r < 0) {
-                                        log_error("bind(%s) failed: %m", sa.un.sun_path);
-                                        return -errno;
-                                }
-                        } else
-                                return -errno;
-                }
+                if (r < 0)
+                        return log_error_errno(errno, "bind(%s) failed: %m", sa.un.sun_path);
 
                 r = setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &one, sizeof(one));
-                if (r < 0) {
-                        log_error("SO_PASSCRED failed: %m");
-                        return -errno;
-                }
+                if (r < 0)
+                        return log_error_errno(errno, "SO_PASSCRED failed: %m");
 
                 m->notify_fd = fd;
                 fd = -1;
@@ -717,18 +682,14 @@ static int manager_setup_notify(Manager *m) {
 
         if (!m->notify_event_source) {
                 r = sd_event_add_io(m->event, &m->notify_event_source, m->notify_fd, EPOLLIN, manager_dispatch_notify_fd, m);
-                if (r < 0) {
-                        log_error("Failed to allocate notify event source: %s", strerror(-r));
-                        return -errno;
-                }
+                if (r < 0)
+                        return log_error_errno(r, "Failed to allocate notify event source: %m");
 
                 /* Process signals a bit earlier than SIGCHLD, so that we can
                  * still identify to which service an exit message belongs */
                 r = sd_event_source_set_priority(m->notify_event_source, -7);
-                if (r < 0) {
-                        log_error("Failed to set priority of notify event source: %s", strerror(-r));
-                        return r;
-                }
+                if (r < 0)
+                        return log_error_errno(r, "Failed to set priority of notify event source: %m");
         }
 
         return 0;
@@ -743,20 +704,17 @@ static int manager_setup_kdbus(Manager *m) {
         if (m->test_run || m->kdbus_fd >= 0)
                 return 0;
 
-        m->kdbus_fd = bus_kernel_create_bus(m->running_as == SYSTEMD_SYSTEM ? "system" : "user", m->running_as == SYSTEMD_SYSTEM, &p);
-        if (m->kdbus_fd < 0) {
-                log_debug("Failed to set up kdbus: %s", strerror(-m->kdbus_fd));
-                return m->kdbus_fd;
-        }
+        if (getpid() == 1)
+                bus_kernel_fix_attach_mask();
+
+        m->kdbus_fd = bus_kernel_create_bus(
+                        m->running_as == SYSTEMD_SYSTEM ? "system" : "user",
+                        m->running_as == SYSTEMD_SYSTEM, &p);
+
+        if (m->kdbus_fd < 0)
+                return log_debug_errno(m->kdbus_fd, "Failed to set up kdbus: %m");
 
         log_debug("Successfully set up kdbus on %s", p);
-
-        /* Create the namespace directory here, so that the contents
-         * of that directory is not visible to non-root users. This is
-         * necessary to ensure that users cannot get access to busses
-         * of virtualized users when no UID namespacing is used. */
-        if (m->running_as == SYSTEMD_SYSTEM)
-                mkdir_p_label("/dev/kdbus/domain", 0700);
 #endif
 
         return 0;
@@ -882,7 +840,7 @@ static unsigned manager_dispatch_gc_queue(Manager *m) {
 
                 if (u->gc_marker == gc_marker + GC_OFFSET_BAD ||
                     u->gc_marker == gc_marker + GC_OFFSET_UNSURE) {
-                        log_debug_unit(u->id, "Collecting %s", u->id);
+                        log_unit_debug(u->id, "Collecting %s", u->id);
                         u->gc_marker = gc_marker + GC_OFFSET_BAD;
                         unit_add_to_cleanup_queue(u);
                 }
@@ -917,11 +875,12 @@ static void manager_clear_jobs_and_units(Manager *m) {
         m->n_running_jobs = 0;
 }
 
-void manager_free(Manager *m) {
+Manager* manager_free(Manager *m) {
         UnitType c;
         int i;
 
-        assert(m);
+        if (!m)
+                return NULL;
 
         manager_clear_jobs_and_units(m);
 
@@ -983,6 +942,7 @@ void manager_free(Manager *m) {
         hashmap_free(m->units_requiring_mounts_for);
 
         free(m);
+        return NULL;
 }
 
 int manager_enumerate(Manager *m) {
@@ -1052,7 +1012,7 @@ static void manager_build_unit_path_cache(Manager *m) {
                 d = opendir(*i);
                 if (!d) {
                         if (errno != ENOENT)
-                                log_error("Failed to open directory %s: %m", *i);
+                                log_error_errno(errno, "Failed to open directory %s: %m", *i);
                         continue;
                 }
 
@@ -1080,7 +1040,7 @@ static void manager_build_unit_path_cache(Manager *m) {
         return;
 
 fail:
-        log_error("Failed to build unit path cache: %s", strerror(-r));
+        log_error_errno(r, "Failed to build unit path cache: %m");
 
         set_free_free(m->unit_path_cache);
         m->unit_path_cache = NULL;
@@ -1195,10 +1155,8 @@ int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool ove
         assert(unit);
         assert(mode < _JOB_MODE_MAX);
 
-        if (mode == JOB_ISOLATE && type != JOB_START) {
-                sd_bus_error_setf(e, SD_BUS_ERROR_INVALID_ARGS, "Isolate is only valid for start.");
-                return -EINVAL;
-        }
+        if (mode == JOB_ISOLATE && type != JOB_START)
+                return sd_bus_error_setf(e, SD_BUS_ERROR_INVALID_ARGS, "Isolate is only valid for start.");
 
         if (type == JOB_RELOAD || type == JOB_RELOAD_OR_START || type == JOB_RESTART || type == JOB_TRY_RESTART) {
                 HASHMAP_FOREACH(j, m->jobs, i) {
@@ -1238,12 +1196,10 @@ int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool ove
                 }
         }
 
-        if (mode == JOB_ISOLATE && !unit->allow_isolate) {
-                sd_bus_error_setf(e, BUS_ERROR_NO_ISOLATION, "Operation refused, unit may not be isolated.");
-                return -EPERM;
-        }
+        if (mode == JOB_ISOLATE && !unit->allow_isolate)
+                return sd_bus_error_setf(e, BUS_ERROR_NO_ISOLATION, "Operation refused, unit may not be isolated.");
 
-        log_debug_unit(unit->id,
+        log_unit_debug(unit->id,
                        "Trying to enqueue job %s/%s/%s", unit->id,
                        job_type_to_string(type), job_mode_to_string(mode));
 
@@ -1269,7 +1225,7 @@ int manager_add_job(Manager *m, JobType type, Unit *unit, JobMode mode, bool ove
         if (r < 0)
                 goto tr_abort;
 
-        log_debug_unit(unit->id,
+        log_unit_debug(unit->id,
                        "Enqueued job %s/%s as %u", unit->id,
                        job_type_to_string(type), (unsigned) tr->anchor_job->id);
 
@@ -1539,7 +1495,7 @@ static void manager_invoke_notify_message(Manager *m, Unit *u, pid_t pid, char *
                 return;
         }
 
-        log_debug_unit(u->id, "Got notification message for unit %s", u->id);
+        log_unit_debug(u->id, "Got notification message for unit %s", u->id);
 
         if (UNIT_VTABLE(u)->notify_message)
                 UNIT_VTABLE(u)->notify_message(u, pid, tags);
@@ -1635,7 +1591,7 @@ static void invoke_sigchld_event(Manager *m, Unit *u, siginfo_t *si) {
         assert(u);
         assert(si);
 
-        log_debug_unit(u->id, "Child "PID_FMT" belongs to %s", si->si_pid, u->id);
+        log_unit_debug(u->id, "Child "PID_FMT" belongs to %s", si->si_pid, u->id);
 
         unit_unwatch_pid(u, si->si_pid);
         UNIT_VTABLE(u)->sigchld_event(u, si->si_pid, si->si_code, si->si_status);
@@ -1707,11 +1663,11 @@ static int manager_start_target(Manager *m, const char *name, JobMode mode) {
         _cleanup_bus_error_free_ sd_bus_error error = SD_BUS_ERROR_NULL;
         int r;
 
-        log_debug_unit(name, "Activating special unit %s", name);
+        log_unit_debug(name, "Activating special unit %s", name);
 
         r = manager_add_job_by_name(m, JOB_START, name, mode, true, &error, NULL);
         if (r < 0)
-                log_error_unit(name, "Failed to enqueue %s job: %s", name, bus_error_message(&error, r));
+                log_unit_error(name, "Failed to enqueue %s job: %s", name, bus_error_message(&error, r));
 
         return r;
 }
@@ -1946,8 +1902,8 @@ static int manager_dispatch_time_change_fd(sd_event_source *source, int fd, uint
         assert(m->time_change_fd == fd);
 
         log_struct(LOG_INFO,
-                   MESSAGE_ID(SD_MESSAGE_TIME_CHANGE),
-                   "MESSAGE=Time has been changed",
+                   LOG_MESSAGE_ID(SD_MESSAGE_TIME_CHANGE),
+                   LOG_MESSAGE("Time has been changed"),
                    NULL);
 
         /* Restart the watch */
@@ -2052,10 +2008,8 @@ int manager_loop(Manager *m) {
                         wait_usec = USEC_INFINITY;
 
                 r = sd_event_run(m->event, wait_usec);
-                if (r < 0) {
-                        log_error("Failed to run event loop: %s", strerror(-r));
-                        return r;
-                }
+                if (r < 0)
+                        return log_error_errno(r, "Failed to run event loop: %m");
         }
 
         return m->exit_code;
@@ -2114,6 +2068,7 @@ void manager_send_unit_audit(Manager *m, Unit *u, int type, bool success) {
 
 #ifdef HAVE_AUDIT
         _cleanup_free_ char *p = NULL;
+        const char *msg;
         int audit_fd;
 
         audit_fd = get_audit_fd();
@@ -2133,18 +2088,19 @@ void manager_send_unit_audit(Manager *m, Unit *u, int type, bool success) {
 
         p = unit_name_to_prefix_and_instance(u->id);
         if (!p) {
-                log_error_unit(u->id,
-                               "Failed to allocate unit name for audit message: %s", strerror(ENOMEM));
+                log_oom();
                 return;
         }
 
-        if (audit_log_user_comm_message(audit_fd, type, "", p, NULL, NULL, NULL, success) < 0) {
-                if (errno == EPERM) {
+        msg = strappenda("unit=", p);
+
+        if (audit_log_user_comm_message(audit_fd, type, msg, "systemd", NULL, NULL, NULL, success) < 0) {
+                if (errno == EPERM)
                         /* We aren't allowed to send audit messages?
                          * Then let's not retry again. */
                         close_audit_fd();
-                } else
-                        log_warning("Failed to send audit message: %m");
+                else
+                        log_warning_errno(errno, "Failed to send audit message: %m");
         }
 #endif
 
@@ -2177,14 +2133,14 @@ void manager_send_unit_plymouth(Manager *m, Unit *u) {
          * message then wait for plymouth */
         fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
         if (fd < 0) {
-                log_error("socket() failed: %m");
+                log_error_errno(errno, "socket() failed: %m");
                 return;
         }
 
         if (connect(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + 1 + strlen(sa.un.sun_path+1)) < 0) {
 
                 if (!IN_SET(errno, EPIPE, EAGAIN, ENOENT, ECONNREFUSED, ECONNRESET, ECONNABORTED))
-                        log_error("connect() failed: %m");
+                        log_error_errno(errno, "connect() failed: %m");
                 return;
         }
 
@@ -2196,7 +2152,7 @@ void manager_send_unit_plymouth(Manager *m, Unit *u) {
         errno = 0;
         if (write(fd, message, n + 1) != n + 1)
                 if (!IN_SET(errno, EPIPE, EAGAIN, ENOENT, ECONNREFUSED, ECONNRESET, ECONNABORTED))
-                        log_error("Failed to write Plymouth message: %m");
+                        log_error_errno(errno, "Failed to write Plymouth message: %m");
 }
 
 void manager_dispatch_bus_name_owner_changed(
@@ -2373,7 +2329,7 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
                         uint32_t id;
 
                         if (safe_atou32(l+15, &id) < 0)
-                                log_warning("Failed to parse current job id value %s", l+15);
+                                log_debug("Failed to parse current job id value %s", l+15);
                         else
                                 m->current_job_id = MAX(m->current_job_id, id);
 
@@ -2381,7 +2337,7 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
                         uint32_t n;
 
                         if (safe_atou32(l+17, &n) < 0)
-                                log_warning("Failed to parse installed jobs counter %s", l+17);
+                                log_debug("Failed to parse installed jobs counter %s", l+17);
                         else
                                 m->n_installed_jobs += n;
 
@@ -2389,7 +2345,7 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
                         uint32_t n;
 
                         if (safe_atou32(l+14, &n) < 0)
-                                log_warning("Failed to parse failed jobs counter %s", l+14);
+                                log_debug("Failed to parse failed jobs counter %s", l+14);
                         else
                                 m->n_failed_jobs += n;
 
@@ -2398,7 +2354,7 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
 
                         b = parse_boolean(l+10);
                         if (b < 0)
-                                log_warning("Failed to parse taint /usr flag %s", l+10);
+                                log_debug("Failed to parse taint /usr flag %s", l+10);
                         else
                                 m->taint_usr = m->taint_usr || b;
 
@@ -2449,7 +2405,7 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
                         int fd;
 
                         if (safe_atoi(l + 10, &fd) < 0 || fd < 0 || !fdset_contains(fds, fd))
-                                log_warning("Failed to parse notify fd: %s", l + 10);
+                                log_debug("Failed to parse notify fd: %s", l + 10);
                         else {
                                 m->notify_event_source = sd_event_source_unref(m->notify_event_source);
                                 safe_close(m->notify_fd);
@@ -2472,14 +2428,21 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
                         int fd;
 
                         if (safe_atoi(l + 9, &fd) < 0 || fd < 0 || !fdset_contains(fds, fd))
-                                log_warning("Failed to parse kdbus fd: %s", l + 9);
+                                log_debug("Failed to parse kdbus fd: %s", l + 9);
                         else {
                                 safe_close(m->kdbus_fd);
                                 m->kdbus_fd = fdset_remove(fds, fd);
                         }
 
-                } else if (bus_track_deserialize_item(&m->deserialized_subscribed, l) == 0)
-                        log_warning("Unknown serialization item '%s'", l);
+                } else {
+                        int k;
+
+                        k = bus_track_deserialize_item(&m->deserialized_subscribed, l);
+                        if (k < 0)
+                                log_debug_errno(k, "Failed to deserialize bus tracker object: %m");
+                        else if (k == 0)
+                                log_debug("Unknown serialization item '%s'", l);
+                }
         }
 
         for (;;) {
@@ -2653,28 +2616,28 @@ static void manager_notify_finished(Manager *m) {
                         initrd_usec = m->userspace_timestamp.monotonic - m->initrd_timestamp.monotonic;
 
                         log_struct(LOG_INFO,
-                                   MESSAGE_ID(SD_MESSAGE_STARTUP_FINISHED),
+                                   LOG_MESSAGE_ID(SD_MESSAGE_STARTUP_FINISHED),
                                    "KERNEL_USEC="USEC_FMT, kernel_usec,
                                    "INITRD_USEC="USEC_FMT, initrd_usec,
                                    "USERSPACE_USEC="USEC_FMT, userspace_usec,
-                                   "MESSAGE=Startup finished in %s (kernel) + %s (initrd) + %s (userspace) = %s.",
-                                   format_timespan(kernel, sizeof(kernel), kernel_usec, USEC_PER_MSEC),
-                                   format_timespan(initrd, sizeof(initrd), initrd_usec, USEC_PER_MSEC),
-                                   format_timespan(userspace, sizeof(userspace), userspace_usec, USEC_PER_MSEC),
-                                   format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC),
+                                   LOG_MESSAGE("Startup finished in %s (kernel) + %s (initrd) + %s (userspace) = %s.",
+                                               format_timespan(kernel, sizeof(kernel), kernel_usec, USEC_PER_MSEC),
+                                               format_timespan(initrd, sizeof(initrd), initrd_usec, USEC_PER_MSEC),
+                                               format_timespan(userspace, sizeof(userspace), userspace_usec, USEC_PER_MSEC),
+                                               format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC)),
                                    NULL);
                 } else {
                         kernel_usec = m->userspace_timestamp.monotonic - m->kernel_timestamp.monotonic;
                         initrd_usec = 0;
 
                         log_struct(LOG_INFO,
-                                   MESSAGE_ID(SD_MESSAGE_STARTUP_FINISHED),
+                                   LOG_MESSAGE_ID(SD_MESSAGE_STARTUP_FINISHED),
                                    "KERNEL_USEC="USEC_FMT, kernel_usec,
                                    "USERSPACE_USEC="USEC_FMT, userspace_usec,
-                                   "MESSAGE=Startup finished in %s (kernel) + %s (userspace) = %s.",
-                                   format_timespan(kernel, sizeof(kernel), kernel_usec, USEC_PER_MSEC),
-                                   format_timespan(userspace, sizeof(userspace), userspace_usec, USEC_PER_MSEC),
-                                   format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC),
+                                   LOG_MESSAGE("Startup finished in %s (kernel) + %s (userspace) = %s.",
+                                               format_timespan(kernel, sizeof(kernel), kernel_usec, USEC_PER_MSEC),
+                                               format_timespan(userspace, sizeof(userspace), userspace_usec, USEC_PER_MSEC),
+                                               format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC)),
                                    NULL);
                 }
         } else {
@@ -2682,10 +2645,10 @@ static void manager_notify_finished(Manager *m) {
                 total_usec = userspace_usec = m->finish_timestamp.monotonic - m->userspace_timestamp.monotonic;
 
                 log_struct(LOG_INFO,
-                           MESSAGE_ID(SD_MESSAGE_STARTUP_FINISHED),
+                           LOG_MESSAGE_ID(SD_MESSAGE_STARTUP_FINISHED),
                            "USERSPACE_USEC="USEC_FMT, userspace_usec,
-                           "MESSAGE=Startup finished in %s.",
-                           format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC),
+                           LOG_MESSAGE("Startup finished in %s.",
+                                       format_timespan(sum, sizeof(sum), total_usec, USEC_PER_MSEC)),
                            NULL);
         }
 
@@ -2761,8 +2724,7 @@ static int create_generator_dir(Manager *m, char **generator, const char *name) 
 
                 r = mkdir_p_label(p, 0755);
                 if (r < 0) {
-                        log_error("Failed to create generator directory %s: %s",
-                                  p, strerror(-r));
+                        log_error_errno(r, "Failed to create generator directory %s: %m", p);
                         free(p);
                         return r;
                 }
@@ -2778,8 +2740,7 @@ static int create_generator_dir(Manager *m, char **generator, const char *name) 
 
                 r = mkdir_p_label(p, 0755);
                 if (r < 0) {
-                        log_error("Failed to create generator directory %s: %s",
-                                  p, strerror(-r));
+                        log_error_errno(r, "Failed to create generator directory %s: %m", p);
                         free(p);
                         return r;
                 }
@@ -2791,7 +2752,7 @@ static int create_generator_dir(Manager *m, char **generator, const char *name) 
                         return log_oom();
 
                 if (!mkdtemp(p)) {
-                        log_error("Failed to create generator directory %s: %m",
+                        log_error_errno(errno, "Failed to create generator directory %s: %m",
                                   p);
                         free(p);
                         return -errno;
@@ -2834,7 +2795,7 @@ void manager_run_generators(Manager *m) {
                 if (errno == ENOENT)
                         return;
 
-                log_error("Failed to enumerate generator directory %s: %m",
+                log_error_errno(errno, "Failed to enumerate generator directory %s: %m",
                           generator_path);
                 return;
         }
@@ -3024,12 +2985,14 @@ void manager_set_first_boot(Manager *m, bool b) {
 void manager_status_printf(Manager *m, StatusType type, const char *status, const char *format, ...) {
         va_list ap;
 
-        if (!manager_get_show_status(m, type))
+        /* If m is NULL, assume we're after shutdown and let the messages through. */
+
+        if (m && !manager_get_show_status(m, type))
                 return;
 
         /* XXX We should totally drop the check for ephemeral here
          * and thus effectively make 'Type=idle' pointless. */
-        if (type == STATUS_TYPE_EPHEMERAL && m->n_on_console > 0)
+        if (type == STATUS_TYPE_EPHEMERAL && m && m->n_on_console > 0)
                 return;
 
         va_start(ap, format);
