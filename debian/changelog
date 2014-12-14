@@ -1,3 +1,20 @@
+systemd (218-1) experimental; urgency=medium
+
+  * New upstream release. Drop all cherry-picked patches and port the Debian
+    specific ones.
+    - Create /etc/machine-id on boot if missing. (LP: #1387090)
+  * Add new libmount-dev build dependency.
+  * Configure with --enable-split-usr.
+  * Merge some permanent Ubuntu changes, using dpkg-vendor:
+    - Don't symlink udev doc directories.
+    - Add epoch to gudev packages; Ubuntu packaged the standalone gudev before
+      it got merged into udev.
+    - Add Apport hooks for udev and systemd.
+  * udev-fallback-graphics upstart job: Guard the modprobe with || true to
+    avoid a failure when vesafb is compiled in. (LP: #1367241)
+
+ -- Martin Pitt <mpitt@debian.org>  Sun, 14 Dec 2014 13:58:39 +0100
+
 systemd (217-4) experimental; urgency=medium
 
   [ Martin Pitt ]
