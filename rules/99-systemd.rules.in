@@ -68,7 +68,7 @@ SUBSYSTEM=="leds", KERNEL=="*kbd_backlight", TAG+="systemd", ENV{SYSTEMD_WANTS}+
 
 # Pull in rfkill save/restore for all rfkill devices
 
-SUBSYSTEM=="rfkill", TAG+="systemd", ENV{SYSTEMD_WANTS}+="systemd-rfkill@$name.service"
+SUBSYSTEM=="rfkill", TAG+="systemd", ENV{SYSTEMD_ALIAS}+="/sys/subsystem/rfkill/devices/%k", ENV{SYSTEMD_WANTS}+="systemd-rfkill@$name.service"
 
 # Asynchronously mount file systems implemented by these modules as
 # soon as they are loaded.

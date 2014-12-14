@@ -4,6 +4,7 @@
 #export DEB_BUILD_OPTIONS="nostrip"
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+VERSION = $(shell dpkg-parsechangelog | sed -n -e '/^Version:/s/.*: //p')
 
 ifneq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
 BOOTSTRAP_DH_FLAGS := -Ngir1.2-gudev-1.0 -Nlibgudev-1.0-0 -Nlibgudev-1.0-dev
@@ -18,6 +19,7 @@ CONFFLAGS = \
 	--with-firmware-path=/lib/firmware \
 	--with-debug-shell=/bin/bash \
 	--with-telinit=/lib/sysvinit/telinit \
+	--enable-split-usr \
 	--disable-coredump \
 	--disable-efi \
 	--disable-myhostname \
@@ -241,11 +243,18 @@ endif
 	rm debian/udev/lib/udev/rules.d/73-seat-late.rules
 	rm debian/udev/lib/udev/rules.d/71-seat.rules
 	rm debian/udev/lib/udev/rules.d/99-systemd.rules
+	# Ubuntu specific files
+	if dpkg-vendor --is ubuntu; then \
+		install -D --mode=644 debian/extra/udev.py debian/udev/usr/share/apport/package-hooks/udev.py; \
+		install -D --mode=644 debian/extra/systemd.py debian/systemd/usr/share/apport/package-hooks/systemd.py; \
+	fi
 
-# use symlinked doc directories as the old udev package did
+# use symlinked doc directories on Debian as the old udev package did
 override_dh_installdocs:
-	dh_installdocs -pudev -plibudev-dev --link-doc=libudev1
-	dh_installdocs -pgir1.2-gudev-1.0 -plibgudev-1.0-dev --link-doc=libgudev-1.0-0
+	if ! dpkg-vendor --is ubuntu; then \
+		dh_installdocs -pudev -plibudev-dev --link-doc=libudev1; \
+		dh_installdocs -pgir1.2-gudev-1.0 -plibgudev-1.0-dev --link-doc=libgudev-1.0-0; \
+	fi
 	dh_installdocs --remaining-packages
 
 override_dh_installinit:
@@ -294,3 +303,10 @@ ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
 else
 	dh $@ --with autoreconf,python3 $(BOOTSTRAP_DH_FLAGS)
 endif
+
+override_dh_gencontrol:
+	# Ubuntu has an epoch on gudev
+	if dpkg-vendor --is ubuntu; then \
+		dh_gencontrol -plibgudev-1.0-0 -plibgudev-1.0-dev -pgir1.2-gudev-1.0 -- "-v1:$(VERSION)"; \
+	fi
+	dh_gencontrol --remaining-packages
