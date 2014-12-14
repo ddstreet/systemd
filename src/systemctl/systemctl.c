@@ -5208,8 +5208,46 @@ static int enable_sysv_units(const char *verb, char **args) {
                     continue;
                 }
 
+                /* Run update-rc.d <file> defaults first to ensure the K- and
+                 * S-symlinks are present. If they are missing, update-rc.d
+                 * <enable|disable> will fail. See
+                 * http://bugs.debian.org/722523 */
                 argv[c++] = basename(p);
-                argv[c++] = verb;
+                argv[c++] = "defaults";
+                argv[c] = NULL;
+
+                l = strv_join((char**)argv, " ");
+                if (!l) {
+                        return log_oom();
+                }
+
+                log_info("Executing %s", l);
+                free(l);
+
+                pid = fork();
+                if (pid < 0) {
+                        log_error("Failed to fork: %m");
+                        return -errno;
+                } else if (pid == 0) {
+                        /* Child */
+
+                        execv(argv[0], (char**) argv);
+                        _exit(EXIT_FAILURE);
+                }
+
+                j = wait_for_terminate(pid, &status);
+                if (j < 0) {
+                        log_error("Failed to wait for child: %s", strerror(-r));
+                        return j;
+                }
+
+                if (status.si_code == CLD_EXITED) {
+                        if (status.si_status != 0)
+                                return -EINVAL;
+                } else
+                        return -EPROTO;
+
+                argv[c-1] = verb;
                 argv[c] = NULL;
 
                 l = strv_join((char**)argv, " ");
