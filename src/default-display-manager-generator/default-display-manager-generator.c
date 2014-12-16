@@ -64,10 +64,10 @@ static int generate_display_manager_alias(void) {
 
         /* we only create the alias symlink for non sysvinit services */
         if (access(target_unit_path, F_OK) < 0 && (errno == ENOENT)) {
-                log_warning("%s doesn't seem to be a system unit, we disable the systemd enabled display manager", target_unit_path);
+                log_warning("%s is not a systemd unit, we disable the systemd enabled display manager", target_unit_path);
                 target_unit_path = "/dev/null";
         } else {
-                log_warning("%s point at %s while the default systemd unit is %s. Reconfiguring %s as default.",
+                log_warning("%s points at %s while the default systemd unit is %s. Reconfiguring %s as default.",
                             default_dm_file, default_dm, enabled_dm_unit, default_dm);
         }
 
