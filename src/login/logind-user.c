@@ -20,6 +20,7 @@
 ***/
 
 #include <sys/mount.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -306,6 +307,7 @@ int user_load(User *u) {
 static int user_mkdir_runtime_path(User *u) {
         char *p;
         int r;
+        struct stat sb;
 
         assert(u);
 
@@ -318,6 +320,12 @@ static int user_mkdir_runtime_path(User *u) {
                         return log_oom();
         } else
                 p = u->runtime_path;
+
+        /* If the directory already exists, don't mount a tmpfs over it */
+        if (stat(p, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+               u->runtime_path = p;
+               return 0;
+        }
 
         if (path_is_mount_point(p, false) <= 0) {
                 _cleanup_free_ char *t = NULL;
@@ -510,7 +518,7 @@ static int user_remove_runtime_path(User *u) {
         if (r < 0)
                 log_error_errno(r, "Failed to remove runtime directory %s: %m", u->runtime_path);
 
-        if (umount2(u->runtime_path, MNT_DETACH) < 0)
+        if (path_is_mount_point(u->runtime_path, false) && umount2(u->runtime_path, MNT_DETACH) < 0)
                 log_error_errno(errno, "Failed to unmount user runtime directory %s: %m", u->runtime_path);
 
         r = rm_rf(u->runtime_path, false, true, false);
