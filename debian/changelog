@@ -1,3 +1,13 @@
+systemd (208-8ubuntu8.2) utopic-proposed; urgency=medium
+
+  * build-logind autopkgtest: Re-enforce that sd_login_monitor_new() succeeds,
+    and restrict this test to isolation-container. (Reproduces LP #1400203)
+  * Bring back patch to make sd_login_monitor_new() work under other init
+    systems where /sys/fs/cgroup/systemd/machine does not exist.
+    (LP: #1400203)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 23 Dec 2014 20:18:28 +0100
+
 systemd (208-8ubuntu8.1) utopic-proposed; urgency=medium
 
   * Fix path-id to correctly recognize supported devices. This brings back
