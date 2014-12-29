@@ -1,3 +1,33 @@
+systemd (218-3) experimental; urgency=medium
+
+  * build-logind autopkgtest: Re-enforce that sd_login_monitor_new() succeeds,
+    and restrict this test to isolation-container. (Reproduces LP #1400203)
+  * Bring back patch to make sd_login_monitor_new() work under other init
+    systems where /sys/fs/cgroup/systemd/machine does not exist.
+    (LP: #1400203)
+  * build-login autopkgtest: Build against libsystemd, not libsystemd-login
+    any more.
+  * Add debian/extra/systemd-vconsole-setup.service dependency shim for
+    the console-setup init script, to avoid breaking dependencies of
+    third-party packages. Install it for Ubuntu only for now, as in Debian
+    plymouth's unit got adjusted. (LP: #1392970, Debian #755194)
+  * Mark systemd{,-sysv} as M-A: foreign (thanks lintian).
+  * Quiesce maintainer-script-calls-systemctl lintian warning.
+  * Quiesce possibly-insecure-handling-of-tmp-files lintian warning, it's
+    wrong there (we are handling tmpfiles.d/ files which are not in a temp
+    dir).
+  * Use dh_installinit's --noscript instead of --no-start for the upstart
+    jobs without sysvinit scripts (thanks lintian).
+  * Put systemd.pc into arch specific pkgconfig dir, as it contains the arch
+    specific libdir value.
+  * Don't enable audit by default. It causes flooding of dmesg and syslog,
+    suppressing actually important messages. (Closes: #773528)
+  * Cherrypick various bug fixes in loopback device setup and netlink socket
+    communication. Fixes massive CPU usage due to tight retry loops in user
+    LXC containers.
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 29 Dec 2014 14:55:35 +0100
+
 systemd (218-2) experimental; urgency=medium
 
   * boot-and-services AppArmor autopkgtest: Stop checking the dmesg log; it is

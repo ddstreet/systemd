@@ -247,6 +247,7 @@ endif
 	if dpkg-vendor --is ubuntu; then \
 		install -D --mode=644 debian/extra/udev.py debian/udev/usr/share/apport/package-hooks/udev.py; \
 		install -D --mode=644 debian/extra/systemd.py debian/systemd/usr/share/apport/package-hooks/systemd.py; \
+		install --mode=644 debian/extra/systemd-vconsole-setup.service debian/systemd/lib/systemd/system/; \
 	fi
 
 # use symlinked doc directories on Debian as the old udev package did
@@ -260,9 +261,10 @@ override_dh_installdocs:
 override_dh_installinit:
 	dh_installinit --no-start
 	dh_installinit --name=udev-finish --no-start
-	dh_installinit --name=udevtrigger --no-start
-	dh_installinit --name=udevmonitor --no-start
-	dh_installinit --name=udev-fallback-graphics --no-start
+	# the following are only upstart jobs
+	dh_installinit --name=udevtrigger --noscripts
+	dh_installinit --name=udevmonitor --noscripts
+	dh_installinit --name=udev-fallback-graphics --noscripts
 
 # The SysV compat tools (which are symlinks to systemctl) are
 # quasi-essential, so add its dependencies to Pre-Depends
