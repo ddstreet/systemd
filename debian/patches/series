@@ -55,3 +55,13 @@ Disable-tests-which-fail-on-buildds.patch
 Make-sd_login_monitor_new-work-for-logind-without-sy.patch
 build-sys-Fix-install-location-of-systemd.pc.patch
 Don-t-enable-audit-by-default.patch
+
+## Ubuntu patches:
+Create-disk-by-partlabel-links-for-mmcblk-partitions.patch
+Support-system-image-read-only-etc.patch
+Add-support-for-ProLiant-Server-Cartridge-power-butt.patch
+Provide-shutdown-fallback-for-upstart.patch
+Trigger-ifup-.service-on-network-devices.patch
+Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
+cgroup-Initialize-cpuset.clone_children.patch
+core-Put-session-scopes-into-all-cgroup-controllers.patch
