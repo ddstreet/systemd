@@ -66,7 +66,7 @@
 
                 <para><literallayout><filename>/etc/systemd/system/*</filename>
 <filename>/run/systemd/system/*</filename>
-<filename>/usr/lib/systemd/system/*</filename>
+<filename>/lib/systemd/system/*</filename>
 <filename>...</filename>
                 </literallayout></para>
 
@@ -77,7 +77,7 @@
 <filename>/run/systemd/user/*</filename>
 <filename>$XDG_DATA_HOME/systemd/user/*</filename>
 <filename>$HOME/.local/share/systemd/user/*</filename>
-<filename>/usr/lib/systemd/user/*</filename>
+<filename>/lib/systemd/user/*</filename>
 <filename>...</filename>
                 </literallayout></para>
         </refsynopsisdiv>
@@ -314,7 +314,7 @@
                         <entry>Runtime units</entry>
                       </row>
                       <row>
-                        <entry><filename>/usr/lib/systemd/system</filename></entry>
+                        <entry><filename>/lib/systemd/system</filename></entry>
                         <entry>Units of installed packages</entry>
                       </row>
                     </tbody>
@@ -365,7 +365,7 @@
                         <entry>Units of packages that have been installed in the home directory (only used when $XDG_DATA_HOME is not set)</entry>
                       </row>
                       <row>
-                        <entry><filename>/usr/lib/systemd/user</filename></entry>
+                        <entry><filename>/lib/systemd/user</filename></entry>
                         <entry>Units of packages that have been installed system-wide</entry>
                       </row>
                     </tbody>
@@ -1137,14 +1137,14 @@
                                 used to conditionalize units on
                                 whether the specified directory
                                 requires an update because
-                                <filename>/usr</filename>'s
+                                <filename>/lib</filename>'s
                                 modification time is newer than the
                                 stamp file
                                 <filename>.updated</filename> in the
                                 specified directory. This is useful to
                                 implement offline updates of the
                                 vendor operating system resources in
-                                <filename>/usr</filename> that require
+                                <filename>/lib</filename> that require
                                 updating of <filename>/etc</filename>
                                 or <filename>/var</filename> on the
                                 next following boot. Units making use
