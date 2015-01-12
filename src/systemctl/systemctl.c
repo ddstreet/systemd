@@ -5142,7 +5142,7 @@ static int import_environment(sd_bus *bus, char **args) {
 static int enable_sysv_units(const char *verb, char **args) {
         int r = 0;
 
-#if defined(HAVE_SYSV_COMPAT) && defined(HAVE_CHKCONFIG)
+#if defined(HAVE_SYSV_COMPAT)
         unsigned f = 0;
         _cleanup_lookup_paths_free_ LookupPaths paths = {};
 
@@ -5150,8 +5150,9 @@ static int enable_sysv_units(const char *verb, char **args) {
                 return 0;
 
         if (!streq(verb, "enable") &&
-            !streq(verb, "disable") &&
-            !streq(verb, "is-enabled"))
+            !streq(verb, "disable"))
+            // update-rc.d currently does not provide is-enabled
+            //!streq(verb, "is-enabled"))
                 return 0;
 
         /* Processes all SysV units, and reshuffles the array so that
@@ -5167,7 +5168,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 _cleanup_free_ char *p = NULL, *q = NULL, *l = NULL;
                 bool found_native = false, found_sysv;
                 unsigned c = 1;
-                const char *argv[6] = { "/sbin/chkconfig", NULL, NULL, NULL, NULL };
+                const char *argv[6] = { "/usr/sbin/update-rc.d", NULL, NULL, NULL, NULL };
                 char **k;
                 int j;
                 pid_t pid;
@@ -5205,15 +5206,15 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!found_sysv)
                         continue;
 
-                log_info("%s is not a native service, redirecting to /sbin/chkconfig.", name);
+                log_info("%s is not a native service, redirecting to /usr/sbin/update-rc.d.", name);
 
-                if (!isempty(arg_root))
-                        argv[c++] = q = strappend("--root=", arg_root);
+                if (!isempty(arg_root) && !streq(arg_root, "/")) {
+                    log_error("Can not run update-rc.d when a root directory other than / is specified");
+                    continue;
+                }
 
                 argv[c++] = basename(p);
-                argv[c++] =
-                        streq(verb, "enable") ? "on" :
-                        streq(verb, "disable") ? "off" : "--level=5";
+                argv[c++] = verb;
                 argv[c] = NULL;
 
                 l = strv_join((char**)argv, " ");
