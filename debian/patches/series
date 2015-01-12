@@ -1,6 +1,8 @@
 ## Cherry-picked from upstream
 shared-time-dst-Avoid-buffer-overflow.patch
 Loopback-setup-rtnl-fixes.patch
+core-make-EPERM-errors-when-applying-OOM-adjustment-.patch
+core-check-both-EPERM-and-EACCES-for-OOM-adjustments.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -65,3 +67,4 @@ Trigger-ifup-.service-on-network-devices.patch
 Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
 cgroup-Initialize-cpuset.clone_children.patch
 core-Put-session-scopes-into-all-cgroup-controllers.patch
+Accept-mountall-specific-fstab-options.patch
