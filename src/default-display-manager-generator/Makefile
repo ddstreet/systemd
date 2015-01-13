@@ -15,10 +15,6 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with systemd; If not, see <http://www.gnu.org/licenses/>.
 
-# This file is a dirty trick to simplify compilation from within
-# emacs. This file is not intended to be distributed. So, don't touch
-# it, even better ignore it!
-
 all:
 	$(MAKE) -C ..
 
