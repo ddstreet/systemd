@@ -184,9 +184,6 @@ override_dh_install:
 		debian/extra/rule_generator.functions \
 		debian/udev/lib/udev/
 	install -D --mode=755 \
-		debian/extra/dsl-modem.agent \
-		debian/extra/logger.agent \
-		debian/extra/net.agent \
 		debian/extra/udev-finish \
 		debian/extra/write_net_rules \
 		debian/udev/lib/udev/
@@ -259,8 +256,9 @@ override_dh_installdocs:
 	dh_installdocs --remaining-packages
 
 override_dh_installinit:
-	dh_installinit --no-start
+	dh_installinit -R --no-start
 	dh_installinit --name=udev-finish --no-start
+	dh_installinit --name=lvm2 --no-start
 	# the following are only upstart jobs
 	dh_installinit --name=udevtrigger --noscripts
 	dh_installinit --name=udevmonitor --noscripts
