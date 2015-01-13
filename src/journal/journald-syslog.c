@@ -85,12 +85,12 @@ static void forward_syslog_iovec(Server *s, const struct iovec *iovec, unsigned 
                 return;
         }
 
-        if (ucred && (errno == ESRCH || errno == EPERM)) {
+        if (ucred && errno == ESRCH) {
                 struct ucred u;
 
                 /* Hmm, presumably the sender process vanished
-                 * by now, or we don't have CAP_SYS_AMDIN, so
-                 * let's fix it as good as we can, and retry */
+                 * by now, so let's fix it as good as we
+                 * can, and retry */
 
                 u = *ucred;
                 u.pid = getpid();

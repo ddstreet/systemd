@@ -4,9 +4,8 @@ Loopback-setup-rtnl-fixes.patch
 build-sys-Fix-install-location-of-systemd.pc.patch
 sysv-generator-handle-Provides-for-non-virtual-facil.patch
 sysv-generator-Avoid-wrong-dependencies-for-failing-.patch
-journal-Fix-syslog-forwarding-without-CAP_SYS_ADMIN.patch
-sysv-generator-Handle-.sh-suffixes-when-translating-.patch
-util-Add-some-missing-hidden_file-suffixes.patch
+core-make-EPERM-errors-when-applying-OOM-adjustment-.patch
+core-check-both-EPERM-and-EACCES-for-OOM-adjustments.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -61,5 +60,13 @@ Make-sd_login_monitor_new-work-for-logind-without-sy.patch
 Don-t-enable-audit-by-default.patch
 Accept-mountall-specific-fstab-options.patch
 Fix-usr-remount-failure-for-split-usr.patch
-sysv-generator-Replace-Provides-symlinks-with-real-u.patch
-util-Add-hidden-suffixes-for-ucf.patch
+
+## Ubuntu patches:
+Create-disk-by-partlabel-links-for-mmcblk-partitions.patch
+Support-system-image-read-only-etc.patch
+Add-support-for-ProLiant-Server-Cartridge-power-butt.patch
+Provide-shutdown-fallback-for-upstart.patch
+Trigger-ifup-.service-on-network-devices.patch
+Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
+cgroup-Initialize-cpuset.clone_children.patch
+core-Put-session-scopes-into-all-cgroup-controllers.patch
