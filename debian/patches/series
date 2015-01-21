@@ -125,6 +125,7 @@ journalctl-correct-help-text-for-until.patch
 Raise-level-of-Found-dependency.-lines.patch
 systemd-tmpfiles-Fix-IGNORE_DIRECTORY_PATH-age-handl.patch
 sysv-generator-handle-Provides-for-non-virtual-facil.patch
+journal-Fix-syslog-forwarding-without-CAP_SYS_ADMIN.patch
 
 ## Debian specific patches:
 Add-back-support-for-Debian-specific-config-files.patch
@@ -177,3 +178,5 @@ Prefer-etc-X11-default-display-manager-if-present.patch
 core-Fix-bind-error-message.patch
 core-Make-binding-notify-private-dbus-socket-more-ro.patch
 Fix-usr-remount-failure-for-split-usr.patch
+sysv-generator-Handle-.sh-suffixes-when-translating-.patch
+sysv-generator-Replace-Provides-symlinks-with-real-u.patch
