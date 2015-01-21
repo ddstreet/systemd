@@ -366,7 +366,7 @@ static int parse_fstab(bool initrd) {
                         path_kill_slashes(where);
 
                 noauto = !!hasmntopt(me, "noauto");
-                nofail = !!hasmntopt(me, "nofail");
+                nofail = !!hasmntopt(me, "nofail") || !!hasmntopt(me, "optional") || !!hasmntopt(me, "nobootwait");
                 log_debug("Found entry what=%s where=%s type=%s nofail=%s noauto=%s",
                           what, where, me->mnt_type,
                           yes_no(noauto), yes_no(nofail));

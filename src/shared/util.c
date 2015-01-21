@@ -1518,6 +1518,13 @@ _pure_ static bool ignore_file_allow_backup(const char *filename) {
                 endswith(filename, ".dpkg-old") ||
                 endswith(filename, ".dpkg-new") ||
                 endswith(filename, ".dpkg-tmp") ||
+                endswith(filename, ".dpkg-dist") ||
+                endswith(filename, ".dpkg-bak") ||
+                endswith(filename, ".dpkg-backup") ||
+                endswith(filename, ".dpkg-remove") ||
+                endswith(filename, ".ucf-new") ||
+                endswith(filename, ".ucf-old") ||
+                endswith(filename, ".ucf-dist") ||
                 endswith(filename, ".swp");
 }
 
