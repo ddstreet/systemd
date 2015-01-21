@@ -125,6 +125,11 @@ static int add_alias(const char *service, const char *alias) {
         assert(service);
         assert(alias);
 
+        if (streq(service, alias)) {
+                log_error("Ignoring creation of an alias %s for itself", service);
+                return 0;
+        }
+
         link = strjoin(arg_dest, "/", alias, NULL);
         if (!link)
                 return log_oom();
@@ -148,6 +153,7 @@ static int generate_unit_file(SysvStub *s) {
         _cleanup_free_ char *wants = NULL;
         _cleanup_free_ char *conflicts = NULL;
         int r;
+        struct stat st;
 
         before = strv_join(s->before, " ");
         if (!before)
@@ -168,6 +174,14 @@ static int generate_unit_file(SysvStub *s) {
         unit = strjoin(arg_dest, "/", s->name, NULL);
         if (!unit)
                 return log_oom();
+
+        /* We might already have a symlink with the same name from a Provides:,
+         * or from backup files like /etc/init.d/foo.bak. Real scripts always win,
+         * so remove an existing link */
+        if (lstat(unit, &st) == 0 && S_ISLNK(st.st_mode)) {
+                log_warning("Overwriting existing symlink %s with real service", unit);
+                unlink(unit);
+        }
 
         f = fopen(unit, "wxe");
         if (!f) {
@@ -283,6 +297,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
         unsigned i;
         char *r;
         const char *n;
+        _cleanup_free_ char *filename_no_sh = NULL;
 
         assert(name);
         assert(_r);
@@ -304,6 +319,13 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 goto finish;
         }
 
+        /* strip ".sh" suffix from file name for comparison */
+        filename_no_sh = strdup(filename);
+        if (!filename_no_sh)
+                return -ENOMEM;
+        if (endswith(filename, ".sh"))
+                filename_no_sh[strlen(filename)-3] = '\0';
+
         /* If we don't know this name, fallback heuristics to figure
          * out whether something is a target or a service alias. */
 
@@ -313,7 +335,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
 
                 /* Facilities starting with $ are most likely targets */
                 r = unit_name_build(n, NULL, ".target");
-        } else if (filename && streq(name, filename))
+        } else if (filename && streq(name, filename_no_sh))
                 /* Names equaling the file name of the services are redundant */
                 return 0;
         else
