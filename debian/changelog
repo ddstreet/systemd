@@ -1,3 +1,36 @@
+systemd (218-5) experimental; urgency=medium
+
+  * Drop logger.agent. It hasn't been called from any udev rule for a long
+    time, and looks obsolete.
+  * debian/rules: Configure with --disable-firstboot to replace some manual
+    file removals.
+  * debian/rules: Remove manual file installation, move them to
+    debian/*.install. Move all Debian specific installed files to
+    debian/extra/.
+  * Merge some changes from the Ubuntu package to reduce the delta; these only
+    apply when building on/for Ubuntu:
+    - Add 40-hyperv-hotadd.rules: Workaround for LP: #1233466.
+    - Add 61-persistant-storage-android.rules to create persistent symlinks
+      for partitions with PARTNAME. By Ricardo Salveti.
+    - Add 71-power-switch-proliant.rules for supporting the power switches of
+      ProLiant Server Cartridges. By Dann Frazier.
+    - Add 78-graphics-card.rules: Mark KMS capable graphics devices as
+      PRIMARY_DEVICE_FOR_DISPLAY so that we can wait for those in plymouth.
+      By Scott James Remnant.
+    - Don't install the Debian *.agent scripts. Instead, have Ubuntu's
+      80-networking.rules directly pull in ifup@.service, which is much easier
+      and more efficient.
+  * Make EPERM/EACCESS when applying OOM adjustment for forked processes
+    non-fatal. This happens in user namespaces like unprivileged LXC
+    containers.
+  * Fix assertion failure due to /dev/urandom being unmounted when shutting
+    down unprivileged containers. Thanks Stéphane Graber.
+  * Enable EFI support. This mostly auto-mounts /sys/firmware/efi/efivars, but
+    also provides a generator for auto-detecting the root and the /boot/efi
+    partition if they aren't in /etc/fstab. (Closes: #773533)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 22 Jan 2015 16:13:46 +0100
+
 systemd (218-4) experimental; urgency=medium
 
   [ Michael Biebl ]
