@@ -26,6 +26,7 @@ usr/bin/systemd-detect-virt
 usr/bin/systemd-delta
 usr/bin/systemd-run
 usr/bin/systemd-path
+usr/bin/bootctl
 usr/bin/busctl
 usr/bin/timedatectl
 usr/bin/localectl
@@ -47,3 +48,9 @@ usr/lib/sysctl.d/
 usr/lib/systemd/
 usr/lib/tmpfiles.d/
 usr/share/locale/
+../../extra/init-functions.d lib/lsb/
+../../extra/tmpfiles.d/*.conf usr/lib/tmpfiles.d/
+../../extra/systemd-logind-launch lib/systemd/
+../../extra/debian-fixup lib/systemd/
+../../extra/debian-fixup.service lib/systemd/system/
+../../extra/ifup@.service lib/systemd/system/
