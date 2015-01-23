@@ -17,7 +17,7 @@ disable-failing-buildd-tests.patch
 block-polling.patch
 fix-race-condition-of-serio-driver-module-not-loading.patch
 load-fbcon.patch
-always-probe-cpu-support-drivers.patch
+load-modules-for-bound-devices.patch
 support-phablet-etc-writable.patch
 ignore-omap-vsync.patch
 pam-check-runtime-dir-user.patch
