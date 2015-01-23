@@ -1,3 +1,12 @@
+systemd (204-5ubuntu20.10) trusty; urgency=medium
+
+  * Replace our always-probe-cpu-support-drivers.patch (which is specific to
+    the "cpu" subsystem) with the more generic upstream fix which also applies
+    to other subsystems. Fixes some modules not loading automatically when
+    using kernel backports > 3.11. (LP: #1404509)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 23 Jan 2015 08:18:59 +0100
+
 systemd (204-5ubuntu20.9) trusty; urgency=medium
 
   * Pull latest keymaps from trunk, as per standing microrelease exception.
