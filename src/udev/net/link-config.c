@@ -197,7 +197,7 @@ int link_config_load(link_config_ctx *ctx) {
 
         if (!enable_name_policy()) {
                 ctx->enable_name_policy = false;
-                log_info("Network interface NamePolicy= disabled on kernel command line, ignoring.");
+                log_debug("Network interface NamePolicy= disabled on kernel command line, ignoring.");
         }
 
         /* update timestamp */
