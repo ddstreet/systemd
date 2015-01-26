@@ -288,6 +288,27 @@ static int scope_start(Unit *u) {
         if (!u->transient && UNIT(s)->manager->n_reloading <= 0)
                 return -ENOENT;
 
+        /* put logind sessions into all controllers, for LXC user containers */
+        if (UNIT_ISSET(u->slice) && startswith(UNIT_DEREF(u->slice)->id, "user-")) {
+                long uid = atol(UNIT_DEREF(u->slice)->id + 5); /* FIXME: Eww! Is there a better way to get the UID? */
+                if (uid > 0) {
+                        r = unit_realize_cgroup(u);
+                        if (r < 0) {
+                                log_unit_warning(u->id, "Cannot realize cgroup for %s: %s", u->id, strerror(-r));
+                                return r;
+                        }
+                        assert(u->cgroup_path);
+
+                        r = cg_create_everywhere_uid(u->manager->cgroup_supported,
+                                                     u->manager->cgroup_supported,
+                                                     u->cgroup_path, (uid_t) uid);
+                        if (r < 0)
+                                log_unit_warning(u->id, "Cannot create cgroup controllers for %s: %s", u->id, strerror(-r));
+                } else {
+                        log_unit_warning(u->id, "Cannot determine UID from slice %s", UNIT_DEREF(u->slice)->id);
+                }
+        }
+
         r = unit_attach_pids_to_cgroup(u);
         if (r < 0)
                 return r;
