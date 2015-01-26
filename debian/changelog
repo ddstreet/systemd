@@ -1,3 +1,25 @@
+systemd (218-6) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * initramfs hook: Install 61-persistant-storage-android.rules if it exists.
+  * Generate POT file during package build, for translators.
+  * Pull latest keymaps from upstream git.
+  * Order ifup@.service and networking.service after network-pre.target.
+    (Closes: #766938)
+  * Tone down "Network interface NamePolicy= disabled on kernel commandline,
+    ignoring" info message to debug, as we expect this while we disable
+    net.ifnames by default. (Closes: #762101, LP: #1411992)
+
+  [ Michael Biebl ]
+  * Ship bash-completion for udevadm. (Closes: #776166)
+  * Drop rc-local generator in favor of statically enabling rc-local.service,
+    and drop halt-local.service which is unnecessary on Debian.
+    (Closes: #776170)
+  * Drop the obsolete libsystemd-* libraries, there are no reverse
+    dependencies left.
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 26 Jan 2015 15:45:45 +0100
+
 systemd (218-5) experimental; urgency=medium
 
   * Drop logger.agent. It hasn't been called from any udev rule for a long
