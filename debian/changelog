@@ -1,3 +1,32 @@
+systemd (218-7) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * Don't attempt to mount the same swap partition twice through different
+    device node aliases. (Closes: #772182, LP: #1399595)
+  * logind: handle closing sessions over daemon restarts. (Closes: #759515,
+    LP: #1415104)
+  * logind: Fix sd_eviocrevoke ioctl call, to make forced input device release
+    after log out actually work.
+  * debian/rules: Drop obsolete --disable-multi-seat-x and
+    --with-firmware-path configure options.
+  * debian/udev.README.Debian: Trim the parts which are obsolete, wrong, or
+    described in manpages. Only keep the Debian specific bits.
+    (Part of #776546)
+  * Actually install udev's README.Debian when building for Debian.
+    (Closes: #776546)
+  * Create system group "input" which was introduced in 215. (LP: #1414409)
+  * ifup@.service: Don't fail if the interface is not configured in
+    /etc/network/interfaces at all. (LP: #1414426)
+
+  [ Michael Biebl ]
+  * Update Vcs-Browser URL to use cgit and https.
+  * Map $x-display-manager LSB facility to display-manager.service instead of
+    making it a target. Using a target had the downside that multiple display
+    managers could hook into it at the same time which could lead to several
+    failed start attempts for the non-default display manager.
+
+ -- Martin Pitt <mpitt@debian.org>  Sun, 01 Feb 2015 20:48:49 +0100
+
 systemd (218-6) experimental; urgency=medium
 
   [ Martin Pitt ]
