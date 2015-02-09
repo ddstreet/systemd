@@ -5176,6 +5176,9 @@ static int enable_sysv_units(const char *verb, char **args) {
 
                 name = args[f++];
 
+                if (!endswith(name, ".service"))
+                        continue;
+
                 if (path_is_absolute(name))
                         continue;
 
@@ -5195,8 +5198,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!p)
                         return log_oom();
 
-                if (endswith(name, ".service"))
-                        p[strlen(p) - strlen(".service")] = 0;
+                p[strlen(p) - strlen(".service")] = 0;
                 found_sysv = access(p, F_OK) >= 0;
                 if (!found_sysv)
                         continue;
