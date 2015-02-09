@@ -622,7 +622,7 @@ systemgenerator_PROGRAMS += \
 	systemd-sysv-generator
 
 MULTI_USER_TARGET_WANTS += \
-	units/rc-local.service
+	rc-local.service
 endif
 
 EXTRA_DIST += \

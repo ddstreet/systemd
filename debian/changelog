@@ -1,3 +1,49 @@
+systemd (218-8) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * boot-and-services autopkgtest: Ensure that there are no failed units,
+    except possibly systemd-modules-load.service (as that notoriously fails
+    with cruft in /etc/modules).
+  * Revert "input" system group creation in systemd.postinst from 218-7. It's
+    already done in udev.postinst.
+  * ifup@.service: Revert checking for existance of ifupdown config for that
+    interface, net.agent already does that.
+  * Drop Also-redirect-to-update-rc.d-when-not-using-.service.patch; not
+    necessary any more with the current version (mangle_names() already takes
+    care of this).
+  * Merge into Add-support-for-rcS.d-init-scripts-to-the-sysv-gener.patch:
+    - Do-not-order-rcS.d-services-after-local-fs.target-if.patch, as it
+      partially reverts the above, and is just fixing it.
+    - Map-rcS.d-init-script-dependencies-to-their-systemd-.patch as it's just
+      adding some missing functionality for the same purpose.
+  * Merge Run-update-rc.d-defaults-before-update-rc.d-enable-d.patch into
+    Make-systemctl-enable-disable-call-update-rc.d-for-s.patch as the former
+    is fixing the latter and is not an independent change.
+  * Drop Launch-logind-via-a-shell-wrapper.patch and systemd-logind-launch
+    wrapper. The only remaining thing that we need from it is to create
+    /run/systemd/, move that into the D-BUS service file directly.
+  * /lib/lsb/init-functions.d/40-systemd: Avoid deadlocks during bootup and
+    shutdown. DHCP/ifupdown and similar hooks which call "/etc/init.d/foo
+    reload" can easily cause deadlocks, since the synchronous wait plus
+    systemd's normal behaviour of transactionally processing all dependencies
+    first easily causes dependency loops. Thus during boot/shutdown operate
+    only on the unit and not on its dependencies, just like SysV behaves.
+    (Closes: #777115, LP: #1417010)
+  * Only start logind if dbus is installed. This fixes the noisy startup
+    failure in environments without dbus, such as LXC containers or servers.
+    (part of #772700)
+  * Add getty-static.service unit which starts getty@.service on tty 2 to 6 if
+    dbus is not installed, and hence logind cannot auto-start them on demand.
+    (Closes: #772700)
+
+  [ Michael Biebl ]
+  * Update insserv-generator and map $x-display-manager to
+    display-manager.service, following the recent change in sysv-generator.
+    This avoids creating references to a no longer existing
+    x-display-manager.target unit.
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 09 Feb 2015 18:07:22 +0100
+
 systemd (218-7) experimental; urgency=medium
 
   [ Martin Pitt ]
