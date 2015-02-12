@@ -1530,7 +1530,11 @@ static int mount_load_proc_self_mountinfo(Manager *m, bool set_flags) {
         if (!tb || !itr)
                 return log_oom();
 
-        r = mnt_table_parse_mtab(tb, NULL);
+        /* FIXME: We really mean "/proc/self/mountinfo" here, but as that's a
+         * regular file this will trick libmount into not parsing
+         * /run/mount/utab; so give it an invalid file to trigger the fallback
+         * to /proc/self/mountinfo. */
+        r = mnt_table_parse_mtab(tb, "/");
         if (r < 0)
                 return r;
 
