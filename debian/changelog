@@ -1,3 +1,35 @@
+systemd (218-9) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * debian/tests/logind: With dropped systemd-logind-launch we don't have a
+    visible /sys/fs/cgroup/systemd/ any more under cgmanager. So adjust the
+    test to check /proc/self/cgroup instead.
+  * Add unit-config autopkgtest to check systemd unit/sysv init enabling and
+    disabling via systemctl. This also reproduces #777613.
+  * systemctl: Always install/enable/disable native units, even if there is a
+    corresponding SysV script and we call update-rc.d; while the latter
+    handles WantedBy=, it does not handle Alias=. (Closes: #777613)
+  * cgroup: Don't trim cgroup trees created by someone else, just the ones
+    that systemd itself created. This avoids cleaning up empty cgroups from
+    e.g. LXC. (Closes: #777601)
+  * Don't parse /etc/mtab for current mounts, but /proc/self/mountinfo. If the
+    former is a file, it's most likely outdated on boot, leading to race
+    conditions and unmounts during boot. (LP: #1419623)
+
+  [ Michael Biebl ]
+  * Explicitly disable the features we don't want to build for those with
+    autodetection. This ensures reliable build results in dirty build
+    environments.
+  * Disable AppArmor support in the udeb build.
+  * core: Don't fail to run services in --user instances if $HOME is missing.
+    (Closes: #759320)
+
+  [ Didier Roche ]
+  * default-display-manager-generator: Avoid unnecessary /dev/null symlink and
+    warning if there is no display-manager.service unit.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 12 Feb 2015 18:45:12 +0100
+
 systemd (218-8) experimental; urgency=medium
 
   [ Martin Pitt ]
