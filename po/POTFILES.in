@@ -3,3 +3,4 @@ src/locale/org.freedesktop.locale1.policy.in
 src/login/org.freedesktop.login1.policy.in
 src/timedate/org.freedesktop.timedate1.policy.in
 src/core/org.freedesktop.systemd1.policy.in.in
+src/fsckd/fsckd.c
