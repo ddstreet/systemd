@@ -15,7 +15,7 @@ ACTION=="add", ATTR{removable}=="1", ATTR{events_poll_msecs}=="-1", ATTR{events_
 SUBSYSTEM!="block", GOTO="persistent_storage_end"
 
 # skip rules for inappropriate block devices
-KERNEL=="fd*|mtd*|nbd*|gnbd*|btibm*|dm-*|md*|zram*", GOTO="persistent_storage_end"
+KERNEL=="fd*|mtd*|nbd*|gnbd*|btibm*|dm-*|md*|zram*|mmcblk[0-9]*rpmb", GOTO="persistent_storage_end"
 
 # ignore partitions that span the entire disk
 TEST=="whole_disk", GOTO="persistent_storage_end"
