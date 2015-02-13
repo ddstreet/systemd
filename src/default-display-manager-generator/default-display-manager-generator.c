@@ -20,6 +20,7 @@
 ***/
 
 #include <errno.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 #include "fileio.h"
@@ -43,6 +44,7 @@ static int generate_display_manager_alias(void) {
 
         _cleanup_free_ char *default_dm_path = NULL, *enabled_dm_unit = NULL;
         const char *default_dm = NULL, *in_mem_symlink = NULL, *target_unit_path = NULL;
+        bool dm_service_exists = true;
         int r;
 
         r = read_full_file(default_dm_file, &default_dm_path, NULL);
@@ -53,8 +55,10 @@ static int generate_display_manager_alias(void) {
         default_dm = strstrip(basename(default_dm_path));
 
         r = readlink_value(dm_service_unit, &enabled_dm_unit);
-        if (r < 0)
+        if (r < 0) {
                 enabled_dm_unit = strdup("");
+                dm_service_exists = false;
+        }
 
         /* all is fine if the info matches */
         if (streq(strappenda(default_dm, ".service"), enabled_dm_unit))
@@ -64,6 +68,11 @@ static int generate_display_manager_alias(void) {
 
         /* we only create the alias symlink for non sysvinit services */
         if (access(target_unit_path, F_OK) < 0 && (errno == ENOENT)) {
+                /* if the dm service was already disabled, nothing to be done */
+                if (!dm_service_exists) {
+                        log_debug("No %s file, nothing to mask", dm_service_unit);
+                        return 0;
+                }
                 log_warning("%s is not a systemd unit, we disable the systemd enabled display manager", target_unit_path);
                 target_unit_path = "/dev/null";
         } else {
