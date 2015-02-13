@@ -50,7 +50,7 @@
 
         <refsynopsisdiv>
                 <para><filename>systemd-timesyncd.service</filename></para>
-                <para><filename>/usr/lib/systemd/systemd-timesyncd</filename></para>
+                <para><filename>/lib/systemd/systemd-timesyncd</filename></para>
         </refsynopsisdiv>
 
         <refsect1>
