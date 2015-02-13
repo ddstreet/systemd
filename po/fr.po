@@ -421,3 +421,15 @@ msgstr "Recharger l'état de systemd"
 #: ../src/core/org.freedesktop.systemd1.policy.in.in.h:10
 msgid "Authentication is required to reload the systemd state."
 msgstr "Authentification requise pour recharger l'état de systemd"
+
+#: ../src/fsckd/fsckd.c:185
+#, c-format
+msgid "Press Ctrl+C to cancel all checks in progress"
+msgstr "Appuyez sur Ctrl+C pour annuler toutes les vérifications en cours"
+
+#: ../src/fsckd/fsckd.c:226
+#, c-format
+msgid "Checking in progress on %d disk (%3.1f%% complete)"
+msgid_plural "Checking in progress on %d disks (%3.1f%% complete)"
+msgstr[0] "Vérification en cours sur %d disque (%3.1f%% complété)"
+msgstr[1] "Vérification en cours sur %d disques (%3.1f%% complété)"

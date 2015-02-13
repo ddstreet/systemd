@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: systemd master\n"
 "Report-Msgid-Bugs-To: https://bugs.freedesktop.org/enter_bug.cgi?"
 "product=systemd&keywords=I18N+L10N&component=general\n"
-"POT-Creation-Date: 2014-06-02 10:25+0000\n"
+"POT-Creation-Date: 2015-01-26 13:38+0100\n"
 "PO-Revision-Date: 2014-06-02 22:43+0100\n"
 "Last-Translator: Benjamin Steinwender <b@stbe.at>\n"
 "Language-Team: German <gnome-de@gnome.org>\n"
@@ -19,6 +19,49 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 1.6.5\n"
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:1
+msgid "Send passphrase back to system"
+msgstr "Passphrase zurück an das System senden"
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:2
+msgid ""
+"Authentication is required to send the entered passphrase back to the system."
+msgstr ""
+"Legitimierung ist zum Senden des eingegebenen Kennworts zurück an das System "
+"notwendig."
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:3
+msgid "Manage system services or units"
+msgstr ""
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:4
+#, fuzzy
+msgid "Authentication is required to manage system services or units."
+msgstr ""
+"Legitimierung ist notwendig für den Zugriff auf die System- und "
+"Dienstverwaltung."
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:5
+msgid "Manage system service or unit files"
+msgstr ""
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:6
+#, fuzzy
+msgid "Authentication is required to manage system service or unit files."
+msgstr ""
+"Legitimierung ist notwendig für den Zugriff auf die System- und "
+"Dienstverwaltung."
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:7
+#, fuzzy
+msgid "Reload the systemd state"
+msgstr "Das System neu starten"
+
+#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:8
+#, fuzzy
+msgid "Authentication is required to reload the systemd state."
+msgstr "Legitimierung ist zum Festlegen der Systemzeit notwendig."
 
 #: ../src/hostname/org.freedesktop.hostname1.policy.in.h:1
 msgid "Set host name"
@@ -46,6 +89,17 @@ msgstr "Maschinen-Information festlegen"
 
 #: ../src/hostname/org.freedesktop.hostname1.policy.in.h:6
 msgid "Authentication is required to set local machine information."
+msgstr ""
+"Legitimierung ist zum Festlegen der lokalen Maschinen-Information "
+"erforderlich."
+
+#: ../src/import/org.freedesktop.import1.policy.in.h:1
+msgid "Download a VM or container image"
+msgstr ""
+
+#: ../src/import/org.freedesktop.import1.policy.in.h:2
+#, fuzzy
+msgid "Authentication is required to download a VM or container image"
 msgstr ""
 "Legitimierung ist zum Festlegen der lokalen Maschinen-Information "
 "erforderlich."
@@ -356,6 +410,15 @@ msgstr ""
 "Legitimierung ist zum Versetzen des System in den Ruhezustand notwendig, "
 "während eine Anwendung wünscht dies zu verhindern."
 
+#: ../src/machine/org.freedesktop.machine1.policy.in.h:1
+msgid "Log into a local container"
+msgstr ""
+
+#: ../src/machine/org.freedesktop.machine1.policy.in.h:2
+#, fuzzy
+msgid "Authentication is required to log into a local container"
+msgstr "Legitimierung ist zum Festlegen des lokalen Rechnernamens notwendig"
+
 #: ../src/timedate/org.freedesktop.timedate1.policy.in.h:1
 msgid "Set system time"
 msgstr "Die Systemzeit festlegen"
@@ -396,23 +459,16 @@ msgstr ""
 "Legitimierung ist zum Festlegen, ob Netzwerkzeitabgeich eingeschaltet sein "
 "soll, erforderlich."
 
-#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:1
-msgid "Send passphrase back to system"
-msgstr "Passphrase zurück an das System senden"
-
-#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:2
-msgid ""
-"Authentication is required to send the entered passphrase back to the system."
+#: ../src/fsckd/fsckd.c:185
+msgid "Press Ctrl+C to cancel all checks in progress"
 msgstr ""
-"Legitimierung ist zum Senden des eingegebenen Kennworts zurück an das System "
-"notwendig."
 
-#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:3
-msgid "Privileged system and service manager access"
-msgstr "Privilegierter Zugriff auf die System- und Dienstverwaltung"
+#: ../src/fsckd/fsckd.c:226
+#, c-format
+msgid "Checking in progress on %d disk (%3.1f%% complete)"
+msgid_plural "Checking in progress on %d disks (%3.1f%% complete)"
+msgstr[0] ""
+msgstr[1] ""
 
-#: ../src/core/org.freedesktop.systemd1.policy.in.in.h:4
-msgid "Authentication is required to access the system and service manager."
-msgstr ""
-"Legitimierung ist notwendig für den Zugriff auf die System- und "
-"Dienstverwaltung."
+#~ msgid "Privileged system and service manager access"
+#~ msgstr "Privilegierter Zugriff auf die System- und Dienstverwaltung"
