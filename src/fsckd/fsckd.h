@@ -24,6 +24,7 @@
 
 #define FSCKD_SOCKET_PATH "/run/systemd/fsckd"
 
+#include <stdbool.h>
 #include "libudev.h"
 
 typedef struct FsckProgress {
@@ -32,3 +33,7 @@ typedef struct FsckProgress {
         size_t max;
         int pass;
 } FsckProgress;
+
+typedef struct FsckdMessage {
+        bool cancel;
+} FsckdMessage;
