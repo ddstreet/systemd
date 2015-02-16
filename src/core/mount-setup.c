@@ -129,6 +129,7 @@ static const char ignore_paths[] =
         /* Container bind mounts */
         "/proc/sys\0"
         "/dev/console\0"
+        "/dev/urandom\0"
         "/proc/kmsg\0";
 
 bool mount_point_is_api(const char *path) {
