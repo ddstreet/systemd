@@ -25,6 +25,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <libintl.h>
+#include <locale.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <sched.h>
@@ -67,6 +69,7 @@
 #include <sys/auxv.h>
 #endif
 
+#include "config.h"
 #include "macro.h"
 #include "util.h"
 #include "ioprio.h"
@@ -5670,6 +5673,11 @@ void *xbsearch_r(const void *key, const void *base, size_t nmemb, size_t size,
                         return (void *)p;
         }
         return NULL;
+}
+
+void init_gettext(void) {
+        setlocale(LC_ALL, "");
+        textdomain(GETTEXT_PACKAGE);
 }
 
 bool is_locale_utf8(void) {
