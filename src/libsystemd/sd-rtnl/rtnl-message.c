@@ -1294,8 +1294,10 @@ static int socket_recv_message(int fd, struct iovec *iov, uint32_t *_group, bool
                 /* no data */
                 if (errno == ENOBUFS)
                         log_debug("rtnl: kernel receive buffer overrun");
+                else if (errno == EAGAIN)
+                        log_debug("rtnl: no data in socket");
 
-                return (errno == EAGAIN) ? 0 : -errno;
+                return (errno == EAGAIN || errno == EINTR) ? 0 : -errno;
         } else if (r == 0)
                 /* connection was closed by the kernel */
                 return -ECONNRESET;
@@ -1307,8 +1309,10 @@ static int socket_recv_message(int fd, struct iovec *iov, uint32_t *_group, bool
                         struct ucred *ucred = (void *)CMSG_DATA(cmsg);
 
                         /* from the kernel */
-                        if (ucred->uid == 0 && ucred->pid == 0)
+                        if (ucred->pid == 0)
                                 auth = true;
+                        else
+                                log_debug("rtnl: ignoring message from pid %u", ucred->pid);
                 } else if (cmsg->cmsg_level == SOL_NETLINK &&
                            cmsg->cmsg_type == NETLINK_PKTINFO &&
                            cmsg->cmsg_len == CMSG_LEN(sizeof(struct nl_pktinfo))) {
@@ -1319,9 +1323,17 @@ static int socket_recv_message(int fd, struct iovec *iov, uint32_t *_group, bool
                 }
         }
 
-        if (!auth)
+        if (!auth) {
                 /* not from the kernel, ignore */
+                if (peek) {
+                        /* drop the message */
+                        r = recvmsg(fd, &msg, 0);
+                        if (r < 0)
+                                return (errno == EAGAIN || errno == EINTR) ? 0 : -errno;
+                }
+
                 return 0;
+        }
 
         if (group)
                 *_group = group;
