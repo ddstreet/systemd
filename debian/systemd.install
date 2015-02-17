@@ -42,6 +42,7 @@ usr/share/doc/
 usr/lib/*/pkgconfig/systemd.pc
 usr/share/polkit-1/
 usr/share/systemd/kbd-model-map
+usr/share/systemd/language-fallback-map
 usr/lib/binfmt.d/
 usr/lib/modules-load.d/
 usr/lib/sysctl.d/
@@ -51,7 +52,4 @@ usr/share/locale/
 ../../extra/init-functions.d lib/lsb/
 ../../extra/tmpfiles.d/*.conf usr/lib/tmpfiles.d/
 ../../extra/debian-fixup lib/systemd/
-../../extra/debian-fixup.service lib/systemd/system/
-../../extra/getty-static.service lib/systemd/system/
-../../extra/ifup@.service lib/systemd/system/
-../../extra/network-pre.conf lib/systemd/system/networking.service.d/
+../../extra/units/* lib/systemd/system/

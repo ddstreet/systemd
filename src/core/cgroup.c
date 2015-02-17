@@ -292,9 +292,12 @@ void cgroup_context_apply(CGroupContext *c, CGroupControllerMask mask, const cha
         if (mask == 0)
                 return;
 
-        /* Some cgroup attributes are not support on the root cgroup,
+        /* Some cgroup attributes are not supported on the root cgroup,
          * hence silently ignore */
         is_root = isempty(path) || path_equal(path, "/");
+        if (is_root)
+                /* Make sure we don't try to display messages with an empty path. */
+                path = "/";
 
         /* We generally ignore errors caused by read-only mounted
          * cgroup trees (assuming we are running in a container then),
@@ -377,7 +380,7 @@ void cgroup_context_apply(CGroupContext *c, CGroupControllerMask mask, const cha
                 }
         }
 
-        if (mask & CGROUP_MEMORY) {
+        if ((mask & CGROUP_MEMORY) && !is_root) {
                 if (c->memory_limit != (uint64_t) -1) {
                         char buf[DECIMAL_STR_MAX(uint64_t) + 1];
 
@@ -951,7 +954,7 @@ int manager_setup_cgroup(Manager *m) {
                 if (m->pin_cgroupfs_fd < 0)
                         return log_error_errno(errno, "Failed to open pin file: %m");
 
-                /* 6.  Always enable hierarchial support if it exists... */
+                /* 6.  Always enable hierarchical support if it exists... */
                 cg_set_attribute("memory", "/", "memory.use_hierarchy", "1");
         }
 

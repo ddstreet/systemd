@@ -22,7 +22,6 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/capability.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -44,6 +43,7 @@
 #include "bus-error.h"
 #include "bus-common-errors.h"
 #include "event-util.h"
+#include "selinux-util.h"
 #include "copy.h"
 
 #define NULL_ADJTIME_UTC "0.0 0 0\n0\nUTC\n"
@@ -93,7 +93,7 @@ static int symlink_or_copy(const char *from, const char *to) {
                 free(pf);
                 free(pt);
 
-                return copy_file(from, to, O_EXCL, 0644);
+                return copy_file(from, to, O_EXCL, 0644, 0);
         }
 
         if (symlink(from, to) < 0) {

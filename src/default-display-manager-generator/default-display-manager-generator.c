@@ -61,10 +61,10 @@ static int generate_display_manager_alias(void) {
         }
 
         /* all is fine if the info matches */
-        if (streq(strappenda(default_dm, ".service"), enabled_dm_unit))
+        if (streq(strjoina(default_dm, ".service"), enabled_dm_unit))
                 return 0;
 
-        target_unit_path = strappenda(SYSTEM_DATA_UNIT_PATH, "/", default_dm, ".service");
+        target_unit_path = strjoina(SYSTEM_DATA_UNIT_PATH, "/", default_dm, ".service");
 
         /* we only create the alias symlink for non sysvinit services */
         if (access(target_unit_path, F_OK) < 0 && (errno == ENOENT)) {
@@ -80,7 +80,7 @@ static int generate_display_manager_alias(void) {
                             default_dm_file, default_dm, enabled_dm_unit, default_dm);
         }
 
-        in_mem_symlink = strappenda(dest, "/display-manager.service");
+        in_mem_symlink = strjoina(dest, "/display-manager.service");
         mkdir_parents_label(in_mem_symlink, 0755);
         if (symlink(target_unit_path, in_mem_symlink) < 0) {
                 log_error("Failed to create symlink %s: %m", in_mem_symlink);
