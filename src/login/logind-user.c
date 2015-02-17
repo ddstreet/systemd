@@ -57,7 +57,7 @@ User* user_new(Manager *m, uid_t uid, gid_t gid, const char *name) {
         if (asprintf(&u->state_file, "/run/systemd/users/"UID_FMT, uid) < 0)
                 goto fail;
 
-        if (hashmap_put(m->users, ULONG_TO_PTR((unsigned long) uid), u) < 0)
+        if (hashmap_put(m->users, UID_TO_PTR(uid), u) < 0)
                 goto fail;
 
         u->manager = m;
@@ -98,7 +98,7 @@ void user_free(User *u) {
 
         free(u->runtime_path);
 
-        hashmap_remove(u->manager->users, ULONG_TO_PTR((unsigned long) u->uid));
+        hashmap_remove(u->manager->users, UID_TO_PTR(u->uid));
 
         free(u->name);
         free(u->state_file);
@@ -330,13 +330,12 @@ static int user_mkdir_runtime_path(User *u) {
         if (path_is_mount_point(p, false) <= 0) {
                 _cleanup_free_ char *t = NULL;
 
-                mkdir(p, 0700);
+                (void) mkdir(p, 0700);
 
                 if (mac_smack_use())
                         r = asprintf(&t, "mode=0700,smackfsroot=*,uid=" UID_FMT ",gid=" GID_FMT ",size=%zu", u->uid, u->gid, u->manager->runtime_dir_size);
                 else
                         r = asprintf(&t, "mode=0700,uid=" UID_FMT ",gid=" GID_FMT ",size=%zu", u->uid, u->gid, u->manager->runtime_dir_size);
-
                 if (r < 0) {
                         r = log_oom();
                         goto fail;
@@ -344,8 +343,20 @@ static int user_mkdir_runtime_path(User *u) {
 
                 r = mount("tmpfs", p, "tmpfs", MS_NODEV|MS_NOSUID, t);
                 if (r < 0) {
-                        log_error_errno(r, "Failed to mount per-user tmpfs directory %s: %m", p);
-                        goto fail;
+                        if (errno != EPERM) {
+                                r = log_error_errno(errno, "Failed to mount per-user tmpfs directory %s: %m", p);
+                                goto fail;
+                        }
+
+                        /* Lacking permissions, maybe
+                         * CAP_SYS_ADMIN-less container? In this case,
+                         * just use a normal directory. */
+
+                        r = chmod_and_chown(p, 0700, u->uid, u->gid);
+                        if (r < 0) {
+                                log_error_errno(r, "Failed to change runtime directory ownership and mode: %m");
+                                goto fail;
+                        }
                 }
         }
 
@@ -353,7 +364,12 @@ static int user_mkdir_runtime_path(User *u) {
         return 0;
 
 fail:
-        free(p);
+        if (p) {
+                /* Try to clean up, but ignore errors */
+                (void) rmdir(p);
+                free(p);
+        }
+
         u->runtime_path = NULL;
         return r;
 }
@@ -518,7 +534,11 @@ static int user_remove_runtime_path(User *u) {
         if (r < 0)
                 log_error_errno(r, "Failed to remove runtime directory %s: %m", u->runtime_path);
 
-        if (path_is_mount_point(u->runtime_path, false) && umount2(u->runtime_path, MNT_DETACH) < 0)
+        /* Ignore cases where the directory isn't mounted, as that's
+         * quite possible, if we lacked the permissions to mount
+         * something */
+        r = umount2(u->runtime_path, MNT_DETACH);
+        if (r < 0 && errno != EINVAL && errno != ENOENT)
                 log_error_errno(errno, "Failed to unmount user runtime directory %s: %m", u->runtime_path);
 
         r = rm_rf(u->runtime_path, false, true, false);
@@ -647,7 +667,7 @@ int user_check_linger_file(User *u) {
         if (!cc)
                 return -ENOMEM;
 
-        p = strappenda("/var/lib/systemd/linger/", cc);
+        p = strjoina("/var/lib/systemd/linger/", cc);
 
         return access(p, F_OK) >= 0;
 }
