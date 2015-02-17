@@ -1,3 +1,43 @@
+systemd (219-1) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * New upstream release:
+    - Fix spelling mistake in systemd.unit(5). (Closes: #773302)
+    - Fix timeouts with D-Bus, leading to SIGFPE. (Closes: #774012)
+    - Fix load/save of multiple rfkill states. (Closes: #759489)
+    - Non-persistant journal (/run/log/journal) is now readable by group adm.
+      (Closes: #771980)
+    - Read netdev user mount option to correctly order network mounts after
+      network.target. (Closes: #769186)
+    - Fix 60-keyboard.hwdb documentation and whitespace handling.
+      (Closes: #757367)
+    - Fix ThinkPad X1 Carbon 20BT trackpad buttons (LP: #1414930)
+    - Drop all backported patches and port the others to new upstream release.
+  * Bump libblkid-dev build dependency as per upstream configure.ac.
+  * debian/systemd.install: Add new language-fallback-map file.
+  * debian/udev.install: Add new systemd-hwdb tool.
+  * debian/libsystemd0.symbols: Add new symbols from this release.
+  * tmpfiles.d/systemd.conf: Drop "wheel" ACL (that group does not exist in
+    Debian) to make the ACL for "adm" actually work.
+  * debian/rules: Explicitly disable importd for now; it should still mature a
+    bit. Explicitly enable hwdb support.
+  * /lib/lsb/init-functions.d/40-systemd: Call systemctl is-system-running
+    with --quiet. (LP: #1421058)
+  * debian/systemd.postrm: Clean getty@tty1.service and remote-fs.target
+    enablement symlinks on purge. (Closes: #778499)
+  * Move all Debian specific units in the systemd package into
+    debian/extra/units/ and simplify debian/systemd.install.
+  * Enable timesyncd by default. Add a config drop-in to not start if ntp,
+    openntpd, or chrony is installed. (Closes: #755722)
+  * debian/systemd.links: Drop obsolete hwclockfirst.service mask link, this
+    was dropped in wheezy's util-linux already.
+  * debian/udev.postinst: Call systemd-hwdb instead of udevadm hwdb.
+
+  [ Michael Biebl ]
+  * Stop removing firstboot man pages. They are now installed conditionally.
+
+ -- Martin Pitt <mpitt@debian.org>  Tue, 17 Feb 2015 15:51:38 +0100
+
 systemd (218-10) experimental; urgency=medium
 
   * Pull latest keymaps from upstream git. (LP: #1334968, #1409721)
