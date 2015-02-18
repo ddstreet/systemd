@@ -1430,7 +1430,6 @@ tests += \
 	test-locale-util \
 	test-execute \
 	test-copy \
-	test-sigbus \
 	test-verbs
 
 EXTRA_DIST += \
