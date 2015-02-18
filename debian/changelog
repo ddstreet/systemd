@@ -1,15 +1,63 @@
-systemd (219-2) experimental; urgency=medium
+systemd (219-1ubuntu1) vivid; urgency=medium
+
+  * Merge with Debian experimental. Remaining Ubuntu changes:
+    - Hack to support system-image read-only /etc, and modify files in
+      /etc/writable/ instead.
+    - Keep our much simpler udev maintainer scripts (all platforms must
+      support udev, no debconf).
+    - initramfs init-top: Drop $ROOTDELAY, we do that in a more sensible way
+      with wait-for-root. Will get applicable to Debian once Debian gets
+      wait-for-root in initramfs-tools.
+    - initramfs init-bottom: If LVM is installed, settle udev,
+      otherwise we get missing LV symlinks. Workaround for LP #1185394.
+    - Add debian/udev.lvm2.init: Dummy SysV init script to satisfy insserv
+      dependencies to "lvm2" which is handled with udev rules in Ubuntu.
+    - Provide shutdown fallback for upstart. (LP: #1370329)
+    - debian/extra/ifup@.service: Additionally run for "auto" class. We don't
+      really support "allow-hotplug" in Ubuntu at the moment, so we need to
+      deal with "auto" devices appearing after "/etc/init.d/networking start"
+      already ran. (LP: #1374521) Also, check if devices are actually defined
+      in /etc/network/interfaces as we don't use Debian's net.agent.
+    - ifup@.service: Drop dependency on networking.service (i. e.
+      /etc/init.d/networking), and merely ensure that /run/network exists.
+      This avoids unnecessary dependencies/waiting during boot and dependency
+      cycles if hooks wait for other interfaces to come up (like ifenslave
+      with bonding interfaces). (LP: #1414544)
+    - Add Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch: In
+      Ubuntu we currently keep the setting whether the RTC is in local or UTC
+      time in /etc/default/rcS "UTC=yes|no", instead of /etc/adjtime.
+      (LP: #1377258)
+    - Put session scopes into all cgroup controllers. This makes unprivileged
+      user LXC containers work under systemd. (LP: #1346734)
+    - Add systemd-fsckd multiplexer and feed its output to plymouth. This
+      provides an aggregate progress report of running file system checks and
+      also allows cancelling them with ^C.
+      (LP: #1316796; Closes: #775093, #758902)
+    - Lower Breaks: to plymouth version which has the udev inotify fix in
+      Ubuntu.
+    - Lower libappamor1 dep to the Ubuntu version where it moved to /lib.
+    - Make failure of boot-and-services NSpawn.test_boot non-fatal for now.
+      This currently fails when being triggered by Jenkins, but is totally
+      unreproducible when running this manually on the exact same machine.
+
+    Upgrade fixes, keep until 16.04 LTS release:
+    - systemd Conflicts/Replaces/Provides systemd-services.
+    - Remove obsolete systemd-logind upstart job.
+    - Clean up obsolete /etc/udev/rules.d/README.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 18 Feb 2015 09:48:57 +0100
+
+systemd (219-2) UNRELEASED; urgency=medium
 
   * Fix UTF-16 to UTF-8 conversion on big-endian machines. (Closes: #778654)
   * Disable new new test-sigbus, it fails on some buildds due to too old
     kernels. (part of #778654)
-  * debian/README.Debian, debian/systemd.postinst: Drop setfacl call for
-    /var/log/journal, this is now done automatically by tmpfiles.d/systemd.conf.
-  * Drop "acl" dependency, not necessary any more with the above.
+  * debian/README.Debian: Drop setfacl call for /var/log/journal, this is now
+    done automatically by tmpfiles.d/systemd.conf.
   * debian/tests/boot-and-services: Move to using /var/lib/machines/,
     /var/lib/containers is deprecated.
 
- -- Martin Pitt <mpitt@debian.org>  Wed, 18 Feb 2015 15:29:42 +0100
+ -- Martin Pitt <mpitt@debian.org>  Wed, 18 Feb 2015 06:57:13 +0100
 
 systemd (219-1) experimental; urgency=medium
 
