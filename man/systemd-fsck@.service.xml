@@ -81,7 +81,7 @@
     last check, number of mounts, unclean unmount, etc.</para>
 
     <para><filename>systemd-fsck</filename> will forward file system
-    checking progress to the console. If a file system check fails for
+    checking progress to <filename>systemd-fsckd.service</filename> socket. If a file system check fails for
     a service without <option>nofail</option>, emergency mode is
     activated, by isolating to
     <filename>emergency.target</filename>.</para>

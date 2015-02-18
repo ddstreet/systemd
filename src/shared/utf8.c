@@ -322,7 +322,11 @@ char *utf16_to_utf8(const void *s, size_t length) {
 
                 /* see RFC 2781 section 2.2 */
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
                 w1 = f[1] << 8 | f[0];
+#else
+                w1 = f[0] << 8 | f[1];
+#endif
                 f += 2;
 
                 if (!utf16_is_surrogate(w1)) {
@@ -336,7 +340,11 @@ char *utf16_to_utf8(const void *s, size_t length) {
                 else if (f >= (const uint8_t*) s + length)
                         break;
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
                 w2 = f[1] << 8 | f[0];
+#else
+                w2 = f[0] << 8 | f[1];
+#endif
                 f += 2;
 
                 if (!utf16_is_trailing_surrogate(w2)) {
