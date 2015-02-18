@@ -6,6 +6,7 @@ debian-changes
 upstream-hwdb-keyboard.patch
 upstream-hwdb-updates.patch
 upstream-reboot-polkit-permissions.patch
+upstream-ignore-mmcrpmb.patch
 
 # rejected upstream
 env-variable-for-machine-ID-path.patch
