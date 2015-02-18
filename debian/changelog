@@ -1,3 +1,16 @@
+systemd (204-5ubuntu20.11) trusty; urgency=medium
+
+  [ Ben Howard ]
+  * Add debian/extra/rules/62-google-cloudimg.rules: Use "noop" scheduler for
+    Google virtio drives. (LP: #1420544)
+
+  [ Martin Pitt ]
+  * Add upstream-ignore-mmcrpmb.patch: Fix /dev/disk/by-path/ symlink of mmc
+    RPMB partitions and don't blkid them to avoid kernel buffer I/O errors and
+    timeouts. (LP: #1333140)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 18 Feb 2015 12:11:49 +0100
+
 systemd (204-5ubuntu20.10) trusty; urgency=medium
 
   * Replace our always-probe-cpu-support-drivers.patch (which is specific to
