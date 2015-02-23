@@ -1,11 +1,12 @@
 /*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
 
-#pragma once
-
 /***
   This file is part of systemd.
 
-  Copyright 2011 Lennart Poettering
+  Copyright 2015 Canonical
+
+  Author:
+    Didier Roche <didrocks@ubuntu.com>
 
   systemd is free software; you can redistribute it and/or modify it
   under the terms of the GNU Lesser General Public License as published by
@@ -21,8 +22,17 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include "journald-server.h"
+#define FSCKD_SOCKET_PATH "/run/systemd/fsckd"
 
-int server_open_stdout_socket(Server *s);
+#include "libudev.h"
 
-void stdout_stream_free(StdoutStream *s);
+typedef struct FsckProgress {
+        dev_t devnum;
+        size_t cur;
+        size_t max;
+        int pass;
+} FsckProgress;
+
+typedef struct FsckdMessage {
+        uint8_t cancel;
+} FsckdMessage;

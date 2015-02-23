@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: systemd\n"
 "Report-Msgid-Bugs-To: 0comffdiz@inbox.ru\n"
 "POT-Creation-Date: 2013-03-24 19:22+0300\n"
-"PO-Revision-Date: 2015-01-23 20:55+0300\n"
+"PO-Revision-Date: 2015-02-19 03:27+0300\n"
 "Last-Translator: Sergey Ptashnick <0comffdiz@inbox.ru>\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
@@ -325,3 +325,14 @@ msgstr "Перечитать конфигурацию systemd"
 #: ../src/core/org.freedesktop.systemd1.policy.in.in.h:8
 msgid "Authentication is required to reload the systemd state."
 msgstr "Чтобы заставить systemd перечитать конфигурацию, необходимо пройти аутентификацию."
+
+#: ../src/fsckd/fsckd.c:186
+msgid "Press Ctrl+C to cancel all filesystem checks in progress"
+msgstr "Чтобы прервать все запущенные проверки файловых систем, нажмите Ctrl+C"
+
+#: ../src/fsckd/fsckd.c:227
+#, c-format
+msgid "Checking in progress on %d disk (%3.1f%% complete)"
+msgid_plural "Checking in progress on %d disks (%3.1f%% complete)"
+msgstr[0] "Проверяется целостность файловой системы на %d диске (выполнено %3.1f%%)"
+msgstr[1] "Проверяется целостность файловых систем на %d дисках (выполнено %3.1f%%)"
