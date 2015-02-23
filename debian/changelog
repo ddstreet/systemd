@@ -1,3 +1,29 @@
+systemd (219-3) experimental; urgency=medium
+
+  * sysv-generator: fix wrong "Overwriting existing symlink" warnings.
+    (Closes: #778700)
+  * Add systemd-fsckd multiplexer and feed its output to plymouth. This
+    provides an aggregate progress report of running file system checks and
+    also allows cancelling them with ^C, in both text mode and Plymouth.
+    (Closes: #775093, #758902; LP: #1316796)
+  * Revert "journald: allow restarting journald without losing stream
+    connections". This was a new feature in 219, but currently causes boot
+    failures due to logind and other services not starting up properly.
+    (Closes: #778970; LP: #1423811)
+  * Add "boot-smoke" autopkgtest: Test 20 successful reboots in a row, and
+    that there are no connection timeouts or stalled jobs. This reproduces the
+    above regression.
+  * debian/tests/localed-locale: Set up locale and keyboard default files on a
+    minimal unconfigured testbed.
+  * Add missing python3 test dependency to cmdline-upstart-boot and
+    display-managers autopkgtests.
+  * debian/tests/boot-and-services: Skip AppArmor test if AppArmor is not
+    enabled.
+  * debian/tests/boot-and-services: Reboot also if lightdm was just installed
+    but isn't running yet.
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 23 Feb 2015 09:52:12 +0100
+
 systemd (219-2) experimental; urgency=medium
 
   * Fix UTF-16 to UTF-8 conversion on big-endian machines. (Closes: #778654)
