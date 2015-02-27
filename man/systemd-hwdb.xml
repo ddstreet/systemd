@@ -57,7 +57,7 @@
       <varlistentry>
         <term><option>--usr</option></term>
         <listitem>
-          <para>Generate in /usr/lib/udev instead of /etc/udev.</para>
+          <para>Generate in /lib/udev instead of /etc/udev.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
