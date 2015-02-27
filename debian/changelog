@@ -1,3 +1,22 @@
+systemd (219-4) experimental; urgency=medium
+
+  * tmpfiles: Avoid creating duplicate ACL entries. Add postinst code to clean
+    them up on upgrade. (Closes: #778656)
+  * bootchart: Fix path to default init. (LP: #1423867)
+  * Add "bootchart" autopkgtest, to spot regressions like the above.
+  * autopkgtests: Factorize out "assert.sh" utility functions, and use them in
+    the tests for useful failure messages.
+  * Downgrade requirement for timedated, hostnamed, localed-locale, and
+    logind autopkgtests from machine to container isolation.
+  * boot-and-services and display-manager autopkgtest: Add systemd-sysv as
+    proper test dependency instead of apt-get installing it. This works now
+    also under Ubuntu 15.04.
+  * boot-and-services autopkgtest: Check cleanup of temporary files during
+    boot. Reproduces #779169.
+  * Clean up /tmp/ directory again. (Closes: #779169, LP: #1424992)
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 27 Feb 2015 07:02:09 +0100
+
 systemd (219-3) experimental; urgency=medium
 
   * sysv-generator: fix wrong "Overwriting existing symlink" warnings.
