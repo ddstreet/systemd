@@ -50,7 +50,7 @@
 
   <refsynopsisdiv>
     <para><filename>systemd-timesyncd.service</filename></para>
-    <para><filename>/usr/lib/systemd/systemd-timesyncd</filename></para>
+    <para><filename>/lib/systemd/systemd-timesyncd</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
@@ -100,5 +100,4 @@
       <citerefentry project='man-pages'><refentrytitle>hwclock</refentrytitle><manvolnum>8</manvolnum></citerefentry>
     </para>
   </refsect1>
-
 </refentry>
