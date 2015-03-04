@@ -13,10 +13,6 @@ Add-mock-fsck-process.patch
 tmpfiles-avoid-creating-duplicate-acl-entries.patch
 bootchart-fix-default-init-path.patch
 journal-fix-Inappropriate-ioctl-for-device-on-ext4.patch
-Use-correct-uname-identifiers-in-arch_map-for-SuperH.patch
-tmpfiles-Fix-handling-of-duplicate-lines.patch
-core-rework-device-state-logic.patch
-core-don-t-change-removed-devices-to-state-tentative.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -71,4 +67,9 @@ Only-start-logind-if-dbus-is-installed.patch
 cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
 core-mount-ensure-that-we-parse-proc-self-mountinfo.patch
 Revert-journald-allow-restarting-journald-without-lo.patch
-PrivateTmp-shouldn-t-require-tmpfs.patch
+
+## Ubuntu patches:
+Support-system-image-read-only-etc.patch
+Provide-shutdown-fallback-for-upstart.patch
+Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
+core-Put-session-scopes-into-all-cgroup-controllers.patch
