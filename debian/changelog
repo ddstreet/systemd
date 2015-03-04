@@ -1,14 +1,13 @@
-systemd (219-5) experimental; urgency=medium
+systemd (219-4ubuntu2) vivid; urgency=medium
+
+  * Merge experimental branch to fix autopkgtest.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 04 Mar 2015 23:17:31 +0100
+
+systemd (219-5) UNRELEASED; urgency=medium
 
   [ Didier Roche ]
   * Add "systemd-fsckd" autopkgtest. (LP: #1427312)
-  * cmdline-upstart-boot autopkgtest: Update to Ubuntu's upstart-sysv split
-    (test gets skipped on Debian while upstart-sysv does not yet exist there).
-  * Cherry-pick a couple of upstream commits for adding transient state,
-    fixing a race where mounts become available before the device being
-    available.
-  * Ensure PrivateTmp doesn't require tmpfs through tmp.mount, but rather adds
-    an After relationship. (Closes: #779902)
 
   [ Martin Pitt ]
   * journald: Suppress expected cases of "Failed to set file attributes"
@@ -17,24 +16,53 @@ systemd (219-5) experimental; urgency=medium
     alternative init system boot entries get updated.
   * debian/tests: Call /tmp/autopkgtest-reboot, to work with autopkgtest >=
     3.11.1.
-  * Check for correct architecture identifiers for SuperH. (Closes: #779710)
-  * Fix tmpfiles.d to only apply the first match again (regression in 219).
-    (LP: #1428540)
-  * /lib/lsb/init-functions.d/40-systemd: Don't ignore systemd unit
-    dependencies in "degraded" mode. (LP: #1429734)
 
-  [ Michael Biebl ]
-  * debian/udev.init: Recognize '!' flag with static device lists, to work
-    with kmod 20. (Closes: #780263)
+ -- Martin Pitt <mpitt@debian.org>  Tue, 03 Mar 2015 14:51:46 +0100
 
-  [ Craig Magina ]
-  * rules-ubuntu/71-power-switch-proliant.rules: Add support for HP ProLiant
-    m400 Server Cartridge soft powerdown on Linux 3.16. (LP: #1428811)
+systemd (219-4ubuntu1) vivid; urgency=medium
 
-  [ Scott Wakeling ]
-  * Rework package description to be more accurate. (Closes: #740372)
+  * Merge with Debian experimental. Remaining Ubuntu changes:
+    - Hack to support system-image read-only /etc, and modify files in
+      /etc/writable/ instead.
+    - Keep our much simpler udev maintainer scripts (all platforms must
+      support udev, no debconf).
+    - initramfs init-top: Drop $ROOTDELAY, we do that in a more sensible way
+      with wait-for-root. Will get applicable to Debian once Debian gets
+      wait-for-root in initramfs-tools.
+    - initramfs init-bottom: If LVM is installed, settle udev,
+      otherwise we get missing LV symlinks. Workaround for LP #1185394.
+    - Add debian/udev.lvm2.init: Dummy SysV init script to satisfy insserv
+      dependencies to "lvm2" which is handled with udev rules in Ubuntu.
+    - Provide shutdown fallback for upstart. (LP: #1370329)
+    - debian/extra/ifup@.service: Additionally run for "auto" class. We don't
+      really support "allow-hotplug" in Ubuntu at the moment, so we need to
+      deal with "auto" devices appearing after "/etc/init.d/networking start"
+      already ran. (LP: #1374521) Also, check if devices are actually defined
+      in /etc/network/interfaces as we don't use Debian's net.agent.
+    - ifup@.service: Drop dependency on networking.service (i. e.
+      /etc/init.d/networking), and merely ensure that /run/network exists.
+      This avoids unnecessary dependencies/waiting during boot and dependency
+      cycles if hooks wait for other interfaces to come up (like ifenslave
+      with bonding interfaces). (LP: #1414544)
+    - Add Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch: In
+      Ubuntu we currently keep the setting whether the RTC is in local or UTC
+      time in /etc/default/rcS "UTC=yes|no", instead of /etc/adjtime.
+      (LP: #1377258)
+    - Put session scopes into all cgroup controllers. This makes unprivileged
+      user LXC containers work under systemd. (LP: #1346734)
+    - Lower Breaks: to plymouth version which has the udev inotify fix in
+      Ubuntu.
+    - Lower libappamor1 dep to the Ubuntu version where it moved to /lib.
+    - Make failure of boot-and-services NSpawn.test_boot non-fatal for now.
+      This currently fails when being triggered by Jenkins, but is totally
+      unreproducible when running this manually on the exact same machine.
 
- -- Martin Pitt <mpitt@debian.org>  Thu, 26 Mar 2015 16:31:04 +0100
+    Upgrade fixes, keep until 16.04 LTS release:
+    - systemd Conflicts/Replaces/Provides systemd-services.
+    - Remove obsolete systemd-logind upstart job.
+    - Clean up obsolete /etc/udev/rules.d/README.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 27 Feb 2015 08:48:16 +0100
 
 systemd (219-4) experimental; urgency=medium
 
