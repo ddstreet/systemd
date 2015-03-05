@@ -338,7 +338,7 @@ static int swap_load(Unit *u) {
         return swap_verify(s);
 }
 
-static int swap_setup_unit(
+static int swap_add_one(
                 Manager *m,
                 const char *what,
                 const char *what_proc_swaps,
@@ -363,10 +363,8 @@ static int swap_setup_unit(
 
         if (u &&
             SWAP(u)->from_proc_swaps &&
-            !path_equal(SWAP(u)->parameters_proc_swaps.what, what_proc_swaps)) {
-                log_error("Swap %s appeared twice with different device paths %s and %s", e, SWAP(u)->parameters_proc_swaps.what, what_proc_swaps);
+            !path_equal(SWAP(u)->parameters_proc_swaps.what, what_proc_swaps))
                 return -EEXIST;
-        }
 
         if (!u) {
                 delete = true;
@@ -381,7 +379,7 @@ static int swap_setup_unit(
 
                 SWAP(u)->what = strdup(what);
                 if (!SWAP(u)->what) {
-                        r = -ENOMEM;
+                        r = log_oom();
                         goto fail;
                 }
 
@@ -409,6 +407,7 @@ static int swap_setup_unit(
         p->priority = priority;
 
         unit_add_to_dbus_queue(u);
+
         return 0;
 
 fail:
@@ -420,7 +419,7 @@ fail:
         return r;
 }
 
-static int swap_process_new(Manager *m, const char *device, int prio, bool set_flags) {
+static int swap_process_new_swap(Manager *m, const char *device, int prio, bool set_flags) {
         _cleanup_udev_device_unref_ struct udev_device *d = NULL;
         struct udev_list_entry *item = NULL, *first = NULL;
         const char *dn;
@@ -429,7 +428,7 @@ static int swap_process_new(Manager *m, const char *device, int prio, bool set_f
 
         assert(m);
 
-        r = swap_setup_unit(m, device, device, prio, set_flags);
+        r = swap_add_one(m, device, device, prio, set_flags);
         if (r < 0)
                 return r;
 
@@ -445,7 +444,7 @@ static int swap_process_new(Manager *m, const char *device, int prio, bool set_f
         /* Add the main device node */
         dn = udev_device_get_devnode(d);
         if (dn && !streq(dn, device))
-                swap_setup_unit(m, dn, device, prio, set_flags);
+                swap_add_one(m, dn, device, prio, set_flags);
 
         /* Add additional units for all symlinks */
         first = udev_device_get_devlinks_list_entry(d);
@@ -466,7 +465,7 @@ static int swap_process_new(Manager *m, const char *device, int prio, bool set_f
                             st.st_rdev != udev_device_get_devnum(d))
                                 continue;
 
-                swap_setup_unit(m, p, device, prio, set_flags);
+                swap_add_one(m, p, device, prio, set_flags);
         }
 
         return r;
@@ -1092,17 +1091,15 @@ static int swap_load_proc_swaps(Manager *m, bool set_flags) {
                         if (k == EOF)
                                 break;
 
-                        log_warning("Failed to parse /proc/swaps:%u.", i);
+                        log_warning("Failed to parse /proc/swaps:%u", i);
                         continue;
                 }
 
                 d = cunescape(dev);
                 if (!d)
-                        return log_oom();
+                        return -ENOMEM;
 
-                device_found_node(m, d, true, DEVICE_FOUND_SWAP, set_flags);
-
-                k = swap_process_new(m, d, prio, set_flags);
+                k = swap_process_new_swap(m, d, prio, set_flags);
                 if (k < 0)
                         r = k;
         }
@@ -1153,9 +1150,6 @@ static int swap_dispatch_io(sd_event_source *source, int fd, uint32_t revents, v
                                 swap_set_state(swap, swap->state);
                                 break;
                         }
-
-                        if (swap->what)
-                                device_found_node(m, swap->what, false, DEVICE_FOUND_SWAP, true);
 
                 } else if (swap->just_activated) {
 
@@ -1304,7 +1298,7 @@ fail:
         return r;
 }
 
-int swap_process_device_new(Manager *m, struct udev_device *dev) {
+int swap_process_new_device(Manager *m, struct udev_device *dev) {
         struct udev_list_entry *item = NULL, *first = NULL;
         _cleanup_free_ char *e = NULL;
         const char *dn;
@@ -1347,7 +1341,7 @@ int swap_process_device_new(Manager *m, struct udev_device *dev) {
         return r;
 }
 
-int swap_process_device_remove(Manager *m, struct udev_device *dev) {
+int swap_process_removed_device(Manager *m, struct udev_device *dev) {
         const char *dn;
         int r = 0;
         Swap *s;
