@@ -48,9 +48,8 @@
 
   <refsynopsisdiv>
     <para><filename>systemd-user-sessions.service</filename></para>
-    <para><filename>/usr/lib/systemd/systemd-user-sessions</filename></para>
+    <para><filename>/lib/systemd/systemd-user-sessions</filename></para>
   </refsynopsisdiv>
-
   <refsect1>
     <title>Description</title>
 
