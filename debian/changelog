@@ -1,3 +1,34 @@
+systemd (215-13) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * Add hwclock-save.service to sync the system clock to the hardware clock on
+    shutdown, to provide monotonic time for reboots. (Note: this is a hack for
+    jessie; the next Debian release will enable timesyncd by default).
+    (Closes: #755722)
+  * Check for correct architecture identifiers for SuperH. (Closes: #779710)
+  * networkd: Fix stopping v4 dhcpclient when the carrier is lost. Thanks
+    Christos Trochalakis! (Closes: #779571)
+  * Fix segfault with units that depend on themselves. (Closes: #780675)
+  * tmpfiles-setup-dev: Call tmpfiles with --boot to allow unsafe device
+    creation. Fixes creation of static device nodes with kmod 20.
+    (Closes: #780263)
+
+  [ Christian Seiler ]
+  * core: Don't migrate PIDs for units that may contain subcgroups.
+    This stops messing up lxc/libvirt/other custom cgroup layouts after
+    daemon-reload. (Closes: #777164)
+  * sysv-generator: add support for /etc/insserv/overrides. (Closes: #759001)
+
+  [ Michael Biebl ]
+  * debian/udev.init: Recognize '!' flag with static device lists, to work
+    with kmod 20. (Closes: #780263)
+
+  [ Didier Roche ]
+  * Ensure PrivateTmp doesn't require tmpfs through tmp.mount, but rather adds
+    an After relationship. (Closes: #779902)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 26 Mar 2015 14:23:35 +0100
+
 systemd (215-12) unstable; urgency=medium
 
   [ Martin Pitt ]
