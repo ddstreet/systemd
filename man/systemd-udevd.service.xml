@@ -39,7 +39,7 @@
     <para><filename>systemd-udevd-kernel.socket</filename></para>
 
     <cmdsynopsis>
-      <command>/usr/lib/systemd/systemd-udevd</command>
+      <command>/lib/systemd/systemd-udevd</command>
       <arg><option>--daemon</option></arg>
       <arg><option>--debug</option></arg>
       <arg><option>--children-max=</option></arg>
