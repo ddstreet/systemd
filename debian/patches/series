@@ -135,6 +135,11 @@ logind-handle-closing-sessions-over-daemon-restarts.patch
 logind-fix-sd_eviocrevoke-ioctl-call.patch
 rules-Fix-by-path-of-mmc-RPMB-partitions-and-don-t-b.patch
 man-document-failed.patch
+Use-correct-uname-identifiers-in-arch_map-for-SuperH.patch
+networkd-link-fix-stopping-v4-dhcpclient-when-the-ca.patch
+core-do-not-add-dependencies-to-self.patch
+units-tmpfiles-setup-dev-allow-unsafe-file-creation-.patch
+core-don-t-migrate-PIDs-for-units-that-may-contain-s.patch
 
 ## Debian specific patches:
 Add-back-support-for-Debian-specific-config-files.patch
@@ -187,3 +192,5 @@ Fix-usr-remount-failure-for-split-usr.patch
 Only-start-logind-if-dbus-is-installed.patch
 cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
 core-don-t-fail-to-run-services-in-user-instances-if.patch
+PrivateTmp-shouldn-t-require-tmpfs.patch
+sysv-generator-add-support-for-etc-insserv-overrides.patch

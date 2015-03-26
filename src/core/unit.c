@@ -597,13 +597,21 @@ static void merge_dependencies(Unit *u, Unit *other, UnitDependency d) {
                 UnitDependency k;
 
                 for (k = 0; k < _UNIT_DEPENDENCY_MAX; k++) {
-                        r = set_remove_and_put(back->dependencies[k], other, u);
-                        if (r == -EEXIST)
+                        /* Do not add dependencies between u and itself */
+                        if (back == u) {
                                 set_remove(back->dependencies[k], other);
-                        else
-                                assert(r >= 0 || r == -ENOENT);
+                        } else {
+                                r = set_remove_and_put(back->dependencies[k], other, u);
+                                if (r == -EEXIST)
+                                        set_remove(back->dependencies[k], other);
+                                else
+                                        assert(r >= 0 || r == -ENOENT);
+                        }
                 }
         }
+
+        /* Also do not move dependencies on u to itself */
+        set_remove(other->dependencies[d], u);
 
         complete_move(&u->dependencies[d], &other->dependencies[d]);
 
@@ -728,7 +736,7 @@ int unit_add_exec_dependencies(Unit *u, ExecContext *c) {
                 return 0;
 
         if (c->private_tmp) {
-                r = unit_require_mounts_for(u, "/tmp");
+                r = unit_add_dependency_by_name(u, UNIT_AFTER, "tmp.mount", NULL, true);
                 if (r < 0)
                         return r;
 
