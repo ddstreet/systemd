@@ -1,3 +1,41 @@
+systemd (219-5) experimental; urgency=medium
+
+  [ Didier Roche ]
+  * Add "systemd-fsckd" autopkgtest. (LP: #1427312)
+  * cmdline-upstart-boot autopkgtest: Update to Ubuntu's upstart-sysv split
+    (test gets skipped on Debian while upstart-sysv does not yet exist there).
+  * Cherry-pick a couple of upstream commits for adding transient state,
+    fixing a race where mounts become available before the device being
+    available.
+  * Ensure PrivateTmp doesn't require tmpfs through tmp.mount, but rather adds
+    an After relationship. (Closes: #779902)
+
+  [ Martin Pitt ]
+  * journald: Suppress expected cases of "Failed to set file attributes"
+    errors. (LP: #1427899)
+  * Add systemd-sysv.postinst: Update grub on first installation, so that the
+    alternative init system boot entries get updated.
+  * debian/tests: Call /tmp/autopkgtest-reboot, to work with autopkgtest >=
+    3.11.1.
+  * Check for correct architecture identifiers for SuperH. (Closes: #779710)
+  * Fix tmpfiles.d to only apply the first match again (regression in 219).
+    (LP: #1428540)
+  * /lib/lsb/init-functions.d/40-systemd: Don't ignore systemd unit
+    dependencies in "degraded" mode. (LP: #1429734)
+
+  [ Michael Biebl ]
+  * debian/udev.init: Recognize '!' flag with static device lists, to work
+    with kmod 20. (Closes: #780263)
+
+  [ Craig Magina ]
+  * rules-ubuntu/71-power-switch-proliant.rules: Add support for HP ProLiant
+    m400 Server Cartridge soft powerdown on Linux 3.16. (LP: #1428811)
+
+  [ Scott Wakeling ]
+  * Rework package description to be more accurate. (Closes: #740372)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 26 Mar 2015 16:31:04 +0100
+
 systemd (219-4) experimental; urgency=medium
 
   * tmpfiles: Avoid creating duplicate ACL entries. Add postinst code to clean
