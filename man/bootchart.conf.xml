@@ -118,7 +118,7 @@
                                 binary instead of <filename>/sbin/init</filename>. This
                                 option is only relevant if bootchart was invoked from the
                                 kernel command line with
-                                init=/usr/lib/systemd/systemd-bootchart.</para></listitem>
+                                init=/lib/systemd/systemd-bootchart.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
