@@ -52,7 +52,7 @@
     <para><filename>/etc/systemd/timesyncd.conf</filename></para>
     <para><filename>/etc/systemd/timesyncd.conf.d/*.conf</filename></para>
     <para><filename>/run/systemd/timesyncd.conf.d/*.conf</filename></para>
-    <para><filename>/usr/lib/systemd/timesyncd.conf.d/*.conf</filename></para>
+    <para><filename>/lib/systemd/timesyncd.conf.d/*.conf</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
