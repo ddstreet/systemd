@@ -1,3 +1,35 @@
+systemd (219-6) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * Import patches from v219-stable branch (up to 85a6fab).
+  * boot-and-services autopkgtest: Add missing python3 test dependency.
+  * Make apparmor run before networking, to ensure that profiles apply to
+    e. g. dhclient (LP: #1438249):
+    - Rename networking.service.d/network-pre.conf to systemd.conf, and add
+      After=apparmor.service.
+    - ifup@.service: Add After=apparmor.service.
+  * udev: Drop hwdb-update dependency, which got introduced by the above
+    v219-stable branch. This causes udev and plymouth to start too late and
+    isn't really needed in Debian yet as we don't support stateless systems
+    yet and handle hwdb.bin updates through dpkg triggers. (LP: #1439301)
+
+  [ Didier Roche ]
+  * Fix mount point detection on overlayfs and similar file systems without
+    name_to_handle_at() and st_dev support. (LP: #1411140)
+
+  [ Christian Seiler ]
+  * Make the journald to syslog forwarding more robust by increasing the
+    maximum datagram queue length from 10 to 512. (Closes: #762700)
+
+  [ Marco d'Itri ]
+  * Avoid writing duplicate entries in 70-persistent-net.rules by double
+    checking if the new udev rule has already been written for the given
+    interface. This happens if multiple add events are generated before the
+    write_net_rules script returns and udevd renames the interface.
+    (Closes: #765577)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 02 Apr 2015 09:14:48 +0200
+
 systemd (219-5) experimental; urgency=medium
 
   [ Didier Roche ]
