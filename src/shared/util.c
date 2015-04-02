@@ -1550,6 +1550,9 @@ _pure_ static bool hidden_file_allow_backup(const char *filename) {
                 endswith(filename, ".dpkg-bak") ||
                 endswith(filename, ".dpkg-backup") ||
                 endswith(filename, ".dpkg-remove") ||
+                endswith(filename, ".ucf-new") ||
+                endswith(filename, ".ucf-old") ||
+                endswith(filename, ".ucf-dist") ||
                 endswith(filename, ".swp");
 }
 
