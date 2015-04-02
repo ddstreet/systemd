@@ -5141,10 +5141,9 @@ static int enable_sysv_units(const char *verb, char **args) {
         while (args[f]) {
                 const char *name;
                 _cleanup_free_ char *p = NULL, *q = NULL, *l = NULL;
-                bool found_native = false, found_sysv;
+                bool found_sysv;
                 unsigned c = 1;
                 const char *argv[6] = { "/usr/sbin/update-rc.d", NULL, NULL, NULL, NULL };
-                char **k;
                 int j;
                 pid_t pid;
                 siginfo_t status;
@@ -5157,21 +5156,6 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (path_is_absolute(name))
                         continue;
 
-                STRV_FOREACH(k, paths.unit_path) {
-                        _cleanup_free_ char *path = NULL;
-
-                        path = path_join(arg_root, *k, name);
-                        if (!path)
-                                return log_oom();
-
-                        found_native = access(path, F_OK) >= 0;
-                        if (found_native)
-                                break;
-                }
-
-                if (found_native)
-                        continue;
-
                 p = path_join(arg_root, SYSTEM_SYSVINIT_PATH, name);
                 if (!p)
                         return log_oom();
@@ -5181,7 +5165,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!found_sysv)
                         continue;
 
-                log_info("%s is not a native service, redirecting to /usr/sbin/update-rc.d.", name);
+                log_info("Synchronizing state for %s with sysvinit using update-rc.d...", name);
 
                 if (!isempty(arg_root) && !streq(arg_root, "/")) {
                     log_error("Can not run update-rc.d when a root directory other than / is specified");
@@ -5267,12 +5251,6 @@ static int enable_sysv_units(const char *verb, char **args) {
                                 return -EINVAL;
                 } else
                         return -EPROTO;
-
-                /* Remove this entry, so that we don't try enabling it as native unit */
-                assert(f > 0);
-                f--;
-                assert(args[f] == name);
-                strv_remove(args, name);
         }
 
 #endif
