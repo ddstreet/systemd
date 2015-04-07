@@ -23,3 +23,16 @@
 ***/
 
 #define FSCKD_SOCKET_PATH "/run/systemd/fsckd"
+
+#include "libudev.h"
+
+typedef struct FsckProgress {
+        dev_t devnum;
+        size_t cur;
+        size_t max;
+        int pass;
+} FsckProgress;
+
+typedef struct FsckdMessage {
+        uint8_t cancel;
+} FsckdMessage;

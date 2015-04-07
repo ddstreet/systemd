@@ -62,7 +62,7 @@
     possible check cancellations.</para>
 
     <para><command>systemd-fsckd</command> receives messages about file
-    system check progress from <command>fsck</command> through an
+    system check progress from <command>systemd-fsck</command> through a
     UNIX domain socket. It can display the progress of the least advanced
     fsck as well as the total number of devices being checked in parallel
     to the console. It will also send progress messages to plymouth.
@@ -137,7 +137,7 @@
 
     <para>On success, 0 is returned, a non-zero failure
     code otherwise. Note that the daemon stays idle for
-    a while to accept new <filename>fsck</filename>
+    a while to accept new <filename>systemd-fsck</filename>
     connections before exiting.</para>
   </refsect1>
 

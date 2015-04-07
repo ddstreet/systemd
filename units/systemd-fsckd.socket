@@ -12,4 +12,3 @@ DefaultDependencies=no
 
 [Socket]
 ListenStream=/run/systemd/fsckd
-SocketMode=0600
