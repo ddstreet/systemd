@@ -161,7 +161,7 @@ static int process_progress(int fd, pid_t fsck_pid, dev_t device_num) {
                 FsckProgress progress;
                 FsckdMessage fsckd_message;
 
-                if (fscanf(f, "%i %lu %lu %ms", &pass, &cur, &max, &device) != 4)
+                if (fscanf(f, "%i %zu %zu %ms", &pass, &cur, &max, &device) != 4)
                         break;
 
                 /* Only update once every 50ms */
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
         _cleanup_udev_device_unref_ struct udev_device *udev_device = NULL;
         const char *device, *type;
         bool root_directory;
-        int progress_pipe[2] = { -1, -1 };
+        _cleanup_close_pair_ int progress_pipe[2] = { -1, -1 };
         char dash_c[sizeof("-C")-1 + DECIMAL_STR_MAX(int) + 1];
         struct stat st;
 
@@ -226,13 +226,15 @@ int main(int argc, char *argv[]) {
 
         test_files();
 
-        if (!arg_force && arg_skip)
-                return 0;
+        if (!arg_force && arg_skip) {
+                r = 0;
+                goto finish;
+        }
 
         udev = udev_new();
         if (!udev) {
-                log_oom();
-                return EXIT_FAILURE;
+                r = log_oom();
+                goto finish;
         }
 
         if (argc > 1) {
@@ -240,14 +242,14 @@ int main(int argc, char *argv[]) {
                 root_directory = false;
 
                 if (stat(device, &st) < 0) {
-                        log_error_errno(errno, "Failed to stat '%s': %m", device);
-                        return EXIT_FAILURE;
+                        r = log_error_errno(errno, "Failed to stat '%s': %m", device);
+                        goto finish;
                 }
 
                 udev_device = udev_device_new_from_devnum(udev, 'b', st.st_rdev);
                 if (!udev_device) {
-                        log_error("Failed to detect device %s", device);
-                        return EXIT_FAILURE;
+                        r = log_error_errno(errno, "Failed to detect device %s", device);
+                        goto finish;
                 }
         } else {
                 struct timespec times[2];
@@ -255,32 +257,37 @@ int main(int argc, char *argv[]) {
                 /* Find root device */
 
                 if (stat("/", &st) < 0) {
-                        log_error_errno(errno, "Failed to stat() the root directory: %m");
-                        return EXIT_FAILURE;
+                        r = log_error_errno(errno, "Failed to stat() the root directory: %m");
+                        goto finish;
                 }
 
                 /* Virtual root devices don't need an fsck */
-                if (major(st.st_dev) == 0)
-                        return EXIT_SUCCESS;
+                if (major(st.st_dev) == 0) {
+                        log_debug("Root directory is virtual, skipping check.");
+                        r = 0;
+                        goto finish;
+                }
 
                 /* check if we are already writable */
                 times[0] = st.st_atim;
                 times[1] = st.st_mtim;
                 if (utimensat(AT_FDCWD, "/", times, 0) == 0) {
                         log_info("Root directory is writable, skipping check.");
-                        return EXIT_SUCCESS;
+                        r = 0;
+                        goto finish;
                 }
 
                 udev_device = udev_device_new_from_devnum(udev, 'b', st.st_dev);
                 if (!udev_device) {
-                        log_error("Failed to detect root device.");
-                        return EXIT_FAILURE;
+                        r = log_error_errno(errno, "Failed to detect root device.");
+                        goto finish;
                 }
 
                 device = udev_device_get_devnode(udev_device);
                 if (!device) {
                         log_error("Failed to detect device node of root directory.");
-                        return EXIT_FAILURE;
+                        r = -ENXIO;
+                        goto finish;
                 }
 
                 root_directory = true;
@@ -291,14 +298,15 @@ int main(int argc, char *argv[]) {
                 r = fsck_exists(type);
                 if (r == -ENOENT) {
                         log_info("fsck.%s doesn't exist, not checking file system on %s", type, device);
-                        return EXIT_SUCCESS;
+                        r = 0;
+                        goto finish;
                 } else if (r < 0)
                         log_warning_errno(r, "fsck.%s cannot be used for %s: %m", type, device);
         }
 
         if (pipe(progress_pipe) < 0) {
-                log_error_errno(errno, "pipe(): %m");
-                return EXIT_FAILURE;
+                r = log_error_errno(errno, "pipe(): %m");
+                goto finish;
         }
 
         cmdline[i++] = "/sbin/fsck";
@@ -318,36 +326,31 @@ int main(int argc, char *argv[]) {
         if (arg_force)
                 cmdline[i++] = "-f";
 
-        if (progress_pipe[1] >= 0) {
-                xsprintf(dash_c, "-C%i", progress_pipe[1]);
-                cmdline[i++] = dash_c;
-        }
+        xsprintf(dash_c, "-C%i", progress_pipe[1]);
+        cmdline[i++] = dash_c;
 
         cmdline[i++] = device;
         cmdline[i++] = NULL;
 
         pid = fork();
         if (pid < 0) {
-                log_error_errno(errno, "fork(): %m");
+                r = log_error_errno(errno, "fork(): %m");
                 goto finish;
         } else if (pid == 0) {
                 /* Child */
-                if (progress_pipe[0] >= 0)
-                        safe_close(progress_pipe[0]);
+                progress_pipe[0] = safe_close(progress_pipe[0]);
                 execv(cmdline[0], (char**) cmdline);
                 _exit(8); /* Operational error */
         }
 
         progress_pipe[1] = safe_close(progress_pipe[1]);
 
-        if (progress_pipe[0] >= 0) {
-                progress_rc = process_progress(progress_pipe[0], pid, st.st_rdev);
-                progress_pipe[0] = -1;
-        }
+        progress_rc = process_progress(progress_pipe[0], pid, st.st_rdev);
+        progress_pipe[0] = -1;
 
-        q = wait_for_terminate(pid, &status);
-        if (q < 0) {
-                log_error_errno(q, "waitid(): %m");
+        r = wait_for_terminate(pid, &status);
+        if (r < 0) {
+                log_error_errno(r, "waitid(): %m");
                 goto finish;
         }
 
@@ -361,6 +364,8 @@ int main(int argc, char *argv[]) {
                 else if (progress_rc != 0)
                         log_error("fsck failed due to unknown reason.");
 
+                r = -EINVAL;
+
                 if (status.si_code == CLD_EXITED && (status.si_status & 2) && root_directory)
                         /* System should be rebooted. */
                         start_target(SPECIAL_REBOOT_TARGET);
@@ -368,19 +373,17 @@ int main(int argc, char *argv[]) {
                         /* Some other problem */
                         start_target(SPECIAL_EMERGENCY_TARGET);
                 else {
-                        r = EXIT_SUCCESS;
+                        r = 0;
                         if (progress_rc != 0)
                                 log_warning("Ignoring error.");
                 }
 
         } else
-                r = EXIT_SUCCESS;
+                r = 0;
 
         if (status.si_code == CLD_EXITED && (status.si_status & 1))
                 touch("/run/systemd/quotacheck");
 
 finish:
-        safe_close_pair(progress_pipe);
-
-        return r;
+        return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
