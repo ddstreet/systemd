@@ -410,8 +410,8 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           processes. Not all unit types manage processes of these
           types however. For example, for mount units, control processes
           are defined (which are the invocations of
-          <filename>/usr/bin/mount</filename> and
-          <filename>/usr/bin/umount</filename>), but no main process
+          <filename>/bin/mount</filename> and
+          <filename>/bin/umount</filename>), but no main process
           is defined. If omitted, defaults to
           <option>all</option>.</para>
         </listitem>
