@@ -1,3 +1,20 @@
+systemd (215-15) unstable; urgency=medium
+
+  [ Adam Conrad ]
+  * debian/systemd.{triggers,postinst}: Trigger a systemctl daemon-reload
+    when init scripts are installed or removed (Closes: #766429)
+
+  [ Martin Pitt ]
+  * Fix getty restart loop when PTS device is gone. (Closes: #780711)
+  * Run timesyncd in virtual machines. (Closes: #762343)
+  * Make logind work in environments without CAP_SYS_ADMIN (mostly
+    containers). Thanks Christian Seiler for the backporting!
+    (Closes: #778608)
+  * Check for correct signatures when setting properties. Fixes systemd
+    getting stuck on trying to set invalid property types. (Closes: #781602)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 09 Apr 2015 10:12:37 +0200
+
 systemd (215-14) unstable; urgency=medium
 
   [ Michael Biebl ]
