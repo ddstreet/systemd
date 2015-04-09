@@ -594,9 +594,14 @@ static const char *migrate_callback(CGroupControllerMask mask, void *userdata) {
 
 static int unit_create_cgroups(Unit *u, CGroupControllerMask mask) {
         _cleanup_free_ char *path = NULL;
+        CGroupContext *c;
         int r;
 
         assert(u);
+
+        c = unit_get_cgroup_context(u);
+        if (!c)
+                return 0;
 
         path = unit_default_cgroup_path(u);
         if (!path)
@@ -623,10 +628,14 @@ static int unit_create_cgroups(Unit *u, CGroupControllerMask mask) {
         u->cgroup_realized = true;
         u->cgroup_realized_mask = mask;
 
-        /* Then, possibly move things over */
-        r = cg_migrate_everywhere(u->manager->cgroup_supported, u->cgroup_path, u->cgroup_path, migrate_callback, u);
-        if (r < 0)
-                log_warning("Failed to migrate cgroup from to %s: %s", u->cgroup_path, strerror(-r));
+        /* Then, possibly move things over, but not if
+         * subgroups may contain processes, which is the case
+         * for slice units. */
+        if (u->type != UNIT_SLICE) {
+                r = cg_migrate_everywhere(u->manager->cgroup_supported, u->cgroup_path, u->cgroup_path, migrate_callback, u);
+                if (r < 0)
+                        log_warning("Failed to migrate cgroup from to %s: %s", u->cgroup_path, strerror(-r));
+        }
 
         return 0;
 }
