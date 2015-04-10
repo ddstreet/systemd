@@ -391,6 +391,7 @@ rootlibexec_PROGRAMS = \
 	systemd-remount-fs \
 	systemd-reply-password \
 	systemd-fsck \
+	systemd-fsckd \
 	systemd-machine-id-commit \
 	systemd-ac-power \
 	systemd-sysctl \
@@ -495,6 +496,7 @@ dist_systemunit_DATA = \
 	units/slices.target \
 	units/system.slice \
 	units/x-.slice \
+	units/systemd-fsckd.socket \
 	units/systemd-initctl.socket \
 	units/systemd-shutdownd.socket \
 	units/syslog.socket \
@@ -546,6 +548,7 @@ nodist_systemunit_DATA = \
 	units/systemd-kexec.service \
 	units/systemd-fsck@.service \
 	units/systemd-fsck-root.service \
+	units/systemd-fsckd.service \
 	units/systemd-machine-id-commit.service \
 	units/systemd-udevd.service \
 	units/systemd-udev-trigger.service \
@@ -604,6 +607,7 @@ EXTRA_DIST += \
 	units/user/systemd-exit.service.in \
 	units/systemd-fsck@.service.in \
 	units/systemd-fsck-root.service.in \
+	units/systemd-fsckd.service.in \
 	units/systemd-machine-id-commit.service.in \
 	units/user@.service.m4.in \
 	units/debug-shell.service.in \
@@ -2360,6 +2364,19 @@ systemd_fsck_LDADD = \
 	libsystemd-internal.la \
 	libudev-internal.la \
 	libsystemd-shared.la
+
+# ------------------------------------------------------------------------------
+systemd_fsckd_SOURCES = \
+	src/fsckd/fsckd.c \
+	src/fsckd/fsckd.h \
+	$(NULL)
+
+systemd_fsckd_LDADD = \
+	libsystemd-internal.la \
+	libsystemd-label.la \
+	libsystemd-shared.la \
+	libudev-internal.la \
+	$(NULL)
 
 # ------------------------------------------------------------------------------
 systemd_machine_id_commit_SOURCES = \
