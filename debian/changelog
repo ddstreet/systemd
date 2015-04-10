@@ -1,3 +1,36 @@
+systemd (219-7) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * Make systemd-sysv's dependency to systemd unversioned. The package just
+    contains 6 symlinks and thus isn't sensitive at all against version
+    mismatches. This avoids running into circular dependencies when testing
+    local debs.
+  * Revert "udev: Drop hwdb-update dependency" and replace with upstream patch
+    which moves it to systemd-udev-trigger.service.
+  * display-managers autopkgtest: Properly wait until all jobs are finished.
+  * display-managers autopkgtest: Reset failed units between tests, to avoid
+    running into restart limits and for better test isolation.
+  * Enable timesyncd in virtual machines. (Closes: #762343)
+
+  [ Adam Conrad ]
+  * debian/systemd.{triggers,postinst}: Trigger a systemctl daemon-reload
+    when init scripts are installed or removed (Closes: #766429)
+
+  [ Didier Roche ]
+  * Squash all fsckd patches in one (as fsckd and such will be removed
+    soon upstream), containing various fixes from upstream git and refactor
+    the connection flow to upstream's suggestion. Modify the man pages to match
+    those modifications as well. Amongst others, this suppresses "Couldn't
+    connect to plymouth" errors if plymouth is not running.
+    (Closes: #782265, LP: #1429171)
+  * Keep plymouth localized messages in a separate patch for easier updates in
+    the future and refresh to latest upstream.
+  * display-managers autopkgtest: Use ExecStart=sleep instead of the actual
+    lightdm binary, to avoid errors from lightdm startup. Drop the now
+    unnecessary "needs-recommends" to speed up the test.
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 10 Apr 2015 11:08:33 +0200
+
 systemd (219-6) experimental; urgency=medium
 
   [ Martin Pitt ]
