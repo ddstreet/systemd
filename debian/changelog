@@ -1,3 +1,95 @@
+systemd (219-7ubuntu1) vivid; urgency=medium
+
+  * Merge with Debian experimental branch. Remaining Ubuntu changes:
+    - Hack to support system-image read-only /etc, and modify files in
+      /etc/writable/ instead.
+    - Keep our much simpler udev maintainer scripts (all platforms must
+      support udev, no debconf).
+    - initramfs init-top: Drop $ROOTDELAY, we do that in a more sensible way
+      with wait-for-root. Will get applicable to Debian once Debian gets
+      wait-for-root in initramfs-tools.
+    - initramfs init-bottom: If LVM is installed, settle udev,
+      otherwise we get missing LV symlinks. Workaround for LP #1185394.
+    - Add debian/udev.lvm2.init: Dummy SysV init script to satisfy insserv
+      dependencies to "lvm2" which is handled with udev rules in Ubuntu.
+    - Add debian/udev.lvm2.service to avoid running the dummy lvm2 init
+      script.
+    - Provide shutdown fallback for upstart. (LP: #1370329)
+    - debian/extra/ifup@.service: Additionally run for "auto" class. We don't
+      really support "allow-hotplug" in Ubuntu at the moment, so we need to
+      deal with "auto" devices appearing after "/etc/init.d/networking start"
+      already ran. (LP: #1374521) Also, check if devices are actually defined
+      in /etc/network/interfaces as we don't use Debian's net.agent.
+      Also run ifup in the background during boot, to avoid blocking
+      network.target. (LP: #1425376)
+    - ifup@.service: Drop dependency on networking.service (i. e.
+      /etc/init.d/networking), and merely ensure that /run/network exists.
+      This avoids unnecessary dependencies/waiting during boot and dependency
+      cycles if hooks wait for other interfaces to come up (like ifenslave
+      with bonding interfaces). (LP: #1414544)
+    - Add Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch: In
+      Ubuntu we currently keep the setting whether the RTC is in local or UTC
+      time in /etc/default/rcS "UTC=yes|no", instead of /etc/adjtime.
+      (LP: #1377258)
+    - Put session scopes into all cgroup controllers. This makes unprivileged
+      user LXC containers work under systemd. (LP: #1346734)
+    - systemctl: Don't forward telinit u to upstart. This works around
+      upstart's Restart() always reexec'ing /sbin/init on Restart(), even if
+      that changes to point to systemd during the upgrade. This avoids running
+      systemd during a dist-upgrade. (LP: #1430479)
+    - Drop hwdb-update dependency from udev-trigger.service, which got
+      introduced in v219-stable. This causes udev and plymouth to start too
+      late and isn't really needed in Ubuntu yet as we don't support stateless
+      systems yet and handle hwdb.bin updates through dpkg triggers. This can
+      be dropped again with initramfs-tools 0.117.
+    - Lower Breaks: to plymouth version which has the udev inotify fix in
+      Ubuntu.
+    - Lower libappamor1 dep to the Ubuntu version where it moved to /lib.
+    - Change systemd-sysv's conflicts to upstart-sysv. (LP: #1422681)
+    - Make failure of boot-and-services NSpawn.test_boot non-fatal for now.
+      This currently fails when being triggered by Jenkins, but is totally
+      unreproducible when running this manually on the exact same machine.
+
+    Upgrade fixes, keep until 16.04 LTS release:
+    - systemd Conflicts/Replaces/Provides systemd-services.
+    - Remove obsolete systemd-logind upstart job.
+    - Clean up obsolete /etc/udev/rules.d/README.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Fri, 10 Apr 2015 13:08:39 +0200
+
+systemd (219-7) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * Make systemd-sysv's dependency to systemd unversioned. The package just
+    contains 6 symlinks and thus isn't sensitive at all against version
+    mismatches. This avoids running into circular dependencies when testing
+    local debs.
+  * Revert "udev: Drop hwdb-update dependency" and replace with upstream patch
+    which moves it to systemd-udev-trigger.service.
+  * display-managers autopkgtest: Properly wait until all jobs are finished.
+  * display-managers autopkgtest: Reset failed units between tests, to avoid
+    running into restart limits and for better test isolation.
+  * Enable timesyncd in virtual machines. (Closes: #762343)
+
+  [ Adam Conrad ]
+  * debian/systemd.{triggers,postinst}: Trigger a systemctl daemon-reload
+    when init scripts are installed or removed (Closes: #766429)
+
+  [ Didier Roche ]
+  * Squash all fsckd patches in one (as fsckd and such will be removed
+    soon upstream), containing various fixes from upstream git and refactor
+    the connection flow to upstream's suggestion. Modify the man pages to match
+    those modifications as well. Amongst others, this suppresses "Couldn't
+    connect to plymouth" errors if plymouth is not running.
+    (Closes: #782265, LP: #1429171)
+  * Keep plymouth localized messages in a separate patch for easier updates in
+    the future and refresh to latest upstream.
+  * display-managers autopkgtest: Use ExecStart=sleep instead of the actual
+    lightdm binary, to avoid errors from lightdm startup. Drop the now
+    unnecessary "needs-recommends" to speed up the test.
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 10 Apr 2015 11:08:33 +0200
+
 systemd (219-6) experimental; urgency=medium
 
   [ Martin Pitt ]

@@ -50,7 +50,7 @@
   <refsynopsisdiv>
     <para><filename>systemd-fsck@.service</filename></para>
     <para><filename>systemd-fsck-root.service</filename></para>
-    <para><filename>/lib/systemd/systemd-fsck</filename></para>
+    <para><filename>/usr/lib/systemd/systemd-fsck</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
@@ -80,8 +80,8 @@
     the filesystem should actually be checked based on the time since
     last check, number of mounts, unclean unmount, etc.</para>
 
-    <para><filename>systemd-fsck</filename> will forward file system
-    checking progress to <filename>systemd-fsckd.service</filename>
+    <para><filename>systemd-fsck</filename> will forward fsck socket
+    for checking progress to <filename>systemd-fsckd.service</filename>
     socket. If a file system check fails for a service without
     <option>nofail</option>, emergency mode is activated, by isolating
     to <filename>emergency.target</filename>.</para>
@@ -137,4 +137,5 @@
       <citerefentry project='man-pages'><refentrytitle>fsck.xfs</refentrytitle><manvolnum>8</manvolnum></citerefentry>
     </para>
   </refsect1>
+
 </refentry>
