@@ -163,9 +163,13 @@ static bool mount_is_network(struct mntent *me) {
 }
 
 static bool mount_in_initrd(struct mntent *me) {
+        struct stat sb;
+
         assert(me);
 
-        return hasmntopt(me, "x-initrd.mount");
+        return
+                hasmntopt(me, "x-initrd.mount") ||
+                (streq(me->mnt_dir, "/usr") && stat("/run/initramfs/fsck-usr", &sb) == 0);
 }
 
 static int add_mount(
