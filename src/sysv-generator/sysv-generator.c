@@ -41,6 +41,8 @@
 #include "fileio.h"
 #include "hashmap.h"
 
+#define SYSV_OVERRIDE_PATH    "/etc/insserv/overrides/"
+
 typedef enum RunlevelType {
         RUNLEVEL_SYSINIT,
         RUNLEVEL_UP,
@@ -76,6 +78,7 @@ static const struct {
 typedef struct SysvStub {
         char *name;
         char *path;
+        char *override_path;
         char *description;
         bool sysinit;
         int sysv_start_priority;
@@ -206,6 +209,12 @@ static int generate_unit_file(SysvStub *s) {
                 fprintf(f, "Wants=%s\n", wants);
         if (!isempty(conflicts))
                 fprintf(f, "Conflicts=%s\n", conflicts);
+
+        /* make systemctl status show the information that the headers
+         * were overridden; not the most elegant way, but SourcePath=
+         * only accepts a single entry */
+        if (s->override_path)
+                fprintf(f, "Documentation=file://%s\n", s->override_path);
 
         fprintf(f,
                 "\n[Service]\n"
@@ -353,7 +362,7 @@ finish:
         return 1;
 }
 
-static int load_sysv(SysvStub *s) {
+static int load_sysv(SysvStub *s, const char *fpath, bool check_for_usage_only) {
         _cleanup_fclose_ FILE *f;
         unsigned line = 0;
         int r;
@@ -370,7 +379,7 @@ static int load_sysv(SysvStub *s) {
 
         assert(s);
 
-        f = fopen(s->path, "re");
+        f = fopen(fpath, "re");
         if (!f)
                 return errno == ENOENT ? 0 : -errno;
 
@@ -383,7 +392,7 @@ static int load_sysv(SysvStub *s) {
 
                         log_error_unit(s->name,
                                        "Failed to read configuration file '%s': %m",
-                                       s->path);
+                                       fpath);
                         return -errno;
                 }
 
@@ -407,6 +416,11 @@ static int load_sysv(SysvStub *s) {
 
                         continue;
                 }
+
+                /* If this is just the run to determine whether the init
+                 * script supports reload. */
+                if (check_for_usage_only)
+                        continue;
 
                 if (state == NORMAL && streq(t, "### BEGIN INIT INFO")) {
                         state = LSB;
@@ -458,7 +472,7 @@ static int load_sysv(SysvStub *s) {
                                 if (!path_is_absolute(fn)) {
                                         log_error_unit(s->name,
                                                        "[%s:%u] PID file not absolute. Ignoring.",
-                                                       s->path, line);
+                                                       fpath, line);
                                         continue;
                                 }
 
@@ -549,7 +563,7 @@ static int load_sysv(SysvStub *s) {
                                         if (r < 0)
                                                 log_error_unit(s->name,
                                                                "[%s:%u] Failed to add LSB Provides name %s, ignoring: %s",
-                                                               s->path, line, m, strerror(-r));
+                                                               fpath, line, m, strerror(-r));
                                 }
 
                         } else if (startswith_no_case(t, "Required-Start:") ||
@@ -573,7 +587,7 @@ static int load_sysv(SysvStub *s) {
                                         if (r < 0) {
                                                 log_error_unit(s->name,
                                                                "[%s:%u] Failed to translate LSB dependency %s, ignoring: %s",
-                                                               s->path, line, n, strerror(-r));
+                                                               fpath, line, n, strerror(-r));
                                                 continue;
                                         }
 
@@ -607,7 +621,7 @@ static int load_sysv(SysvStub *s) {
                                         if (r < 0)
                                                 log_error_unit(s->name,
                                                                "[%s:%u] Failed to add dependency on %s, ignoring: %s",
-                                                               s->path, line, m, strerror(-r));
+                                                               fpath, line, m, strerror(-r));
                                 }
 
                         } else if (startswith_no_case(t, "Description:")) {
@@ -763,6 +777,7 @@ static int native_unit_exists(LookupPaths lp, char *name) {
 
 static int enumerate_sysv(LookupPaths lp, Hashmap *all_services) {
         char **path;
+        int had_override = 0;
 
         STRV_FOREACH(path, lp.sysvinit_path) {
                 _cleanup_closedir_ DIR *d = NULL;
@@ -778,7 +793,7 @@ static int enumerate_sysv(LookupPaths lp, Hashmap *all_services) {
                 while ((de = readdir(d))) {
                         SysvStub *service;
                         struct stat st;
-                        _cleanup_free_ char *fpath = NULL, *name = NULL;
+                        _cleanup_free_ char *fpath = NULL, *name = NULL, *override_fpath = NULL;
                         int r;
 
                         if (ignore_file(de->d_name))
@@ -793,6 +808,19 @@ static int enumerate_sysv(LookupPaths lp, Hashmap *all_services) {
 
                         if (!(st.st_mode & S_IXUSR))
                                 continue;
+
+                        override_fpath = strjoin(SYSV_OVERRIDE_PATH, de->d_name, NULL);
+                        if (!override_fpath)
+                                return log_oom();
+
+                        if (stat(override_fpath, &st) < 0) {
+                                free(override_fpath);
+                                override_fpath = NULL;
+                        } else if (!had_override) {
+                                /* Only display this message once. */
+                                had_override = 1;
+                                log_info("Using overrides in %s. This is only supported in Jessie as a transitional measure.", SYSV_OVERRIDE_PATH);
+                        }
 
                         name = sysv_translate_name(de->d_name);
                         if (!name)
@@ -814,8 +842,17 @@ static int enumerate_sysv(LookupPaths lp, Hashmap *all_services) {
                         service->sysv_start_priority = -1;
                         service->name = name;
                         service->path = fpath;
+                        service->override_path = override_fpath;
 
-                        r = load_sysv(service);
+                        if (override_fpath) {
+                                r = load_sysv(service, override_fpath, false);
+                                if (r < 0)
+                                        continue;
+                        }
+
+                        /* always read in the init script to determine whether
+                         * it supports reload action */
+                        r = load_sysv(service, fpath, (bool) override_fpath);
                         if (r < 0)
                                 continue;
 
@@ -823,7 +860,7 @@ static int enumerate_sysv(LookupPaths lp, Hashmap *all_services) {
                         if (r < 0)
                                 return log_oom();
 
-                        name = fpath = NULL;
+                        name = fpath = override_fpath = NULL;
                 }
         }
 
