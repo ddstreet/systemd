@@ -1,3 +1,10 @@
+systemd (219-7ubuntu2) vivid; urgency=medium
+
+  * cryptsetup: Implement offset and skip options. (Closes: #751707,
+    LP: #953875)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 16 Apr 2015 14:59:39 -0500
+
 systemd (219-7ubuntu1) vivid; urgency=medium
 
   * Merge with Debian experimental branch. Remaining Ubuntu changes:
