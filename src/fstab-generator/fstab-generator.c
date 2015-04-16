@@ -151,8 +151,7 @@ static bool mount_is_network(struct mntent *me) {
 static bool mount_in_initrd(struct mntent *me) {
         assert(me);
 
-        return fstab_test_option(me->mnt_opts, "x-initrd.mount\0") ||
-               streq(me->mnt_dir, "/usr");
+        return fstab_test_option(me->mnt_opts, "x-initrd.mount\0");
 }
 
 static int add_mount(
