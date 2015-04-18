@@ -351,7 +351,9 @@ static int parse_fstab(bool initrd) {
                         path_kill_slashes(where);
 
                 noauto = fstab_test_yes_no_option(me->mnt_opts, "noauto\0" "auto\0");
-                nofail = fstab_test_yes_no_option(me->mnt_opts, "nofail\0" "fail\0");
+                nofail = fstab_test_yes_no_option(me->mnt_opts, "nofail\0" "fail\0") ||
+                         fstab_test_yes_no_option(me->mnt_opts, "nobootwait\0" "bootwait\0") ||
+                         fstab_test_option(me->mnt_opts, "optional\0");
                 log_debug("Found entry what=%s where=%s type=%s nofail=%s noauto=%s",
                           what, where, me->mnt_type,
                           yes_no(noauto), yes_no(nofail));
