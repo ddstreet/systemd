@@ -5186,7 +5186,6 @@ static int enable_sysv_units(const char *verb, char **args) {
                 }
 
                 log_info("Executing %s", l);
-                free(l);
 
                 pid = fork();
                 if (pid < 0) {
@@ -5214,6 +5213,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 argv[c-1] = verb;
                 argv[c] = NULL;
 
+                free(l);
                 l = strv_join((char**)argv, " ");
                 if (!l)
                         return log_oom();

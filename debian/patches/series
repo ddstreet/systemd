@@ -4,6 +4,10 @@ sysv-generator-fix-wrong-Overwriting-existing-symlin.patch
 Add-gettext-support.patch
 units-move-After-systemd-hwdb-update.service-depende.patch
 timesyncd-enable-timesyncd-in-virtual-machines.patch
+cryptsetup-Implement-offset-and-skip-options.patch
+login-make-hold-off-timeout-configurable.patch
+util-Fix-assertion-in-split-on-missing.patch
+sd-daemon-simplify-sd_pid_notify_with_fds.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -11,7 +15,6 @@ Make-systemctl-enable-disable-call-update-rc.d-for-s.patch
 systemctl-don-t-skip-native-units-when-enabling-disa.patch
 don-t-try-to-start-autovt-units-when-not-running-wit.patch
 timedated-don-t-rely-on-usr-being-mounted-in-the-ini.patch
-fstab-generator-don-t-rely-on-usr-being-mounted-in-t.patch
 Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
 Start-logind-on-demand-via-libpam-systemd.patch
 Update-localed-to-use-the-Debian-config-files.patch
@@ -57,9 +60,10 @@ Drop-rc-local-generator.patch
 Only-start-logind-if-dbus-is-installed.patch
 cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
 core-mount-ensure-that-we-parse-proc-self-mountinfo.patch
-Revert-journald-allow-restarting-journald-without-lo.patch
 PrivateTmp-shouldn-t-require-tmpfs.patch
 path_is_mount_point-handle-false-positive-on-some-fs.patch
 syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Add-fsckd-po-files.patch
+Skip-filesystem-check-if-already-done-by-the-initram.patch
+Revert-core-one-step-back-again-for-nspawn-we-actual.patch
