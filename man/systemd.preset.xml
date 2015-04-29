@@ -48,10 +48,10 @@
   <refsynopsisdiv>
     <para><filename>/etc/systemd/system-preset/*.preset</filename></para>
     <para><filename>/run/systemd/system-preset/*.preset</filename></para>
-    <para><filename>/usr/lib/systemd/system-preset/*.preset</filename></para>
+    <para><filename>/lib/systemd/system-preset/*.preset</filename></para>
     <para><filename>/etc/systemd/user-preset/*.preset</filename></para>
     <para><filename>/run/systemd/user-preset/*.preset</filename></para>
-    <para><filename>/usr/lib/systemd/user-preset/*.preset</filename></para>
+    <para><filename>/lib/systemd/user-preset/*.preset</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
@@ -108,10 +108,10 @@
     <para>Each preset file shall be named in the style of
     <filename>&lt;priority&gt;-&lt;program&gt;.conf</filename>. Files
     in <filename>/etc/</filename> override files with the same name in
-    <filename>/usr/lib/</filename> and <filename>/run/</filename>.
+    <filename>/lib/</filename> and <filename>/run/</filename>.
     Files in <filename>/run/</filename> override files with the same
-    name in <filename>/usr/lib/</filename>. Packages should install
-    their preset files in <filename>/usr/lib/</filename>. Files in
+    name in <filename>/lib/</filename>. Packages should install
+    their preset files in <filename>/lib/</filename>. Files in
     <filename>/etc/</filename> are reserved for the local
     administrator, who may use this logic to override the preset files
     installed by vendor packages. All preset files are sorted by their
@@ -133,7 +133,7 @@
     <title>Example</title>
 
     <example>
-      <title>Default off example <filename>/usr/lib/systemd/system-preset/99-default.preset</filename>:</title>
+      <title>Default off example <filename>/lib/systemd/system-preset/99-default.preset</filename>:</title>
 
       <programlisting>disable *</programlisting>
     </example>
@@ -144,7 +144,7 @@
     suchlike.</para>
 
     <example>
-      <title>A GNOME spin example <filename>/usr/lib/systemd/system-preset/50-gnome.preset</filename>:</title>
+      <title>A GNOME spin example <filename>/lib/systemd/system-preset/50-gnome.preset</filename>:</title>
 
       <programlisting>enable gdm.service
 enable colord.service
