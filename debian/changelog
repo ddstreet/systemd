@@ -1,3 +1,10 @@
+systemd (219-7ubuntu4.1) vivid; urgency=medium
+
+  * Handle ibmveth virtual LPAR net devices using the driver name as well as
+    by matching by subsystem. (LP: #1437375)
+
+ -- Mathieu Trudel-Lapierre <mathieu-tl@ubuntu.com>  Mon, 04 May 2015 21:31:46 -0400
+
 systemd (219-7ubuntu4) vivid; urgency=medium
 
   * hwdb: Fix wireless switch on Dell Latitude (LP: #1441849)
