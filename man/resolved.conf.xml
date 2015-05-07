@@ -52,7 +52,7 @@
     <para><filename>/etc/systemd/resolved.conf</filename></para>
     <para><filename>/etc/systemd/resolved.conf.d/*.conf</filename></para>
     <para><filename>/run/systemd/resolved.conf.d/*.conf</filename></para>
-    <para><filename>/usr/lib/systemd/resolved.conf.d/*.conf</filename></para>
+    <para><filename>/lib/systemd/resolved.conf.d/*.conf</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
