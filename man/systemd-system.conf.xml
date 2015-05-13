@@ -54,11 +54,11 @@
     <para><filename>/etc/systemd/system.conf</filename></para>
     <para><filename>/etc/systemd/system.conf.d/*.conf</filename></para>
     <para><filename>/run/systemd/system.conf.d/*.conf</filename></para>
-    <para><filename>/usr/lib/systemd/system.conf.d/*.conf</filename></para>
+    <para><filename>/lib/systemd/system.conf.d/*.conf</filename></para>
     <para><filename>/etc/systemd/user.conf</filename></para>
     <para><filename>/etc/systemd/user.conf.d/*.conf</filename></para>
     <para><filename>/run/systemd/user.conf.d/*.conf</filename></para>
-    <para><filename>/usr/lib/systemd/user.conf.d/*.conf</filename></para>
+    <para><filename>/lib/systemd/user.conf.d/*.conf</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
