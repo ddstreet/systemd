@@ -5169,9 +5169,6 @@ static int enable_sysv_units(const char *verb, char **args) {
                                 break;
                 }
 
-                if (found_native)
-                        continue;
-
                 p = path_join(arg_root, SYSTEM_SYSVINIT_PATH, name);
                 if (!p)
                         return log_oom();
@@ -5181,7 +5178,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!found_sysv)
                         continue;
 
-                log_info("%s is not a native service, redirecting to /usr/sbin/update-rc.d.", name);
+                log_info("Synchronizing state for %s with sysvinit using update-rc.d...", name);
 
                 if (!isempty(arg_root) && !streq(arg_root, "/")) {
                     log_error("Can not run update-rc.d when a root directory other than / is specified");
@@ -5267,6 +5264,9 @@ static int enable_sysv_units(const char *verb, char **args) {
                                 return -EINVAL;
                 } else
                         return -EPROTO;
+
+                if (found_native)
+                        continue;
 
                 /* Remove this entry, so that we don't try enabling it as native unit */
                 assert(f > 0);
