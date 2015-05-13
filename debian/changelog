@@ -1,3 +1,36 @@
+systemd (219-9) experimental; urgency=medium
+
+  * 75-persistent-net-generator.rules: Fix rules for ibmveth (it's a driver,
+    not a subsystem). (LP: #1437375)
+  * debian/tests/unit-config: Add tests for systemctl enable/disable on a
+    SysV-only unit. Reproduces LP #1447807.
+  * Fix systemctl enable for SysV scripts without a native unit. We must not
+    try and enable the nonexisting unit then. (LP: #1447807)
+  * Drop Add-env-variable-for-machine-ID-path.patch. systemd should always
+    be installed via the essential "init" in buildd schroots now.
+  * debian/README.source: Update git-buildpackage commands for the renames in
+    0.6.24.
+  * Make apparmor run before networking, to ensure that profiles apply to
+    e. g. dhclient (LP: #1438249):
+    - Rename networking.service.d/network-pre.conf to systemd.conf, and add
+      After=apparmor.service.
+    - ifup@.service: Add After=apparmor.service.
+    - Add Breaks: on apparmor << 2.9.2-1, which dropped its dependency to
+      $remote_fs.
+  * Drop login-don-t-overmount-run-user-UID-on-upgrades.patch and
+    login-don-t-overmount-run-user-UID-on-upgrades.patch, these were only
+    needed for upgrades from wheezy to jessie.
+  * systemd.{pre,post}inst: Clean up obsolete (pre-wheezy/jessie) upgrade
+    fixes.
+  * systemd-fsckd autopkgtest: Stop assuming that
+    /etc/default/grub.d/90-autopkgtest.cfg exists.
+  * systemd-fsckd autopkgtest: Add missing plymouth test dependency.
+  * Drop core-mount-ensure-that-we-parse-proc-self-mountinfo.patch, and bump
+    util-linux dependency to the version which enables
+    --enable-libmount-force-mountinfo.
+
+ -- Martin Pitt <mpitt@debian.org>  Wed, 13 May 2015 12:27:21 +0200
+
 systemd (219-8) experimental; urgency=medium
 
   [ Michael Biebl ]
@@ -19,7 +52,7 @@ systemd (219-8) experimental; urgency=medium
   * Reduce the initial suspend supression time from 3 minutes to 30 seconds,
     and make it configurable. (LP: #1444166)
   * Fix double free crash in "systemctl enable" when calling update-rc.d and
-    the latter fails. (LP: #1426588)
+    the latter fails. (Closes: #764613, LP: #1426588)
   * hwdb: Fix wireless switch on Dell Latitude (LP: #1441849)
   * Fix assertion crash when reading a service file with missing ' and
     trailing space. (LP: #1447243)
@@ -31,10 +64,10 @@ systemd (219-8) experimental; urgency=medium
   * Revert upstream commit 743970d which immediately SIGKILLs units during
     shutdown. This leads to problems like bash not being able to write its
     history, mosh not saving its state, and similar failed cleanup actions.
-    (LP: #1448259)
+    (Closes: #784720, LP: #1448259)
   * Drop the reversion of "journald: allow restarting journald without losing
     stream connections", and replace with proper upstream fix for
-    sd_pid_notify_with_fds(). (See Debian #778970, LP #1423811)
+    sd_pid_notify_with_fds(). (See Debian #778970, LP #1423811; LP: #1437896)
 
  -- Martin Pitt <mpitt@debian.org>  Wed, 29 Apr 2015 17:13:41 +0200
 

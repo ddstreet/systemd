@@ -111,7 +111,6 @@ _public_ int sd_id128_get_machine(sd_id128_t *ret) {
         ssize_t k;
         unsigned j;
         sd_id128_t t;
-        const char *machine_id_path;
 
         assert_return(ret, -EINVAL);
 
@@ -120,10 +119,7 @@ _public_ int sd_id128_get_machine(sd_id128_t *ret) {
                 return 0;
         }
 
-        machine_id_path = getenv("SYSTEMD_MACHINE_ID_PATH");
-        if (machine_id_path == NULL)
-                machine_id_path = "/etc/machine-id";
-        fd = open(machine_id_path, O_RDONLY|O_CLOEXEC|O_NOCTTY);
+        fd = open("/etc/machine-id", O_RDONLY|O_CLOEXEC|O_NOCTTY);
         if (fd < 0)
                 return -errno;
 
