@@ -44,10 +44,7 @@ Make-run-lock-tmpfs-an-API-fs.patch
 Include-additional-directories-in-ProtectSystem.patch
 Fix-paths-in-man-pages.patch
 buildsys-Don-t-default-to-gold-as-the-linker.patch
-sd-bus-Accept-no-sender-as-the-destination-field.patch
-login-don-t-overmount-run-user-UID-on-upgrades.patch
 udev-re-enable-mount-propagation-for-udevd.patch
-Add-env-variable-for-machine-ID-path.patch
 Prefer-etc-X11-default-display-manager-if-present.patch
 Re-enable-journal-forwarding-to-syslog.patch
 Disable-tests-which-fail-on-buildds.patch
@@ -59,7 +56,6 @@ util-Add-hidden-suffixes-for-ucf.patch
 Drop-rc-local-generator.patch
 Only-start-logind-if-dbus-is-installed.patch
 cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
-core-mount-ensure-that-we-parse-proc-self-mountinfo.patch
 PrivateTmp-shouldn-t-require-tmpfs.patch
 path_is_mount_point-handle-false-positive-on-some-fs.patch
 syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
