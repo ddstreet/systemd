@@ -454,5 +454,16 @@ msgstr ""
 "Legitimierung ist zum Festlegen, ob Netzwerkzeitabgeich eingeschaltet sein "
 "soll, erforderlich."
 
+#: ../src/fsckd/fsckd.c:186
+msgid "Press Ctrl+C to cancel all filesystem checks in progress"
+msgstr "Strl+C drücken um laufende Dateisystem-Prüfungen abzubrechen"
+
+#: ../src/fsckd/fsckd.c:227
+#, c-format
+msgid "Checking in progress on %d disk (%3.1f%% complete)"
+msgid_plural "Checking in progress on %d disks (%3.1f%% complete)"
+msgstr[0] "Prüfe %d Laufwerk (%3.1f%% fertig)"
+msgstr[1] "Prüfe %d Laufwerke (%3.1f%% fertig)"
+
 #~ msgid "Privileged system and service manager access"
 #~ msgstr "Privilegierter Zugriff auf die System- und Dienstverwaltung"
