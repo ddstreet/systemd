@@ -66,7 +66,7 @@
 
     <para><literallayout><filename>/etc/systemd/system/*</filename>
 <filename>/run/systemd/system/*</filename>
-<filename>/usr/lib/systemd/system/*</filename>
+<filename>/lib/systemd/system/*</filename>
 <filename>...</filename>
     </literallayout></para>
 
@@ -77,7 +77,7 @@
 <filename>/run/systemd/user/*</filename>
 <filename>$XDG_DATA_HOME/systemd/user/*</filename>
 <filename>$HOME/.local/share/systemd/user/*</filename>
-<filename>/usr/lib/systemd/user/*</filename>
+<filename>/lib/systemd/user/*</filename>
 <filename>...</filename>
     </literallayout></para>
   </refsynopsisdiv>
@@ -295,7 +295,7 @@
       <entry>Runtime units</entry>
           </row>
           <row>
-      <entry><filename>/usr/lib/systemd/system</filename></entry>
+      <entry><filename>/lib/systemd/system</filename></entry>
       <entry>Units of installed packages</entry>
           </row>
         </tbody>
@@ -1309,7 +1309,7 @@ ExecStart=/usr/sbin/foo-daemon
 
       <para>There are two methods of overriding vendor settings in
       unit files: copying the unit file from
-      <filename>/usr/lib/systemd/system</filename> to
+      <filename>/lib/systemd/system</filename> to
       <filename>/etc/systemd/system</filename> and modifying the
       chosen settings. Alternatively, one can create a directory named
       <filename><replaceable>unit</replaceable>.d/</filename> within
@@ -1343,7 +1343,7 @@ ExecStart=/usr/sbin/foo-daemon
       load paths for further details.</para>
 
       <para>Suppose there is a vendor-supplied unit
-      <filename>/usr/lib/systemd/system/httpd.service</filename> with
+      <filename>/lib/systemd/system/httpd.service</filename> with
       the following contents:</para>
 
       <programlisting>[Unit]
