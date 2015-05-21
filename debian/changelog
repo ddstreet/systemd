@@ -1,3 +1,23 @@
+systemd (219-7ubuntu6) vivid; urgency=medium
+
+  * Fix assertion crash with empty Exec*= paths. (LP: #1454173)
+  * systemd-fsckd autopkgtest: Stop assuming that
+    /etc/default/grub.d/90-autopkgtest.cfg exists.
+  * systemd-fsckd autopkgtest: Add missing plymouth test dependency.
+  * debian/tests/boot-smoke: Allow 10 seconds for systemd jobs to settle down.
+  * Fix "tentative" state of devices which are not in /dev (mostly in
+    containers), and avoid overzealous cleanup unmounting of mounts from them.
+    (LP: #1444402)
+  * journal: Gracefully handle failure to bind to audit socket, which is known
+    to fail in namespaces (containers) with current kernels. Also
+    conditionalize systemd-journald-audit.socket on CAP_AUDIT_READ.
+    (LP: #1457054)
+  * Add sigpwr-container-shutdown.service: Power off when receiving SIGPWR in
+    a container. This makes lxc-stop work for systemd containers.
+    (LP: #1457321)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 21 May 2015 14:47:46 +0200
+
 systemd (219-7ubuntu5) vivid; urgency=medium
 
   * Revert upstream commit 743970d which immediately SIGKILLs units during
