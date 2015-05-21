@@ -52,7 +52,7 @@
     <para><filename>/etc/systemd/journald.conf</filename></para>
     <para><filename>/etc/systemd/journald.conf.d/*.conf</filename></para>
     <para><filename>/run/systemd/journald.conf.d/*.conf</filename></para>
-    <para><filename>/usr/lib/systemd/journald.conf.d/*.conf</filename></para>
+    <para><filename>/lib/systemd/journald.conf.d/*.conf</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
