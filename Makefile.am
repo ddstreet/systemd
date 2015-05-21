@@ -624,12 +624,13 @@ CLEANFILES += \
 
 if HAVE_SYSV_COMPAT
 nodist_systemunit_DATA += \
-	units/rc-local.service \
-	units/halt-local.service
+	units/rc-local.service
 
 systemgenerator_PROGRAMS += \
-	systemd-sysv-generator \
-	systemd-rc-local-generator
+	systemd-sysv-generator
+
+MULTI_USER_TARGET_WANTS += \
+	rc-local.service
 endif
 
 EXTRA_DIST += \
