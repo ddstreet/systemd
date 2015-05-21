@@ -1,3 +1,35 @@
+systemd (219-10) experimental; urgency=medium
+
+  * Fix assertion crash with empty Exec*= paths. (LP: #1454173)
+  * Drop Avoid-reload-and-re-start-requests-during-early-boot.patch
+    and Avoid-reloading-services-when-shutting-down.patch: This was fixed more
+    robustly in invoke-rc.d and service now, see #777113.
+  * debian/tests/boot-smoke: Allow 10 seconds for systemd jobs to settle down.
+  * Fix "tentative" state of devices which are not in /dev (mostly in
+    containers), and avoid overzealous cleanup unmounting of mounts from them.
+    (LP: #1444402)
+  * debian/extra/udev-helpers/net.agent: Eliminate cat and most grep calls.
+  * Drop Set-default-polling-interval-on-removable-devices-as.patch; it's long
+    obsolete, CD ejection with the hardware button works properly without it.
+  * Re-enable-journal-forwarding-to-syslog.patch: Update patch description,
+    journal.conf.d/ exists now.
+  * journal: Gracefully handle failure to bind to audit socket, which is known
+    to fail in namespaces (containers) with current kernels. Also
+    conditionalize systemd-journald-audit.socket on CAP_AUDIT_READ.
+    (LP: #1457054)
+  * Put back *.agent scripts and use net.agent in Ubuntu. This fixes escaping
+    of unit names, reduces the delta, and will make it easier to get a common
+    solution for integrating ifup.d/ scripts with networkd.
+  * When booting with "quiet", run the initramfs' udevd with "notice" log
+    level. (LP: #1432171)
+  * Add sigpwr-container-shutdown.service: Power off when receiving SIGPWR in
+    a container. This makes lxc-stop work for systemd containers.
+    (LP: #1457321)
+  * write_net_rules: Escape '{' and '}' characters as well, to make this work
+    with busybox grep. Thanks Faidon Liambotis! (Closes: #765577)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 21 May 2015 09:43:52 +0200
+
 systemd (219-9) experimental; urgency=medium
 
   * 75-persistent-net-generator.rules: Fix rules for ibmveth (it's a driver,
