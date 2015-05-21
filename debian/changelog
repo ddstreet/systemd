@@ -1,3 +1,20 @@
+systemd (215-18) unstable; urgency=medium
+
+  [ Michael Biebl ]
+  * manager: Pass correct errno to strerror(), have_ask_password contains
+    negative error values which have to be negated when being passed to
+    strerror().
+
+  [ Martin Pitt ]
+  * Revert upstream commit 743970d which immediately SIGKILLs units during
+    shutdown. This leads to problems like bash not being able to write its
+    history, mosh not saving its state, and similar failed cleanup actions.
+    (Closes: #784720, LP: #1448259)
+  * write_net_rules: Escape '{' and '}' characters as well, to make this work
+    with busybox grep. Thanks Faidon Liambotis! (Closes: #765577)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 21 May 2015 15:49:30 +0200
+
 systemd (215-17) unstable; urgency=high
 
   * cryptsetup: Implement offset and skip options. (Closes: #751707,
