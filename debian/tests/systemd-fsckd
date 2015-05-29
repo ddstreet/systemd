@@ -53,7 +53,7 @@ class FsckdTest(unittest.TestCase):
             os.rename(SYSTEM_FSCK_PATH, SAVED_FSCK_PATH)
 
         # install mock fsck and killer
-        self.install_bin(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', 'test', 'mocks', 'fsck'),
+        self.install_bin(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'fsck'),
                          SYSTEM_FSCK_PATH)
         self.install_bin(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'process-killer'),
                          PROCESS_KILLER_PATH)
@@ -134,7 +134,7 @@ class FsckdTest(unittest.TestCase):
             self.assertFsckdStop()
             self.assertProcessKilled()
             self.assertFsckProceeded()
-            self.assertTrue(self.is_failed_unit('plymouth-start'))
+            self.assertFalse(self.is_active_unit('plymouth-start'))
             self.assertSystemRunning()
 
     def install_bin(self, source, dest):
@@ -161,8 +161,8 @@ class FsckdTest(unittest.TestCase):
 
     def was_running(self, unit):
         '''Check that a given unit has been running'''
-        out = subprocess.check_output(['systemctl', 'show', '--property=ExecMainExitTimestampMonotonic', unit])
-        if b'=0' in out:
+        out = subprocess.check_output(['systemctl', 'show', '--property=ExecStart', unit])
+        if b'start_time=[n/a]' in out:
             return False
         return True
 
