@@ -23,11 +23,9 @@
 #include <sys/epoll.h>
 #include <libudev.h>
 
-#include "strv.h"
 #include "log.h"
 #include "unit-name.h"
 #include "dbus-device.h"
-#include "def.h"
 #include "path-util.h"
 #include "udev-util.h"
 #include "unit.h"
@@ -134,15 +132,12 @@ static void device_set_state(Device *d, DeviceState state) {
         d->state = state;
 
         if (state != old_state)
-                log_unit_debug(UNIT(d)->id,
-                               "%s changed %s -> %s", UNIT(d)->id,
-                               device_state_to_string(old_state),
-                               device_state_to_string(state));
+                log_unit_debug(UNIT(d), "Changed %s -> %s", device_state_to_string(old_state), device_state_to_string(state));
 
         unit_notify(UNIT(d), state_translation_table[old_state], state_translation_table[state], true);
 }
 
-static int device_coldplug(Unit *u, Hashmap *deferred_work) {
+static int device_coldplug(Unit *u) {
         Device *d = DEVICE(u);
 
         assert(d);
@@ -151,10 +146,45 @@ static int device_coldplug(Unit *u, Hashmap *deferred_work) {
         if (d->found & DEVICE_FOUND_UDEV)
                 /* If udev says the device is around, it's around */
                 device_set_state(d, DEVICE_PLUGGED);
-        else if (d->found != DEVICE_NOT_FOUND)
+        else if (d->found != DEVICE_NOT_FOUND && d->deserialized_state != DEVICE_PLUGGED)
                 /* If a device is found in /proc/self/mountinfo or
-                 * /proc/swaps, it's "tentatively" around. */
+                 * /proc/swaps, and was not yet announced via udev,
+                 * it's "tentatively" around. */
                 device_set_state(d, DEVICE_TENTATIVE);
+
+        return 0;
+}
+
+static int device_serialize(Unit *u, FILE *f, FDSet *fds) {
+        Device *d = DEVICE(u);
+
+        assert(u);
+        assert(f);
+        assert(fds);
+
+        unit_serialize_item(u, f, "state", device_state_to_string(d->state));
+
+        return 0;
+}
+
+static int device_deserialize_item(Unit *u, const char *key, const char *value, FDSet *fds) {
+        Device *d = DEVICE(u);
+
+        assert(u);
+        assert(key);
+        assert(value);
+        assert(fds);
+
+        if (streq(key, "state")) {
+                DeviceState state;
+
+                state = device_state_from_string(value);
+                if (state < 0)
+                        log_unit_debug(u, "Failed to parse state value: %s", value);
+                else
+                        d->deserialized_state = state;
+        } else
+                log_unit_debug(u, "Unknown serialization key: %s", key);
 
         return 0;
 }
@@ -219,7 +249,7 @@ static int device_update_description(Unit *u, struct udev_device *dev, const cha
                 r = unit_set_description(u, path);
 
         if (r < 0)
-                log_unit_error_errno(u->id, r, "Failed to set device description: %m");
+                log_unit_error_errno(u, r, "Failed to set device description: %m");
 
         return r;
 }
@@ -234,7 +264,7 @@ static int device_add_udev_wants(Unit *u, struct udev_device *dev) {
         assert(u);
         assert(dev);
 
-        property = u->manager->running_as == SYSTEMD_USER ? "SYSTEMD_USER_WANTS" : "SYSTEMD_WANTS";
+        property = u->manager->running_as == MANAGER_USER ? "MANAGER_USER_WANTS" : "SYSTEMD_WANTS";
         wants = udev_device_get_property_value(dev, property);
         if (!wants)
                 return 0;
@@ -246,16 +276,16 @@ static int device_add_udev_wants(Unit *u, struct udev_device *dev) {
                 memcpy(e, word, l);
                 e[l] = 0;
 
-                n = unit_name_mangle(e, MANGLE_NOGLOB);
-                if (!n)
-                        return log_oom();
+                r = unit_name_mangle(e, UNIT_NAME_NOGLOB, &n);
+                if (r < 0)
+                        return log_unit_error_errno(u, r, "Failed to mangle unit name: %m");
 
                 r = unit_add_dependency_by_name(u, UNIT_WANTS, n, NULL, true);
                 if (r < 0)
-                        return log_unit_error_errno(u->id, r, "Failed to add wants dependency: %m");
+                        return log_unit_error_errno(u, r, "Failed to add wants dependency: %m");
         }
         if (!isempty(state))
-                log_unit_warning(u->id, "Property %s on %s has trailing garbage, ignoring.", property, strna(udev_device_get_syspath(dev)));
+                log_unit_warning(u, "Property %s on %s has trailing garbage, ignoring.", property, strna(udev_device_get_syspath(dev)));
 
         return 0;
 }
@@ -276,9 +306,9 @@ static int device_setup_unit(Manager *m, struct udev_device *dev, const char *pa
                         return 0;
         }
 
-        e = unit_name_from_path(path, ".device");
-        if (!e)
-                return log_oom();
+        r = unit_name_from_path(path, ".device", &e);
+        if (r < 0)
+                return log_error_errno(r, "Failed to generate unit name from device path: %m");
 
         u = manager_get_unit(m, e);
 
@@ -286,7 +316,7 @@ static int device_setup_unit(Manager *m, struct udev_device *dev, const char *pa
             sysfs &&
             DEVICE(u)->sysfs &&
             !path_equal(DEVICE(u)->sysfs, sysfs)) {
-                log_unit_error(u->id, "Device %s appeared twice with different sysfs paths %s and %s", e, DEVICE(u)->sysfs, sysfs);
+                log_unit_debug(u, "Device %s appeared twice with different sysfs paths %s and %s", e, DEVICE(u)->sysfs, sysfs);
                 return -EEXIST;
         }
 
@@ -329,9 +359,9 @@ static int device_setup_unit(Manager *m, struct udev_device *dev, const char *pa
         return 0;
 
 fail:
-        log_unit_warning_errno(u->id, r, "Failed to set up device unit: %m");
+        log_unit_warning_errno(u, r, "Failed to set up device unit: %m");
 
-        if (delete && u)
+        if (delete)
                 unit_free(u);
 
         return r;
@@ -412,7 +442,7 @@ static int device_process_new(Manager *m, struct udev_device *dev) {
 }
 
 static void device_update_found_one(Device *d, bool add, DeviceFound found, bool now) {
-        DeviceFound n;
+        DeviceFound n, previous;
 
         assert(d);
 
@@ -420,16 +450,27 @@ static void device_update_found_one(Device *d, bool add, DeviceFound found, bool
         if (n == d->found)
                 return;
 
+        previous = d->found;
         d->found = n;
 
-        if (now) {
-                if (d->found & DEVICE_FOUND_UDEV)
-                        device_set_state(d, DEVICE_PLUGGED);
-                else if (add && d->found != DEVICE_NOT_FOUND)
-                        device_set_state(d, DEVICE_TENTATIVE);
-                else
-                        device_set_state(d, DEVICE_DEAD);
-        }
+        if (!now)
+                return;
+
+        if (d->found & DEVICE_FOUND_UDEV)
+                /* When the device is known to udev we consider it
+                 * plugged. */
+                device_set_state(d, DEVICE_PLUGGED);
+        else if (d->found != DEVICE_NOT_FOUND && (previous & DEVICE_FOUND_UDEV) == 0)
+                /* If the device has not been seen by udev yet, but is
+                 * now referenced by the kernel, then we assume the
+                 * kernel knows it now, and udev might soon too. */
+                device_set_state(d, DEVICE_TENTATIVE);
+        else
+                /* If nobody sees the device, or if the device was
+                 * previously seen by udev and now is only referenced
+                 * from the kernel, then we consider the device is
+                 * gone, the kernel just hasn't noticed it yet. */
+                device_set_state(d, DEVICE_DEAD);
 }
 
 static int device_update_found_by_sysfs(Manager *m, const char *sysfs, bool add, DeviceFound found, bool now) {
@@ -451,6 +492,7 @@ static int device_update_found_by_sysfs(Manager *m, const char *sysfs, bool add,
 static int device_update_found_by_name(Manager *m, const char *path, bool add, DeviceFound found, bool now) {
         _cleanup_free_ char *e = NULL;
         Unit *u;
+        int r;
 
         assert(m);
         assert(path);
@@ -458,9 +500,9 @@ static int device_update_found_by_name(Manager *m, const char *path, bool add, D
         if (found == DEVICE_NOT_FOUND)
                 return 0;
 
-        e = unit_name_from_path(path, ".device");
-        if (!e)
-                return log_oom();
+        r = unit_name_from_path(path, ".device", &e);
+        if (r < 0)
+                return log_error_errno(r, "Failed to generate unit name from device path: %m");
 
         u = manager_get_unit(m, e);
         if (!u)
@@ -574,7 +616,7 @@ static int device_enumerate(Manager *m) {
                 /* This will fail if we are unprivileged, but that
                  * should not matter much, as user instances won't run
                  * during boot. */
-                udev_monitor_set_receive_buffer_size(m->udev_monitor, 128*1024*1024);
+                (void) udev_monitor_set_receive_buffer_size(m->udev_monitor, 128*1024*1024);
 
                 r = udev_monitor_filter_add_match_tag(m->udev_monitor, "systemd");
                 if (r < 0)
@@ -587,6 +629,8 @@ static int device_enumerate(Manager *m) {
                 r = sd_event_add_io(m->event, &m->udev_event_source, udev_monitor_get_fd(m->udev_monitor), EPOLLIN, device_dispatch_io, m);
                 if (r < 0)
                         goto fail;
+
+                (void) sd_event_source_set_description(m->udev_event_source, "device");
         }
 
         e = udev_enumerate_new(m->udev);
@@ -708,9 +752,8 @@ static int device_dispatch_io(sd_event_source *source, int fd, uint32_t revents,
         return 0;
 }
 
-static bool device_supported(Manager *m) {
+static bool device_supported(void) {
         static int read_only = -1;
-        assert(m);
 
         /* If /sys is read-only we don't support device units, and any
          * attempts to start one should fail immediately. */
@@ -727,6 +770,9 @@ int device_found_node(Manager *m, const char *node, bool add, DeviceFound found,
 
         assert(m);
         assert(node);
+
+        if (!device_supported())
+                return 0;
 
         /* This is called whenever we find a device referenced in
          * /proc/swaps or /proc/self/mounts. Such a device might be
@@ -794,6 +840,9 @@ const UnitVTable device_vtable = {
         .load = unit_load_fragment_and_dropin_optional,
 
         .coldplug = device_coldplug,
+
+        .serialize = device_serialize,
+        .deserialize_item = device_deserialize_item,
 
         .dump = device_dump,
 

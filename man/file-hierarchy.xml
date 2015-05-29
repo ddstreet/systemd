@@ -1,6 +1,9 @@
 <?xml version='1.0'?> <!--*-nxml-*-->
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY % entities SYSTEM "custom-entities.ent" >
+%entities;
+]>
 
 <!--
   This file is part of systemd.
@@ -256,9 +259,8 @@
         used for package-specific data, unless this data is
         architecture-dependent, too. To query
         <varname>$libdir</varname> for the primary architecture of the
-        system, invoke: <programlisting># pkg-config --variable=libdir
-        systemd</programlisting> or <programlisting># systemd-path
-        system-library-arch</programlisting> </para></listitem>
+        system, invoke:
+        <programlisting># systemd-path system-library-arch</programlisting></para></listitem>
 
       </varlistentry>
 

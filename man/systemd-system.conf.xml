@@ -1,6 +1,9 @@
 <?xml version='1.0'?> <!--*-nxml-*-->
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY % entities SYSTEM "custom-entities.ent" >
+%entities;
+]>
 
 <!--
   This file is part of systemd.
@@ -51,14 +54,14 @@
   </refnamediv>
 
   <refsynopsisdiv>
-    <para><filename>/etc/systemd/system.conf</filename></para>
-    <para><filename>/etc/systemd/system.conf.d/*.conf</filename></para>
+    <para><filename>&pkgsysconfdir;/system.conf</filename></para>
+    <para><filename>&pkgsysconfdir;/system.conf.d/*.conf</filename></para>
     <para><filename>/run/systemd/system.conf.d/*.conf</filename></para>
-    <para><filename>/lib/systemd/system.conf.d/*.conf</filename></para>
-    <para><filename>/etc/systemd/user.conf</filename></para>
-    <para><filename>/etc/systemd/user.conf.d/*.conf</filename></para>
+    <para><filename>&rootlibexecdir;/system.conf.d/*.conf</filename></para>
+    <para><filename>&pkgsysconfdir;/user.conf</filename></para>
+    <para><filename>&pkgsysconfdir;/user.conf.d/*.conf</filename></para>
     <para><filename>/run/systemd/user.conf.d/*.conf</filename></para>
-    <para><filename>/lib/systemd/user.conf.d/*.conf</filename></para>
+    <para><filename>&rootlibexecdir;/user.conf.d/*.conf</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
@@ -260,7 +263,11 @@
         <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>
         for details on the per-unit settings). For non-service units,
         <varname>DefaultTimeoutStartSec=</varname> sets the default
-        <varname>TimeoutSec=</varname> value. </para></listitem>
+        <varname>TimeoutSec=</varname>
+        value. <varname>DefaultTimeoutStartSec=</varname> and
+        <varname>DefaultTimeoutStopSec=</varname> default to
+        90s. <varname>DefaultRestartSec=</varname> defaults to
+        100ms.</para></listitem>
       </varlistentry>
 
       <varlistentry>
@@ -272,7 +279,10 @@
         <varname>StartLimitInterval=</varname> and
         <varname>StartLimitBurst=</varname>. See
         <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>
-        for details on the per-service settings.</para></listitem>
+        for details on the per-service settings.
+        <varname>DefaultStartLimitInterval=</varname> defaults to
+        10s. <varname>DefaultStartLimitBurst=</varname> defaults to
+        5.</para></listitem>
       </varlistentry>
 
       <varlistentry>

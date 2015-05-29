@@ -22,7 +22,6 @@
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 #include <sys/wait.h>
-#include <pthread.h>
 
 #include "sd-id128.h"
 #include "sd-daemon.h"
@@ -462,7 +461,7 @@ _public_ sd_event* sd_event_unref(sd_event *e) {
 static bool event_pid_changed(sd_event *e) {
         assert(e);
 
-        /* We don't support people creating am event loop and keeping
+        /* We don't support people creating an event loop and keeping
          * it around over a fork(). Let's complain. */
 
         return e->original_pid != getpid();
@@ -920,7 +919,7 @@ _public_ int sd_event_add_time(
                 callback = time_exit_callback;
 
         type = clock_to_event_source_type(clock);
-        assert_return(type >= 0, -ENOTSUP);
+        assert_return(type >= 0, -EOPNOTSUPP);
 
         d = event_get_clock_data(e, type);
         assert(d);
@@ -2235,7 +2234,7 @@ static int dispatch_exit(sd_event *e) {
 
         r = source_dispatch(p);
 
-        e->state = SD_EVENT_PASSIVE;
+        e->state = SD_EVENT_INITIAL;
         sd_event_unref(e);
 
         return r;
@@ -2304,7 +2303,7 @@ _public_ int sd_event_prepare(sd_event *e) {
         assert_return(e, -EINVAL);
         assert_return(!event_pid_changed(e), -ECHILD);
         assert_return(e->state != SD_EVENT_FINISHED, -ESTALE);
-        assert_return(e->state == SD_EVENT_PASSIVE, -EBUSY);
+        assert_return(e->state == SD_EVENT_INITIAL, -EBUSY);
 
         if (e->exit_requested)
                 goto pending;
@@ -2338,15 +2337,15 @@ _public_ int sd_event_prepare(sd_event *e) {
         if (event_next_pending(e) || e->need_process_child)
                 goto pending;
 
-        e->state = SD_EVENT_PREPARED;
+        e->state = SD_EVENT_ARMED;
 
         return 0;
 
 pending:
-        e->state = SD_EVENT_PREPARED;
+        e->state = SD_EVENT_ARMED;
         r = sd_event_wait(e, 0);
         if (r == 0)
-                e->state = SD_EVENT_PREPARED;
+                e->state = SD_EVENT_ARMED;
 
         return r;
 }
@@ -2359,7 +2358,7 @@ _public_ int sd_event_wait(sd_event *e, uint64_t timeout) {
         assert_return(e, -EINVAL);
         assert_return(!event_pid_changed(e), -ECHILD);
         assert_return(e->state != SD_EVENT_FINISHED, -ESTALE);
-        assert_return(e->state == SD_EVENT_PREPARED, -EBUSY);
+        assert_return(e->state == SD_EVENT_ARMED, -EBUSY);
 
         if (e->exit_requested) {
                 e->state = SD_EVENT_PENDING;
@@ -2447,7 +2446,7 @@ _public_ int sd_event_wait(sd_event *e, uint64_t timeout) {
         r = 0;
 
 finish:
-        e->state = SD_EVENT_PASSIVE;
+        e->state = SD_EVENT_INITIAL;
 
         return r;
 }
@@ -2470,14 +2469,14 @@ _public_ int sd_event_dispatch(sd_event *e) {
 
                 e->state = SD_EVENT_RUNNING;
                 r = source_dispatch(p);
-                e->state = SD_EVENT_PASSIVE;
+                e->state = SD_EVENT_INITIAL;
 
                 sd_event_unref(e);
 
                 return r;
         }
 
-        e->state = SD_EVENT_PASSIVE;
+        e->state = SD_EVENT_INITIAL;
 
         return 1;
 }
@@ -2488,19 +2487,23 @@ _public_ int sd_event_run(sd_event *e, uint64_t timeout) {
         assert_return(e, -EINVAL);
         assert_return(!event_pid_changed(e), -ECHILD);
         assert_return(e->state != SD_EVENT_FINISHED, -ESTALE);
-        assert_return(e->state == SD_EVENT_PASSIVE, -EBUSY);
+        assert_return(e->state == SD_EVENT_INITIAL, -EBUSY);
 
         r = sd_event_prepare(e);
-        if (r > 0)
-                return sd_event_dispatch(e);
-        else if (r < 0)
-                return r;
+        if (r == 0)
+                /* There was nothing? Then wait... */
+                r = sd_event_wait(e, timeout);
 
-        r = sd_event_wait(e, timeout);
-        if (r > 0)
-                return sd_event_dispatch(e);
-        else
-                return r;
+        if (r > 0) {
+                /* There's something now, then let's dispatch it */
+                r = sd_event_dispatch(e);
+                if (r < 0)
+                        return r;
+
+                return 1;
+        }
+
+        return r;
 }
 
 _public_ int sd_event_loop(sd_event *e) {
@@ -2508,7 +2511,7 @@ _public_ int sd_event_loop(sd_event *e) {
 
         assert_return(e, -EINVAL);
         assert_return(!event_pid_changed(e), -ECHILD);
-        assert_return(e->state == SD_EVENT_PASSIVE, -EBUSY);
+        assert_return(e->state == SD_EVENT_INITIAL, -EBUSY);
 
         sd_event_ref(e);
 

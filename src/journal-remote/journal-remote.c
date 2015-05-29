@@ -26,8 +26,6 @@
 #include <string.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <getopt.h>
 
@@ -35,13 +33,11 @@
 #include "journal-file.h"
 #include "journald-native.h"
 #include "socket-util.h"
-#include "mkdir.h"
 #include "build.h"
 #include "macro.h"
 #include "strv.h"
 #include "fileio.h"
 #include "conf-parser.h"
-#include "siphash24.h"
 
 #ifdef HAVE_GNUTLS
 #include <gnutls/gnutls.h>
@@ -147,7 +143,7 @@ static int spawn_getter(const char *getter, const char *url) {
         _cleanup_strv_free_ char **words = NULL;
 
         assert(getter);
-        r = strv_split_quoted(&words, getter, false);
+        r = strv_split_quoted(&words, getter, 0);
         if (r < 0)
                 return log_error_errno(r, "Failed to split getter option: %m");
 
@@ -353,7 +349,7 @@ static int remove_source(RemoteServer *s, int fd) {
 
 static int add_source(RemoteServer *s, int fd, char* name, bool own_name) {
 
-        RemoteSource *source;
+        RemoteSource *source = NULL;
         int r;
 
         /* This takes ownership of name, even on failure, if own_name is true. */
@@ -520,7 +516,7 @@ static int process_http_upload(
 
         while (true) {
                 r = process_source(source, arg_compress, arg_seal);
-                if (r == -EAGAIN || r == -EWOULDBLOCK)
+                if (r == -EAGAIN)
                         break;
                 else if (r < 0) {
                         log_warning("Failed to process data for connection %p", connection);
@@ -702,7 +698,7 @@ static int setup_microhttpd_server(RemoteServer *s,
         info = MHD_get_daemon_info(d->daemon, MHD_DAEMON_INFO_EPOLL_FD_LINUX_ONLY);
         if (!info) {
                 log_error("µhttp returned NULL daemon info");
-                r = -ENOTSUP;
+                r = -EOPNOTSUPP;
                 goto error;
         }
 
@@ -1148,7 +1144,7 @@ static int dispatch_raw_connection_event(sd_event_source *event,
                 .size = sizeof(union sockaddr_union),
                 .type = SOCK_STREAM,
         };
-        char *hostname;
+        char *hostname = NULL;
 
         fd2 = accept_connection("raw", fd, &addr, &hostname);
         if (fd2 < 0)
@@ -1507,31 +1503,6 @@ static int load_certificates(char **key, char **cert, char **trust) {
         return 0;
 }
 
-static int setup_gnutls_logger(char **categories) {
-        if (!arg_listen_http && !arg_listen_https)
-                return 0;
-
-#ifdef HAVE_GNUTLS
-        {
-                char **cat;
-                int r;
-
-                gnutls_global_set_log_function(log_func_gnutls);
-
-                if (categories) {
-                        STRV_FOREACH(cat, categories) {
-                                r = log_enable_gnutls_category(*cat);
-                                if (r < 0)
-                                        return r;
-                        }
-                } else
-                        log_reset_gnutls_level();
-        }
-#endif
-
-        return 0;
-}
-
 int main(int argc, char **argv) {
         RemoteServer s = {};
         int r;
@@ -1548,9 +1519,12 @@ int main(int argc, char **argv) {
         if (r <= 0)
                 return r == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 
-        r = setup_gnutls_logger(arg_gnutls_log);
-        if (r < 0)
-                return EXIT_FAILURE;
+
+        if (arg_listen_http || arg_listen_https) {
+                r = setup_gnutls_logger(arg_gnutls_log);
+                if (r < 0)
+                        return EXIT_FAILURE;
+        }
 
         if (arg_listen_https || https_socket >= 0)
                 if (load_certificates(&key, &cert, &trust) < 0)

@@ -20,7 +20,6 @@
 ***/
 
 #include <errno.h>
-#include <unistd.h>
 #include <malloc.h>
 #include <sys/un.h>
 
@@ -147,7 +146,7 @@ int mac_selinux_fix(const char *path, bool ignore_enoent, bool ignore_erofs) {
                         r = lsetfilecon(path, fcon);
 
                         /* If the FS doesn't support labels, then exit without warning */
-                        if (r < 0 && errno == ENOTSUP)
+                        if (r < 0 && errno == EOPNOTSUPP)
                                 return 0;
                 }
         }

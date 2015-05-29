@@ -43,8 +43,8 @@
 #include "macro.h"
 #include "socket-util.h"
 #include "util.h"
-#include "fsckd.h"
 
+#define FSCKD_SOCKET_PATH "/run/systemd/fsck.progress"
 #define IDLE_TIME_SECONDS 30
 #define PLYMOUTH_REQUEST_KEY "K\2\2\3"
 #define CLIENTS_MAX 128

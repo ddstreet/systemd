@@ -23,35 +23,26 @@
 ***/
 
 #include <sys/socket.h>
-#include <sys/un.h>
 #include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <poll.h>
-#include <stddef.h>
-#include <getopt.h>
 
 #include "log.h"
 #include "util.h"
-#include "socket-util.h"
 #include "sd-daemon.h"
 #include "sd-bus.h"
 #include "bus-internal.h"
 #include "bus-message.h"
 #include "bus-util.h"
-#include "build.h"
 #include "strv.h"
-#include "def.h"
-#include "capability.h"
 #include "bus-control.h"
-#include "smack-util.h"
 #include "set.h"
 #include "bus-xml-policy.h"
 #include "driver.h"
 #include "proxy.h"
 #include "synthesize.h"
+#include "formats-util.h"
 
 static int proxy_create_destination(Proxy *p, const char *destination, const char *local_sec, bool negotiate_fds) {
         _cleanup_bus_close_unref_ sd_bus *b = NULL;

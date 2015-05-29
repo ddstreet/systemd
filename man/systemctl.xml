@@ -1,6 +1,9 @@
 <?xml version='1.0'?> <!--*- Mode: nxml; nxml-child-indent: 2; indent-tabs-mode: nil -*-->
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY % entities SYSTEM "custom-entities.ent" >
+%entities;
+]>
 
 <!--
   This file is part of systemd.
@@ -154,7 +157,7 @@
           <command>list-dependencies</command>, i.e. follow
           dependencies of type <varname>WantedBy=</varname>,
           <varname>RequiredBy=</varname>,
-          <varname>RequiredByOverrridable=</varname>,
+          <varname>RequiredByOverridable=</varname>,
           <varname>PartOf=</varname>, <varname>BoundBy=</varname>,
           instead of <varname>Wants=</varname> and similar.
           </para>
@@ -316,8 +319,8 @@
           <para>Do not synchronously wait for the requested operation
           to finish. If this is not specified, the job will be
           verified, enqueued and <command>systemctl</command> will
-          wait until it is completed. By passing this argument, it is
-          only verified and enqueued.</para>
+          wait until the unit's start-up is completed. By passing this
+          argument, it is only verified and enqueued.</para>
         </listitem>
       </varlistentry>
 
@@ -410,8 +413,8 @@
           processes. Not all unit types manage processes of these
           types however. For example, for mount units, control processes
           are defined (which are the invocations of
-          <filename>/bin/mount</filename> and
-          <filename>/bin/umount</filename>), but no main process
+          <filename>&MOUNT_PATH;</filename> and
+          <filename>&UMOUNT_PATH;</filename>), but no main process
           is defined. If omitted, defaults to
           <option>all</option>.</para>
         </listitem>
@@ -452,6 +455,18 @@
           systems. Warning: specifying <option>--force</option> twice
           with any of these operations might result in data
           loss.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--now</option></term>
+
+        <listitem>
+          <para>When used with <command>enable</command>, the units
+          will also be started. When used with <command>disable</command> or
+          <command>mask</command>, the units will also be stopped. The start
+          or stop operation is only carried out when the respective enable or
+          disable operation has been successful.</para>
         </listitem>
       </varlistentry>
 
@@ -523,6 +538,18 @@
           available choices, see
           <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>.
           Defaults to <literal>short</literal>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--firmware-setup</option></term>
+
+        <listitem>
+          <para>When used with the <command>reboot</command> command,
+          indicate to the system's firmware to boot into setup
+          mode. Note that this is currently only supported on some EFI
+          systems and only if the system was booted in EFI
+          mode.</para>
         </listitem>
       </varlistentry>
 
@@ -909,11 +936,12 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
             the changes are taken into account immediately. Note that
             this does <emphasis>not</emphasis> have the effect of also
             starting any of the units being enabled. If this
-            is desired, a separate <command>start</command> command must
-            be invoked for the unit. Also note that in case of instance
-            enablement, symlinks named the same as instances are created in
-            the install location, however they all point to the same
-            template unit file.</para>
+            is desired, either <option>--now</option> should be used
+            together with this command, or an additional <command>start</command>
+            command must be invoked for the unit. Also note that in case of
+            instance enablement, symlinks named the same as instances
+            are created in the install location, however they all point to the
+            same template unit file.</para>
 
             <para>This command will print the actions executed. This
             output may be suppressed by passing <option>--quiet</option>.
@@ -968,9 +996,10 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
             <command>enable</command>. This call implicitly reloads the
             systemd daemon configuration after completing the disabling
             of the units. Note that this command does not implicitly
-            stop the units that are being disabled. If this is desired,
-            an additional <command>stop</command> command should be
-            executed afterwards.</para>
+            stop the units that are being disabled. If this is desired, either
+            <option>--now</option> should be used together with this command, or
+            an additional <command>stop</command> command should be executed
+            afterwards.</para>
 
             <para>This command will print the actions executed. This
             output may be suppressed by passing <option>--quiet</option>.
@@ -1116,7 +1145,8 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
             activation of the unit, including enablement and manual
             activation. Use this option with care. This honors the
             <option>--runtime</option> option to only mask temporarily
-            until the next reboot of the system.</para>
+            until the next reboot of the system. The <option>--now</option>
+            option can be used to ensure that the units are also stopped.</para>
           </listitem>
         </varlistentry>
 
@@ -1495,7 +1525,7 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
 
           <listitem>
             <para>Shut down and halt the system. This is mostly equivalent to
-            <command>start halt.target --irreversible</command>, but also
+            <command>start halt.target --job-mode=replace-irreversibly</command>, but also
             prints a wall message to all users.  If combined with
             <option>--force</option>, shutdown of all running services is
             skipped, however all processes are killed and all file
@@ -1511,7 +1541,7 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
 
           <listitem>
             <para>Shut down and power-off the system. This is mostly
-            equivalent to <command>start poweroff.target --irreversible</command>,
+            equivalent to <command>start poweroff.target --job-mode=replace-irreversibly</command>,
             but also prints a wall message to all users. If combined with
             <option>--force</option>, shutdown of all running services is
             skipped, however all processes are killed and all file
@@ -1527,7 +1557,7 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
 
           <listitem>
             <para>Shut down and reboot the system. This is mostly
-            equivalent to <command>start reboot.target --irreversible</command>,
+            equivalent to <command>start reboot.target --job-mode=replace-irreversibly</command>,
             but also prints a wall message to all users. If combined with
             <option>--force</option>, shutdown of all running services is
             skipped, however all processes are killed and all file
@@ -1554,7 +1584,7 @@ kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
 
           <listitem>
             <para>Shut down and reboot the system via kexec. This is
-            mostly equivalent to <command>start kexec.target --irreversible</command>,
+            mostly equivalent to <command>start kexec.target --job-mode=replace-irreversibly</command>,
             but also prints a wall message to all users. If combined
             with <option>--force</option>, shutdown of all running
             services is skipped, however all processes are killed and

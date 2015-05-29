@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <!--*-nxml-*-->
-<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY % entities SYSTEM "custom-entities.ent" >
+%entities;
+]>
 <!--
   This file is part of systemd.
 
@@ -46,7 +49,7 @@
   </refnamediv>
 
   <refsynopsisdiv>
-    <para><filename>/lib/systemd/system-generators/systemd-fstab-generator</filename></para>
+    <para><filename>&rootlibexecdir;/system-generators/systemd-fstab-generator</filename></para>
   </refsynopsisdiv>
 
   <refsect1>
@@ -156,7 +159,7 @@
         <listitem><para>Takes the <filename>/usr</filename> filesystem
         mount options to use. If <varname>mount.usr=</varname> or
         <varname>mount.usrfstype=</varname> is set, then
-        <varname>mount.usrflages=</varname> will default to the value
+        <varname>mount.usrflags=</varname> will default to the value
         set in <varname>rootflags=</varname>.</para>
 
         <para>Otherwise this value will be read from the

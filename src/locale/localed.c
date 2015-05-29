@@ -33,7 +33,6 @@
 #include "env-util.h"
 #include "fileio.h"
 #include "fileio-label.h"
-#include "label.h"
 #include "bus-util.h"
 #include "bus-error.h"
 #include "bus-message.h"
@@ -560,7 +559,7 @@ static int read_next_mapping(const char* filename,
                 if (l[0] == 0 || l[0] == '#')
                         continue;
 
-                r = strv_split_quoted(&b, l, false);
+                r = strv_split_quoted(&b, l, 0);
                 if (r < 0)
                         return r;
 
@@ -890,7 +889,7 @@ static int property_get_locale(
         return sd_bus_message_append_strv(reply, l);
 }
 
-static int method_set_locale(sd_bus *bus, sd_bus_message *m, void *userdata, sd_bus_error *error) {
+static int method_set_locale(sd_bus_message *m, void *userdata, sd_bus_error *error) {
         Context *c = userdata;
         _cleanup_strv_free_ char **l = NULL;
         char **i;
@@ -900,6 +899,9 @@ static int method_set_locale(sd_bus *bus, sd_bus_message *m, void *userdata, sd_
         bool have[_LOCALE_MAX] = {};
         int p;
         int r;
+
+        assert(m);
+        assert(c);
 
         r = bus_message_read_strv_extend(m, &l);
         if (r < 0)
@@ -969,7 +971,14 @@ static int method_set_locale(sd_bus *bus, sd_bus_message *m, void *userdata, sd_
         if (modified) {
                 _cleanup_strv_free_ char **settings = NULL;
 
-                r = bus_verify_polkit_async(m, CAP_SYS_ADMIN, "org.freedesktop.locale1.set-locale", interactive, &c->polkit_registry, error);
+                r = bus_verify_polkit_async(
+                                m,
+                                CAP_SYS_ADMIN,
+                                "org.freedesktop.locale1.set-locale",
+                                interactive,
+                                UID_INVALID,
+                                &c->polkit_registry,
+                                error);
                 if (r < 0)
                         return r;
                 if (r == 0)
@@ -1003,7 +1012,7 @@ static int method_set_locale(sd_bus *bus, sd_bus_message *m, void *userdata, sd_
                         return sd_bus_error_set_errnof(error, r, "Failed to set locale: %s", strerror(-r));
                 }
 
-                locale_update_system_manager(c, bus);
+                locale_update_system_manager(c, sd_bus_message_get_bus(m));
 
                 if (settings) {
                         _cleanup_free_ char *line;
@@ -1013,7 +1022,8 @@ static int method_set_locale(sd_bus *bus, sd_bus_message *m, void *userdata, sd_
                 } else
                         log_info("Changed locale to unset.");
 
-                sd_bus_emit_properties_changed(bus,
+                (void) sd_bus_emit_properties_changed(
+                                sd_bus_message_get_bus(m),
                                 "/org/freedesktop/locale1",
                                 "org.freedesktop.locale1",
                                 "Locale", NULL);
@@ -1024,11 +1034,14 @@ static int method_set_locale(sd_bus *bus, sd_bus_message *m, void *userdata, sd_
         return sd_bus_reply_method_return(m, NULL);
 }
 
-static int method_set_vc_keyboard(sd_bus *bus, sd_bus_message *m, void *userdata, sd_bus_error *error) {
+static int method_set_vc_keyboard(sd_bus_message *m, void *userdata, sd_bus_error *error) {
         Context *c = userdata;
         const char *keymap, *keymap_toggle;
         int convert, interactive;
         int r;
+
+        assert(m);
+        assert(c);
 
         r = sd_bus_message_read(m, "ssbb", &keymap, &keymap_toggle, &convert, &interactive);
         if (r < 0)
@@ -1047,7 +1060,14 @@ static int method_set_vc_keyboard(sd_bus *bus, sd_bus_message *m, void *userdata
                     (keymap_toggle && (!filename_is_valid(keymap_toggle) || !string_is_safe(keymap_toggle))))
                         return sd_bus_error_set_errnof(error, -EINVAL, "Received invalid keymap data");
 
-                r = bus_verify_polkit_async(m, CAP_SYS_ADMIN, "org.freedesktop.locale1.set-keyboard", interactive, &c->polkit_registry, error);
+                r = bus_verify_polkit_async(
+                                m,
+                                CAP_SYS_ADMIN,
+                                "org.freedesktop.locale1.set-keyboard",
+                                interactive,
+                                UID_INVALID,
+                                &c->polkit_registry,
+                                error);
                 if (r < 0)
                         return r;
                 if (r == 0)
@@ -1066,17 +1086,18 @@ static int method_set_vc_keyboard(sd_bus *bus, sd_bus_message *m, void *userdata
                 log_info("Changed virtual console keymap to '%s' toggle '%s'",
                          strempty(c->vc_keymap), strempty(c->vc_keymap_toggle));
 
-                r = vconsole_reload(bus);
+                r = vconsole_reload(sd_bus_message_get_bus(m));
                 if (r < 0)
                         log_error_errno(r, "Failed to request keymap reload: %m");
 
-                sd_bus_emit_properties_changed(bus,
+                (void) sd_bus_emit_properties_changed(
+                                sd_bus_message_get_bus(m),
                                 "/org/freedesktop/locale1",
                                 "org.freedesktop.locale1",
                                 "VConsoleKeymap", "VConsoleKeymapToggle", NULL);
 
                 if (convert) {
-                        r = vconsole_convert_to_x11(c, bus);
+                        r = vconsole_convert_to_x11(c, sd_bus_message_get_bus(m));
                         if (r < 0)
                                 log_error_errno(r, "Failed to convert keymap data: %m");
                 }
@@ -1133,11 +1154,14 @@ static int verify_xkb_rmlvo(const char *model, const char *layout, const char *v
 }
 #endif
 
-static int method_set_x11_keyboard(sd_bus *bus, sd_bus_message *m, void *userdata, sd_bus_error *error) {
+static int method_set_x11_keyboard(sd_bus_message *m, void *userdata, sd_bus_error *error) {
         Context *c = userdata;
         const char *layout, *model, *variant, *options;
         int convert, interactive;
         int r;
+
+        assert(m);
+        assert(c);
 
         r = sd_bus_message_read(m, "ssssbb", &layout, &model, &variant, &options, &convert, &interactive);
         if (r < 0)
@@ -1166,7 +1190,14 @@ static int method_set_x11_keyboard(sd_bus *bus, sd_bus_message *m, void *userdat
                     (options && !string_is_safe(options)))
                         return sd_bus_error_set_errnof(error, -EINVAL, "Received invalid keyboard data");
 
-                r = bus_verify_polkit_async(m, CAP_SYS_ADMIN, "org.freedesktop.locale1.set-keyboard", interactive, &c->polkit_registry, error);
+                r = bus_verify_polkit_async(
+                                m,
+                                CAP_SYS_ADMIN,
+                                "org.freedesktop.locale1.set-keyboard",
+                                interactive,
+                                UID_INVALID,
+                                &c->polkit_registry,
+                                error);
                 if (r < 0)
                         return r;
                 if (r == 0)
@@ -1197,13 +1228,14 @@ static int method_set_x11_keyboard(sd_bus *bus, sd_bus_message *m, void *userdat
                          strempty(c->x11_variant),
                          strempty(c->x11_options));
 
-                sd_bus_emit_properties_changed(bus,
+                (void) sd_bus_emit_properties_changed(
+                                sd_bus_message_get_bus(m),
                                 "/org/freedesktop/locale1",
                                 "org.freedesktop.locale1",
                                 "X11Layout", "X11Model", "X11Variant", "X11Options", NULL);
 
                 if (convert) {
-                        r = x11_convert_to_vconsole(c, bus);
+                        r = x11_convert_to_vconsole(c, sd_bus_message_get_bus(m));
                         if (r < 0)
                                 log_error_errno(r, "Failed to convert keymap data: %m");
                 }

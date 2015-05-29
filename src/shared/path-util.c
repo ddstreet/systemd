@@ -19,15 +19,12 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include <assert.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <dirent.h>
 #include <sys/statvfs.h>
 
 #include "macro.h"
@@ -36,6 +33,7 @@
 #include "strv.h"
 #include "path-util.h"
 #include "missing.h"
+#include "fileio.h"
 
 bool path_is_absolute(const char *p) {
         return p[0] == '/';
@@ -473,145 +471,196 @@ char* path_join(const char *root, const char *path, const char *rest) {
                                NULL);
 }
 
-int path_is_mount_point(const char *t, bool allow_symlink) {
+static int fd_fdinfo_mnt_id(int fd, const char *filename, int flags, int *mnt_id) {
+        char path[strlen("/proc/self/fdinfo/") + DECIMAL_STR_MAX(int)];
+        _cleanup_free_ char *fdinfo = NULL;
+        _cleanup_close_ int subfd = -1;
+        char *p;
+        int r;
 
-        union file_handle_union h = FILE_HANDLE_INIT;
+        if ((flags & AT_EMPTY_PATH) && isempty(filename))
+                xsprintf(path, "/proc/self/fdinfo/%i", fd);
+        else {
+                subfd = openat(fd, filename, O_RDONLY|O_CLOEXEC|O_NOCTTY|O_PATH);
+                if (subfd < 0)
+                        return -errno;
+
+                xsprintf(path, "/proc/self/fdinfo/%i", subfd);
+        }
+
+        r = read_full_file(path, &fdinfo, NULL);
+        if (r == -ENOENT) /* The fdinfo directory is a relatively new addition */
+                return -EOPNOTSUPP;
+        if (r < 0)
+                return -errno;
+
+        p = startswith(fdinfo, "mnt_id:");
+        if (!p) {
+                p = strstr(fdinfo, "\nmnt_id:");
+                if (!p) /* The mnt_id field is a relatively new addition */
+                        return -EOPNOTSUPP;
+
+                p += 8;
+        }
+
+        p += strspn(p, WHITESPACE);
+        p[strcspn(p, WHITESPACE)] = 0;
+
+        return safe_atoi(p, mnt_id);
+}
+
+int fd_is_mount_point(int fd, const char *parent) {
+        union file_handle_union h = FILE_HANDLE_INIT, h_parent = FILE_HANDLE_INIT;
         int mount_id = -1, mount_id_parent = -1;
-        _cleanup_free_ char *parent = NULL, *path = NULL;
-        _cleanup_fclose_ FILE *f = NULL;
-        bool mountpoint_found = false;
+        bool nosupp = false, check_st_dev = true;
         struct stat a, b;
         int r;
-        bool nosupp = false;
 
-        /* We are not actually interested in the file handles, but
-         * name_to_handle_at() also passes us the mount ID, hence use
-         * it but throw the handle away */
+        assert(fd >= 0);
+
+        /* First we will try the name_to_handle_at() syscall, which
+         * tells us the mount id and an opaque file "handle". It is
+         * not supported everywhere though (kernel compile-time
+         * option, not all file systems are hooked up). If it works
+         * the mount id is usually good enough to tell us whether
+         * something is a mount point.
+         *
+         * If that didn't work we will try to read the mount id from
+         * /proc/self/fdinfo/<fd>. This is almost as good as
+         * name_to_handle_at(), however, does not return the the
+         * opaque file handle. The opaque file handle is pretty useful
+         * to detect the root directory, which we should always
+         * consider a mount point. Hence we use this only as
+         * fallback. Exporting the mnt_id in fdinfo is a pretty recent
+         * kernel addition.
+         *
+         * As last fallback we do traditional fstat() based st_dev
+         * comparisons. This is how things were traditionally done,
+         * but unionfs breaks breaks this since it exposes file
+         * systems with a variety of st_dev reported. Also, btrfs
+         * subvolumes have different st_dev, even though they aren't
+         * real mounts of their own. */
+
+        r = name_to_handle_at(fd, "", &h.handle, &mount_id, AT_EMPTY_PATH);
+        if (r < 0) {
+                if (errno == ENOSYS)
+                        /* This kernel does not support name_to_handle_at()
+                         * fall back to simpler logic. */
+                        goto fallback_fdinfo;
+                else if (errno == EOPNOTSUPP)
+                        /* This kernel or file system does not support
+                         * name_to_handle_at(), hence let's see if the
+                         * upper fs supports it (in which case it is a
+                         * mount point), otherwise fallback to the
+                         * traditional stat() logic */
+                        nosupp = true;
+                else
+                        return -errno;
+        }
+
+        if (parent)
+                r = name_to_handle_at(AT_FDCWD, parent, &h_parent.handle, &mount_id_parent, 0);
+        else
+                /* this only works for directories */
+                r = name_to_handle_at(fd, "..", &h_parent.handle, &mount_id_parent, 0);
+        if (r < 0) {
+                if (errno == EOPNOTSUPP) {
+                        if (nosupp)
+                                /* Neither parent nor child do name_to_handle_at()?
+                                   We have no choice but to fall back. */
+                                goto fallback_fdinfo;
+                        else
+                                /* The parent can't do name_to_handle_at() but the
+                                 * directory we are interested in can?
+                                 * If so, it must be a mount point. */
+                                return 1;
+                } else
+                        return -errno;
+        }
+
+        /* The parent can do name_to_handle_at() but the
+         * directory we are interested in can't? If so, it
+         * must be a mount point. */
+        if (nosupp)
+                return 1;
+
+        /* If the file handle for the directory we are
+         * interested in and its parent are identical, we
+         * assume this is the root directory, which is a mount
+         * point. */
+
+        if (h.handle.handle_bytes == h_parent.handle.handle_bytes &&
+            h.handle.handle_type == h_parent.handle.handle_type &&
+            memcmp(h.handle.f_handle, h_parent.handle.f_handle, h.handle.handle_bytes) == 0)
+                return 1;
+
+        return mount_id != mount_id_parent;
+
+fallback_fdinfo:
+        r = fd_fdinfo_mnt_id(fd, "", AT_EMPTY_PATH, &mount_id);
+        if (r == -EOPNOTSUPP)
+                goto fallback_fstat;
+        if (r < 0)
+                return r;
+
+        if (parent)
+                r = fd_fdinfo_mnt_id(AT_FDCWD, parent, 0, &mount_id_parent);
+        else
+                /* this only works for directories */
+                r = fd_fdinfo_mnt_id(fd, "..", 0, &mount_id_parent);
+        if (r < 0)
+                return r;
+
+        if (mount_id != mount_id_parent)
+                return 1;
+
+        /* Hmm, so, the mount ids are the same. This leaves one
+         * special case though for the root file system. For that,
+         * let's see if the parent directory has the same inode as we
+         * are interested in. Hence, let's also do fstat() checks now,
+         * too, but avoid the st_dev comparisons, since they aren't
+         * that useful on unionfs mounts. */
+        check_st_dev = false;
+
+fallback_fstat:
+        if (fstatat(fd, "", &a, AT_EMPTY_PATH) < 0)
+                return -errno;
+
+        if (parent)
+                r = fstatat(AT_FDCWD, parent, &b, 0);
+        else
+                r = fstatat(fd, "..", &b, 0);
+        if (r < 0)
+                return -errno;
+
+        /* A directory with same device and inode as its parent? Must
+         * be the root directory */
+        if (a.st_dev == b.st_dev &&
+            a.st_ino == b.st_ino)
+                return 1;
+
+        return check_st_dev && (a.st_dev != b.st_dev);
+}
+
+int path_is_mount_point(const char *t, bool allow_symlink) {
+        _cleanup_close_ int fd = -1;
+        _cleanup_free_ char *parent = NULL;
+        int r;
+
+        assert(t);
 
         if (path_equal(t, "/"))
                 return 1;
 
-        r = name_to_handle_at(AT_FDCWD, t, &h.handle, &mount_id, allow_symlink ? AT_SYMLINK_FOLLOW : 0);
-        if (r < 0) {
-                if (errno == ENOSYS)
-                        /* This kernel does not support name_to_handle_at()
-                         * fall back to the traditional stat() logic. */
-                        goto fallback;
-                else if (errno == EOPNOTSUPP)
-                        /* This kernel or file system does not support
-                         * name_to_handle_at(), hence fallback to the
-                         * traditional stat() logic */
-                        nosupp = true;
-                else if (errno == ENOENT)
-                        return 0;
-                else
-                        return -errno;
-        }
-
         r = path_get_parent(t, &parent);
         if (r < 0)
                 return r;
 
-        h.handle.handle_bytes = MAX_HANDLE_SZ;
-        r = name_to_handle_at(AT_FDCWD, parent, &h.handle, &mount_id_parent, AT_SYMLINK_FOLLOW);
-        if (r < 0)
-                if (errno == EOPNOTSUPP)
-                        if (nosupp)
-                                /* Neither parent nor child do name_to_handle_at()?
-                                   We have no choice but to fall back. */
-                                goto fallback;
-                        else
-                                /* The parent can't do name_to_handle_at() but
-                                 * the directory we are interested in can?
-                                 * Or the other way around?
-                                 * If so, it must be a mount point. */
-                                return 1;
-                else
-                        return -errno;
-        else
-                return mount_id != mount_id_parent;
-
-fallback:
-        if (allow_symlink)
-                r = stat(t, &a);
-        else
-                r = lstat(t, &a);
-
-        if (r < 0) {
-                if (errno == ENOENT)
-                        return 0;
-
-                return -errno;
-        }
-
-        free(parent);
-        parent = NULL;
-
-        r = path_get_parent(t, &parent);
-        if (r < 0)
-                return r;
-
-        r = stat(parent, &b);
-        if (r < 0)
+        fd = openat(AT_FDCWD, t, O_RDONLY|O_NONBLOCK|O_CLOEXEC|(allow_symlink ? 0 : O_PATH|O_NOFOLLOW));
+        if (fd < 0)
                 return -errno;
 
-        /* if parent major block is 0, this can be an overlay fs,
-           fallback to reading /proc/self/mounts */
-        if (major(b.st_dev) == 0)
-                goto fallback_proc_mounts;
-
-        return a.st_dev != b.st_dev;
-
-fallback_proc_mounts:
-        if (allow_symlink) {
-                r = readlink_and_make_absolute(t, &path);
-                // this can happen on sysfs, fallback to previous behavior
-                if (r < 0)
-                        return a.st_dev != b.st_dev;
-        } else
-                path = strdup(t);
-
-        f = fopen("/proc/self/mounts", "re");
-        if (!f)
-                return a.st_dev != b.st_dev;
-
-        for (;;) {
-                _cleanup_free_ char *mountpoint = NULL, *unesc_mountpoint = NULL;
-                r = fscanf(f,
-                          "%*s "       /* (1) fs spec */
-                          "%ms "       /* (2) mount point */
-                          "%*[^\n]",   /* not interested by other values */
-                          &mountpoint);
-                if (r != 1) {
-                        if (r == EOF)
-                                break;
-                        if (ferror(f) && errno)
-                                return a.st_dev != b.st_dev;
-
-                        continue;
-                }
-
-                unesc_mountpoint = cunescape(mountpoint);
-                if (!unesc_mountpoint)
-                        return -ENOMEM;
-
-                /* check that our mount point isn't hidden by a later mount of a parent dir */
-                if (mountpoint_found) {
-                        size_t l = strlen(unesc_mountpoint);
-                        if (strlen(path) > l &&
-                            path_startswith(path, unesc_mountpoint) &&
-                            (unesc_mountpoint[l-1] == '/' || path[l] == '/'))
-                                mountpoint_found = false;
-                }
-
-                if (path_equal(path, unesc_mountpoint))
-                        mountpoint_found = true;
-        }
-
-        if (mountpoint_found)
-                return 1;
-
-        return 0;
+        return fd_is_mount_point(fd, parent);
 }
 
 int path_is_read_only_fs(const char *path) {
@@ -761,4 +810,38 @@ int fsck_exists(const char *fstype) {
                 return -ENOENT;
 
         return 0;
+}
+
+char *prefix_root(const char *root, const char *path) {
+        char *n, *p;
+        size_t l;
+
+        /* If root is passed, prefixes path with it. Otherwise returns
+         * it as is. */
+
+        assert(path);
+
+        /* First, drop duplicate prefixing slashes from the path */
+        while (path[0] == '/' && path[1] == '/')
+                path++;
+
+        if (isempty(root) || path_equal(root, "/"))
+                return strdup(path);
+
+        l = strlen(root) + 1 + strlen(path) + 1;
+
+        n = new(char, l);
+        if (!n)
+                return NULL;
+
+        p = stpcpy(n, root);
+
+        while (p > n && p[-1] == '/')
+                p--;
+
+        if (path[0] != '/')
+                *(p++) = '/';
+
+        strcpy(p, path);
+        return n;
 }

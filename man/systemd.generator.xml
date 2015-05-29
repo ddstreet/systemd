@@ -59,14 +59,14 @@
 
     <para>
       <literallayout><filename>/run/systemd/system-generators/*</filename>
-<filename>/etc/systemd/system-generators/*</filename>
+<filename>&pkgsysconfdir;/system-generators/*</filename>
 <filename>/usr/local/lib/systemd/system-generators/*</filename>
 <filename>&systemgeneratordir;/*</filename></literallayout>
     </para>
 
     <para>
       <literallayout><filename>/run/systemd/user-generators/*</filename>
-<filename>/etc/systemd/user-generators/*</filename>
+<filename>&pkgsysconfdir;/user-generators/*</filename>
 <filename>/usr/local/lib/systemd/user-generators/*</filename>
 <filename>&usergeneratordir;/*</filename></literallayout>
     </para>
@@ -140,7 +140,7 @@
       <listitem>
         <para><parameter>late-dir</parameter></para>
         <para>argv[3] may be used to extend the unit file tree without
-        overridding any other unit files. Any native configuration
+        overriding any other unit files. Any native configuration
         files supplied by the vendor or user/administrator take
         precedence over the generated ones placed in this directory.
         </para>

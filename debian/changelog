@@ -1,3 +1,64 @@
+systemd (220-1) experimental; urgency=medium
+
+  [ Martin Pitt ]
+  * New upstream release:
+    - Ship sdio.ids and ids-update.pl in upstream tarball. (Closes: #780650)
+    - Drop non-working "journalctl /dev/sda" example from manpage
+      (Closes: #781604)
+    - man systemd.network: Explain UseDomains a bit more (not used by
+      default). (Closes: #766413)
+    - Ignore comments in /etc/hostname (LP: #766413)
+    - Drop all backported patches and port the others to new upstream release.
+  * Cherry-pick patch to fix udevd --daemon assertion regression.
+  * Cherry-pick patch to fix udevd worker hang.
+  * systemd.install: systemd.pc moved back into /usr/share/pkgconfig/.
+  * libsystemd0.symbols: Add new symbols from this release.
+  * Drop debian/extra/60-keyboard.hwdb for now. Upstream has a newer version,
+    and it's not nearly as often updated any more as it used to be.
+  * debian/rules: Remove shipped audit_type-to-name.h and
+    keyboard-keys-from-name.gperf and regenerate them during build (bug in
+    upstream 220 tarball).
+  * autopkgtest: Ship/use mock fsck from debian/tests, as it's missing in the
+    220 tarball.
+  * Add libnss-mymachines binary package. (Closes: #784858)
+  * Add libnss-myhostname binary package, taking over from the very old and
+    unmaintained standalone source package as per its maintainer's request.
+    (Closes: #760514)
+  * Drop buildsys-Don-t-default-to-gold-as-the-linker.patch and set LD in
+    debian/rules on sparc only. This can be dropped entirely once we build
+    GUdev from a separate source.
+  * bootchart autopkgtest: Skip test if /proc/schedstat does not exist, i. e.
+    the kernel is missing CONFIG_SCHEDSTAT. Bootchart requires this.
+  * systemd-fsckd autopkgtest: On Debian plymouth-start stays running, adjust
+    was_running() for that.
+  * systemd-fsckd autopkgtest: In test_systemd_fsck_with_plymouth_failure(),
+    fix plymouthd status check to work under both Debian and Ubuntu.
+  * Replace almost all of Fix-paths-in-man-pages.patch with upstreamed
+    patches. (The reminder is planned to get fixed upstream as well.)
+  * Remove our update-rc.d patches, replace them with upstream patches for
+    /lib/systemd/systemd-sysv-install abstraction, and provide one for
+    update-rc.d. Also implement "is-enabled" command by directly checking for
+    the presence of rcS or rc5 symlinks. (Closes: #760616)
+  * Fix path_is_mount_point for files (regression in 220).
+  * debian/control: Drop obsolete XS-Testsuite:, dpkg adds it automatically.
+  * Use Ubuntu's default NTP server for timesyncd when building on Ubuntu.
+
+  [ Michael Biebl ]
+  * Remove /var/run and /var/lock migration code from debian-fixup. The /run
+    migration was completed in wheezy so this is no longer necessary.
+  * Drop our versioned Depends on initscripts. This was initially added for
+    the /run migration and later to ensure we have a mountnfs hook which
+    doesn't cause a deadlock under systemd. The /run migration was completed
+    in wheezy and jessie ships a fixed mountnfs hook. In addition we now use
+    the ignore-dependencies job mode in our lsb init-functions hook, so it's
+    safe to drop this dependency.
+  * Stop building gudev packages. Upstream has moved the gudev code into a
+    separate repository which is now managed on gnome.org. The gudev packages
+    will be built from src:libgudev from now on. See also
+    http://lists.freedesktop.org/archives/systemd-devel/2015-May/032070.html
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 29 May 2015 10:37:40 +0200
+
 systemd (219-10) experimental; urgency=medium
 
   * Fix assertion crash with empty Exec*= paths. (LP: #1454173)
