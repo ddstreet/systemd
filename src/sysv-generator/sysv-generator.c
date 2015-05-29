@@ -38,6 +38,7 @@
 #include "install.h"
 
 typedef enum RunlevelType {
+        RUNLEVEL_SYSINIT,
         RUNLEVEL_UP,
         RUNLEVEL_DOWN
 } RunlevelType;
@@ -47,6 +48,9 @@ static const struct {
         const char *target;
         const RunlevelType type;
 } rcnd_table[] = {
+        /* Debian SysV runlevel for early boot */
+        { "rcS.d",  SPECIAL_SYSINIT_TARGET,   RUNLEVEL_SYSINIT },
+
         /* Standard SysV runlevels for start-up */
         { "rc1.d",  SPECIAL_RESCUE_TARGET,     RUNLEVEL_UP },
         { "rc2.d",  SPECIAL_MULTI_USER_TARGET, RUNLEVEL_UP },
@@ -71,6 +75,7 @@ typedef struct SysvStub {
         char *name;
         char *path;
         char *description;
+        bool sysinit;
         int sysv_start_priority;
         char *pid_file;
         char **before;
@@ -190,6 +195,8 @@ static int generate_unit_file(SysvStub *s) {
                 "Description=%s\n",
                 s->path, s->description);
 
+        if (s->sysinit)
+                fprintf(f, "DefaultDependencies=no\n");
         if (!isempty(before))
                 fprintf(f, "Before=%s\n", before);
         if (!isempty(after))
@@ -203,11 +210,12 @@ static int generate_unit_file(SysvStub *s) {
                 "\n[Service]\n"
                 "Type=forking\n"
                 "Restart=no\n"
-                "TimeoutSec=5min\n"
+                "TimeoutSec=%s\n"
                 "IgnoreSIGPIPE=no\n"
                 "KillMode=process\n"
                 "GuessMainPID=no\n"
                 "RemainAfterExit=%s\n",
+                s->sysinit ? "0" : "5min",
                 yes_no(!s->pid_file));
 
         if (s->pid_file)
@@ -266,16 +274,22 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
 
         static const char * const table[] = {
                 /* LSB defined facilities */
-                "local_fs",             NULL,
+                "local_fs",             SPECIAL_LOCAL_FS_TARGET,
                 "network",              SPECIAL_NETWORK_ONLINE_TARGET,
                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
                 "portmap",              SPECIAL_RPCBIND_TARGET,
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
-                "syslog",               NULL,
+                "syslog",               "systemd-journald-dev-log.socket",
                 "time",                 SPECIAL_TIME_SYNC_TARGET,
                 /* Debian defined facilities */
                 "x-display-manager",    "display-manager.service",
                 "mail-transport-agent", "mail-transport-agent.target",
+                /* special rcS init scripts */
+                "cryptdisks",           "cryptsetup.target",
+                "mountall",             SPECIAL_LOCAL_FS_TARGET,
+                "mountnfs",             SPECIAL_REMOTE_FS_TARGET,
+                "checkroot",            "systemd-remount-fs.service",
+                "dbus",                 "dbus.socket",
         };
 
         char *filename_no_sh, *e, *r;
@@ -694,6 +708,11 @@ static int fix_order(SysvStub *s, Hashmap *all_services) {
                 if (s->has_lsb && other->has_lsb)
                         continue;
 
+                /* Don't order units between sysinit and regular sysv services,
+                 * they are ordered before and after basic.target anyway. */
+                if (other->sysinit != s->sysinit)
+                        continue;
+
                 if (other->sysv_start_priority < s->sysv_start_priority) {
                         r = strv_extend(&s->after, other->name);
                         if (r < 0)
@@ -855,8 +874,12 @@ static int set_dependencies_from_rcnd(const LookupPaths *lp, Hashmap *all_servic
                                 }
 
                                 if (de->d_name[0] == 'S')  {
+                                        if (rcnd_table[i].type == RUNLEVEL_SYSINIT) {
+                                                service->sysinit = true;
+                                                service->sysv_start_priority = a*10 + b;
+                                        }
 
-                                        if (rcnd_table[i].type == RUNLEVEL_UP) {
+                                        if (rcnd_table[i].type == RUNLEVEL_UP && !service->sysinit) {
                                                 service->sysv_start_priority =
                                                         MAX(a*10 + b, service->sysv_start_priority);
                                         }
