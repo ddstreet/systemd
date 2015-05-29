@@ -509,7 +509,7 @@ static int fd_fdinfo_mnt_id(int fd, const char *filename, int flags, int *mnt_id
         return safe_atoi(p, mnt_id);
 }
 
-int fd_is_mount_point(int fd) {
+int fd_is_mount_point(int fd, const char *parent) {
         union file_handle_union h = FILE_HANDLE_INIT, h_parent = FILE_HANDLE_INIT;
         int mount_id = -1, mount_id_parent = -1;
         bool nosupp = false, check_st_dev = true;
@@ -558,7 +558,11 @@ int fd_is_mount_point(int fd) {
                         return -errno;
         }
 
-        r = name_to_handle_at(fd, "..", &h_parent.handle, &mount_id_parent, 0);
+        if (parent)
+                r = name_to_handle_at(AT_FDCWD, parent, &h_parent.handle, &mount_id_parent, 0);
+        else
+                /* this only works for directories */
+                r = name_to_handle_at(fd, "..", &h_parent.handle, &mount_id_parent, 0);
         if (r < 0) {
                 if (errno == EOPNOTSUPP) {
                         if (nosupp)
@@ -599,7 +603,11 @@ fallback_fdinfo:
         if (r < 0)
                 return r;
 
-        r = fd_fdinfo_mnt_id(fd, "..", 0, &mount_id_parent);
+        if (parent)
+                r = fd_fdinfo_mnt_id(AT_FDCWD, parent, 0, &mount_id_parent);
+        else
+                /* this only works for directories */
+                r = fd_fdinfo_mnt_id(fd, "..", 0, &mount_id_parent);
         if (r < 0)
                 return r;
 
@@ -618,7 +626,11 @@ fallback_fstat:
         if (fstatat(fd, "", &a, AT_EMPTY_PATH) < 0)
                 return -errno;
 
-        if (fstatat(fd, "..", &b, 0) < 0)
+        if (parent)
+                r = fstatat(AT_FDCWD, parent, &b, 0);
+        else
+                r = fstatat(fd, "..", &b, 0);
+        if (r < 0)
                 return -errno;
 
         /* A directory with same device and inode as its parent? Must
@@ -632,17 +644,23 @@ fallback_fstat:
 
 int path_is_mount_point(const char *t, bool allow_symlink) {
         _cleanup_close_ int fd = -1;
+        _cleanup_free_ char *parent = NULL;
+        int r;
 
         assert(t);
 
         if (path_equal(t, "/"))
                 return 1;
 
-        fd = openat(AT_FDCWD, t, O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC|(allow_symlink ? 0 : O_PATH));
+        r = path_get_parent(t, &parent);
+        if (r < 0)
+                return r;
+
+        fd = openat(AT_FDCWD, t, O_RDONLY|O_NONBLOCK|O_CLOEXEC|(allow_symlink ? 0 : O_PATH|O_NOFOLLOW));
         if (fd < 0)
                 return -errno;
 
-        return fd_is_mount_point(fd);
+        return fd_is_mount_point(fd, parent);
 }
 
 int path_is_read_only_fs(const char *path) {
