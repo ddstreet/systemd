@@ -1,6 +1,9 @@
 <?xml version='1.0'?> <!--*-nxml-*-->
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY % entities SYSTEM "custom-entities.ent" >
+%entities;
+]>
 
 <!--
   This file is part of systemd.
@@ -295,7 +298,7 @@
       <varlistentry>
         <term><varname>root=</varname></term>
         <term><varname>rootfstype=</varname></term>
-        <term><varname>rootfsflags=</varname></term>
+        <term><varname>rootflags=</varname></term>
         <term><varname>ro</varname></term>
         <term><varname>rw</varname></term>
 

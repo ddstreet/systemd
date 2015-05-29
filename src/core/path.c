@@ -21,7 +21,6 @@
 
 #include <sys/inotify.h>
 #include <sys/epoll.h>
-#include <sys/ioctl.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -31,7 +30,6 @@
 #include "mkdir.h"
 #include "dbus-path.h"
 #include "special.h"
-#include "path-util.h"
 #include "macro.h"
 #include "bus-util.h"
 #include "bus-error.h"
@@ -75,6 +73,8 @@ int path_spec_watch(PathSpec *s, sd_event_io_handler_t handler) {
         if (r < 0)
                 goto fail;
 
+        (void) sd_event_source_set_description(s->event_source, "path");
+
         /* This assumes the path was passed through path_kill_slashes()! */
 
         for (slash = strchr(s->path, '/'); ; slash = strchr(slash+1, '/')) {
@@ -99,9 +99,7 @@ int path_spec_watch(PathSpec *s, sd_event_io_handler_t handler) {
                                 break;
                         }
 
-                        log_warning("Failed to add watch on %s: %s", s->path,
-                                    errno == ENOSPC ? "too many watches" : strerror(-r));
-                        r = -errno;
+                        r = log_warning_errno(errno, "Failed to add watch on %s: %s", s->path, errno == ENOSPC ? "too many watches" : strerror(-r));
                         if (cut)
                                 *cut = tmp;
                         goto fail;
@@ -136,9 +134,8 @@ int path_spec_watch(PathSpec *s, sd_event_io_handler_t handler) {
         }
 
         if (!exists) {
-                log_error_errno(errno, "Failed to add watch on any of the components of %s: %m",
-                          s->path);
-                r = -errno; /* either EACCESS or ENOENT */
+                r = log_error_errno(errno, "Failed to add watch on any of the components of %s: %m", s->path);
+                /* either EACCESS or ENOENT */
                 goto fail;
         }
 
@@ -300,8 +297,7 @@ static int path_verify(Path *p) {
                 return 0;
 
         if (!p->specs) {
-                log_unit_error(UNIT(p)->id,
-                               "%s lacks path setting. Refusing.", UNIT(p)->id);
+                log_unit_error(UNIT(p), "Path unit lacks path setting. Refusing.");
                 return -EINVAL;
         }
 
@@ -318,7 +314,7 @@ static int path_add_default_dependencies(Path *p) {
         if (r < 0)
                 return r;
 
-        if (UNIT(p)->manager->running_as == SYSTEMD_SYSTEM) {
+        if (UNIT(p)->manager->running_as == MANAGER_SYSTEM) {
                 r = unit_add_two_dependencies_by_name(UNIT(p), UNIT_AFTER, UNIT_REQUIRES,
                                                       SPECIAL_SYSINIT_TARGET, NULL, true);
                 if (r < 0)
@@ -430,22 +426,14 @@ static void path_set_state(Path *p, PathState state) {
                 path_unwatch(p);
 
         if (state != old_state)
-                log_debug("%s changed %s -> %s",
-                          UNIT(p)->id,
-                          path_state_to_string(old_state),
-                          path_state_to_string(state));
+                log_debug("Changed %s -> %s", path_state_to_string(old_state), path_state_to_string(state));
 
         unit_notify(UNIT(p), state_translation_table[old_state], state_translation_table[state], true);
 }
 
 static void path_enter_waiting(Path *p, bool initial, bool recheck);
 
-static int path_enter_waiting_coldplug(Unit *u) {
-        path_enter_waiting(PATH(u), true, true);
-        return 0;
-}
-
-static int path_coldplug(Unit *u, Hashmap *deferred_work) {
+static int path_coldplug(Unit *u) {
         Path *p = PATH(u);
 
         assert(p);
@@ -454,10 +442,9 @@ static int path_coldplug(Unit *u, Hashmap *deferred_work) {
         if (p->deserialized_state != p->state) {
 
                 if (p->deserialized_state == PATH_WAITING ||
-                    p->deserialized_state == PATH_RUNNING) {
-                        hashmap_put(deferred_work, u, &path_enter_waiting_coldplug);
-                        path_set_state(p, PATH_WAITING);
-                } else
+                    p->deserialized_state == PATH_RUNNING)
+                        path_enter_waiting(p, true, true);
+                else
                         path_set_state(p, p->deserialized_state);
         }
 
@@ -498,8 +485,7 @@ static void path_enter_running(Path *p) {
         return;
 
 fail:
-        log_warning("%s failed to queue unit startup job: %s",
-                    UNIT(p)->id, bus_error_message(&error, r));
+        log_unit_warning(UNIT(p), "Failed to queue unit startup job: %s", bus_error_message(&error, r));
         path_enter_dead(p, PATH_FAILURE_RESOURCES);
 }
 
@@ -524,7 +510,7 @@ static void path_enter_waiting(Path *p, bool initial, bool recheck) {
 
         if (recheck)
                 if (path_check_good(p, initial)) {
-                        log_debug("%s got triggered.", UNIT(p)->id);
+                        log_unit_debug(UNIT(p), "Got triggered.");
                         path_enter_running(p);
                         return;
                 }
@@ -539,7 +525,7 @@ static void path_enter_waiting(Path *p, bool initial, bool recheck) {
 
         if (recheck)
                 if (path_check_good(p, false)) {
-                        log_debug("%s got triggered.", UNIT(p)->id);
+                        log_unit_debug(UNIT(p), "Got triggered.");
                         path_enter_running(p);
                         return;
                 }
@@ -548,7 +534,7 @@ static void path_enter_waiting(Path *p, bool initial, bool recheck) {
         return;
 
 fail:
-        log_warning_errno(r, "%s failed to enter waiting state: %m", UNIT(p)->id);
+        log_unit_warning_errno(UNIT(p), r, "Failed to enter waiting state: %m");
         path_enter_dead(p, PATH_FAILURE_RESOURCES);
 }
 
@@ -617,7 +603,7 @@ static int path_deserialize_item(Unit *u, const char *key, const char *value, FD
 
                 state = path_state_from_string(value);
                 if (state < 0)
-                        log_debug("Failed to parse state value %s", value);
+                        log_unit_debug(u, "Failed to parse state value: %s", value);
                 else
                         p->deserialized_state = state;
 
@@ -626,12 +612,12 @@ static int path_deserialize_item(Unit *u, const char *key, const char *value, FD
 
                 f = path_result_from_string(value);
                 if (f < 0)
-                        log_debug("Failed to parse result value %s", value);
+                        log_unit_debug(u, "Failed to parse result value: %s", value);
                 else if (f != PATH_SUCCESS)
                         p->result = f;
 
         } else
-                log_debug("Unknown serialization key '%s'", key);
+                log_unit_debug(u, "Unknown serialization key: %s", key);
 
         return 0;
 }
@@ -709,9 +695,7 @@ static void path_trigger_notify(Unit *u, Unit *other) {
 
         if (p->state == PATH_RUNNING &&
             UNIT_IS_INACTIVE_OR_FAILED(unit_active_state(other))) {
-                log_unit_debug(UNIT(p)->id,
-                               "%s got notified about unit deactivation.",
-                               UNIT(p)->id);
+                log_unit_debug(UNIT(p), "Got notified about unit deactivation.");
 
                 /* Hmm, so inotify was triggered since the
                  * last activation, so I guess we need to

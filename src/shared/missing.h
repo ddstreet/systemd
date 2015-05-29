@@ -428,6 +428,10 @@ struct btrfs_ioctl_clone_range_args {
 #define BTRFS_FIRST_FREE_OBJECTID 256
 #endif
 
+#ifndef BTRFS_LAST_FREE_OBJECTID
+#define BTRFS_LAST_FREE_OBJECTID -256ULL
+#endif
+
 #ifndef BTRFS_ROOT_TREE_OBJECTID
 #define BTRFS_ROOT_TREE_OBJECTID 1
 #endif
@@ -450,6 +454,10 @@ struct btrfs_ioctl_clone_range_args {
 
 #ifndef BTRFS_QGROUP_LIMIT_KEY
 #define BTRFS_QGROUP_LIMIT_KEY 244
+#endif
+
+#ifndef BTRFS_ROOT_BACKREF_KEY
+#define BTRFS_ROOT_BACKREF_KEY 144
 #endif
 
 #ifndef BTRFS_SUPER_MAGIC
@@ -851,6 +859,14 @@ static inline int setns(int fd, int nstype) {
 #define LOOPBACK_IFINDEX 1
 #endif
 
+#if !HAVE_DECL_IFA_FLAGS
+#define IFA_FLAGS 8
+#endif
+
+#ifndef IFA_F_NOPREFIXROUTE
+#define IFA_F_NOPREFIXROUTE 0x200
+#endif
+
 #ifndef MAX_AUDIT_MESSAGE_LENGTH
 #define MAX_AUDIT_MESSAGE_LENGTH 8970
 #endif
@@ -939,4 +955,12 @@ static inline int kcmp(pid_t pid1, pid_t pid2, int type, unsigned long idx1, uns
 
 #ifndef KCMP_FILE
 #define KCMP_FILE 0
+#endif
+
+#ifndef INPUT_PROP_POINTING_STICK
+#define INPUT_PROP_POINTING_STICK 0x05
+#endif
+
+#ifndef INPUT_PROP_ACCELEROMETER
+#define INPUT_PROP_ACCELEROMETER  0x06
 #endif

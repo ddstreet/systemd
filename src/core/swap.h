@@ -26,7 +26,6 @@
 
 typedef struct Swap Swap;
 
-#include "unit.h"
 
 typedef enum SwapState {
         SWAP_DEAD,
@@ -87,6 +86,8 @@ struct Swap {
          * from/to /proc/swaps */
         bool is_active:1;
         bool just_activated:1;
+
+        bool reset_cpu_usage:1;
 
         SwapResult result;
 

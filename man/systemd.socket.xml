@@ -1,6 +1,9 @@
 <?xml version='1.0'?> <!--*-nxml-*-->
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY % entities SYSTEM "custom-entities.ent" >
+%entities;
+]>
 
 <!--
   This file is part of systemd.
@@ -127,7 +130,7 @@
     (see
     <citerefentry><refentrytitle>sd_listen_fds</refentrytitle><manvolnum>3</manvolnum></citerefentry>
     for details) or via the traditional
-    <citerefentry><refentrytitle>inetd</refentrytitle><manvolnum>8</manvolnum></citerefentry>-style
+    <citerefentry project='freebsd'><refentrytitle>inetd</refentrytitle><manvolnum>8</manvolnum></citerefentry>-style
     socket passing (i.e. sockets passed in via standard input and
     output, using <varname>StandardInput=socket</varname> in the
     service file).</para>
@@ -355,9 +358,14 @@
         <varname>Accept=true</varname> set. Setting
         <varname>Accept=true</varname> is mostly useful to allow
         daemons designed for usage with
-        <citerefentry><refentrytitle>inetd</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+        <citerefentry project='freebsd'><refentrytitle>inetd</refentrytitle><manvolnum>8</manvolnum></citerefentry>
         to work unmodified with systemd socket
-        activation.</para></listitem>
+        activation.</para>
+
+        <para>For IPv4 and IPv6 connections the <varname>REMOTE_ADDR</varname>
+        environment variable will contain the remote IP, and <varname>REMOTE_PORT</varname>
+        will contain the remote port. This is the same as the format used by CGI.
+        For SOCK_RAW the port is the IP protocol.</para></listitem>
       </varlistentry>
 
       <varlistentry>

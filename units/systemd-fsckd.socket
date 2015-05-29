@@ -11,5 +11,5 @@ Documentation=man:systemd-fsckd.service(8) man:systemd-fsck@.service(8) man:syst
 DefaultDependencies=no
 
 [Socket]
-ListenStream=/run/systemd/fsckd
+ListenStream=/run/systemd/fsck.progress
 SocketMode=0600

@@ -417,6 +417,9 @@ msgstr "Recarregar o estado do sistema"
 msgid "Authentication is required to reload the systemd state."
 msgstr "É necessária autenticação para recarregar o estado do sistema."
 
+#~ msgid "Privileged system and service manager access"
+#~ msgstr "Acesso privilegiado ao gerenciador de serviço e de sistema"
+
 #: ../src/fsckd/fsckd.c:186
 msgid "Press Ctrl+C to cancel all filesystem checks in progress"
 msgstr ""
@@ -427,6 +430,3 @@ msgid "Checking in progress on %d disk (%3.1f%% complete)"
 msgid_plural "Checking in progress on %d disks (%3.1f%% complete)"
 msgstr[0] ""
 msgstr[1] ""
-
-#~ msgid "Privileged system and service manager access"
-#~ msgstr "Acesso privilegiado ao gerenciador de serviço e de sistema"

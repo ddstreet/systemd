@@ -80,6 +80,7 @@ REQUIREMENTS:
           CONFIG_TMPFS_XATTR
           CONFIG_{TMPFS,EXT4,XFS,BTRFS_FS,...}_POSIX_ACL
           CONFIG_SECCOMP
+          CONFIG_CHECKPOINT_RESTORE (for the kcmp() syscall)
 
         Required for CPUShares in resource control unit settings
           CONFIG_CGROUP_SCHED
@@ -110,7 +111,7 @@ REQUIREMENTS:
         with audit being enabled. This works correctly only on kernels
         3.14 and newer though. TL;DR: turn audit off, still.
 
-        glibc >= 2.14
+        glibc >= 2.16
         libcap
         libmount >= 2.20 (from util-linux)
         libseccomp >= 1.0.0 (optional)
@@ -143,6 +144,7 @@ REQUIREMENTS:
         When building from git, you need the following additional
         dependencies:
 
+        pkg-config
         docbook-xsl
         xsltproc
         automake
@@ -219,6 +221,17 @@ NSS:
         The three modules should be used in the following order:
 
                 hosts: files mymachines resolve myhostname
+
+SYSV INIT.D SCRIPTS:
+        When calling "systemctl enable/disable/is-enabled" on a unit which is a
+        SysV init.d script, it calls /usr/lib/systemd/systemd-sysv-install;
+        this needs to translate the action into the distribution specific
+        mechanism such as chkconfig or update-rc.d. Packagers need to provide
+        this script if you need this functionality (you don't if you disabled
+        SysV init support).
+
+        Please see src/systemctl/systemd-sysv-install.SKELETON for how this
+        needs to look like, and provide an implementation at the marked places.
 
 WARNINGS:
         systemd will warn you during boot if /etc/mtab is not a

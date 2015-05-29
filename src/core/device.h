@@ -23,8 +23,6 @@
 
 typedef struct Device Device;
 
-#include "unit.h"
-
 /* We simply watch devices, we cannot plug/unplug them. That
  * simplifies the state engine greatly */
 typedef enum DeviceState {
@@ -53,7 +51,7 @@ struct Device {
         devices for the same sysfs path. We chain them up here. */
         LIST_FIELDS(struct Device, same_sysfs);
 
-        DeviceState state;
+        DeviceState state, deserialized_state;
 };
 
 extern const UnitVTable device_vtable;

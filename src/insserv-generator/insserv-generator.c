@@ -73,7 +73,7 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 "x-display-manager",    "display-manager.service",
         };
 
-        unsigned i;
+        unsigned i, e;
         char *r;
         const char *n;
 
@@ -105,7 +105,10 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                         return -EINVAL;
 
                 /* Facilities starting with $ are most likely targets */
-                r = unit_name_build(n, NULL, ".target");
+                e = unit_name_build(n, NULL, ".target", &r);
+                if (e < 0)
+                        return log_error_errno(e, "Failed to generate unit name: %m");
+
         } else if (filename && streq(name, filename))
                 /* Names equaling the file name of the services are redundant */
                 return 0;

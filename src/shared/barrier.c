@@ -21,13 +21,10 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <poll.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/eventfd.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -141,7 +138,7 @@ int barrier_create(Barrier *b) {
  * barrier_create(). The object is released and reset to invalid
  * state. Therefore, it is safe to call barrier_destroy() multiple
  * times or even if barrier_create() failed. However, barrier must be
- * always initalized with BARRIER_NULL.
+ * always initialized with BARRIER_NULL.
  *
  * If @b is NULL, this is a no-op.
  */
