@@ -500,7 +500,7 @@ int setup_namespace(
                         const char *usr_dir, *boot_dir, *etc_dir;
                         const char *bin_dir, *sbin_dir, *lib_dir, *lib64_dir;
 
-                        usr_dir = prefix_roota(root_directory, "/home");
+                        usr_dir = prefix_roota(root_directory, "/usr");
                         boot_dir = prefix_roota(root_directory, "/boot");
                         boot_dir = strjoina("-", boot_dir);
                         etc_dir = prefix_roota(root_directory, "/etc");

@@ -1,3 +1,20 @@
+systemd (220-3) unstable; urgency=medium
+
+  * Fix ProtectSystem=yes to actually protect /usr, not /home.
+    (Closes: #787343)
+  * sd-device: fix device_get_properties_strv(). Fixes environment for
+    processes spawned by udev, in particular "allow-hoplug" ifupdown
+    interfaces via ifup@.service. (Closes: #787263)
+  * Ignore test failures on mipsel; the three failures are not reproducible on
+    the porter box (different kernel?). (See #787258)
+  * Add ifupdown-hotplug autopkgtest. Reproduces #787263.
+  * udev: Bring back persistant storage symlinks for bcache. Thanks David
+    Mohr! (Closes: #787367)
+  * sd-device: Fix invalid property strv pointers. This unbreaks the
+    environment of udev callouts.
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 01 Jun 2015 12:58:20 +0200
+
 systemd (220-2) unstable; urgency=low
 
   * 220-1 was meant to go to experimental, but was accidentally uploaded to
