@@ -417,7 +417,8 @@ systemgenerator_PROGRAMS = \
 	systemd-getty-generator \
 	systemd-fstab-generator \
 	systemd-system-update-generator \
-	systemd-debug-generator
+	systemd-debug-generator \
+	systemd-default-display-manager-generator
 
 dist_bashcompletion_DATA = \
 	shell-completion/bash/busctl \
@@ -2436,6 +2437,14 @@ systemd_delta_SOURCES = \
 
 systemd_delta_LDADD = \
 	libsystemd-shared.la
+
+# ------------------------------------------------------------------------------
+systemd_default_display_manager_generator_SOURCES = \
+    src/default-display-manager-generator/default-display-manager-generator.c
+
+systemd_default_display_manager_generator_LDADD = \
+    libsystemd-label.la \
+    libsystemd-shared.la
 
 # ------------------------------------------------------------------------------
 systemd_insserv_generator_SOURCES = \
