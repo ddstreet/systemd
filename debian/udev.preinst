@@ -51,14 +51,14 @@ check_installing_kernel() {
 
 check_kernel_version() {
   # skip the check if udev is not already active
-  [ -d /dev/.udev/ -o -d /run/udev/ ] || return 0
+  [ -d /run/udev/ ] || return 0
 
   supported_kernel && return
 
   if [ -e /etc/udev/kernel-upgrade ]; then
     echo "This version of udev requires a kernel >= 2.6.32, but the upgrade was forced."
     # restart udevd which was killed by the old prerm
-    udevd -d || true
+    /lib/systemd/systemd-udevd -d || true
     return 0
   fi
   
@@ -72,7 +72,7 @@ check_kernel_version() {
     echo "A reboot is needed, but proceeding with the upgrade."
     touch /etc/udev/kernel-upgrade
     # restart udevd which was killed by the old prerm
-    udevd -d || true
+    /lib/systemd/systemd-udevd -d || true
     return 0
   fi
 
@@ -86,7 +86,7 @@ check_kernel_version() {
     echo "This version of udev requires a kernel >= 2.6.32, but the upgrade was forced."
     touch /etc/udev/kernel-upgrade
     # restart udevd which was killed by the old prerm
-    udevd -d || true
+    /lib/systemd/systemd-udevd -d || true
     return 0
   fi
   db_stop
@@ -95,7 +95,7 @@ check_kernel_version() {
 
 check_kernel_features() {
   # skip the check if udev is not already active
-  [ -d /dev/.udev/ -o -d /run/udev/ ] || return 0
+  [ -d /run/udev/ ] || return 0
 
   # skip the check if check_kernel_version() decided that a new kernel is
   # being installed
@@ -209,15 +209,6 @@ mask_systemd_service() {
   fi
 }
 
-stop_on_upstart_upgrade() {
-  if which initctl >/dev/null && initctl version | grep -q upstart
-  then
-    # We have to stop udev before we can restart it under upstart in the
-    # postinst.
-    invoke-rc.d udev stop
-  fi
-}
-
 check_version() {
   # $2 is non-empty when installing from the "config-files" state
   [ "$2" ] || return 0
@@ -230,15 +221,7 @@ check_version() {
       check_kernel_version
       check_kernel_features
     fi
-  fi # 168-2
-
-  if dpkg --compare-versions $2 lt 175-1; then
-    rm_conffile /etc/modprobe.d/blacklist.conf
-  fi # 175-1
-
-  if dpkg --compare-versions $2 lt 175-7.1; then
-    stop_on_upstart_upgrade
-  fi # 175-7.1
+  fi # 204-4
 
   if dpkg --compare-versions $2 lt 204-4; then
     # suppress errors when the new rules files contain options not supported by
