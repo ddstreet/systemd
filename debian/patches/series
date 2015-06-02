@@ -9,6 +9,8 @@ core-namespace-Protect-usr-instead-of-home-with-Prot.patch
 sd-device-fix-device_get_properties_strv.patch
 udev-Bring-back-persistant-storage-symlinks-for-bcac.patch
 sd-device-fix-invalid-property-strv-pointers.patch
+load-fragment-use-UNESCAPE_RELAX-flag-to-parse-exec-.patch
+test-unit-file-add-test-for-improperly-escaped-exec-.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -26,11 +28,8 @@ Make-net.ifnames-opt-in-instead-of-opt-out.patch
 Use-different-default-paths-for-various-binaries.patch
 Order-remote-fs.target-after-local-fs.target.patch
 Skip-99-systemd.rules-when-not-running-systemd-as-in.patch
-Load-sg-module-from-80-drivers.rules.patch
-Updates-to-default-device-permissions.patch
 insserv.conf-generator.patch
 Add-targets-for-compatibility-with-Debian-insserv-sy.patch
-more-cd-aliases.patch
 Adjust-systemd-user-pam-config-file-for-Debian.patch
 Add-run-initctl-support-to-SysV-compat-tools.patch
 Add-support-for-TuxOnIce-hibernation.patch
@@ -53,7 +52,6 @@ Only-start-logind-if-dbus-is-installed.patch
 cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
 PrivateTmp-shouldn-t-require-tmpfs.patch
 path-util-Fix-path_is_mount_point-for-files.patch
-#path_is_mount_point-handle-false-positive-on-some-fs.patch
 syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
