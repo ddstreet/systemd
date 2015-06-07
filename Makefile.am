@@ -6686,7 +6686,6 @@ SYSINIT_TARGET_WANTS += \
 
 LOCAL_FS_TARGET_WANTS += \
 	systemd-remount-fs.service \
-	tmp.mount \
 	var-lib-machines.mount
 
 MULTI_USER_TARGET_WANTS += \
