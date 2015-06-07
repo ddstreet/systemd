@@ -1,3 +1,26 @@
+systemd (220-5) unstable; urgency=medium
+
+  * debian/README.source: Upstream repository moved to github, adjust
+    cherry-picking instructions accordingly.
+  * debian/control: Replace obsolete Python2 version header with
+    X-Python3-Version.
+  * dracut: Fix path to systemd-fsck. (Closes: #787553)
+  * Ignore test failures during build if /etc/machine-id is missing (which is
+    the case in a few buildd chroots still). (Closes: #787258)
+  * debian/udev.README.Debian: Move network interface hotplug documentation
+    into separate section. Point out that "lo" does not need to be configured
+    in ifupdown under systemd.
+  * debian/udev.README.Debian: Document net.ifnames, and how to write udev
+    rules for custom network names.
+  * Add debian/extra/01-mac-for-usb.link: Use MAC based names for network
+    interfaces which are (directly or indirectly) on USB. Path based names
+    are inadequate for dynamic buses like USB.
+  * Fix another escape parsing regression in Exec*= lines. (Closes: #787256)
+  * Disable EFI support for udeb build.
+  * Refine detection of touch screen devices.
+
+ -- Martin Pitt <mpitt@debian.org>  Sun, 07 Jun 2015 16:52:33 +0200
+
 systemd (220-4) unstable; urgency=medium
 
   [ Martin Pitt ]

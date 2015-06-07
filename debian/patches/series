@@ -11,6 +11,12 @@ udev-Bring-back-persistant-storage-symlinks-for-bcac.patch
 sd-device-fix-invalid-property-strv-pointers.patch
 load-fragment-use-UNESCAPE_RELAX-flag-to-parse-exec-.patch
 test-unit-file-add-test-for-improperly-escaped-exec-.patch
+test-unit-file.c-fixup-the-test-for-commit-3b51f8ddd.patch
+util-fix-another-cunescape-regression.patch
+shared-generator-correct-path-to-systemd-fsck.patch
+udev-input_id-refactor-device-detection.patch
+udev-input_id-use-direct-property-and-mt-axis-for-to.patch
+udev-input_id-use-ABS_MT_SLOT-1-to-exclude-non-touch.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
