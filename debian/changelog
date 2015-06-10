@@ -1,3 +1,10 @@
+systemd (220-5ubuntu2) wily; urgency=medium
+
+  * boot-and-services: Drop expectedFailure from NSpawn.test_boot() test, this
+    seems to work properly now.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 10 Jun 2015 09:01:16 +0200
+
 systemd (220-5ubuntu1) wily; urgency=medium
 
   * Merge with Debian unstable. Remaining Ubuntu changes:
