@@ -614,6 +614,27 @@ int cg_create(const char *controller, const char *path) {
         return 1;
 }
 
+int cg_create_uid(const char *controller, const char *path, uid_t uid) {
+        _cleanup_free_ char *fs = NULL;
+        int r;
+
+        r = cg_get_path_and_check(controller, path, NULL, &fs);
+        if (r < 0)
+                return r;
+
+        r = mkdir_parents(fs, 0755);
+        if (r < 0)
+                return r;
+
+        if (mkdir(fs, 0755) < 0 && errno != EEXIST)
+                return -errno;
+
+        if (chown(fs, uid, (gid_t) -1) < 0)
+                return -errno;
+
+        return 1;
+}
+
 int cg_create_and_attach(const char *controller, const char *path, pid_t pid) {
         int r, q;
 
@@ -1731,7 +1752,13 @@ static const char mask_names[] =
         "cpuacct\0"
         "blkio\0"
         "memory\0"
-        "devices\0";
+        "devices\0"
+        "hugetlb\0"
+        "cpuset\0"
+        "net_cls\0"
+        "net_prio\0"
+        "freezer\0"
+        "perf_event\0";
 
 int cg_create_everywhere(CGroupControllerMask supported, CGroupControllerMask mask, const char *path) {
         CGroupControllerMask bit = 1;
@@ -1751,6 +1778,33 @@ int cg_create_everywhere(CGroupControllerMask supported, CGroupControllerMask ma
         NULSTR_FOREACH(n, mask_names) {
                 if (mask & bit)
                         cg_create(n, path);
+
+                bit <<= 1;
+        }
+
+        return 0;
+}
+
+int cg_create_everywhere_uid(CGroupControllerMask supported, CGroupControllerMask mask, const char *path, uid_t uid) {
+        CGroupControllerMask bit = 1;
+        const char *n;
+        int r;
+
+        /* This one will create a cgroup in our private tree, but also
+         * duplicate it in the trees specified in mask, and remove it
+         * in all others */
+
+        /* First create the cgroup in our own hierarchy. */
+        r = cg_create_uid(SYSTEMD_CGROUP_CONTROLLER, path, uid);
+        if (r < 0)
+                return r;
+
+        /* Then, do the same in the other hierarchies */
+        NULSTR_FOREACH(n, mask_names) {
+                if (mask & bit)
+                        cg_create_uid(n, path, uid);
+                else if (supported & bit)
+                        cg_trim(n, path, true);
 
                 bit <<= 1;
         }
