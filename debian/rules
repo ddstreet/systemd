@@ -22,7 +22,6 @@ CONFFLAGS = \
 	--with-telinit=/lib/sysvinit/telinit \
 	--enable-split-usr \
 	--disable-gudev \
-	--disable-seccomp \
 	--disable-qrencode \
 	--disable-microhttpd \
 	--disable-chkconfig \
@@ -88,6 +87,7 @@ CONFFLAGS_udeb = \
 	--disable-hwdb \
 	--disable-manpages \
 	--disable-efi \
+	--disable-seccomp \
 	--without-python
 
 override_dh_auto_configure:
@@ -171,6 +171,11 @@ override_dh_install:
 		ln -s ../systemd-update-utmp-runlevel.service \
 			debian/systemd/lib/systemd/system/$${t}.target.wants ;\
 	done
+
+	# we don't want /tmp to be a tmpfs by default
+	mv debian/systemd/lib/systemd/system/tmp.mount debian/systemd/usr/share/systemd/
+	printf '\n[Install]\nWantedBy=local-fs.target\n' >> debian/systemd/usr/share/systemd/tmp.mount
+	rm debian/systemd/lib/systemd/system/local-fs.target.wants/tmp.mount
 
 	# remove duplicates
 	# files shipped by systemd-sysv / sysvinit

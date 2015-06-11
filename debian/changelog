@@ -1,3 +1,27 @@
+systemd (220-6) unstable; urgency=medium
+
+  * Enable seccomp support on the architectures that provide libseccomp.
+    (Closes: #760299)
+  * boot-and-services autopkgtest: Add SeccompTest for the above.
+  * boot-and-services autopkgtest: Check that we don't get an unwanted
+    tmp.mount unless /etc/fstab explicitly specifies it.
+  * Bump libcap-dev build dep to the version that provides libcap2-udeb.
+    (Closes: #787542)
+  * Stop installing tmp.mount by default; there are still situations where it
+    becomes active through dependencies from other units, which is surprising,
+    hides existing data in /tmp during runtime, and it isn't safe to have a
+    tmpfs /tmp on every install scenario. (Closes: #783509)
+    - d/rules: Ship tmp.mount in /usr/share/systemd/ instead of
+      /lib/systemd/systemd.
+    - systemd.postinst: When tmp.mount already was enabled, install tmp.mount
+      into /etc and keep it enabled.
+    - systemd.postinst: When enabling tmp.mount because of RAMTMP=yes, copy it
+      from /usr/share.
+    - Drop Don-t-mount-tmp-as-tmpfs-by-default.patch and
+      PrivateTmp-shouldn-t-require-tmpfs.patch, not necessary any more.
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 11 Jun 2015 09:25:49 +0200
+
 systemd (220-5) unstable; urgency=medium
 
   * debian/README.source: Upstream repository moved to github, adjust
