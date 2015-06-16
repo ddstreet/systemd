@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: optional
-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>,
            Marco d'Itri <md@linux.it>,
            Michael Stapelberg <stapelberg@debian.org>,
@@ -62,9 +63,11 @@ Depends: ${shlibs:Depends},
          libcap2-bin
 Breaks: lvm2 (<< 2.02.104-1),
         lsb-base (<< 4.1+Debian4),
-        apparmor (<< 2.9.2-1),
+        apparmor (<< 2.9.1-0ubuntu5),
         systemd-shim (<< 8-2)
-Conflicts: klogd
+Conflicts: klogd, systemd-services
+Replaces: systemd-services
+Provides: systemd-services
 Description: system and service manager
  systemd is a system and service manager for Linux. It provides aggressive
  parallelization capabilities, uses socket and D-Bus activation for starting
@@ -85,10 +88,12 @@ Multi-Arch: foreign
 Section: admin
 Priority: extra
 Conflicts: sysvinit-core,
-           upstart
+           upstart-sysv,
+           upstart (<< 1.13.2-0ubuntu10~),
 Replaces: sysvinit (<< 2.88dsf-44~),
           sysvinit-core,
-          upstart
+          upstart-sysv,
+          upstart (<< 1.13.2-0ubuntu10~),
 Pre-Depends: systemd
 Depends: ${shlibs:Depends},
          ${misc:Depends}
@@ -283,7 +288,7 @@ Depends: ${shlibs:Depends},
 Breaks: consolekit (<< 0.4.6-1),
         kmod (<< 14),
         systemd (<< 215-1),
-        plymouth (<< 0.9.0-7),
+        plymouth (<< 0.9.0-0ubuntu8~),
         bash-completion (<< 1:2.1)
 Replaces: bash-completion (<< 1:2.1)
 Description: /dev/ and hotplug management daemon
