@@ -19,7 +19,6 @@ path-util-Fix-path_is_mount_point-for-files.patch
 udev-input_id-refactor-device-detection.patch
 udev-input_id-use-direct-property-and-mt-axis-for-to.patch
 udev-input_id-use-ABS_MT_SLOT-1-to-exclude-non-touch.patch
-rules-restore-block-watch-after-CHANGE-events.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -34,6 +33,7 @@ Fix-up-tmpfiles.d-permissions-properly.patch
 Revert-udev-network-device-renaming-immediately-give.patch
 Use-different-default-paths-for-various-binaries.patch
 Order-remote-fs.target-after-local-fs.target.patch
+Skip-99-systemd.rules-when-not-running-systemd-as-in.patch
 insserv.conf-generator.patch
 Add-targets-for-compatibility-with-Debian-insserv-sy.patch
 Adjust-systemd-user-pam-config-file-for-Debian.patch
@@ -59,3 +59,11 @@ syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+
+## Ubuntu patches:
+Support-system-image-read-only-etc.patch
+Provide-shutdown-fallback-for-upstart.patch
+systemctl-Don-t-forward-telinit-u-to-upstart.patch
+Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
+core-Put-session-scopes-into-all-cgroup-controllers.patch
+udev-trigger-Drop-hwdb-update-dependency.patch
