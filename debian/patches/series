@@ -3,6 +3,7 @@ udevd-event-fix-event-queue-in-daemenozied-mode.patch
 udevd-fix-SIGCHLD-handling-in-daemon-mode.patch
 man-generate-configured-paths-in-manpages.patch
 man-use-configured-path-for-mount-and-umount-binarie.patch
+man-replace-hard-coded-usr-lib.patch
 systemctl-drop-hardcoded-chkconfig-invocation.patch
 systemctl-Don-t-skip-SysV-init.d-scripts-when-enabli.patch
 core-namespace-Protect-usr-instead-of-home-with-Prot.patch
@@ -14,9 +15,11 @@ test-unit-file-add-test-for-improperly-escaped-exec-.patch
 test-unit-file.c-fixup-the-test-for-commit-3b51f8ddd.patch
 util-fix-another-cunescape-regression.patch
 shared-generator-correct-path-to-systemd-fsck.patch
+path-util-Fix-path_is_mount_point-for-files.patch
 udev-input_id-refactor-device-detection.patch
 udev-input_id-use-direct-property-and-mt-axis-for-to.patch
 udev-input_id-use-ABS_MT_SLOT-1-to-exclude-non-touch.patch
+rules-restore-block-watch-after-CHANGE-events.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -29,10 +32,8 @@ Add-note-to-udev.conf-that-changes-to-that-file-requ.patch
 Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 Fix-up-tmpfiles.d-permissions-properly.patch
 Revert-udev-network-device-renaming-immediately-give.patch
-Make-net.ifnames-opt-in-instead-of-opt-out.patch
 Use-different-default-paths-for-various-binaries.patch
 Order-remote-fs.target-after-local-fs.target.patch
-Skip-99-systemd.rules-when-not-running-systemd-as-in.patch
 insserv.conf-generator.patch
 Add-targets-for-compatibility-with-Debian-insserv-sy.patch
 Adjust-systemd-user-pam-config-file-for-Debian.patch
@@ -42,7 +43,6 @@ Add-support-for-rcS.d-init-scripts-to-the-sysv-gener.patch
 Stop-syslog.socket-when-entering-emergency-mode.patch
 Make-run-lock-tmpfs-an-API-fs.patch
 Include-additional-directories-in-ProtectSystem.patch
-Fix-paths-in-man-pages.patch
 udev-re-enable-mount-propagation-for-udevd.patch
 Prefer-etc-X11-default-display-manager-if-present.patch
 Re-enable-journal-forwarding-to-syslog.patch
@@ -55,7 +55,6 @@ util-Add-hidden-suffixes-for-ucf.patch
 Drop-rc-local-generator.patch
 Only-start-logind-if-dbus-is-installed.patch
 cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
-path-util-Fix-path_is_mount_point-for-files.patch
 syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
