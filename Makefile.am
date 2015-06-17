@@ -1463,14 +1463,11 @@ tests += \
 	test-capability \
 	test-async \
 	test-ratelimit \
-	test-condition \
 	test-uid-range \
 	test-bus-policy \
 	test-locale-util \
 	test-execute \
 	test-copy \
-	test-cap-list \
-	test-sigbus \
 	test-verbs
 
 EXTRA_DIST += \
@@ -3173,10 +3170,8 @@ tests += \
 	test-bus-introspect \
 	test-bus-objects \
 	test-bus-error \
-	test-bus-creds \
 	test-bus-gvariant \
 	test-event \
-	test-rtnl \
 	test-local-addresses \
 	test-resolve
 
@@ -3516,7 +3511,6 @@ test_lldp_LDADD = \
 
 tests += \
 	test-dhcp-option \
-	test-dhcp-client \
 	test-dhcp-server \
 	test-ipv4ll \
 	test-icmp6-rs \
@@ -5924,7 +5918,6 @@ test_network_tables_LDADD += \
 endif
 
 tests += \
-	test-network \
 	test-network-tables
 
 dist_systemunit_DATA += \
