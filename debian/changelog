@@ -1,3 +1,51 @@
+systemd (220-7) unstable; urgency=medium
+
+  [ Michael Biebl ]
+  * Enable seccomp support on arm64 as well.
+  * Replace the remainder of Fix-paths-in-man-pages.patch with an upstream
+    provided patch.
+
+  [ Martin Pitt ]
+  * Switch to net.ifnames persistant network interfaces (on new
+    installations/for new hardware), and deprecate the old
+    75-persistent-net-generator.rules. See the ML discussion for details:
+        https://lists.debian.org/debian-devel/2015/05/msg00170.html
+        https://lists.debian.org/debian-devel/2015/06/msg00018.html
+    - Drop Make-net.ifnames-opt-in-instead-of-opt-out.patch, to use
+      net.ifnames by default.
+    - Revert-udev-network-device-renaming-immediately-give.patch: Adjust
+      patch comment.
+    - Drop 75-persistent-net-generator.rules, write_net_rules helper and
+      rule_generator.functions.
+    - Adjust udev's README.Debian accordingly, and describe the migration.
+      This needs to happen manually as there is no robust way of doing this
+      automatically.
+    - Add udev NEWS file for announcing this change and pointing to udev's
+      README.
+    - udev.postinst: Drop write_interfaces_rules().
+    - udev.postinst: Disable net.ifnames on systems which did not support
+      75-persistent-net-generator.rules (most importantly, virtualized guests)
+      to avoid changing network interface names on upgrade.
+    - LP: #1454254
+  * fsckd-daemon-for-inter-fsckd-communication.patch: Add fsckd.c to
+    POTFILES.in.
+  * ifupdown-hotplug autopkgtest: Fix config name in interfaces.d/, it must
+    not have a suffix in Debian. Also clean up the file after the test.
+  * net.agent: When running under systemd, run everything in the foreground.
+    This avoids killing the forked child in the middle of its operation under
+    systemd when the parent exits.
+  * Check during build that systemd and systemd-journald don't link against
+    anything in /usr, to prevent bugs like #771652 and #788913 in the future.
+  * Drop Skip-99-systemd.rules-when-not-running-systemd-as-in.patch. The rules
+    mostly just attach tags systemd specific properties which are harmless
+    under other init systems, and systemd-sysctl also works there.
+  * 80-networking.rules: Only call agents for add|remove, as they don't handle
+    other events.
+  * Restore udev watches on block device changes. (Closes: #789060,
+    LP: #1466081)
+
+ -- Martin Pitt <mpitt@debian.org>  Wed, 17 Jun 2015 22:48:53 +0200
+
 systemd (220-6) unstable; urgency=medium
 
   * Enable seccomp support on the architectures that provide libseccomp.
@@ -114,7 +162,7 @@ systemd (220-1) unstable; urgency=medium
       (Closes: #781604)
     - man systemd.network: Explain UseDomains a bit more (not used by
       default). (Closes: #766413)
-    - Ignore comments in /etc/hostname (LP: #766413)
+    - Ignore comments in /etc/hostname (LP: #1053048)
     - Drop all backported patches and port the others to new upstream release.
   * Cherry-pick patch to fix udevd --daemon assertion regression.
   * Cherry-pick patch to fix udevd worker hang.
@@ -141,7 +189,7 @@ systemd (220-1) unstable; urgency=medium
   * systemd-fsckd autopkgtest: In test_systemd_fsck_with_plymouth_failure(),
     fix plymouthd status check to work under both Debian and Ubuntu.
   * Replace almost all of Fix-paths-in-man-pages.patch with upstreamed
-    patches. (The reminder is planned to get fixed upstream as well.)
+    patches. (The remainder is planned to get fixed upstream as well.)
   * Remove our update-rc.d patches, replace them with upstream patches for
     /lib/systemd/systemd-sysv-install abstraction, and provide one for
     update-rc.d. Also implement "is-enabled" command by directly checking for
