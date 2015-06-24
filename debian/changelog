@@ -1,3 +1,9 @@
+systemd (220-7ubuntu2) wily; urgency=medium
+
+  * persistent block rules: Whitelist xvd* devices for Xen. (LP: #1468091)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 24 Jun 2015 07:02:50 +0200
+
 systemd (220-7ubuntu1) wily; urgency=medium
 
   * Merge with Debian unstable. Remaining Ubuntu changes:

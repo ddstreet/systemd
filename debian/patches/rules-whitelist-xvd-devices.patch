@@ -1,0 +1,34 @@
+From bb5c512de22eeb7464f120a01fd1d59e7a4bbb7b Mon Sep 17 00:00:00 2001
+From: Alex Crawford <alex.crawford@coreos.com>
+Date: Thu, 4 Jun 2015 15:54:35 -0700
+Subject: [PATCH] rules: whitelist xvd* devices
+
+Xen disks need to be whitelisted as well.
+---
+ rules/60-block.rules              | 2 +-
+ rules/60-persistent-storage.rules | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+Index: systemd-220/rules/60-block.rules
+===================================================================
+--- systemd-220.orig/rules/60-block.rules
++++ systemd-220/rules/60-block.rules
+@@ -8,4 +8,4 @@ ACTION=="add", SUBSYSTEM=="module", KERN
+ ACTION=="change", SUBSYSTEM=="scsi", ENV{DEVTYPE}=="scsi_device", TEST=="block", ATTR{block/*/uevent}="change"
+ 
+ # watch metadata changes, caused by tools closing the device node which was opened for writing
+-ACTION!="remove", SUBSYSTEM=="block", KERNEL=="loop*|nvme*|sd*|vd*", OPTIONS+="watch"
++ACTION!="remove", SUBSYSTEM=="block", KERNEL=="loop*|nvme*|sd*|vd*|xvd*", OPTIONS+="watch"
+Index: systemd-220/rules/60-persistent-storage.rules
+===================================================================
+--- systemd-220.orig/rules/60-persistent-storage.rules
++++ systemd-220/rules/60-persistent-storage.rules
+@@ -6,7 +6,7 @@
+ ACTION=="remove", GOTO="persistent_storage_end"
+ 
+ SUBSYSTEM!="block", GOTO="persistent_storage_end"
+-KERNEL!="loop*|mmcblk*[0-9]|msblk*[0-9]|mspblk*[0-9]|nvme*|sd*|sr*|vd*|bcache*", GOTO="persistent_storage_end"
++KERNEL!="loop*|mmcblk*[0-9]|msblk*[0-9]|mspblk*[0-9]|nvme*|sd*|sr*|vd*|xvd*|bcache*", GOTO="persistent_storage_end"
+ 
+ # ignore partitions that span the entire disk
+ TEST=="whole_disk", GOTO="persistent_storage_end"
