@@ -1,9 +1,6 @@
 <?xml version='1.0'?> <!--*-nxml-*-->
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
-<!ENTITY % entities SYSTEM "custom-entities.ent" >
-%entities;
-]>
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
 
 <!--
   This file is part of systemd.
@@ -24,7 +21,7 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 -->
 
-<refentry id="sd_bus_message_get_monotonic_usec" conditional="ENABLE_KDBUS">
+<refentry id="sd_bus_message_get_monotonic_usec">
 
   <refentryinfo>
     <title>sd_bus_message_get_monotonic_usec</title>
