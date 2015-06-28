@@ -1,9 +1,6 @@
 <?xml version='1.0'?> <!--*- Mode: nxml; nxml-child-indent: 2; indent-tabs-mode: nil -*-->
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
-<!ENTITY % entities SYSTEM "custom-entities.ent" >
-%entities;
-]>
+"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
 
 <!--
   This file is part of systemd.
@@ -24,7 +21,7 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 -->
 
-<refentry id="sd_event_add_signal" conditional="ENABLE_KDBUS">
+<refentry id="sd_event_add_signal">
 
   <refentryinfo>
     <title>sd_event_add_signal</title>

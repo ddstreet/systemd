@@ -22,3 +22,4 @@ Restart=always
 RestartSec=0
 ExecStart=@rootlibexecdir@/systemd-udevd
 KillMode=mixed
+WatchdogSec=1min

@@ -1,25 +1,4 @@
 ## Cherry-picked from upstream
-udevd-event-fix-event-queue-in-daemenozied-mode.patch
-udevd-fix-SIGCHLD-handling-in-daemon-mode.patch
-man-generate-configured-paths-in-manpages.patch
-man-use-configured-path-for-mount-and-umount-binarie.patch
-man-replace-hard-coded-usr-lib.patch
-systemctl-drop-hardcoded-chkconfig-invocation.patch
-systemctl-Don-t-skip-SysV-init.d-scripts-when-enabli.patch
-core-namespace-Protect-usr-instead-of-home-with-Prot.patch
-sd-device-fix-device_get_properties_strv.patch
-udev-Bring-back-persistant-storage-symlinks-for-bcac.patch
-sd-device-fix-invalid-property-strv-pointers.patch
-load-fragment-use-UNESCAPE_RELAX-flag-to-parse-exec-.patch
-test-unit-file-add-test-for-improperly-escaped-exec-.patch
-test-unit-file.c-fixup-the-test-for-commit-3b51f8ddd.patch
-util-fix-another-cunescape-regression.patch
-shared-generator-correct-path-to-systemd-fsck.patch
-path-util-Fix-path_is_mount_point-for-files.patch
-udev-input_id-refactor-device-detection.patch
-udev-input_id-use-direct-property-and-mt-axis-for-to.patch
-udev-input_id-use-ABS_MT_SLOT-1-to-exclude-non-touch.patch
-rules-restore-block-watch-after-CHANGE-events.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -49,7 +28,6 @@ Re-enable-journal-forwarding-to-syslog.patch
 Disable-tests-which-fail-on-buildds.patch
 Make-sd_login_monitor_new-work-for-logind-without-sy.patch
 Don-t-enable-audit-by-default.patch
-Accept-mountall-specific-fstab-options.patch
 Fix-usr-remount-failure-for-split-usr.patch
 util-Add-hidden-suffixes-for-ucf.patch
 Drop-rc-local-generator.patch
@@ -59,3 +37,4 @@ syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Revert-rules-fix-tests-for-removable-state.patch
