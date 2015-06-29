@@ -3013,7 +3013,6 @@ tests += \
 	test-bus-error \
 	test-bus-gvariant \
 	test-event \
-	test-netlink \
 	test-local-addresses \
 	test-resolve
 
