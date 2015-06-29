@@ -1,3 +1,9 @@
+systemd (221-1ubuntu2) wily; urgency=medium
+
+  * Disable test-netlink during package build, fails on some buildds.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 29 Jun 2015 07:53:45 +0200
+
 systemd (221-1ubuntu1) wily; urgency=medium
 
   * Merge with Debian unstable. Remaining Ubuntu changes:
