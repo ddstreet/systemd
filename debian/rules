@@ -23,7 +23,6 @@ CONFFLAGS = \
 	--enable-split-usr \
 	--disable-qrencode \
 	--disable-microhttpd \
-	--disable-chkconfig \
 	--disable-gnutls \
 	--disable-libcurl \
 	--disable-libidn \
@@ -36,6 +35,7 @@ CONFFLAGS = \
 	--disable-importd \
 	--disable-libiptc \
 	--disable-silent-rules \
+	--disable-python-devel \
 	--with-ntp-servers="$(DEFAULT_NTP_SERVERS)"  \
 	--with-system-uid-max=999 \
 	--with-system-gid-max=999
@@ -112,7 +112,7 @@ ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
 	echo "Checking that executables don't link to libraries in /usr..."
 	set -e; for e in debian/install/deb/lib/systemd/systemd*; do \
 	    echo " $$e"; \
-	    OUT=`ldd $$e | grep -v libfakeroot`; if echo "$$OUT" | grep -q /usr; then \
+	    OUT=`env -u LD_PRELOAD ldd $$e`; if echo "$$OUT" | grep -q /usr; then \
 	        echo "ERROR: $$e links to /usr"; echo "$$OUT"; exit 1; \
 	    fi; \
 	done
@@ -128,16 +128,8 @@ ifeq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
 	dh_auto_clean --builddirectory=build-udeb
 endif
 	rm -rf debian/install/
-	# remove pre-generated man pages so they are rebuilt
-	rm -f man/*.[13578]
-	# remove pre-generated rules and unit files so they are rebuilt
-	rm -f rules/99-systemd.rules \
-		units/emergency.service \
-		units/systemd-udevd.service \
-		units/systemd-udev-settle.service \
-		units/systemd-udev-trigger.service
 	# remove Python byte code files
-	rm -f *.pyc
+	rm -rf tools/__pycache__/
 
 override_dh_install:
 	# remove unnecessary / unused files
@@ -201,6 +193,12 @@ endif
 	rm debian/systemd/usr/share/man/man8/runlevel.8
 	# files shipped by libpam-systemd
 	rm debian/systemd/usr/share/man/man8/pam_systemd.8
+	# files shipped by libnss-myhostname
+	rm debian/systemd/usr/share/man/man8/libnss_myhostname.so.2.8
+	rm debian/systemd/usr/share/man/man8/nss-myhostname.8
+	# files shipped by libnss-mymachines
+	rm debian/systemd/usr/share/man/man8/libnss_mymachines.so.2.8
+	rm debian/systemd/usr/share/man/man8/nss-mymachines.8
 	# files shipped by udev
 	rm -r debian/systemd/etc/udev/
 	rm debian/systemd/lib/systemd/system/systemd-udev*
@@ -208,12 +206,15 @@ endif
 	rm debian/systemd/lib/systemd/system/*.target.wants/systemd-udev*
 	rm debian/systemd/lib/systemd/system/*.target.wants/*hwdb*
 	rm debian/systemd/lib/systemd/systemd-udevd
+	rm debian/systemd/usr/share/man/man5/udev.conf.5
+	rm debian/systemd/usr/share/man/man7/hwdb.7
 	rm debian/systemd/usr/share/man/man7/udev.7
-	rm debian/systemd/usr/share/man/man7/*hwdb*.7
-	rm debian/systemd/usr/share/man/man8/*udev*.8
-	rm debian/systemd/usr/share/man/man8/*hwdb*.8
+	rm debian/systemd/usr/share/man/man8/systemd-hwdb*
+	rm debian/systemd/usr/share/man/man8/systemd-udevd*
+	rm debian/systemd/usr/share/man/man8/udevadm.8
+	rm debian/systemd/usr/share/zsh/vendor-completions/_udevadm
 	rm debian/systemd/usr/share/bash-completion/completions/udevadm
-	# files systemd by cryptsetup
+	# files shipped by cryptsetup
 ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
 	rm debian/systemd/usr/share/man/man5/crypttab.5
 endif
@@ -230,16 +231,6 @@ endif
 		install --mode=644 debian/extra/systemd-vconsole-setup.service debian/systemd/lib/systemd/system/; \
 		install --mode=644 debian/extra/rules-ubuntu/*.rules debian/udev/lib/udev/rules.d/; \
 	fi
-
-# use symlinked doc directories on Debian as the old udev package did; we have
-# to manually install udev's README for that
-override_dh_installdocs:
-	if ! dpkg-vendor --is ubuntu; then \
-		dh_installdocs -pudev -plibudev-dev --link-doc=libudev1; \
-		install -D --mode 644 debian/udev.README.Debian debian/libudev1/usr/share/doc/libudev1/README.Debian; \
-		install -D --mode 644 debian/udev.NEWS debian/libudev1/usr/share/doc/libudev1/NEWS.Debian; \
-	fi
-	dh_installdocs --remaining-packages
 
 override_dh_installinit:
 	dh_installinit --no-start
@@ -285,4 +276,4 @@ dh_options = -Nudev-udeb -Nlibudev1-udeb
 endif
 
 %:
-	dh $@ $(dh_options) --with autoreconf,python3 --parallel
+	dh $@ $(dh_options) --with autoreconf --parallel
