@@ -181,7 +181,7 @@ static int export_legacy_dbus_address(
         int r;
 
         /* skip export if kdbus is not active */
-        if (access("/sys/fs/kdbus", F_OK) < 0)
+        if (!is_kdbus_available())
                 return PAM_SUCCESS;
 
         if (asprintf(&s, KERNEL_USER_BUS_ADDRESS_FMT ";" UNIX_USER_BUS_ADDRESS_FMT, uid, runtime) < 0) {
@@ -213,7 +213,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                 *seat = NULL,
                 *type = NULL, *class = NULL,
                 *class_pam = NULL, *type_pam = NULL, *cvtnr = NULL, *desktop = NULL;
-        _cleanup_bus_close_unref_ sd_bus *bus = NULL;
+        _cleanup_bus_flush_close_unref_ sd_bus *bus = NULL;
         int session_fd = -1, existing, r;
         bool debug = false, remote;
         struct passwd *pw;
@@ -492,7 +492,7 @@ _public_ PAM_EXTERN int pam_sm_close_session(
                 int argc, const char **argv) {
 
         _cleanup_bus_error_free_ sd_bus_error error = SD_BUS_ERROR_NULL;
-        _cleanup_bus_close_unref_ sd_bus *bus = NULL;
+        _cleanup_bus_flush_close_unref_ sd_bus *bus = NULL;
         const void *existing = NULL;
         const char *id;
         int r;
