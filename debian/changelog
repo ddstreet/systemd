@@ -1,3 +1,11 @@
+systemd (204-5ubuntu20.13) trusty; urgency=medium
+
+  * debian/patches/ibmveth_persistent_mac.patch: fix the exception to locally
+    administered MAC addresses for ibmveth; use DRIVERS rather than SUBSYSTEMS
+    to point to ibmveth. (LP: #1437375)
+
+ -- Mathieu Trudel-Lapierre <mathieu-tl@ubuntu.com>  Wed, 08 Jul 2015 13:34:18 -0400
+
 systemd (204-5ubuntu20.12) trusty; urgency=medium
 
   * Add support for HP ProLiant m400 Server Cartridge soft powerdown on the
