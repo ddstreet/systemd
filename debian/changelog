@@ -1,3 +1,54 @@
+systemd (222-1) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * New upstream release:
+    - Fix reload killing BusName= units. (Closes: #746151)
+    - sysv-generator: detect invalid names and escape them. (Closes: #677075)
+    - Document removal of PIDFile on daemon shutdown. (Closes: #734006)
+    - Drop Revert-rules-fix-tests-for-removable-state.patch, the auto-suspend
+      rules now got dropped entirely.
+  * Add Revert-VT-reuse-patches.patch: Revert a couple of logind VT reuse
+    patches which alternately broke lightdm and gdm.
+  * debian/libsystemd0.symbols: Add new symbols from this release.
+  * Disable test-netlink during package build, fails on some buildds.
+  * udev.postinst: Don't call addgroup with --quiet, so that if the "input"
+    group already exists as a non-system group you get a sensible error
+    message. Some broken tutorials forget the --system option.
+    (Closes: #769948, LP: #1455956)
+  * systemd.postinst: Drop the --quiet from the addgroup calls as well, same
+    reason as above. (Closes: #762275)
+  * udev: Drop doc dir symlinking. It has caused too much trouble and only
+    marginally helps to avoid duplication. Such duplication should be dealt
+    with at the distro, not package level.
+  * debian/rules: Entirely ignore $LD_PRELOAD instead of just libfakeroot in
+    the link check, to also avoid libeatmydata. (Closes: #790546)
+  * boot-and-services, display-managers autopkgtests: Install and configure
+    dummy X.org driver, so that these work in headless machines/VMs.
+  * systemd-fsckd autopkgtest: Stop using/asserting on lightdm, just check
+    that default.target is active. lightdm is prone to fail in test
+    environments, and fiddling with it in two other autopkgtests is
+    sufficient.
+  * debian/watch: Adjust to new upstream release model of only providing the
+    github tag tarballs.
+  * Drop dsl-modem.agent. It hasn't been maintained/tested for many years, few
+    if any people actually use this, and this doesn't belong into udev.
+
+  [ Michael Biebl ]
+  * Stop building the Python 3 bindings. They were split into a separate
+    source package upstream and are now built from src:python-systemd. See
+    http://lists.freedesktop.org/archives/systemd-devel/2015-July/033443.html
+  * Remove obsolete --disable-chkconfig configure option.
+  * Move the man pages for libnss-myhostname, libnss-mymachines and udev.conf
+    from systemd into the correct package. Move the zsh completion file for
+    udevadm into the udev package as well. Add Breaks/Replaces accordingly.
+    (Closes: #790879)
+  * Drop rules which remove pre-generated files before build. The upstream
+    tarball no longer ships any pre-generated files so this is no longer
+    necessary.
+  * Fix cleanup rule for Python byte code files.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 08 Jul 2015 18:56:07 +0200
+
 systemd (221-1) unstable; urgency=medium
 
   * New upstream release 221:
