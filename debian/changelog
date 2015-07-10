@@ -1,3 +1,9 @@
+systemd (222-1ubuntu3) wily; urgency=medium
+
+  * debian/udev-udeb.install: Fix the FTBFS created by the previous upload.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Fri, 10 Jul 2015 16:40:19 -0600
+
 systemd (222-1ubuntu2) wily; urgency=medium
 
   * debian/udev-udeb.install: Install new bits for net.ifnames (LP: #1473542)
