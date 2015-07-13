@@ -1,3 +1,9 @@
+systemd (222-1ubuntu4) wily; urgency=medium
+
+  * debian/extra/initramfs-tools/hooks/udev: Fix for 70-persistent-net.rules.
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Mon, 13 Jul 2015 00:40:17 -0600
+
 systemd (222-1ubuntu3) wily; urgency=medium
 
   * debian/udev-udeb.install: Fix the FTBFS created by the previous upload.
