@@ -43,7 +43,7 @@ Package: systemd
 Architecture: linux-any
 Multi-Arch: foreign
 Section: admin
-Priority: optional
+Priority: important
 Recommends: libpam-systemd,
             dbus
 Suggests: systemd-ui
@@ -81,7 +81,7 @@ Package: systemd-sysv
 Architecture: linux-any
 Multi-Arch: foreign
 Section: admin
-Priority: extra
+Priority: important
 Conflicts: sysvinit-core,
            upstart
 Replaces: sysvinit (<< 2.88dsf-44~),
@@ -233,36 +233,6 @@ Depends: ${misc:Depends},
 Description: systemd utility library (transitional package)
  The sd-daemon library provides a reference implementation of various
  APIs for new-style daemons, as implemented by the systemd init system.
- .
- This is a compatibility package which provides a .pc file for the old library
- name. That way, packages can be rebuilt against the new libsystemd library
- without requiring changes to existing configure scripts.
-
-Package: libsystemd-journal-dev
-Architecture: linux-any
-Multi-Arch: same
-Section: oldlibs
-Priority: extra
-Depends: ${misc:Depends},
-         libsystemd-dev (>= ${binary:Version})
-Description: systemd journal utility library (transitional package)
- The libsystemd-journal library provides an interface for the
- systemd journal service.
- .
- This is a compatibility package which provides a .pc file for the old library
- name. That way, packages can be rebuilt against the new libsystemd library
- without requiring changes to existing configure scripts.
-
-Package: libsystemd-id128-dev
-Architecture: linux-any
-Multi-Arch: same
-Section: oldlibs
-Priority: extra
-Depends: ${misc:Depends},
-         libsystemd-dev (>= ${binary:Version})
-Description: systemd 128 bit ID utility library (transitional package)
- The libsystemd-id128 library provides utility functions for generating
- 128 bit IDs.
  .
  This is a compatibility package which provides a .pc file for the old library
  name. That way, packages can be rebuilt against the new libsystemd library
