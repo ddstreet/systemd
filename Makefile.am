@@ -410,6 +410,7 @@ rootlibexec_PROGRAMS += \
 endif
 
 systemgenerator_PROGRAMS = \
+	systemd-insserv-generator \
 	systemd-getty-generator \
 	systemd-fstab-generator \
 	systemd-system-update-generator \
@@ -2349,6 +2350,13 @@ systemd_delta_SOURCES = \
 
 systemd_delta_LDADD = \
 	libshared.la
+
+# ------------------------------------------------------------------------------
+systemd_insserv_generator_SOURCES = \
+	src/insserv-generator/insserv-generator.c
+
+systemd_insserv_generator_LDADD = \
+	libsystemd-internal.la
 
 # ------------------------------------------------------------------------------
 systemd_getty_generator_SOURCES = \
