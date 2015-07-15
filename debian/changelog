@@ -1,3 +1,28 @@
+systemd (222-2) unstable; urgency=medium
+
+  [ Adam Conrad ]
+  * debian/udev-udeb.install: Install new bits for net.ifnames (LP: #1473542)
+  * debian/extra/initramfs-tools/hooks/udev: Do the same for initramfs-tools.
+
+  [ Martin Pitt ]
+  * emergency.service: Wait for plymouth to shut down. Fixes invisible
+    emergency shell with plymouth running endlessly. (LP: #1471258)
+  * Add "networkd" autopkgtest. Covers basic DHCP on IPv4 and IPv4+6 on a veth
+    device.
+
+  [ Michael Biebl ]
+  * Bump package priorities of systemd and systemd-sysv to important to match
+    what has been used in the Debian archive since Jessie.
+  * Drop scsi_wait_scan hack from the udev initramfs-tools script. This Linux
+    kernel module has been broken since 2.6.30 and as a result was removed in
+    3.5. The Debian Jessie kernel no longer ships this module.
+    (Closes: #752775)
+  * Drop libsystemd-journald-dev and libsystemd-id128-dev. There are no
+    reverse dependencies left and we want to avoid new packages picking up
+    a build dependency on those obsolete transitional packages.
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 15 Jul 2015 23:51:15 +0200
+
 systemd (222-1) unstable; urgency=medium
 
   [ Martin Pitt ]
