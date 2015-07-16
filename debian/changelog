@@ -1,3 +1,28 @@
+systemd (221-1+deb9u2) stretch-proposed-updates; urgency=medium
+
+  [ Cyril Brulebois ]
+  * Additionally cherry-pick the following commit to avoid REJECTs since
+    stretch already has python3-systemd version 230-1.
+
+  [ Michael Biebl ]
+  * Stop building the Python 3 bindings. They were split into a separate
+    source package upstream and are now built from src:python-systemd. See
+    http://lists.freedesktop.org/archives/systemd-devel/2015-July/033443.html
+
+ -- Cyril Brulebois <kibi@debian.org>  Thu, 16 Jul 2015 20:56:18 +0200
+
+systemd (221-1+deb9u1) stretch-proposed-updates; urgency=medium
+
+  [ Cyril Brulebois ]
+  * Fix net.ifnames support in d-i for the Stretch Alpha 1 release by
+    cherry-picking the relevant commits from version 222-2.
+
+  [ Adam Conrad ]
+  * debian/udev-udeb.install: Install new bits for net.ifnames (LP: #1473542)
+  * debian/extra/initramfs-tools/hooks/udev: Do the same for initramfs-tools.
+
+ -- Cyril Brulebois <kibi@debian.org>  Thu, 16 Jul 2015 08:13:09 +0200
+
 systemd (221-1) unstable; urgency=medium
 
   * New upstream release 221:
