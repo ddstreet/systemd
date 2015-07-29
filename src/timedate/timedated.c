@@ -225,7 +225,7 @@ static int context_write_data_timezone(Context *c) {
                 return r;
 
         if (stat("/etc/timezone", &st) == 0 && S_ISREG(st.st_mode)) {
-                r = write_string_file_atomic("/etc/timezone", c->zone);
+                r = write_string_file("/etc/timezone", c->zone, WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_ATOMIC);
                 if (r < 0)
                         return r;
         }

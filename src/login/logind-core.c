@@ -318,7 +318,6 @@ int manager_get_session_by_pid(Manager *m, pid_t pid, Session **session) {
         int r;
 
         assert(m);
-        assert(session);
 
         if (pid < 1)
                 return -EINVAL;
@@ -331,7 +330,8 @@ int manager_get_session_by_pid(Manager *m, pid_t pid, Session **session) {
         if (!s)
                 return 0;
 
-        *session = s;
+        if (session)
+                *session = s;
         return 1;
 }
 
