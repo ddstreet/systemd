@@ -1,3 +1,50 @@
+systemd (223-1) unstable; urgency=medium
+
+  * New upstream release:
+    - Fix systemd-bootchart crash. (Closes: #792403)
+    - Trim list of files in /usr/share/doc/systemd/. (Closes: #791839)
+    - Fix "Invalid argument" failure with some  journal files.
+      (Closes: #792090)
+    - tmpfiles: Don't recursively descend into journal directories in /var.
+      (Closes: #791897)
+    - Don't frequently wake up on disabled TimeoutIdleSec=, in particular in
+      automount timers. (LP: #1470845)
+    - tmpfiles: Don't delete lost+found/. (Closes: #788193)
+
+  [ Michael Biebl ]
+  * udev: Remove obsolete rm_conffile/mv_conffile functions from udev.preinst.
+    The udev package is using dpkg-maintscripts-helper now to remove obsolete
+    conffiles.
+  * systemd: Remove obsolete conffile clean up from pre-wheezy.
+  * udev-udeb: Remove scsi_wait_scan hack from the start-udev script as well.
+
+  [ Martin Pitt ]
+  * Enable GNU EFI support and add gnu-efi build dep. This enables/ships the
+    systemd EFI boot loader. (Closes: #787720, LP: #1472283)
+  * networkd autopkgtest: More robust/forceful killing of dnsmasq.
+  * ifup@.service: Drop "oneshot" to run ifup in the background during boot.
+    This avoids blocking network.target on boot with unavailable hotplug
+    interfaces in /etc/network/interfaces. (Closes: #790669, LP: #1425376)
+  * systemd.postinst: Avoid confusing error message about
+    /run/systemd/was-enabled not existing on reconfiguring.
+  * debian/extra/initramfs-tools/hooks/udev: Drop some redundant code.
+  * Fix networkd-wait-online -i to properly wait for the given interfaces
+    only.
+  * Drop debian/extra/base-installer.d/05udev: We use net.ifnames by default
+    now, thus we don't need to copy 70-persistent-*.rules any more.
+  * debian/extra/start-udev: Run d-i's udevd with "notice" log level, just
+    like we did in the initramfs in 219-10.
+  * Fix size explosion of networkd (post-223 patch from trunk).
+
+  [ Julian Wollrath ]
+  * Copy all .link interface naming definitions to initramfs. (Closes: #793374)
+
+  [ Felipe Sateler ]
+  * nss-my*.postinst: configure at the end of the hosts line, not before
+    files. (Closes: #789006)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 30 Jul 2015 00:02:26 +0200
+
 systemd (222-2) unstable; urgency=medium
 
   [ Adam Conrad ]
@@ -1585,7 +1632,7 @@ systemd (208-7) unstable; urgency=medium
   * Install zsh completions to the correct place. (Closes: #717540)
 
   [ Jon Severinsson ]
-  * Cherry-pick upstream fix for journal file permissions.
+  * Cherry-pick upstream fix for journal file permissions. (Closes: #755062)
   * Map some rcS.d init script dependencies to their systemd equivalent.
   * Update Depends on initscripts to the version with a systemd-compatible
     mountnfs ifup hook. (Closes: #746358)

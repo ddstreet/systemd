@@ -82,6 +82,7 @@ CONFFLAGS_udeb = \
 	--disable-hwdb \
 	--disable-manpages \
 	--disable-efi \
+	--disable-gnuefi \
 	--disable-seccomp \
 	--without-python
 
