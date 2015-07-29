@@ -34,8 +34,8 @@ A+ /run/log/journal/%m - - - - group:adm:r-x
 z /var/log/journal 2755 root systemd-journal - -
 z /var/log/journal/%m 2755 root systemd-journal - -
 m4_ifdef(`HAVE_ACL',``
-a+ /var/log/journal/%m - - - - d:group:adm:r-x
-A+ /var/log/journal/%m - - - - group:adm:r-x
+a+ /var/log/journal/%m - - - - d:group:adm:r-x,d
+a+ /var/log/journal/%m - - - - group:adm:r-x
 '')m4_dnl
 
 d /var/lib/systemd 0755 root root -

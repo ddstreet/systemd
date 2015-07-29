@@ -689,45 +689,26 @@ static int method_create_session(sd_bus_message *message, void *userdata, sd_bus
                         return r;
         }
 
-        manager_get_session_by_pid(m, leader, &session);
-        if (session) {
-                _cleanup_free_ char *path = NULL;
-                _cleanup_close_ int fifo_fd = -1;
+        r = manager_get_session_by_pid(m, leader, NULL);
+        if (r > 0)
+                return sd_bus_error_setf(error, BUS_ERROR_SESSION_BUSY, "Already running in a session");
 
-                /* Session already exists, client is probably
-                 * something like "su" which changes uid but is still
-                 * the same session */
-
-                fifo_fd = session_create_fifo(session);
-                if (fifo_fd < 0)
-                        return fifo_fd;
-
-                path = session_bus_path(session);
-                if (!path)
-                        return -ENOMEM;
-
-                log_debug("Sending reply about an existing session: "
-                          "id=%s object_path=%s uid=%u runtime_path=%s "
-                          "session_fd=%d seat=%s vtnr=%u",
-                          session->id,
-                          path,
-                          (uint32_t) session->user->uid,
-                          session->user->runtime_path,
-                          fifo_fd,
-                          session->seat ? session->seat->id : "",
-                          (uint32_t) session->vtnr);
-
-                return sd_bus_reply_method_return(
-                                message, "soshusub",
-                                session->id,
-                                path,
-                                session->user->runtime_path,
-                                fifo_fd,
-                                (uint32_t) session->user->uid,
-                                session->seat ? session->seat->id : "",
-                                (uint32_t) session->vtnr,
-                                true);
-        }
+        /*
+         * Old gdm and lightdm start the user-session on the same VT as
+         * the greeter session. But they destroy the greeter session
+         * after the user-session and want the user-session to take
+         * over the VT. We need to support this for
+         * backwards-compatibility, so make sure we allow new sessions
+         * on a VT that a greeter is running on. Furthermore, to allow
+         * re-logins, we have to allow a greeter to take over a used VT for
+         * the exact same reasons.
+         */
+        if (c != SESSION_GREETER &&
+            vtnr > 0 &&
+            vtnr < m->seat0->position_count &&
+            m->seat0->positions[vtnr] &&
+            m->seat0->positions[vtnr]->class != SESSION_GREETER)
+                return sd_bus_error_setf(error, BUS_ERROR_SESSION_BUSY, "Already occupied by a session");
 
         audit_session_from_pid(leader, &audit_id);
         if (audit_id > 0) {
@@ -1194,7 +1175,7 @@ static int trigger_device(Manager *m, struct udev_device *d) {
                 if (!t)
                         return -ENOMEM;
 
-                write_string_file(t, "change");
+                write_string_file(t, "change", WRITE_STRING_FILE_CREATE);
         }
 
         return 0;
@@ -1793,7 +1774,7 @@ static int nologin_timeout_handler(
 
         log_info("Creating /run/nologin, blocking further logins...");
 
-        r = write_string_file_atomic("/run/nologin", "System is going down.");
+        r = write_string_file("/run/nologin", "System is going down.", WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_ATOMIC);
         if (r < 0)
                 log_error_errno(r, "Failed to create /run/nologin: %m");
         else
@@ -2468,8 +2449,6 @@ const sd_bus_vtable manager_vtable[] = {
         SD_BUS_METHOD("PowerOff", "b", NULL, method_poweroff, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("Reboot", "b", NULL, method_reboot, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("Suspend", "b", NULL, method_suspend, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("ScheduleShutdown", "st", NULL, method_schedule_shutdown, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("CancelScheduledShutdown", NULL, "b", method_cancel_scheduled_shutdown, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("Hibernate", "b", NULL, method_hibernate, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("HybridSleep", "b", NULL, method_hybrid_sleep, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("CanPowerOff", NULL, "s", method_can_poweroff, SD_BUS_VTABLE_UNPRIVILEGED),
@@ -2477,6 +2456,8 @@ const sd_bus_vtable manager_vtable[] = {
         SD_BUS_METHOD("CanSuspend", NULL, "s", method_can_suspend, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("CanHibernate", NULL, "s", method_can_hibernate, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("CanHybridSleep", NULL, "s", method_can_hybrid_sleep, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("ScheduleShutdown", "st", NULL, method_schedule_shutdown, SD_BUS_VTABLE_UNPRIVILEGED),
+        SD_BUS_METHOD("CancelScheduledShutdown", NULL, "b", method_cancel_scheduled_shutdown, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("Inhibit", "ssss", "h", method_inhibit, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("CanRebootToFirmwareSetup", NULL, "s", method_can_reboot_to_firmware_setup, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("SetRebootToFirmwareSetup", "b", NULL, method_set_reboot_to_firmware_setup, SD_BUS_VTABLE_UNPRIVILEGED),
