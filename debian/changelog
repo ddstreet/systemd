@@ -1,3 +1,11 @@
+systemd (224-1) unstable; urgency=medium
+
+  * New upstream release.
+  * boot-and-services autopkgtest: Ignore thermald. Since 1.4.3-2 it starts by
+    default, but fails in most virtual envs.
+
+ -- Martin Pitt <mpitt@debian.org>  Sat, 01 Aug 2015 13:38:57 +0200
+
 systemd (223-2) unstable; urgency=medium
 
   * Don't enable gnu-efi on ARM. It FTBFSes and cannot really be tested now as
