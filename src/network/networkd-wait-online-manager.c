@@ -42,7 +42,7 @@ bool manager_ignore_link(Manager *m, Link *link) {
         if (link->flags & IFF_LOOPBACK)
                 return true;
 
-        /* if interfaces are given on the commandlin, ignore all others */
+        /* if interfaces are given on the command line, ignore all others */
         if (m->interfaces && !strv_contains(m->interfaces, link->ifname))
                 return true;
 

@@ -91,7 +91,6 @@ MANPAGES += \
 	man/systemd-debug-generator.8 \
 	man/systemd-delta.1 \
 	man/systemd-detect-virt.1 \
-	man/systemd-efi-boot-generator.8 \
 	man/systemd-escape.1 \
 	man/systemd-fsck@.service.8 \
 	man/systemd-fsckd.service.8 \
@@ -2315,7 +2314,6 @@ EXTRA_DIST += \
 	man/systemd-debug-generator.xml \
 	man/systemd-delta.xml \
 	man/systemd-detect-virt.xml \
-	man/systemd-efi-boot-generator.xml \
 	man/systemd-escape.xml \
 	man/systemd-firstboot.xml \
 	man/systemd-fsck@.service.xml \
