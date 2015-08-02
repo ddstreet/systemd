@@ -1,3 +1,55 @@
+systemd (224-1ubuntu1) wily; urgency=medium
+
+  * Merge with Debian unstable. Remaining Ubuntu changes:
+    - Hack to support system-image read-only /etc, and modify files in
+      /etc/writable/ instead.
+    - Keep our much simpler udev maintainer scripts (all platforms must
+      support udev, no debconf).
+    - initramfs init-bottom: If LVM is installed, settle udev,
+      otherwise we get missing LV symlinks. Workaround for LP #1185394.
+    - Add debian/udev.lvm2.init: Dummy SysV init script to satisfy insserv
+      dependencies to "lvm2" which is handled with udev rules in Ubuntu.
+    - Add debian/udev.lvm2.service to avoid running the dummy lvm2 init
+      script.
+    - Provide shutdown fallback for upstart. (LP: #1370329)
+    - debian/extra/ifup@.service: Additionally run for "auto" class. We don't
+      really support "allow-hotplug" in Ubuntu at the moment, so we need to
+      deal with "auto" devices appearing after "/etc/init.d/networking start"
+      already ran. (LP: #1374521)
+    - ifup@.service: Drop dependency on networking.service (i. e.
+      /etc/init.d/networking), and merely ensure that /run/network exists.
+      This avoids unnecessary dependencies/waiting during boot and dependency
+      cycles if hooks wait for other interfaces to come up (like ifenslave
+      with bonding interfaces). (LP: #1414544)
+    - Add Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch: In
+      Ubuntu we currently keep the setting whether the RTC is in local or UTC
+      time in /etc/default/rcS "UTC=yes|no", instead of /etc/adjtime.
+      (LP: #1377258)
+    - Put session scopes into all cgroup controllers. This makes unprivileged
+      user LXC containers work under systemd. (LP: #1346734)
+    - systemctl: Don't forward telinit u to upstart. This works around
+      upstart's Restart() always reexec'ing /sbin/init on Restart(), even if
+      that changes to point to systemd during the upgrade. This avoids running
+      systemd during a dist-upgrade. (LP: #1430479)
+    - Drop hwdb-update dependency from udev-trigger.service, which got
+      introduced in v219-stable. This causes udev and plymouth to start too
+      late and isn't really needed in Ubuntu yet as we don't support stateless
+      systems yet and handle hwdb.bin updates through dpkg triggers. This can
+      be dropped again with initramfs-tools 0.117.
+    - Lower Breaks: to plymouth version which has the udev inotify fix in
+      Ubuntu.
+    - Lower apparmor Breaks: to the Ubuntu version that dropped $remote_fs.
+    - Change systemd-sysv's conflicts to upstart-sysv. (LP: #1422681)
+
+    Upgrade fixes, keep until 16.04 LTS release:
+    - systemd Conflicts/Replaces/Provides systemd-services.
+    - Remove obsolete systemd-logind upstart job.
+    - Clean up obsolete /etc/udev/rules.d/README.
+    - systemd.postinst: Migrate mountall specific fstab options to standard
+      util-linux "nofail" option.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Sun, 02 Aug 2015 12:43:42 +0200
+
 systemd (224-1) unstable; urgency=medium
 
   * New upstream release.
