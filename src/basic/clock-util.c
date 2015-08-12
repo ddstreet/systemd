@@ -69,26 +69,17 @@ int clock_set_hwclock(const struct tm *tm) {
 int clock_is_localtime(void) {
         _cleanup_fclose_ FILE *f;
 
-        /*
-         * The third line of adjtime is "UTC" or "LOCAL" or nothing.
-         *   # /etc/adjtime
-         *   0.0 0 0
-         *   0
-         *   UTC
-         */
-        f = fopen("/etc/adjtime", "re");
+        f = fopen("/etc/default/rcS", "re");
         if (f) {
                 char line[LINE_MAX];
                 bool b;
 
-                b = fgets(line, sizeof(line), f) &&
-                        fgets(line, sizeof(line), f) &&
-                        fgets(line, sizeof(line), f);
-                if (!b)
-                        return -EIO;
+                while (fgets(line, sizeof(line), f)) {
+                        truncate_nl(line);
+                        if (startswith(line, "UTC"))
+                                return strstr(line, "no") != NULL;
 
-                truncate_nl(line);
-                return streq(line, "LOCAL");
+                }
 
         } else if (errno != ENOENT)
                 return -errno;
