@@ -1,7 +1,7 @@
 #! /usr/bin/make -f
 
-#export DH_VERBOSE=1
-#export DEB_BUILD_OPTIONS="nostrip"
+#export DH_VERBOSE = 1
+#export DEB_BUILD_OPTIONS = nostrip
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 VERSION = $(shell dpkg-parsechangelog | sed -n -e '/^Version:/s/.*: //p')
@@ -10,6 +10,10 @@ ifeq ($(shell dpkg-vendor --query vendor),Ubuntu)
     DEFAULT_NTP_SERVERS = ntp.ubuntu.com
 else
     DEFAULT_NTP_SERVERS = 0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org
+endif
+
+ifneq (,$(findstring noudeb,$(DEB_BUILD_OPTIONS)))
+export DEB_BUILD_PROFILES += noudeb
 endif
 
 CONFFLAGS = \
@@ -22,9 +26,7 @@ CONFFLAGS = \
 	--with-telinit=/lib/sysvinit/telinit \
 	--enable-split-usr \
 	--disable-qrencode \
-	--disable-microhttpd \
 	--disable-gnutls \
-	--disable-libcurl \
 	--disable-libidn \
 	--disable-elfutils \
 	--disable-vconsole \
@@ -32,25 +34,28 @@ CONFFLAGS = \
 	--disable-firstboot \
 	--disable-coredump \
 	--disable-xkbcommon \
-	--disable-importd \
 	--disable-libiptc \
 	--disable-silent-rules \
-	--disable-python-devel \
 	--with-ntp-servers="$(DEFAULT_NTP_SERVERS)"  \
 	--with-system-uid-max=999 \
 	--with-system-gid-max=999
 
-ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
-CONFFLAGS += --enable-libcryptsetup
-endif
-
 CONFFLAGS_deb = \
 	--enable-selinux \
-	--enable-apparmor \
 	--enable-compat-libs \
 	--enable-hwdb \
 	--enable-efi \
 	PYTHON=python3
+
+ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
+CONFFLAGS_deb += --enable-libcryptsetup \
+                 --enable-apparmor \
+                 --enable-libcurl \
+                 --enable-importd \
+                 --enable-microhttpd
+else
+CONFFLAGS_deb += --disable-audit
+endif
 
 CONFFLAGS_udeb = \
 	--disable-libcryptsetup \
@@ -68,6 +73,9 @@ CONFFLAGS_udeb = \
 	--disable-backlight \
 	--disable-logind \
 	--disable-machined \
+	--disable-libcurl \
+	--disable-importd \
+	--disable-microhttpd \
 	--disable-hostnamed \
 	--disable-timedated \
 	--disable-networkd \
@@ -89,14 +97,14 @@ CONFFLAGS_udeb = \
 override_dh_auto_configure:
 	dh_auto_configure --builddirectory=build-deb \
 		-- $(CONFFLAGS) $(CONFFLAGS_deb)
-ifeq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
+ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_auto_configure --builddirectory=build-udeb \
 		-- $(CONFFLAGS) $(CONFFLAGS_udeb)
 endif
 
 override_dh_auto_build:
 	dh_auto_build --builddirectory=build-deb
-ifeq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
+ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_auto_build --builddirectory=build-udeb
 endif
 	# generate POT file for translators
@@ -105,18 +113,9 @@ endif
 override_dh_auto_install:
 	dh_auto_install --builddirectory=build-deb \
 		--destdir=debian/install/deb
-ifeq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
+ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_auto_install --builddirectory=build-udeb \
 		--destdir=debian/install/udeb
-endif
-ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
-	echo "Checking that executables don't link to libraries in /usr..."
-	set -e; for e in debian/install/deb/lib/systemd/systemd*; do \
-	    echo " $$e"; \
-	    OUT=`env -u LD_PRELOAD ldd $$e`; if echo "$$OUT" | grep -q /usr; then \
-	        echo "ERROR: $$e links to /usr"; echo "$$OUT"; exit 1; \
-	    fi; \
-	done
 endif
 	# fix paths in manpages; manually check the remaining /usr occurrences
 	# occasionally, with filtering out paths which are known to be in /usr:
@@ -125,7 +124,7 @@ endif
 
 override_dh_auto_clean:
 	dh_auto_clean --builddirectory=build-deb
-ifeq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
+ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_auto_clean --builddirectory=build-udeb
 endif
 	rm -rf debian/install/
@@ -161,7 +160,7 @@ override_dh_install:
 	rm -f debian/install/*/lib/*/libsystemd-*.so.*
 	# remove symlinks enabling default-on services
 	rm -rf debian/install/*/etc/systemd/system/*.target.wants/
-ifeq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
+ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_install -pudev-udeb -plibudev1-udeb --sourcedir=debian/install/udeb
 endif
 	# still needs to mature a bit, and packaging
@@ -173,7 +172,7 @@ endif
 	dh_install --remaining-packages --sourcedir=debian/install/deb --fail-missing
 
 	# Make sure the runlevel services are known by systemd so their targets
-	# get launches. See https://bugzilla.redhat.com/show_bug.cgi?id=1002806
+	# get launched. See https://bugzilla.redhat.com/show_bug.cgi?id=1002806
 	for t in poweroff rescue multi-user graphical reboot; do \
 		mkdir -p debian/systemd/lib/systemd/system/$${t}.target.wants;\
 		ln -s ../systemd-update-utmp-runlevel.service \
@@ -185,47 +184,24 @@ endif
 	printf '\n[Install]\nWantedBy=local-fs.target\n' >> debian/systemd/usr/share/systemd/tmp.mount
 	rm debian/systemd/lib/systemd/system/local-fs.target.wants/tmp.mount
 
-	# remove duplicates
-	# files shipped by systemd-sysv / sysvinit
-	rm debian/systemd/usr/share/man/man1/init.1
-	rm debian/systemd/usr/share/man/man8/halt.8
-	rm debian/systemd/usr/share/man/man8/poweroff.8
-	rm debian/systemd/usr/share/man/man8/reboot.8
-	rm debian/systemd/usr/share/man/man8/shutdown.8
-	rm debian/systemd/usr/share/man/man8/telinit.8
-	rm debian/systemd/usr/share/man/man8/runlevel.8
-	# files shipped by libpam-systemd
-	rm debian/systemd/usr/share/man/man8/pam_systemd.8
-	# files shipped by libnss-myhostname
-	rm debian/systemd/usr/share/man/man8/libnss_myhostname.so.2.8
-	rm debian/systemd/usr/share/man/man8/nss-myhostname.8
-	# files shipped by libnss-mymachines
-	rm debian/systemd/usr/share/man/man8/libnss_mymachines.so.2.8
-	rm debian/systemd/usr/share/man/man8/nss-mymachines.8
-	# files shipped by udev
-	rm -r debian/systemd/etc/udev/
-	rm debian/systemd/lib/systemd/system/systemd-udev*
-	rm debian/systemd/lib/systemd/system/systemd-hwdb*
-	rm debian/systemd/lib/systemd/system/*.target.wants/systemd-udev*
-	rm debian/systemd/lib/systemd/system/*.target.wants/*hwdb*
-	rm debian/systemd/lib/systemd/systemd-udevd
-	rm debian/systemd/usr/share/man/man5/udev.conf.5
-	rm debian/systemd/usr/share/man/man7/hwdb.7
-	rm debian/systemd/usr/share/man/man7/udev.7
-	rm debian/systemd/usr/share/man/man8/systemd-hwdb*
-	rm debian/systemd/usr/share/man/man8/systemd-udevd*
-	rm debian/systemd/usr/share/man/man8/udevadm.8
-	rm debian/systemd/usr/share/zsh/vendor-completions/_udevadm
-	rm debian/systemd/usr/share/bash-completion/completions/udevadm
 	# files shipped by cryptsetup
 ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
 	rm debian/systemd/usr/share/man/man5/crypttab.5
 endif
+
 	# files shipped by systemd
 	rm debian/udev/lib/udev/rules.d/70-uaccess.rules
 	rm debian/udev/lib/udev/rules.d/73-seat-late.rules
 	rm debian/udev/lib/udev/rules.d/71-seat.rules
 	rm debian/udev/lib/udev/rules.d/99-systemd.rules
+
+	# remove duplicate files shipped by systemd-*/udev
+	echo "Removing duplicate files in systemd package:"
+	set -e; for pkg in $(shell dh_listpackages -Nudev-udeb -Nlibudev1-udeb -Nsystemd); do \
+		echo "... from $$pkg..."; \
+		(cd debian/$$pkg; find -type f -o -type l) | (cd debian/systemd; xargs rm -f --verbose); \
+		(cd debian/$$pkg; find -mindepth 1 -type d) | (cd debian/systemd; xargs rmdir --ignore-fail-on-non-empty --verbose || true); \
+	done
 
 	# Ubuntu specific files
 	if dpkg-vendor --is ubuntu; then \
@@ -234,6 +210,16 @@ endif
 		install --mode=644 debian/extra/systemd-vconsole-setup.service debian/systemd/lib/systemd/system/; \
 		install --mode=644 debian/extra/rules-ubuntu/*.rules debian/udev/lib/udev/rules.d/; \
 	fi
+
+ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+	echo "Checking that executables don't link to libraries in /usr..."
+	set -e; for e in debian/systemd/lib/systemd/systemd* debian/udev/lib/systemd/systemd*; do \
+	    echo " $$e"; \
+	    OUT=`env -u LD_PRELOAD ldd $$e` || continue; if echo "$$OUT" | grep -q /usr; then \
+	        echo "ERROR: $$e links to /usr"; echo "$$OUT"; exit 1; \
+	    fi; \
+	done
+endif
 
 override_dh_installinit:
 	dh_installinit --no-start
@@ -244,7 +230,7 @@ override_dh_installinit:
 	dh_installinit --name=udev-fallback-graphics --noscripts
 
 # The SysV compat tools (which are symlinks to systemctl) are
-# quasi-essential, so add its dependencies to Pre-Depends
+# quasi-essential, so add their dependencies to Pre-Depends
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=753589
 override_dh_shlibdeps:
 	dh_shlibdeps -psystemd -- -dPre-Depends -edebian/systemd/bin/systemctl -dDepends
@@ -274,7 +260,7 @@ ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
 		if [ ! -e /etc/machine-id ]; then echo "/etc/machine-id missing, ignoring test failures"; else exit 1; fi; )
 endif
 
-ifneq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
+ifneq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 dh_options = -Nudev-udeb -Nlibudev1-udeb
 endif
 
