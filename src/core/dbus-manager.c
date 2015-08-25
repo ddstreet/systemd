@@ -1650,9 +1650,11 @@ static int method_enable_unit_files_generic(
         if (r < 0)
                 return r;
 
-        r = mac_selinux_unit_access_check_strv(l, message, m, verb, error);
-        if (r < 0)
-                return r;
+        if (call != unit_file_link) {
+                r = mac_selinux_unit_access_check_strv(l, message, m, verb, error);
+                if (r < 0)
+                        return r;
+        }
 
         r = bus_verify_manage_unit_files_async(m, message, error);
         if (r < 0)

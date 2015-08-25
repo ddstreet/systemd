@@ -1,4 +1,5 @@
 ## Cherry-picked from upstream
+networkd-fix-neworkd-crash.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -23,7 +24,6 @@ Stop-syslog.socket-when-entering-emergency-mode.patch
 Make-run-lock-tmpfs-an-API-fs.patch
 Include-additional-directories-in-ProtectSystem.patch
 udev-re-enable-mount-propagation-for-udevd.patch
-Prefer-etc-X11-default-display-manager-if-present.patch
 Re-enable-journal-forwarding-to-syslog.patch
 Disable-tests-which-fail-on-buildds.patch
 Make-sd_login_monitor_new-work-for-logind-without-sy.patch
@@ -37,3 +37,4 @@ syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Hack-to-unbreak-systemctl-link.patch

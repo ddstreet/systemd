@@ -1,3 +1,49 @@
+systemd (224-2) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * Skip systemd-fsckd autopkgtest if /run/initramfs/fsck-root exists, i. e.
+    the initramfs already ran fsck.
+  * Fix broken ACL in tmpfiles.d/systemd.conf. (Closes: #794645, LP: #1480552)
+  * Add debian/tests/unit-config: Test "systemctl link"; reproduces LP#1480310.
+  * Add a hack to unbreak "systemctl link". (LP: #1480310)
+  * debian/extra/rules-ubuntu/40-hyperv-hotadd.rules: Also apply to Xen, and
+    rename to 40-vm-hotadd.rules.
+  * Fix networkd crash. (Closes: #796358)
+  * debian/rules: Remove all files/empty dirs in systemd which are already
+    shipped by systemd-* or udev, instead of an explicit list.
+  * Bump "mount" dependency to >= 2.26, to ensure "swapon -o" availability.
+    (Closes: #796389)
+  * Install /lib/systemd/network/* into udev instead of systemd, as it's
+    really udev which is evaluating these.
+  * Split out "systemd-container" package with machined and nspawn and enable
+    importd. Add new libbz2-dev, zlib1g-dev, and libcurl-dev build deps.
+    (LP: #1448900)
+  * Move transitional libgcrypt11-dev build dep to libgcrypt20-dev.
+  * debian/rules: Limit check for libraries in /usr to systemd and udev
+    packages, as other packages like systemd-containers can (and do) link to
+    /usr.
+  * Build-depend on dpkg-dev (>= 1.17.14) and bump debhelper version for build
+    profiles support.
+  * Drop "display-managers" autopkgtest, obsolete with dropped
+    default-display-manager-generator.
+  * boot-and-services autopkgtest: Add systemd-container test dependency for
+    the nspawn tests.
+  * Don't enable audit support when building with "stage1" profile, to avoid
+    circular build dep.
+
+  [ Helmut Grohne ]
+  * Improve support for cross-building and bootstrapping.
+
+  [ Michael Biebl ]
+  * Drop default-display-manager-generator. All major desktops now use a
+    display manager which support the new scheme and setup the
+    /etc/systemd/system/display-manager.service symlink correctly.
+  * Add new binary package "systemd-journal-remote" with tools for
+    sending/receiving remote journal logs:
+    systemd-journal-{remote,upload,gatewayd}. (Closes: #742802, LP: #1480952)
+
+ -- Martin Pitt <mpitt@debian.org>  Tue, 25 Aug 2015 12:40:35 +0200
+
 systemd (224-1) unstable; urgency=medium
 
   * New upstream release.
