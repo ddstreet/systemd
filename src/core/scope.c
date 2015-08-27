@@ -295,6 +295,21 @@ static int scope_start(Unit *u) {
         (void) unit_realize_cgroup(u);
         (void) unit_reset_cpu_usage(u);
 
+        /* put logind sessions into all controllers, for LXC user containers */
+        if (UNIT_ISSET(u->slice) && startswith(UNIT_DEREF(u->slice)->id, "user-")) {
+                long uid = atol(UNIT_DEREF(u->slice)->id + 5); /* FIXME: Eww! Is there a better way to get the UID? */
+                if (uid > 0) {
+                        assert(u->cgroup_path);
+                        r = cg_create_everywhere_uid(u->manager->cgroup_supported,
+                                                     u->manager->cgroup_supported,
+                                                     u->cgroup_path, (uid_t) uid);
+                        if (r < 0)
+                                log_unit_warning(u, "Cannot create cgroup controllers for %s: %s", UNIT_DEREF(u->slice)->id, strerror(-r));
+                } else {
+                        log_unit_warning(u, "Cannot determine UID from slice %s", UNIT_DEREF(u->slice)->id);
+                }
+        }
+
         r = unit_attach_pids_to_cgroup(u);
         if (r < 0) {
                 log_unit_warning_errno(UNIT(s), r, "Failed to add PIDs to scope's control group: %m");
