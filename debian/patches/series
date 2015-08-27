@@ -1,5 +1,6 @@
 ## Cherry-picked from upstream
 networkd-fix-neworkd-crash.patch
+selinux-fix-regression-of-systemctl-subcommands-when.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -37,4 +38,11 @@ syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
-Hack-to-unbreak-systemctl-link.patch
+
+## Ubuntu patches:
+Support-system-image-read-only-etc.patch
+Provide-shutdown-fallback-for-upstart.patch
+systemctl-Don-t-forward-telinit-u-to-upstart.patch
+Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
+core-Put-session-scopes-into-all-cgroup-controllers.patch
+udev-trigger-Drop-hwdb-update-dependency.patch
