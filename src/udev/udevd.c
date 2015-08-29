@@ -1415,7 +1415,7 @@ int main(int argc, char *argv[])
                                 if (worker->state != WORKER_RUNNING)
                                         continue;
 
-                                if ((now(CLOCK_MONOTONIC) - worker->event_start_usec) > 30 * USEC_PER_SEC) {
+                                if ((now(CLOCK_MONOTONIC) - worker->event_start_usec) > 180 * USEC_PER_SEC) {
                                         log_error("worker [%u] %s timeout; kill it", worker->pid,
                                             worker->event ? worker->event->devpath : "<idle>");
                                         kill(worker->pid, SIGKILL);
