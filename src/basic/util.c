@@ -115,17 +115,23 @@ size_t page_size(void) {
         return pgsz;
 }
 
-bool streq_ptr(const char *a, const char *b) {
+int strcmp_ptr(const char *a, const char *b) {
 
-        /* Like streq(), but tries to make sense of NULL pointers */
-
+        /* Like strcmp(), but tries to make sense of NULL pointers */
         if (a && b)
-                return streq(a, b);
+                return strcmp(a, b);
 
-        if (!a && !b)
-                return true;
+        if (!a && b)
+                return -1;
 
-        return false;
+        if (a && !b)
+                return 1;
+
+        return 0;
+}
+
+bool streq_ptr(const char *a, const char *b) {
+        return strcmp_ptr(a, b) == 0;
 }
 
 char* endswith(const char *s, const char *postfix) {
@@ -3003,21 +3009,6 @@ char* strshorten(char *s, size_t l) {
         return s;
 }
 
-bool machine_name_is_valid(const char *s) {
-
-        if (!hostname_is_valid(s))
-                return false;
-
-        /* Machine names should be useful hostnames, but also be
-         * useful in unit names, hence we enforce a stricter length
-         * limitation. */
-
-        if (strlen(s) > 64)
-                return false;
-
-        return true;
-}
-
 int pipe_eof(int fd) {
         struct pollfd pollfd = {
                 .fd = fd,
@@ -4840,7 +4831,7 @@ int parse_proc_cmdline(int (*parse_item)(const char *key, const char *value)) {
                 _cleanup_free_ char *word = NULL;
                 char *value = NULL;
 
-                r = unquote_first_word(&p, &word, UNQUOTE_RELAX);
+                r = extract_first_word(&p, &word, NULL, EXTRACT_QUOTES|EXTRACT_RELAX);
                 if (r < 0)
                         return r;
                 if (r == 0)
@@ -4880,7 +4871,7 @@ int get_proc_cmdline_key(const char *key, char **value) {
                 _cleanup_free_ char *word = NULL;
                 const char *e;
 
-                r = unquote_first_word(&p, &word, UNQUOTE_RELAX);
+                r = extract_first_word(&p, &word, NULL, EXTRACT_QUOTES|EXTRACT_RELAX);
                 if (r < 0)
                         return r;
                 if (r == 0)
@@ -4925,6 +4916,9 @@ int container_get_leader(const char *machine, pid_t *pid) {
         assert(machine);
         assert(pid);
 
+        if (!machine_name_is_valid(machine))
+                return -EINVAL;
+
         p = strjoina("/run/systemd/machines/", machine);
         r = parse_env_file(p, NEWLINE, "LEADER", &s, "CLASS", &class, NULL);
         if (r == -ENOENT)
@@ -4947,8 +4941,8 @@ int container_get_leader(const char *machine, pid_t *pid) {
         return 0;
 }
 
-int namespace_open(pid_t pid, int *pidns_fd, int *mntns_fd, int *netns_fd, int *root_fd) {
-        _cleanup_close_ int pidnsfd = -1, mntnsfd = -1, netnsfd = -1;
+int namespace_open(pid_t pid, int *pidns_fd, int *mntns_fd, int *netns_fd, int *userns_fd, int *root_fd) {
+        _cleanup_close_ int pidnsfd = -1, mntnsfd = -1, netnsfd = -1, usernsfd = -1;
         int rfd = -1;
 
         assert(pid >= 0);
@@ -4980,6 +4974,15 @@ int namespace_open(pid_t pid, int *pidns_fd, int *mntns_fd, int *netns_fd, int *
                         return -errno;
         }
 
+        if (userns_fd) {
+                const char *userns;
+
+                userns = procfs_file_alloca(pid, "ns/user");
+                usernsfd = open(userns, O_RDONLY|O_NOCTTY|O_CLOEXEC);
+                if (usernsfd < 0 && errno != ENOENT)
+                        return -errno;
+        }
+
         if (root_fd) {
                 const char *root;
 
@@ -4998,15 +5001,33 @@ int namespace_open(pid_t pid, int *pidns_fd, int *mntns_fd, int *netns_fd, int *
         if (netns_fd)
                 *netns_fd = netnsfd;
 
+        if (userns_fd)
+                *userns_fd = usernsfd;
+
         if (root_fd)
                 *root_fd = rfd;
 
-        pidnsfd = mntnsfd = netnsfd = -1;
+        pidnsfd = mntnsfd = netnsfd = usernsfd = -1;
 
         return 0;
 }
 
-int namespace_enter(int pidns_fd, int mntns_fd, int netns_fd, int root_fd) {
+int namespace_enter(int pidns_fd, int mntns_fd, int netns_fd, int userns_fd, int root_fd) {
+        if (userns_fd >= 0) {
+                /* Can't setns to your own userns, since then you could
+                 * escalate from non-root to root in your own namespace, so
+                 * check if namespaces equal before attempting to enter. */
+                _cleanup_free_ char *userns_fd_path = NULL;
+                int r;
+                if (asprintf(&userns_fd_path, "/proc/self/fd/%d", userns_fd) < 0)
+                        return -ENOMEM;
+
+                r = files_same(userns_fd_path, "/proc/self/ns/user");
+                if (r < 0)
+                        return r;
+                if (r)
+                        userns_fd = -1;
+        }
 
         if (pidns_fd >= 0)
                 if (setns(pidns_fd, CLONE_NEWPID) < 0)
@@ -5018,6 +5039,10 @@ int namespace_enter(int pidns_fd, int mntns_fd, int netns_fd, int root_fd) {
 
         if (netns_fd >= 0)
                 if (setns(netns_fd, CLONE_NEWNET) < 0)
+                        return -errno;
+
+        if (userns_fd >= 0)
+                if (setns(userns_fd, CLONE_NEWUSER) < 0)
                         return -errno;
 
         if (root_fd >= 0) {
@@ -5695,7 +5720,7 @@ int is_device_node(const char *path) {
         return !!(S_ISBLK(info.st_mode) || S_ISCHR(info.st_mode));
 }
 
-int unquote_first_word(const char **p, char **ret, UnquoteFlags flags) {
+int extract_first_word(const char **p, char **ret, const char *separators, ExtractFlags flags) {
         _cleanup_free_ char *s = NULL;
         size_t allocated = 0, sz = 0;
         int r;
@@ -5708,12 +5733,18 @@ int unquote_first_word(const char **p, char **ret, UnquoteFlags flags) {
                 SINGLE_QUOTE_ESCAPE,
                 DOUBLE_QUOTE,
                 DOUBLE_QUOTE_ESCAPE,
-                SPACE,
+                SEPARATOR,
         } state = START;
 
         assert(p);
-        assert(*p);
         assert(ret);
+
+        if (!separators)
+                separators = WHITESPACE;
+
+        /* Bail early if called after last value or with no input */
+        if (!*p)
+                goto finish_force_terminate;
 
         /* Parses the first word of a string, and returns it in
          * *ret. Removes all quotes in the process. When parsing fails
@@ -5726,32 +5757,46 @@ int unquote_first_word(const char **p, char **ret, UnquoteFlags flags) {
                 switch (state) {
 
                 case START:
-                        if (c == 0)
-                                goto finish;
-                        else if (strchr(WHITESPACE, c))
+                        if (c == 0) {
+                                if (flags & EXTRACT_DONT_COALESCE_SEPARATORS)
+                                        if (!GREEDY_REALLOC(s, allocated, sz+1))
+                                                return -ENOMEM;
+                                goto finish_force_terminate;
+                        } else if (strchr(separators, c)) {
+                                if (flags & EXTRACT_DONT_COALESCE_SEPARATORS) {
+                                        if (!GREEDY_REALLOC(s, allocated, sz+1))
+                                                return -ENOMEM;
+                                        (*p) ++;
+                                        goto finish_force_next;
+                                }
                                 break;
+                        }
 
                         state = VALUE;
                         /* fallthrough */
 
                 case VALUE:
                         if (c == 0)
-                                goto finish;
-                        else if (c == '\'') {
+                                goto finish_force_terminate;
+                        else if (c == '\'' && (flags & EXTRACT_QUOTES)) {
                                 if (!GREEDY_REALLOC(s, allocated, sz+1))
                                         return -ENOMEM;
 
                                 state = SINGLE_QUOTE;
                         } else if (c == '\\')
                                 state = VALUE_ESCAPE;
-                        else if (c == '\"') {
+                        else if (c == '\"' && (flags & EXTRACT_QUOTES)) {
                                 if (!GREEDY_REALLOC(s, allocated, sz+1))
                                         return -ENOMEM;
 
                                 state = DOUBLE_QUOTE;
-                        } else if (strchr(WHITESPACE, c))
-                                state = SPACE;
-                        else {
+                        } else if (strchr(separators, c)) {
+                                if (flags & EXTRACT_DONT_COALESCE_SEPARATORS) {
+                                        (*p) ++;
+                                        goto finish_force_next;
+                                }
+                                state = SEPARATOR;
+                        } else {
                                 if (!GREEDY_REALLOC(s, allocated, sz+2))
                                         return -ENOMEM;
 
@@ -5762,8 +5807,8 @@ int unquote_first_word(const char **p, char **ret, UnquoteFlags flags) {
 
                 case SINGLE_QUOTE:
                         if (c == 0) {
-                                if (flags & UNQUOTE_RELAX)
-                                        goto finish;
+                                if (flags & EXTRACT_RELAX)
+                                        goto finish_force_terminate;
                                 return -EINVAL;
                         } else if (c == '\'')
                                 state = VALUE;
@@ -5801,29 +5846,29 @@ int unquote_first_word(const char **p, char **ret, UnquoteFlags flags) {
                                 return -ENOMEM;
 
                         if (c == 0) {
-                                if ((flags & UNQUOTE_CUNESCAPE_RELAX) &&
-                                    (state == VALUE_ESCAPE || flags & UNQUOTE_RELAX)) {
+                                if ((flags & EXTRACT_CUNESCAPE_RELAX) &&
+                                    (state == VALUE_ESCAPE || flags & EXTRACT_RELAX)) {
                                         /* If we find an unquoted trailing backslash and we're in
-                                         * UNQUOTE_CUNESCAPE_RELAX mode, keep it verbatim in the
+                                         * EXTRACT_CUNESCAPE_RELAX mode, keep it verbatim in the
                                          * output.
                                          *
-                                         * Unbalanced quotes will only be allowed in UNQUOTE_RELAX
-                                         * mode, UNQUOTE_CUNESCAP_RELAX mode does not allow them.
+                                         * Unbalanced quotes will only be allowed in EXTRACT_RELAX
+                                         * mode, EXTRACT_CUNESCAPE_RELAX mode does not allow them.
                                          */
                                         s[sz++] = '\\';
-                                        goto finish;
+                                        goto finish_force_terminate;
                                 }
-                                if (flags & UNQUOTE_RELAX)
-                                        goto finish;
+                                if (flags & EXTRACT_RELAX)
+                                        goto finish_force_terminate;
                                 return -EINVAL;
                         }
 
-                        if (flags & UNQUOTE_CUNESCAPE) {
+                        if (flags & EXTRACT_CUNESCAPE) {
                                 uint32_t u;
 
                                 r = cunescape_one(*p, (size_t) -1, &c, &u);
                                 if (r < 0) {
-                                        if (flags & UNQUOTE_CUNESCAPE_RELAX) {
+                                        if (flags & EXTRACT_CUNESCAPE_RELAX) {
                                                 s[sz++] = '\\';
                                                 s[sz++] = c;
                                                 goto end_escape;
@@ -5846,24 +5891,29 @@ end_escape:
                                 VALUE;
                         break;
 
-                case SPACE:
+                case SEPARATOR:
                         if (c == 0)
+                                goto finish_force_terminate;
+                        if (flags & EXTRACT_DONT_COALESCE_SEPARATORS)
+                                goto finish_force_next;
+                        if (!strchr(separators, c))
                                 goto finish;
-                        if (!strchr(WHITESPACE, c))
-                                goto finish;
-
                         break;
                 }
 
                 (*p) ++;
         }
 
+finish_force_terminate:
+        *p = NULL;
 finish:
         if (!s) {
+                *p = NULL;
                 *ret = NULL;
                 return 0;
         }
 
+finish_force_next:
         s[sz] = 0;
         *ret = s;
         s = NULL;
@@ -5871,26 +5921,27 @@ finish:
         return 1;
 }
 
-int unquote_first_word_and_warn(
+int extract_first_word_and_warn(
                 const char **p,
                 char **ret,
-                UnquoteFlags flags,
+                const char *separators,
+                ExtractFlags flags,
                 const char *unit,
                 const char *filename,
                 unsigned line,
                 const char *rvalue) {
         /* Try to unquote it, if it fails, warn about it and try again but this
-         * time using UNQUOTE_CUNESCAPE_RELAX to keep the backslashes verbatim
+         * time using EXTRACT_CUNESCAPE_RELAX to keep the backslashes verbatim
          * in invalid escape sequences. */
         const char *save;
         int r;
 
         save = *p;
-        r = unquote_first_word(p, ret, flags);
-        if (r < 0 && !(flags&UNQUOTE_CUNESCAPE_RELAX)) {
-                /* Retry it with UNQUOTE_CUNESCAPE_RELAX. */
+        r = extract_first_word(p, ret, separators, flags);
+        if (r < 0 && !(flags&EXTRACT_CUNESCAPE_RELAX)) {
+                /* Retry it with EXTRACT_CUNESCAPE_RELAX. */
                 *p = save;
-                r = unquote_first_word(p, ret, flags|UNQUOTE_CUNESCAPE_RELAX);
+                r = extract_first_word(p, ret, separators, flags|EXTRACT_CUNESCAPE_RELAX);
                 if (r < 0)
                         log_syntax(unit, LOG_ERR, filename, line, EINVAL,
                                    "Unbalanced quoting in command line, ignoring: \"%s\"", rvalue);
@@ -5901,7 +5952,7 @@ int unquote_first_word_and_warn(
         return r;
 }
 
-int unquote_many_words(const char **p, UnquoteFlags flags, ...) {
+int extract_many_words(const char **p, const char *separators, ExtractFlags flags, ...) {
         va_list ap;
         char **l;
         int n = 0, i, c, r;
@@ -5927,7 +5978,7 @@ int unquote_many_words(const char **p, UnquoteFlags flags, ...) {
         l = newa0(char*, n);
         for (c = 0; c < n; c++) {
 
-                r = unquote_first_word(p, &l[c], flags);
+                r = extract_first_word(p, &l[c], separators, flags);
                 if (r < 0) {
                         int j;
 
@@ -6009,7 +6060,7 @@ int ptsname_malloc(int fd, char **ret) {
 }
 
 int openpt_in_namespace(pid_t pid, int flags) {
-        _cleanup_close_ int pidnsfd = -1, mntnsfd = -1, rootfd = -1;
+        _cleanup_close_ int pidnsfd = -1, mntnsfd = -1, usernsfd = -1, rootfd = -1;
         _cleanup_close_pair_ int pair[2] = { -1, -1 };
         union {
                 struct cmsghdr cmsghdr;
@@ -6026,7 +6077,7 @@ int openpt_in_namespace(pid_t pid, int flags) {
 
         assert(pid > 0);
 
-        r = namespace_open(pid, &pidnsfd, &mntnsfd, NULL, &rootfd);
+        r = namespace_open(pid, &pidnsfd, &mntnsfd, NULL, &usernsfd, &rootfd);
         if (r < 0)
                 return r;
 
@@ -6042,7 +6093,7 @@ int openpt_in_namespace(pid_t pid, int flags) {
 
                 pair[0] = safe_close(pair[0]);
 
-                r = namespace_enter(pidnsfd, mntnsfd, -1, rootfd);
+                r = namespace_enter(pidnsfd, mntnsfd, -1, usernsfd, rootfd);
                 if (r < 0)
                         _exit(EXIT_FAILURE);
 
@@ -6508,6 +6559,32 @@ int rename_noreplace(int olddirfd, const char *oldpath, int newdirfd, const char
         return 0;
 }
 
+static char *strcpy_backslash_escaped(char *t, const char *s, const char *bad) {
+        assert(bad);
+
+        for (; *s; s++) {
+                if (*s == '\\' || strchr(bad, *s))
+                        *(t++) = '\\';
+
+                *(t++) = *s;
+        }
+
+        return t;
+}
+
+char *shell_escape(const char *s, const char *bad) {
+        char *r, *t;
+
+        r = new(char, strlen(s)*2+1);
+        if (!r)
+                return NULL;
+
+        t = strcpy_backslash_escaped(r, s, bad);
+        *t = 0;
+
+        return r;
+}
+
 char *shell_maybe_quote(const char *s) {
         const char *p;
         char *r, *t;
@@ -6534,13 +6611,7 @@ char *shell_maybe_quote(const char *s) {
         *(t++) = '"';
         t = mempcpy(t, s, p - s);
 
-        for (; *p; p++) {
-
-                if (strchr(SHELL_NEED_ESCAPE, *p))
-                        *(t++) = '\\';
-
-                *(t++) = *p;
-        }
+        t = strcpy_backslash_escaped(t, p, SHELL_NEED_ESCAPE);
 
         *(t++)= '"';
         *t = 0;
@@ -6599,4 +6670,74 @@ int reset_uid_gid(void) {
                 return -errno;
 
         return 0;
+}
+
+int getxattr_malloc(const char *path, const char *name, char **value, bool allow_symlink) {
+        char *v;
+        size_t l;
+        ssize_t n;
+
+        assert(path);
+        assert(name);
+        assert(value);
+
+        for (l = 100; ; l = (size_t) n + 1) {
+                v = new0(char, l);
+                if (!v)
+                        return -ENOMEM;
+
+                if (allow_symlink)
+                        n = lgetxattr(path, name, v, l);
+                else
+                        n = getxattr(path, name, v, l);
+
+                if (n >= 0 && (size_t) n < l) {
+                        *value = v;
+                        return n;
+                }
+
+                free(v);
+
+                if (n < 0 && errno != ERANGE)
+                        return -errno;
+
+                if (allow_symlink)
+                        n = lgetxattr(path, name, NULL, 0);
+                else
+                        n = getxattr(path, name, NULL, 0);
+                if (n < 0)
+                        return -errno;
+        }
+}
+
+int fgetxattr_malloc(int fd, const char *name, char **value) {
+        char *v;
+        size_t l;
+        ssize_t n;
+
+        assert(fd >= 0);
+        assert(name);
+        assert(value);
+
+        for (l = 100; ; l = (size_t) n + 1) {
+                v = new0(char, l);
+                if (!v)
+                        return -ENOMEM;
+
+                n = fgetxattr(fd, name, v, l);
+
+                if (n >= 0 && (size_t) n < l) {
+                        *value = v;
+                        return n;
+                }
+
+                free(v);
+
+                if (n < 0 && errno != ERANGE)
+                        return -errno;
+
+                n = fgetxattr(fd, name, NULL, 0);
+                if (n < 0)
+                        return -errno;
+        }
 }
