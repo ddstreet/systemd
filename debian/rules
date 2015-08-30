@@ -26,7 +26,6 @@ CONFFLAGS = \
 	--with-telinit=/lib/sysvinit/telinit \
 	--enable-split-usr \
 	--disable-qrencode \
-	--disable-gnutls \
 	--disable-libidn \
 	--disable-elfutils \
 	--disable-vconsole \
@@ -48,13 +47,23 @@ CONFFLAGS_deb = \
 	PYTHON=python3
 
 ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
-CONFFLAGS_deb += --enable-libcryptsetup \
-                 --enable-apparmor \
-                 --enable-libcurl \
-                 --enable-importd \
-                 --enable-microhttpd
+CONFFLAGS_deb += \
+	--enable-audit \
+	--enable-libcryptsetup \
+	--enable-apparmor \
+	--enable-libcurl \
+	--enable-importd \
+	--enable-microhttpd \
+	--enable-gnutls
 else
-CONFFLAGS_deb += --disable-audit
+CONFFLAGS_deb += \
+	--disable-audit \
+	--disable-libcryptsetup \
+	--disable-apparmor \
+	--disable-libcurl \
+	--disable-importd \
+	--disable-microhttpd \
+	--disable-gnutls
 endif
 
 CONFFLAGS_udeb = \
@@ -76,6 +85,7 @@ CONFFLAGS_udeb = \
 	--disable-libcurl \
 	--disable-importd \
 	--disable-microhttpd \
+	--disable-gnutls \
 	--disable-hostnamed \
 	--disable-timedated \
 	--disable-networkd \
@@ -260,9 +270,5 @@ ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
 		if [ ! -e /etc/machine-id ]; then echo "/etc/machine-id missing, ignoring test failures"; else exit 1; fi; )
 endif
 
-ifneq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
-dh_options = -Nudev-udeb -Nlibudev1-udeb
-endif
-
 %:
-	dh $@ $(dh_options) --with autoreconf --parallel
+	dh $@ --with autoreconf --parallel

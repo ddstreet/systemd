@@ -37,6 +37,7 @@ Build-Depends: debhelper (>= 9.20141010),
                zlib1g-dev <!stage1> | libz-dev <!stage1>,
                libcurl4-gnutls-dev <!stage1> | libcurl-dev <!stage1>,
                libmicrohttpd-dev <!stage1>,
+               libgnutls28-dev <!stage1>,
                libgcrypt20-dev,
                libkmod-dev (>= 15),
                libblkid-dev (>= 2.24),
@@ -122,7 +123,7 @@ Conflicts: systemd (<< 224-2)
 Replaces: systemd (<< 224-2)
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         systemd,
+         systemd
 Description: systemd container/nspawn tools
  systemd is a system and service manager for Linux. It provides aggressive
  parallelization capabilities, uses socket and D-Bus activation for starting
@@ -145,12 +146,10 @@ Architecture: linux-any
 Multi-Arch: foreign
 Section: admin
 Priority: optional
-Conflicts: systemd (<< 224-2)
-Replaces: systemd (<< 224-2)
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          systemd,
-         adduser,
+         adduser
 Description: tools for sending and receiving remote journal logs
  systemd is a system and service manager for Linux. It provides aggressive
  parallelization capabilities, uses socket and D-Bus activation for starting
@@ -162,8 +161,7 @@ Description: tools for sending and receiving remote journal logs
  systemd is compatible with SysV and LSB init scripts and can work as a
  drop-in replacement for sysvinit.
  .
- This package provides systemd's tools for sending and receiving remote journal
- logs:
+ This package provides tools for sending and receiving remote journal logs:
   * systemd-journal-remote
   * systemd-journal-upload
   * systemd-journal-gatewayd
