@@ -43,7 +43,7 @@ LIBUDEV_REVISION=4
 LIBUDEV_AGE=6
 
 LIBSYSTEMD_CURRENT=10
-LIBSYSTEMD_REVISION=1
+LIBSYSTEMD_REVISION=2
 LIBSYSTEMD_AGE=10
 
 # The following four libraries only exist for compatibility reasons,
@@ -416,6 +416,7 @@ systemgenerator_PROGRAMS = \
 	systemd-system-update-generator \
 	systemd-debug-generator
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA = \
 	shell-completion/bash/busctl \
 	shell-completion/bash/journalctl \
@@ -432,7 +433,9 @@ dist_bashcompletion_DATA = \
 
 nodist_bashcompletion_DATA = \
 	shell-completion/bash/systemctl
+endif
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA = \
 	shell-completion/zsh/_busctl \
 	shell-completion/zsh/_journalctl \
@@ -449,6 +452,7 @@ dist_zshcompletion_DATA = \
 
 nodist_zshcompletion_DATA = \
 	shell-completion/zsh/_systemctl
+endif
 
 EXTRA_DIST += \
 	shell-completion/bash/systemctl.in \
@@ -622,13 +626,12 @@ EXTRA_DIST += \
 
 if HAVE_SYSV_COMPAT
 nodist_systemunit_DATA += \
-	units/rc-local.service
+	units/rc-local.service \
+	units/halt-local.service
 
 systemgenerator_PROGRAMS += \
-	systemd-sysv-generator
-
-MULTI_USER_TARGET_WANTS += \
-	rc-local.service
+	systemd-sysv-generator \
+	systemd-rc-local-generator
 endif
 
 EXTRA_DIST += \
@@ -1403,6 +1406,7 @@ tests += \
 	test-utf8 \
 	test-ellipsize \
 	test-util \
+	test-hostname-util \
 	test-process-util \
 	test-terminal-util \
 	test-path-lookup \
@@ -1445,6 +1449,8 @@ tests += \
 	test-execute \
 	test-copy \
 	test-verbs \
+	test-af-list \
+	test-arphrd-list \
 	test-dns-domain
 
 EXTRA_DIST += \
@@ -1676,6 +1682,12 @@ test_util_SOURCES = \
 	src/test/test-util.c
 
 test_util_LDADD = \
+	libshared.la
+
+test_hostname_util_SOURCES = \
+	src/test/test-hostname-util.c
+
+test_hostname_util_LDADD = \
 	libshared.la
 
 test_process_util_SOURCES = \
@@ -2055,6 +2067,18 @@ test_bus_policy_LDADD = \
 	libbus-proxy-core.la \
 	libshared.la
 
+test_af_list_SOURCES = \
+	src/test/test-af-list.c
+
+test_af_list_LDADD = \
+	libbasic.la
+
+test_arphrd_list_SOURCES = \
+	src/test/test-arphrd-list.c
+
+test_arphrd_list_LDADD = \
+	libbasic.la
+
 # ------------------------------------------------------------------------------
 ## .PHONY so it always rebuilds it
 .PHONY: coverage lcov-run lcov-report coverage-sync
@@ -2222,8 +2246,10 @@ SYSINIT_TARGET_WANTS += \
 	systemd-tmpfiles-setup-dev.service \
 	systemd-tmpfiles-setup.service
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_systemd-tmpfiles
+endif
 
 TIMERS_TARGET_WANTS += \
 	systemd-tmpfiles-clean.timer
@@ -2471,11 +2497,15 @@ bootctl_LDADD = \
 bin_PROGRAMS += \
 	bootctl
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA += \
 	shell-completion/bash/bootctl
+endif
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_bootctl
+endif
 endif
 
 # ------------------------------------------------------------------------------
@@ -4255,11 +4285,15 @@ test_coredump_vacuum_SOURCES = \
 test_coredump_vacuum_LDADD = \
 	libshared.la
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA += \
 	shell-completion/bash/coredumpctl
+endif
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_coredumpctl
+endif
 
 nodist_sysctl_DATA = \
 	sysctl.d/50-coredump.conf
@@ -4507,12 +4541,15 @@ hostnamectl_LDADD = \
 bin_PROGRAMS += \
 	hostnamectl
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA += \
 	shell-completion/bash/hostnamectl
+endif
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_hostnamectl
-
+endif
 endif
 
 polkitpolicy_in_files += \
@@ -4578,12 +4615,15 @@ localectl_LDADD = \
 bin_PROGRAMS += \
 	localectl
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA += \
 	shell-completion/bash/localectl
+endif
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_localectl
-
+endif
 endif
 
 .PHONY: update-kbd-model-map
@@ -4635,11 +4675,15 @@ timedatectl_LDADD = \
 bin_PROGRAMS += \
 	timedatectl
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA += \
 	shell-completion/bash/timedatectl
+endif
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_timedatectl
+endif
 endif
 
 polkitpolicy_in_files += \
@@ -4746,8 +4790,10 @@ machinectl_LDADD = \
 rootbin_PROGRAMS += \
 	machinectl
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA += \
 	shell-completion/bash/machinectl
+endif
 
 test_machine_tables_SOURCES = \
 	src/machine/test-machine-tables.c
@@ -4776,9 +4822,11 @@ dist_dbuspolicy_DATA += \
 polkitpolicy_files += \
 	src/machine/org.freedesktop.machine1.policy
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_machinectl \
 	shell-completion/zsh/_sd_machines
+endif
 
 SYSTEM_UNIT_ALIASES += \
 	systemd-machined.service dbus-org.freedesktop.machine1.service
@@ -5337,12 +5385,16 @@ loginctl_LDADD = \
 rootbin_PROGRAMS += \
 	loginctl
 
+if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA += \
 	shell-completion/bash/loginctl
+endif
 
+if ENABLE_ZSH_COMPLETION
 dist_zshcompletion_DATA += \
 	shell-completion/zsh/_loginctl \
 	shell-completion/zsh/_systemd-inhibit
+endif
 
 systemd_inhibit_SOURCES = \
 	src/login/inhibit.c
@@ -6024,10 +6076,11 @@ dist: dist-check-python dist-check-compat-libs
 .PHONY: hwdb-update
 hwdb-update:
 	( cd $(top_srcdir)/hwdb && \
-	wget -N http://www.linux-usb.org/usb.ids \
-		http://pci-ids.ucw.cz/v2.2/pci.ids \
-		http://standards.ieee.org/develop/regauth/oui/oui.txt \
-		http://standards.ieee.org/develop/regauth/iab/iab.txt && \
+	wget -O usb.ids 'http://www.linux-usb.org/usb.ids' && \
+	wget -O pci.ids 'http://pci-ids.ucw.cz/v2.2/pci.ids' && \
+	wget -O ma-large.txt 'https://services13.ieee.org/RST/standards-ra-web/rest/assignments/download/?registry=MA-L&format=txt' && \
+	wget -O ma-medium.txt 'https://services13.ieee.org/RST/standards-ra-web/rest/assignments/download/?registry=MA-M&format=txt' && \
+	wget -O ma-small.txt 'https://services13.ieee.org/RST/standards-ra-web/rest/assignments/download/?registry=MA-S&format=txt' && \
 	./ids-update.pl )
 
 .PHONY: built-sources

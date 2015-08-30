@@ -99,11 +99,6 @@ static const char* nonempty(const char *s) {
         return isempty(s) ? NULL : s;
 }
 
-static void free_and_replace(char **s, char *v) {
-        free(*s);
-        *s = v;
-}
-
 static bool startswith_comma(const char *s, const char *prefix) {
         const char *t;
 
@@ -559,7 +554,7 @@ static int read_next_mapping(const char* filename,
                 if (l[0] == 0 || l[0] == '#')
                         continue;
 
-                r = strv_split_quoted(&b, l, 0);
+                r = strv_split_extract(&b, l, WHITESPACE, EXTRACT_QUOTES);
                 if (r < 0)
                         return r;
 

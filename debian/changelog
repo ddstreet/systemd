@@ -1,3 +1,37 @@
+systemd (225-1) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * New upstream release.
+    - Fixes FTBFS on alpha. (Closes: #792551)
+    - Fixes machined state tracking logic. (Closes: #788269)
+  * Add better fix for "systemctl link/enable" breakage with full paths.
+    (LP: #1480310)
+  * debian/rules: Add missing $(dh_options) in overridden debhelper targets.
+
+  [ Felipe Sateler ]
+  * Move conffile from systemd to systemd-container package (Closes: #797048)
+
+  [ Michael Biebl ]
+  * Drop unnecessary Conflicts/Replaces from systemd-journal-remote.
+    None of the files in this package were previously shipped by systemd.
+  * Create system users for systemd-journal-{gateway,remote,upload} when
+    installing the systemd-journal-remote package.
+  * Explicitly turn off the features we don't want in a stage1 build.
+    Otherwise ./configure might enable them automatically if the build
+    dependencies are installed and "dh_install --fail-missing" will then fail
+    due to uninstalled files.
+  * Enable GnuTLS support as systemd-journal-remote makes sense mostly with
+    encryption enabled.
+  * Rely on build profiles to determine which packages should be skipped
+    during build and no longer specify that manually.
+  * Drop our patch which removes rc-local-generator.
+    rc-local.service acts as an ordering barrier even if its condition is
+    false, because conditions are evaluated when the service is about to be
+    started, not when it is enqueued. We don't want this ordering barrier on
+    systems that don't need/use /etc/rc.local.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 30 Aug 2015 21:18:59 +0200
+
 systemd (224-2) unstable; urgency=medium
 
   [ Martin Pitt ]
