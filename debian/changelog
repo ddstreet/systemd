@@ -1,3 +1,11 @@
+systemd (225-1ubuntu2) wily; urgency=medium
+
+  * Ignore init when doing cg_migrate_everywhere.  Otherwise, inside a
+    container using lxcfs, init can get trapped in the slice, and there's
+    simply no reason to do this in the first place. (LP: #1491557)
+
+ -- Serge Hallyn <serge.hallyn@ubuntu.com>  Wed, 02 Sep 2015 10:58:51 -0500
+
 systemd (225-1ubuntu1) wily; urgency=medium
 
   * Merge with Debian unstable (FFE: LP: #1489702). Remaining Ubuntu changes:
