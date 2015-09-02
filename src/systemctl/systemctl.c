@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <stddef.h>
 
 #include "sd-daemon.h"
@@ -7108,6 +7109,41 @@ static int talk_initctl(void) {
         return 1;
 }
 
+static int talk_upstart(void) {
+        _cleanup_close_ int fd;
+        struct sockaddr_un upstart_addr = {
+                .sun_family = AF_UNIX,
+                .sun_path = "\0/com/ubuntu/upstart\0",
+        };
+        char rl;
+        char telinit_cmd[] = "telinit X";
+
+        /* check if we can connect to upstart; if not, fail */
+        fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0);
+        if (fd < 0) {
+                log_error("socket(AF_UNIX) failed: %m");
+                return -errno;
+        }
+        if (connect(fd, &upstart_addr, sizeof(upstart_addr.sun_family) + 1 +
+                                       strlen(upstart_addr.sun_path + 1)) < 0) {
+                log_debug("cannot connect to upstart");
+                return 0;
+        }
+        log_debug("upstart is running");
+
+        rl = action_to_runlevel();
+        if (!rl)
+                return 0;
+
+        /* invoke telinit with the desired new runlevel */
+        telinit_cmd[8] = rl;
+        if (system(telinit_cmd) != 0) {
+                log_error("failed to run %s for upstart fallback", telinit_cmd);
+                return 0;
+        }
+        return 1;
+}
+
 static int systemctl_main(sd_bus *bus, int argc, char *argv[], int bus_error) {
 
         static const struct {
@@ -7295,9 +7331,13 @@ static int start_with_fallback(sd_bus *bus) {
                         goto done;
         }
 
-        /* Nothing else worked, so let's try
-         * /dev/initctl */
+        /* systemd didn't work (most probably it's not the current init
+         * system), so let's try /dev/initctl for SysV init */
         if (talk_initctl() > 0)
+                goto done;
+
+        /* and now upstart */
+        if (talk_upstart() > 0)
                 goto done;
 
         log_error("Failed to talk to init daemon.");
