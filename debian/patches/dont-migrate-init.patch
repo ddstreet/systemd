@@ -1,0 +1,22 @@
+Index: systemd-225/src/basic/cgroup-util.c
+===================================================================
+--- systemd-225.orig/src/basic/cgroup-util.c
++++ systemd-225/src/basic/cgroup-util.c
+@@ -1857,7 +1857,7 @@ int cg_migrate_everywhere(CGroupControll
+         int r;
+ 
+         if (!path_equal(from, to))  {
+-                r = cg_migrate_recursive(SYSTEMD_CGROUP_CONTROLLER, from, SYSTEMD_CGROUP_CONTROLLER, to, false, true);
++                r = cg_migrate_recursive(SYSTEMD_CGROUP_CONTROLLER, from, SYSTEMD_CGROUP_CONTROLLER, to, true, true);
+                 if (r < 0)
+                         return r;
+         }
+@@ -1872,7 +1872,7 @@ int cg_migrate_everywhere(CGroupControll
+                         if (!p)
+                                 p = to;
+ 
+-                        cg_migrate_recursive_fallback(SYSTEMD_CGROUP_CONTROLLER, to, n, p, false, false);
++                        cg_migrate_recursive_fallback(SYSTEMD_CGROUP_CONTROLLER, to, n, p, true, false);
+                 }
+ 
+                 bit <<= 1;
