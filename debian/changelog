@@ -1,3 +1,25 @@
+systemd (225-1ubuntu4) wily; urgency=medium
+
+  * Rename 01-mac-for-usb.link to 90-mac-for-usb.link so that it becomes
+    easier to override.
+  * debian-fixup.service just has one purpose now (make /etc/mtab a symlink),
+    so drop the debian/extra/debian-fixup shell script and put the ln command
+    directly into debian-fixup.service. Update the description.
+  * Rework networkd ifupdown integration: Drop networkd-if-up.d@.service and
+    its invocation from net.agent again. It does not work when restarting
+    networkd and requires too much overhead. Instead, add a suid root helper
+    systemd-networkd-dispatcher which calls run-parts, and patch networkd to
+    run the wrapper at the appropriate time.
+  * debian/tests/networkd: Check that /etc/resolv.conf gets the DHCP's
+    nameserver in case it is a symlink (i. e. dynamically managed by
+    systemd-resolved or resolvconf).
+  * systemd-networkd-dispatcher: Also pass on the DNS server list to if-up.d/
+    as $IF_DNS_NAMESERVERS, so that resolvconf or similar programs work as
+    expected.
+  * Fix shutdown with specifying a time.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 09 Sep 2015 17:08:50 +0200
+
 systemd (225-1ubuntu3) wily; urgency=medium
 
   * Enable libseccomp support for mips64, mips64el, and x32. (Closes: #797403)
