@@ -1,4 +1,5 @@
 ## Cherry-picked from upstream
+login-fix-NULL-deref-on-wall_message.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -35,6 +36,7 @@ syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+networkd-call-systemd-networkd-dispatcher-when-links.patch
 
 ## Ubuntu patches:
 Support-system-image-read-only-etc.patch
