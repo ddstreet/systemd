@@ -1,3 +1,12 @@
+systemd (204-5ubuntu20.14) trusty; urgency=medium
+
+  * debian/extra/60-keyboard.hwdb: Update to current version, as per standing
+    SRU exception:
+    - Fix wireless switch on Dell Latitudes. (LP: #1441849)
+    - Fix Microphone mute hotkey for Dell Precision series. (LP: #1494135)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 10 Sep 2015 09:35:27 +0200
+
 systemd (204-5ubuntu20.13) trusty; urgency=medium
 
   * debian/patches/ibmveth_persistent_mac.patch: fix the exception to locally
