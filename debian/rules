@@ -117,6 +117,8 @@ override_dh_auto_build:
 ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_auto_build --builddirectory=build-udeb
 endif
+	mkdir -p debian/install/deb/lib/systemd
+	$(CC) $(CFLAGS) debian/extra/systemd-networkd-dispatcher.c -o debian/install/deb/lib/systemd/systemd-networkd-dispatcher
 	# generate POT file for translators
 	cd build-deb/po; srcdir=../../po intltool-update --pot --verbose
 
@@ -166,6 +168,7 @@ override_dh_install:
 	# remove deprecated compatibility libraries
 	rm -f debian/install/*/usr/lib/*/pkgconfig/libsystemd-journal.pc
 	rm -f debian/install/*/usr/lib/*/pkgconfig/libsystemd-id128.pc
+	rm -f debian/install/*/usr/lib/*/pkgconfig/libsystemd-login.pc
 	rm -f debian/install/*/usr/lib/*/libsystemd-*.so
 	rm -f debian/install/*/lib/*/libsystemd-*.so.*
 	# remove symlinks enabling default-on services
@@ -233,7 +236,6 @@ endif
 
 override_dh_installinit:
 	dh_installinit --no-start
-	dh_installinit --name=udev-finish --no-start
 	# the following are only upstart jobs
 	dh_installinit --name=udevtrigger --noscripts
 	dh_installinit --name=udevmonitor --noscripts
