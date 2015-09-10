@@ -42,7 +42,7 @@ Build-Depends: debhelper (>= 9.20141010),
                libkmod-dev (>= 15),
                libblkid-dev (>= 2.24),
                libmount-dev (>= 2.20),
-               libseccomp-dev (>= 1.0.0) [amd64 arm64 armel armhf i386 mips mipsel],
+               libseccomp-dev (>= 1.0.0) [amd64 arm64 armel armhf i386 mips mipsel mips64 mips64el x32],
                python3:native,
                python3-lxml:native
 
@@ -125,16 +125,6 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          systemd
 Description: systemd container/nspawn tools
- systemd is a system and service manager for Linux. It provides aggressive
- parallelization capabilities, uses socket and D-Bus activation for starting
- services, offers on-demand starting of daemons, keeps track of processes
- using Linux control groups, supports snapshotting and restoring of the system
- state, maintains mount and automount points and implements an elaborate
- transactional dependency-based service control logic.
- .
- systemd is compatible with SysV and LSB init scripts and can work as a
- drop-in replacement for sysvinit.
- .
  This package provides systemd's tools for nspawn and container/VM management:
   * systemd-nspawn
   * systemd-machined and machinectl
@@ -151,16 +141,6 @@ Depends: ${shlibs:Depends},
          systemd,
          adduser
 Description: tools for sending and receiving remote journal logs
- systemd is a system and service manager for Linux. It provides aggressive
- parallelization capabilities, uses socket and D-Bus activation for starting
- services, offers on-demand starting of daemons, keeps track of processes
- using Linux control groups, supports snapshotting and restoring of the system
- state, maintains mount and automount points and implements an elaborate
- transactional dependency-based service control logic.
- .
- systemd is compatible with SysV and LSB init scripts and can work as a
- drop-in replacement for sysvinit.
- .
  This package provides tools for sending and receiving remote journal logs:
   * systemd-journal-remote
   * systemd-journal-upload
@@ -179,18 +159,8 @@ Depends: ${shlibs:Depends},
          dbus,
          systemd-shim (>= 8-2) | systemd-sysv
 Description: system and service manager - PAM module
- systemd is a system and service manager for Linux. It provides aggressive
- parallelization capabilities, uses socket and D-Bus activation for starting
- services, offers on-demand starting of daemons, keeps track of processes
- using Linux control groups, supports snapshotting and restoring of the system
- state, maintains mount and automount points and implements an elaborate
- transactional dependency-based service control logic.
- .
- systemd is compatible with SysV and LSB init scripts and can work as a
- drop-in replacement for sysvinit.
- .
  This package contains the PAM module which registers user sessions in
- the systemd control group hierarchy.
+ the systemd control group hierarchy for logind.
  .
  If in doubt, do install this package.
  .
@@ -268,21 +238,6 @@ Description: systemd utility library - development files
  The libsystemd0 library provides interfaces to various systemd components.
  .
  This package contains the development files.
-
-Package: libsystemd-login-dev
-Architecture: linux-any
-Multi-Arch: same
-Section: oldlibs
-Priority: extra
-Depends: ${misc:Depends},
-         libsystemd-dev (>= ${binary:Version})
-Description: systemd login utility library (transitional package)
- The libsystemd-login library provides an interface for the
- systemd-logind service which is used to track user sessions and seats.
- .
- This is a compatibility package which provides a .pc file for the old library
- name. That way, packages can be rebuilt against the new libsystemd library
- without requiring changes to existing configure scripts.
 
 Package: libsystemd-daemon-dev
 Architecture: linux-any
@@ -386,15 +341,5 @@ Depends: ${misc:Depends},
          libsystemd0 (= ${binary:Version}),
          libudev1 (= ${binary:Version})
 Description: system and service manager (debug symbols)
- systemd is a system and service manager for Linux. It provides aggressive
- parallelization capabilities, uses socket and D-Bus activation for starting
- services, offers on-demand starting of daemons, keeps track of processes
- using Linux control groups, supports snapshotting and restoring of the system
- state, maintains mount and automount points and implements an elaborate
- transactional dependency-based service control logic.
- .
- systemd is compatible with SysV and LSB init scripts and can work as a
- drop-in replacement for sysvinit.
- .
  This package contains the debugging symbols for systemd, udev and
  related libraries.
