@@ -970,6 +970,7 @@ static int method_set_locale(sd_bus_message *m, void *userdata, sd_bus_error *er
                                 m,
                                 CAP_SYS_ADMIN,
                                 "org.freedesktop.locale1.set-locale",
+                                NULL,
                                 interactive,
                                 UID_INVALID,
                                 &c->polkit_registry,
@@ -1059,6 +1060,7 @@ static int method_set_vc_keyboard(sd_bus_message *m, void *userdata, sd_bus_erro
                                 m,
                                 CAP_SYS_ADMIN,
                                 "org.freedesktop.locale1.set-keyboard",
+                                NULL,
                                 interactive,
                                 UID_INVALID,
                                 &c->polkit_registry,
@@ -1102,6 +1104,7 @@ static int method_set_vc_keyboard(sd_bus_message *m, void *userdata, sd_bus_erro
 }
 
 #ifdef HAVE_XKBCOMMON
+_printf_(3, 0)
 static void log_xkb(struct xkb_context *ctx, enum xkb_log_level lvl, const char *format, va_list args) {
         const char *fmt;
 
@@ -1189,6 +1192,7 @@ static int method_set_x11_keyboard(sd_bus_message *m, void *userdata, sd_bus_err
                                 m,
                                 CAP_SYS_ADMIN,
                                 "org.freedesktop.locale1.set-keyboard",
+                                NULL,
                                 interactive,
                                 UID_INVALID,
                                 &c->polkit_registry,

@@ -73,7 +73,8 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 "x-display-manager",    "display-manager.service",
         };
 
-        unsigned i, e;
+        unsigned i;
+        int e;
         char *r;
         const char *n;
 
