@@ -1,3 +1,13 @@
+systemd (226-2) unstable; urgency=medium
+
+  * debian/udev.init: Mount /dev file system with nosuid. (LP: #1450960)
+  * udev.postinst: udev 226 introduced predictable interface names for virtio.
+    Create /etc/systemd/network/50-virtio-kernel-names.link on upgrade to
+    disable this, to avoid changing e. g. "eth0" to "ens3" in QEMU instances
+    and similar environments. (Closes: #799034)
+
+ -- Martin Pitt <mpitt@debian.org>  Tue, 15 Sep 2015 15:21:09 +0200
+
 systemd (226-1) unstable; urgency=medium
 
   [ Martin Pitt ]
