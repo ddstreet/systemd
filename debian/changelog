@@ -1,3 +1,15 @@
+systemd (226-3) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * README.Debian: Fix "other" typo. Thanks Salvatore Bonaccorso.
+    (Closes: #798737)
+
+  [ Michael Biebl ]
+  * Stop building the compat library packages and drop them for good.
+  * Update debian/copyright.
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 19 Sep 2015 19:06:51 +0200
+
 systemd (226-2) unstable; urgency=medium
 
   * debian/udev.init: Mount /dev file system with nosuid. (LP: #1450960)
