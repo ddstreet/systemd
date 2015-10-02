@@ -1,3 +1,18 @@
+systemd (226-4) unstable; urgency=medium
+
+  * debian/tests/logind: Be more verbose on failures.
+  * Revert networkd calling if-{up,post-down}.d/ scripts. About half of the
+    existing hooks are not relevant or even actively detrimental when running
+    with networkd. For the relevant ones, a lot of them should be fixed in the
+    projects themselves (using IP_FREEBIND etc.). (Closes: #798625)
+  * Add systemd-networkd-resolvconf-update.{path,service} units to send DNS
+    server updates from networkd to resolvconf, if installed and enabled.
+  * Don't restart logind on upgrades any more. This kills X.org (#798097)
+    while logind doesn't save/restore its open fds (issue #1163), and also
+    gets confused about being idle in between (LP: #1473800)
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 02 Oct 2015 13:44:28 +0200
+
 systemd (226-3) unstable; urgency=medium
 
   [ Martin Pitt ]

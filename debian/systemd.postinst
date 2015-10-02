@@ -114,10 +114,6 @@ _update_catalog
 # Make systemd-detect-virt utility usable for non-root users
 setcap cap_dac_override,cap_sys_ptrace=ep /usr/bin/systemd-detect-virt || true
 
-# systemd-networkd-dispatcher is a suid root helper for networkd
-chown root:systemd-network /lib/systemd/systemd-networkd-dispatcher
-chmod 4754 /lib/systemd/systemd-networkd-dispatcher
-
 # Re-run systemctl enable for any service that was enabled when preinst was run.
 if dpkg --compare-versions "$2" ge "204" && [ -e /run/systemd/was-enabled ]; then
     while read UNIT ; do
@@ -137,7 +133,8 @@ fi
 
 if [ -n "$2" ]; then
     _systemctl daemon-reexec || true
-    _systemctl try-restart systemd-logind.service || true
+    # don't restart logind; this can be done again once this gets implemented:
+    # https://github.com/systemd/systemd/issues/1163
     _systemctl try-restart systemd-networkd.service || true
     _systemctl try-restart systemd-resolved.service || true
     _systemctl try-restart systemd-timesyncd.service || true
@@ -150,4 +147,11 @@ if dpkg --compare-versions "$2" lt-nl "219-8"; then
        rmdir --ignore-fail-on-non-empty /etc/systemd/system/${t}.target.wants 2> /dev/null || true
    done
 fi
+
+# start systemd-networkd-resolvconf-update.path on first install/upgrade if
+# required
+if _systemctl is-active --quiet resolvconf; then
+    _systemctl start systemd-networkd-resolvconf-update.path || true
+fi
+
 #DEBHELPER#
