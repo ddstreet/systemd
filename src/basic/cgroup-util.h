@@ -30,12 +30,18 @@
 
 /* A bit mask of well known cgroup controllers */
 typedef enum CGroupControllerMask {
-        CGROUP_CPU = 1,
-        CGROUP_CPUACCT = 2,
-        CGROUP_BLKIO = 4,
-        CGROUP_MEMORY = 8,
-        CGROUP_DEVICE = 16,
-        _CGROUP_CONTROLLER_MASK_ALL = 31
+        CGROUP_CPU = (1 << 0),
+        CGROUP_CPUACCT = (1 << 1),
+        CGROUP_BLKIO = (1 << 2),
+        CGROUP_MEMORY = (1 << 3),
+        CGROUP_DEVICE = (1 << 4),
+        CGROUP_HUGETLB = (1 << 5),
+        CGROUP_CPUSET = (1 << 6),
+        CGROUP_NET_CLS = (1 << 7),
+        CGROUP_NET_PRIO = (1 << 8),
+        CGROUP_FREEZER = (1 << 9),
+        CGROUP_PERF_EVENT = (1 << 10),
+        _CGROUP_CONTROLLER_MASK_ALL = (1 << 11) - 1
 } CGroupControllerMask;
 
 /*
@@ -80,6 +86,7 @@ int cg_rmdir(const char *controller, const char *path);
 int cg_delete(const char *controller, const char *path);
 
 int cg_create(const char *controller, const char *path);
+int cg_create_uid(const char *controller, const char *path, uid_t uid);
 int cg_attach(const char *controller, const char *path, pid_t pid);
 int cg_attach_fallback(const char *controller, const char *path, pid_t pid);
 int cg_create_and_attach(const char *controller, const char *path, pid_t pid);
@@ -129,6 +136,7 @@ int cg_slice_to_path(const char *unit, char **ret);
 typedef const char* (*cg_migrate_callback_t)(CGroupControllerMask mask, void *userdata);
 
 int cg_create_everywhere(CGroupControllerMask supported, CGroupControllerMask mask, const char *path);
+int cg_create_everywhere_uid(CGroupControllerMask supported, CGroupControllerMask mask, const char *path, uid_t uid);
 int cg_attach_everywhere(CGroupControllerMask supported, const char *path, pid_t pid, cg_migrate_callback_t callback, void *userdata);
 int cg_attach_many_everywhere(CGroupControllerMask supported, const char *path, Set* pids, cg_migrate_callback_t callback, void *userdata);
 int cg_migrate_everywhere(CGroupControllerMask supported, const char *from, const char *to, cg_migrate_callback_t callback, void *userdata);
