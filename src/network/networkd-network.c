@@ -114,6 +114,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->llmnr = RESOLVE_SUPPORT_YES;
 
         network->link_local = ADDRESS_FAMILY_IPV6;
+        network->ip_forward = _ADDRESS_FAMILY_BOOLEAN_INVALID;
 
         network->ipv6_privacy_extensions = IPV6_PRIVACY_EXTENSIONS_NO;
 
