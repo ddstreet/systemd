@@ -1,3 +1,14 @@
+systemd (204-5ubuntu20.15) trusty; urgency=medium
+
+  * Avoid writing duplicate entries in 70-persistent-net.rules by double
+    checking if the new udev rule has already been written for the given
+    interface. This happens if multiple add events are generated before
+    the write_net_rules script returns and udevd renames the interface.
+  * write_net_rules: Escape '{' and '}' characters as well, to make this work
+    with busybox grep.  (LP: #1470399)
+
+ -- Louis Bouchard <louis.bouchard@ubuntu.com>  Mon, 05 Oct 2015 12:34:41 +0200
+
 systemd (204-5ubuntu20.14) trusty; urgency=medium
 
   * debian/extra/60-keyboard.hwdb: Update to current version, as per standing
