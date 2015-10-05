@@ -1,3 +1,23 @@
+systemd (225-1ubuntu7) wily; urgency=medium
+
+  * Don't restart logind on upgrades any more. This kills X.org (#798097)
+    while logind doesn't save/restore its open fds (issue #1163), and also
+    gets confused about being idle in between (LP: #1473800)
+  * debian/extra/initramfs-tools/hooks/udev: Copy all
+    /etc/udev/rules.d/*.rules rules which are not merely overriding the one in
+    /lib/, not just 70-persistent-net.rules.  They might contain network names
+    or other bits which are relevant for the initramfs. (Closes: #795494)
+  * ifup@.service: Drop PartOf=network.target; we don't want to stop these
+    units during shutdown. Stopping networking.service already shuts down the
+    interfaces, but contains the safeguard for NFS or other network file
+    systems. Isolating emergency.target still keeps working as before as well,
+    as this also stops networking.service. (Closes: #761909, LP: #1492546)
+  * networkd: Change IPForward= default to "kernel". This keeps compatibility
+    with lots of packages which expect to be able to enable global forwarding
+    in /proc/sys/net/ipv4/ip_forward. (LP: #1500992)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 05 Oct 2015 15:53:26 +0200
+
 systemd (225-1ubuntu6) wily; urgency=medium
 
   * Build using libseccomp on all architectures.
