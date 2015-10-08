@@ -1,3 +1,24 @@
+systemd (227-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Bump watchdog timeout for shipped units to 3 min. (Closes: #776460)
+    - gpt-auto-generator: Check fstab for /boot entries. (Closes: #797326)
+    - Fix group of RuntimeDirectory dirs. (Closes: #798391)
+    - Support %i (and other macros) in RuntimeDirectory. (Closes: #799324)
+    - Bump util-linux/libmount-dev dependencies to >= 2.27.
+  * debian/libsystemd0.symbols: Add new symbols for this release.
+  * debian/extra/initramfs-tools/hooks/udev: Copy all
+    /etc/udev/rules.d/*.rules rules which are not merely overriding the one in
+    /lib/, not just 70-persistent-net.rules.  They might contain network names
+    or other bits which are relevant for the initramfs. (Closes: #795494)
+  * ifup@.service: Drop PartOf=network.target; we don't want to stop these
+    units during shutdown. Stopping networking.service already shuts down the
+    interfaces, but contains the safeguard for NFS or other network file
+    systems. Isolating emergency.target still keeps working as before as well,
+    as this also stops networking.service. (Closes: #761909, LP: #1492546)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 08 Oct 2015 11:34:35 +0200
+
 systemd (226-4) unstable; urgency=medium
 
   * debian/tests/logind: Be more verbose on failures.
