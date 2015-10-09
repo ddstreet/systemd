@@ -32,6 +32,7 @@
 #include "udev-util.h"
 #include "logind.h"
 #include "terminal-util.h"
+#include "sd-daemon.h"
 
 int manager_add_device(Manager *m, const char *sysfs, bool master, Device **_device) {
         Device *d;
@@ -409,6 +410,11 @@ int manager_spawn_autovt(Manager *m, unsigned int vtnr) {
 
         if (vtnr > m->n_autovts &&
             vtnr != m->reserve_vt)
+                return 0;
+
+        /* It only makes sense to send a StartUnit call to systemd if this
+         * machine is actually booted with systemd. */
+        if (!sd_booted())
                 return 0;
 
         if (vtnr != m->reserve_vt) {
