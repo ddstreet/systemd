@@ -508,6 +508,11 @@ CGroupControllerMask unit_get_cgroup_mask(Unit *u) {
                         return _CGROUP_CONTROLLER_MASK_ALL;
         }
 
+        if (u->type == UNIT_SCOPE && UNIT_ISSET(u->slice) && startswith(UNIT_DEREF(u->slice)->id, "user-")) {
+                log_unit_debug(u, "Putting user session scope into all cgroup controllers for LXC user containers");
+                return u->manager->cgroup_supported;
+        }
+
         return cgroup_context_get_mask(c);
 }
 
@@ -957,6 +962,10 @@ int manager_setup_cgroup(Manager *m) {
 
                 /* 6.  Always enable hierarchical support if it exists... */
                 cg_set_attribute("memory", "/", "memory.use_hierarchy", "1");
+
+                /* 7. Enable conf copying of cpuset attributes to children, so
+                 * that we can actually attach processes to cpuset */
+                cg_set_attribute("cpuset", "/", "cgroup.clone_children", "1");
         }
 
         /* 7. Figure out which controllers are supported */
