@@ -28,3 +28,4 @@ fix-ftbfs.patch
 add-cgmanager-support
 Advertise-hibernation-only-if-there-s-enough-free-sw.patch
 ProLiant-power-button.patch
+avocent-sc-secure-kvm.patch

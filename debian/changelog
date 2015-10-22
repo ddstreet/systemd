@@ -1,3 +1,11 @@
+systemd (204-5ubuntu20.16) trusty-proposed; urgency=medium
+
+  * debian/patches/avocent-sc-secure-kvm.patch: Disable USB autosuspend
+    for the Avocent SC Secure KVM.
+    (LP: #1371403)
+
+ -- Bryce Harrington <bryce@ubuntu.com>  Thu, 22 Oct 2015 13:39:41 -0700
+
 systemd (204-5ubuntu20.15) trusty; urgency=medium
 
   * Avoid writing duplicate entries in 70-persistent-net.rules by double
