@@ -668,6 +668,27 @@ int cg_create(const char *controller, const char *path) {
         return 1;
 }
 
+int cg_create_uid(const char *controller, const char *path, uid_t uid) {
+        _cleanup_free_ char *fs = NULL;
+        int r;
+
+        r = cg_get_path_and_check(controller, path, NULL, &fs);
+        if (r < 0)
+                return r;
+
+        r = mkdir_parents(fs, 0755);
+        if (r < 0)
+                return r;
+
+        if (mkdir(fs, 0755) < 0 && errno != EEXIST)
+                return -errno;
+
+        if (chown(fs, uid, (gid_t) -1) < 0)
+                return -errno;
+
+        return 1;
+}
+
 int cg_create_and_attach(const char *controller, const char *path, pid_t pid) {
         int r, q;
 
@@ -1856,6 +1877,42 @@ int cg_create_everywhere(CGroupMask supported, CGroupMask mask, const char *path
         return 0;
 }
 
+int cg_create_everywhere_uid(CGroupMask supported, CGroupMask mask, const char *path, uid_t uid) {
+        CGroupController c;
+        int r, unified;
+
+        /* This one will create a cgroup in our private tree, but also
+         * duplicate it in the trees specified in mask, and remove it
+         * in all others */
+
+        /* First create the cgroup in our own hierarchy. */
+        r = cg_create_uid(SYSTEMD_CGROUP_CONTROLLER, path, uid);
+        if (r < 0)
+                return r;
+
+        /* If we are in the unified hierarchy, we are done now */
+        unified = cg_unified();
+        if (unified < 0)
+                return unified;
+        if (unified > 0)
+                return 0;
+
+        /* Otherwise, do the same in the other hierarchies */
+        for (c = 0; c < _CGROUP_CONTROLLER_MAX; c++) {
+                CGroupMask bit = CGROUP_CONTROLLER_TO_MASK(c);
+                const char *n;
+
+                n = cgroup_controller_to_string(c);
+
+                if (mask & bit)
+                        (void) cg_create_uid(n, path, uid);
+                else if (supported & bit)
+                        (void) cg_trim(n, path, true);
+        }
+
+        return 0;
+}
+
 int cg_attach_everywhere(CGroupMask supported, const char *path, pid_t pid, cg_migrate_callback_t path_callback, void *userdata) {
         CGroupController c;
         int r, unified;
@@ -2253,6 +2310,11 @@ static const char *cgroup_controller_table[_CGROUP_CONTROLLER_MAX] = {
         [CGROUP_CONTROLLER_DEVICES] = "devices",
         [CGROUP_CONTROLLER_PIDS] = "pids",
         [CGROUP_CONTROLLER_NET_CLS] = "net_cls",
+        [CGROUP_CONTROLLER_HUGETLB] = "hugetlb",
+        [CGROUP_CONTROLLER_CPUSET] = "cpuset",
+        [CGROUP_CONTROLLER_NET_PRIO] = "net_prio",
+        [CGROUP_CONTROLLER_FREEZER] = "freezer",
+        [CGROUP_CONTROLLER_PERF_EVENT] = "perf_event",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(cgroup_controller, CGroupController);
