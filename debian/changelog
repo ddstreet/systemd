@@ -1,4 +1,60 @@
-systemd (227-3) unstable; urgency=medium
+systemd (227-2ubuntu1) xenial; urgency=medium
+
+  * Merge with Debian unstable. Remaining Ubuntu changes:
+    - Hack to support system-image read-only /etc, and modify files in
+      /etc/writable/ instead.
+    - Simpler udev maintainer scripts (all platforms must support udev, no
+      debconf).
+    - initramfs init-bottom: If LVM is installed, settle udev,
+      otherwise we get missing LV symlinks. Workaround for LP #1185394.
+    - Add debian/udev.lvm2.init: Dummy SysV init script to satisfy insserv
+      dependencies to "lvm2" which is handled with udev rules in Ubuntu.
+    - Add debian/udev.lvm2.service to avoid running the dummy lvm2 init
+      script.
+    - Provide shutdown fallback for upstart. (LP: #1370329)
+    - debian/extra/ifup@.service: Additionally run for "auto" class. We don't
+      really support "allow-hotplug" in Ubuntu at the moment, so we need to
+      deal with "auto" devices appearing after "/etc/init.d/networking start"
+      already ran. (LP: #1374521)
+    - ifup@.service: Drop dependency on networking.service (i. e.
+      /etc/init.d/networking), and merely ensure that /run/network exists.
+      This avoids unnecessary dependencies/waiting during boot and dependency
+      cycles if hooks wait for other interfaces to come up (like ifenslave
+      with bonding interfaces). (LP: #1414544)
+    - Add Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch: In
+      Ubuntu we currently keep the setting whether the RTC is in local or UTC
+      time in /etc/default/rcS "UTC=yes|no", instead of /etc/adjtime.
+      (LP: #1377258)
+    - networkd: Change IPForward= default to "kernel". This keeps
+      compatibility with lots of packages which expect to be able to
+      enable global forwarding in /proc/sys/net/ipv4/ip_forward.
+      (LP: #1500992)
+    - Put session scopes into all cgroup controllers. This makes unprivileged
+      user LXC containers work under systemd. (LP: #1346734)
+    - Don't attempt to migrate pid 1 itself when migrating cgroups for started
+      units; works around some not yet understood cgproxy/systemd interaction.
+      This particularly unbreaks cgproxy in LXC. (LP: #1491557)
+    - Lower Breaks: to plymouth version which has the udev inotify fix in
+      Ubuntu.
+    - Change systemd-sysv's conflicts to upstart-sysv. (LP: #1422681)
+    - Don't build new systemd-journal-remote package and drop
+      libmicrohttpd-dev. This is blocked by the MIR (LP #1488341).
+    - Build using libseccomp on all architectures (See Debian #800818)
+
+    Upgrade fixes, keep until 16.04 LTS release:
+    - systemd Conflicts/Replaces/Provides systemd-services.
+    - Remove obsolete systemd-logind upstart job.
+    - Clean up obsolete /etc/udev/rules.d/README.
+    - systemd.postinst: Migrate mountall specific fstab options to standard
+      util-linux "nofail" option.
+    - systemctl: Don't forward telinit u to upstart. This works around
+      upstart's Restart() always reexec'ing /sbin/init on Restart(), even if
+      that changes to point to systemd during the upgrade. This avoids running
+      systemd during a dist-upgrade. (LP: #1430479)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 28 Oct 2015 09:46:04 +0100
+
+systemd (227-3) UNRELEASED; urgency=medium
 
   [ Martin Pitt ]
   * debian/tests/logind: Add tests for scheduled shutdown with and without
@@ -15,35 +71,13 @@ systemd (227-3) unstable; urgency=medium
   * Drop Order-remote-fs.target-after-local-fs.target.patch. It's mostly
     academic and only applies to the already known-broken situation that rcS
     init.d scripts depend on $remote_fs.
-  * Replace reversion of sd_pid_notify_with_fds() msg_controllen fix with
-    proper upstream fix to never block on sending messages on NOTIFY_SOCKET
-    socket.
-  * Drop check for missing /etc/machine-id on "make check" failure; this isn't
-    happening on current buildds any more.
-  * Drop Disable-tests-which-fail-on-buildds.patch, to re-evaluate what still
-    fails and needs fixing. On failure, show kernel version and /etc/hosts
-    to be able to debug them better. The next upload will make the necessary
-    adjustments to fix package builds again.
 
   [ Michael Biebl ]
   * Drop dependency on udev from the systemd package. We don't need udev
     within a container, so this allows us to trim down the footprint by not
-    installing the udev package. As the udev package has Priority: important,
-    it is still installed by default though.
-  * Include the status of the udev package when filing a bug report against
-    systemd, and vice versa.
-  * Use filter instead of findstring, since findstring also matches
-    substrings and we only want direct matches.
-  * systemd.bug-script: Fix typo. (Closes: #804512)
-  * Re-add bits which call SELinux in systemd-user pam service.
-    (Closes: #804565)
+    installing the udev package.
 
-  [ Felipe Sateler ]
-  * Add libnss-resolve package. (Closes: #798905)
-  * Add systemd-coredump package. This Conflicts/Replaces/Provides a new
-    "core-dump-handler" virtual package. (Closes: #744964)
-
- -- Martin Pitt <mpitt@debian.org>  Wed, 11 Nov 2015 15:04:26 +0100
+ -- Martin Pitt <mpitt@debian.org>  Tue, 13 Oct 2015 11:03:21 +0200
 
 systemd (227-2) unstable; urgency=medium
 
