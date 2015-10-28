@@ -370,7 +370,7 @@
           sysctl options of the network interface (see <ulink
           url="https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt">ip-sysctl.txt</ulink>
           for details about sysctl options). Defaults to
-          <literal>no</literal>.</para>
+          <literal>kernel</literal>.</para>
 
          <para>Note: unless this option is turned on, or set to <literal>kernel</literal>,
           no IP forwarding is done on this interface, even if this is
