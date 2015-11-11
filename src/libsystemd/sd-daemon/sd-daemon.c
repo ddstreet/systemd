@@ -40,6 +40,8 @@
 
 #include "sd-daemon.h"
 
+#define SNDBUF_SIZE (8*1024*1024)
+
 static void unsetenv_all(bool unset_environment) {
 
         if (!unset_environment)
@@ -435,6 +437,8 @@ _public_ int sd_pid_notify_with_fds(pid_t pid, int unset_environment, const char
                 r = -errno;
                 goto finish;
         }
+
+        fd_inc_sndbuf(fd, SNDBUF_SIZE);
 
         iovec.iov_len = strlen(state);
 

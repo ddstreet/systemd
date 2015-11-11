@@ -75,6 +75,8 @@
 #include "watchdog.h"
 #include "manager.h"
 
+#define NOTIFY_RCVBUF_SIZE (8*1024*1024)
+
 /* Initial delay and the interval for printing status messages about running jobs */
 #define JOBS_IN_PROGRESS_WAIT_USEC (5*USEC_PER_SEC)
 #define JOBS_IN_PROGRESS_PERIOD_USEC (USEC_PER_SEC / 3)
@@ -677,6 +679,8 @@ static int manager_setup_notify(Manager *m) {
                 fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
                 if (fd < 0)
                         return log_error_errno(errno, "Failed to allocate notification socket: %m");
+
+                fd_inc_rcvbuf(fd, NOTIFY_RCVBUF_SIZE);
 
                 if (m->running_as == MANAGER_SYSTEM)
                         m->notify_socket = strdup("/run/systemd/notify");
