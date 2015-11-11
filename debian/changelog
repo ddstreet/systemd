@@ -1,3 +1,50 @@
+systemd (227-3) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * debian/tests/logind: Add tests for scheduled shutdown with and without
+    wall message.
+  * Import upstream fix for not unmounting system mounts (#801361) and drop
+    our revert patch.
+  * debian/tests/boot-smoke: Apply check for failed unmounts only to user
+    systemd processes, i. e. not to pid 1.
+  * Drop Fix-usr-remount-failure-for-split-usr.patch. Jessie has a new enough
+    initramfs-tools already, and this was just an error message, not breaking
+    the boot.
+  * Drop debian-fixup.service in favor of using a tmpfiles.d clause, which is
+    faster.
+  * Drop Order-remote-fs.target-after-local-fs.target.patch. It's mostly
+    academic and only applies to the already known-broken situation that rcS
+    init.d scripts depend on $remote_fs.
+  * Replace reversion of sd_pid_notify_with_fds() msg_controllen fix with
+    proper upstream fix to never block on sending messages on NOTIFY_SOCKET
+    socket.
+  * Drop check for missing /etc/machine-id on "make check" failure; this isn't
+    happening on current buildds any more.
+  * Drop Disable-tests-which-fail-on-buildds.patch, to re-evaluate what still
+    fails and needs fixing. On failure, show kernel version and /etc/hosts
+    to be able to debug them better. The next upload will make the necessary
+    adjustments to fix package builds again.
+
+  [ Michael Biebl ]
+  * Drop dependency on udev from the systemd package. We don't need udev
+    within a container, so this allows us to trim down the footprint by not
+    installing the udev package. As the udev package has Priority: important,
+    it is still installed by default though.
+  * Include the status of the udev package when filing a bug report against
+    systemd, and vice versa.
+  * Use filter instead of findstring, since findstring also matches
+    substrings and we only want direct matches.
+  * systemd.bug-script: Fix typo. (Closes: #804512)
+  * Re-add bits which call SELinux in systemd-user pam service.
+    (Closes: #804565)
+
+  [ Felipe Sateler ]
+  * Add libnss-resolve package. (Closes: #798905)
+  * Add systemd-coredump package. This Conflicts/Replaces/Provides a new
+    "core-dump-handler" virtual package. (Closes: #744964)
+
+ -- Martin Pitt <mpitt@debian.org>  Wed, 11 Nov 2015 15:04:26 +0100
+
 systemd (227-2) unstable; urgency=medium
 
   * Revert "sd_pid_notify_with_fds: fix computing msg_controllen", it causes

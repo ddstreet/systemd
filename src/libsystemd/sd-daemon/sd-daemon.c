@@ -40,6 +40,8 @@
 
 #include "sd-daemon.h"
 
+#define SNDBUF_SIZE (8*1024*1024)
+
 static void unsetenv_all(bool unset_environment) {
 
         if (!unset_environment)
@@ -430,11 +432,18 @@ _public_ int sd_pid_notify_with_fds(pid_t pid, int unset_environment, const char
                 goto finish;
         }
 
+        if (strlen(e) > sizeof(sockaddr.un.sun_path)) {
+                r = -EINVAL;
+                goto finish;
+        }
+
         fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0);
         if (fd < 0) {
                 r = -errno;
                 goto finish;
         }
+
+        fd_inc_sndbuf(fd, SNDBUF_SIZE);
 
         iovec.iov_len = strlen(state);
 
@@ -449,9 +458,12 @@ _public_ int sd_pid_notify_with_fds(pid_t pid, int unset_environment, const char
         have_pid = pid != 0 && pid != getpid();
 
         if (n_fds > 0 || have_pid) {
-                msghdr.msg_controllen = CMSG_SPACE(sizeof(int) * n_fds) +
-                                        CMSG_SPACE(sizeof(struct ucred) * have_pid);
-                msghdr.msg_control = alloca(msghdr.msg_controllen);
+                /* CMSG_SPACE(0) may return value different then zero, which results in miscalculated controllen. */
+                msghdr.msg_controllen =
+                        (n_fds > 0 ? CMSG_SPACE(sizeof(int) * n_fds) : 0) +
+                        (have_pid ? CMSG_SPACE(sizeof(struct ucred)) : 0);
+
+                msghdr.msg_control = alloca0(msghdr.msg_controllen);
 
                 cmsg = CMSG_FIRSTHDR(&msghdr);
                 if (n_fds > 0) {
