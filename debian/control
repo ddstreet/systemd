@@ -63,7 +63,6 @@ Depends: ${shlibs:Depends},
          util-linux (>= 2.27),
          mount (>= 2.26),
          sysv-rc,
-         udev,
          adduser,
          libcap2-bin
 Breaks: lvm2 (<< 2.02.104-1),
@@ -146,6 +145,23 @@ Description: tools for sending and receiving remote journal logs
   * systemd-journal-upload
   * systemd-journal-gatewayd
 
+Package: systemd-coredump
+Build-Profiles: <!stage1>
+Architecture: linux-any
+Multi-Arch: foreign
+Section: admin
+Priority: optional
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         systemd
+Conflicts: core-dump-handler
+Replaces: core-dump-handler
+Provides: core-dump-handler
+Description: tools for storing and retrieving coredumps
+ This package provides systemd tools for storing and retrieving coredumps:
+  * systemd-coredump
+  * coredumpctl
+
 Package: libpam-systemd
 Architecture: linux-any
 Multi-Arch: same
@@ -204,6 +220,22 @@ Description: nss module to resolve hostnames for local container instances
  resolved to IP addresses of the specific container, ordered by their scope.
  .
  Installing this package automatically adds mymachines to /etc/nsswitch.conf.
+
+Package: libnss-resolve
+Architecture: linux-any
+Multi-Arch: same
+Replaces: systemd (<< 227-3)
+Breaks: systemd (<< 227-3)
+Section: admin
+Priority: extra
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, systemd
+Description: nss module to resolve names via systemd-resolved
+ nss-resolve is a plugin for the GNU Name Service Switch (NSS) functionality
+ of the GNU C Library (glibc) providing DNS and LLMNR resolution to programs via
+ the systemd-resolved daemon (provided in the systemd package).
+ .
+ Installing this package automatically adds resolve to /etc/nsswitch.conf.
 
 Package: libsystemd0
 Architecture: linux-any
