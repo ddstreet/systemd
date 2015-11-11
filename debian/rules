@@ -12,7 +12,7 @@ else
     DEFAULT_NTP_SERVERS = 0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org
 endif
 
-ifneq (,$(findstring noudeb,$(DEB_BUILD_OPTIONS)))
+ifneq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
 export DEB_BUILD_PROFILES += noudeb
 endif
 
@@ -32,7 +32,6 @@ CONFFLAGS = \
 	--disable-vconsole \
 	--disable-sysusers \
 	--disable-firstboot \
-	--disable-coredump \
 	--disable-xkbcommon \
 	--disable-libiptc \
 	--disable-silent-rules \
@@ -46,10 +45,11 @@ CONFFLAGS_deb = \
 	--enable-efi \
 	PYTHON=python3
 
-ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
+ifeq (, $(filter stage1, $(DEB_BUILD_PROFILES)))
 CONFFLAGS_deb += \
 	--enable-audit \
 	--enable-libcryptsetup \
+	--enable-coredump \
 	--enable-apparmor \
 	--enable-libcurl \
 	--enable-importd \
@@ -59,6 +59,7 @@ else
 CONFFLAGS_deb += \
 	--disable-audit \
 	--disable-libcryptsetup \
+	--disable-coredump \
 	--disable-apparmor \
 	--disable-libcurl \
 	--disable-importd \
@@ -68,6 +69,7 @@ endif
 
 CONFFLAGS_udeb = \
 	--disable-libcryptsetup \
+	--disable-coredump \
 	--disable-pam \
 	--disable-audit \
 	--disable-selinux \
@@ -168,9 +170,6 @@ override_dh_install:
 ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_install -pudev-udeb -plibudev1-udeb --sourcedir=debian/install/udeb
 endif
-	# still needs to mature a bit, and packaging
-	rm -f debian/install/*/usr/lib/*/libnss_resolve*
-
 	# fix location of NSS modules
 	cd debian/install/deb/; for f in usr/lib/*/libnss_*; do mv $$f $${f#usr/}; done
 
@@ -190,7 +189,7 @@ endif
 	rm debian/systemd/lib/systemd/system/local-fs.target.wants/tmp.mount
 
 	# files shipped by cryptsetup
-ifeq (,$(findstring stage1,$(DEB_BUILD_PROFILES)))
+ifeq (, $(filter stage1, $(DEB_BUILD_PROFILES)))
 	rm debian/systemd/usr/share/man/man5/crypttab.5
 endif
 
@@ -216,7 +215,7 @@ endif
 		install --mode=644 debian/extra/rules-ubuntu/*.rules debian/udev/lib/udev/rules.d/; \
 	fi
 
-ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
 	echo "Checking that executables don't link to libraries in /usr..."
 	set -e; for e in debian/systemd/lib/systemd/systemd* debian/udev/lib/systemd/systemd*; do \
 	    echo " $$e"; \
@@ -254,14 +253,18 @@ override_dh_autoreconf:
 override_dh_strip:
 	dh_strip --dbg-package=systemd-dbg
 
-# tests require /etc/machine-id to be present
 override_dh_auto_test:
-ifeq (, $(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
 	# some tests hang under fakeroot, so disable fakeroot
+	# temporarily show kernel version and /etc/hosts, for debugging what
+	# they are failing on
 	env -u LD_PRELOAD make -C build-deb check || ( \
 		cd build-deb; \
 		for f in test-*.log; do echo "==== $$f ===="; cat $$f; done; \
-		if [ ! -e /etc/machine-id ]; then echo "/etc/machine-id missing, ignoring test failures"; else exit 1; fi; )
+		echo "==== /etc/hosts ==="; cat /etc/hosts; \
+		echo "==== kernel version ==="; cat /proc/version; \
+		echo "==== machine id ==="; cat /etc/machine-id; \
+		exit 1)
 endif
 
 %:
