@@ -1,0 +1,109 @@
+Description: fix siphash24 implementation to handle unaligned inputs
+ The siphash24 implementation assumes the input can be cast to a 64-bit
+ integer.  This is not guaranteed to be true, when the input can be anything
+ - including a pointer into a string, which is the case for some of systemd's
+ uses.
+ .
+ Unfortunately the test case is not guaranteed to help on architectures where
+ we care about it, because some architectures have a global kernel flag
+ controlling unaligned fixups (/proc/cpu/alignment) but no support for
+ overriding this behavior on a per-process basis (prctl).  So a regression
+ here might still result in the test passing at build-time but failing at
+ runtime.
+Author: Steve Langasek <steve.langasek@canonical.com>
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1512323
+
+Index: systemd-227/src/test/test-siphash24.c
+===================================================================
+--- systemd-227.orig/src/test/test-siphash24.c
++++ systemd-227/src/test/test-siphash24.c
+@@ -24,17 +24,33 @@
+ 
+ #define ITERATIONS 10000000ULL
+ 
++int do_test(const uint8_t *in, size_t len, const uint8_t *key);
++
+ /* see https://131002.net/siphash/siphash.pdf, Appendix A */
+ int main(int argc, char *argv[]) {
+-        struct siphash state = {};
+         const uint8_t in[15]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                   0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e };
+         const uint8_t key[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                   0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
++        uint64_t in_buf[4];
++
++        /* Test with same input but different alignments. */
++        memcpy((uint8_t *)in_buf, in, sizeof(in));
++        do_test((uint8_t *)in_buf, sizeof(in), key);
++        memcpy(((uint8_t *)in_buf)+1, in, sizeof(in));
++        do_test((uint8_t *)in_buf+1, sizeof(in), key);
++        memcpy(((uint8_t *)in_buf)+2, in, sizeof(in));
++        do_test((uint8_t *)in_buf+2, sizeof(in), key);
++        memcpy(((uint8_t *)in_buf)+4, in, sizeof(in));
++        do_test((uint8_t *)in_buf+4, sizeof(in), key);
++}
++
++int do_test(const uint8_t *in, size_t len, const uint8_t *key) {
++        struct siphash state = {};
+         uint64_t out = 0;
+         unsigned i, j;
+ 
+-        siphash24((uint8_t *)&out, in, sizeof(in), key);
++        siphash24((uint8_t *)&out, in, len, key);
+         assert_se(out == htole64(0xa129ca6149be45e5));
+ 
+         /* verify the internal state as given in the above paper */
+@@ -43,7 +59,7 @@ int main(int argc, char *argv[]) {
+         assert_se(state.v1 == 0x6b617f6d656e6665);
+         assert_se(state.v2 == 0x6b7f62616d677361);
+         assert_se(state.v3 == 0x7b6b696e727e6c7b);
+-        siphash24_compress(in, sizeof(in), &state);
++        siphash24_compress(in, len, &state);
+         assert_se(state.v0 == 0x4a017198de0a59e0);
+         assert_se(state.v1 == 0x0d52f6f62a4f59a4);
+         assert_se(state.v2 == 0x634cb3577b01fd3d);
+@@ -57,14 +73,15 @@ int main(int argc, char *argv[]) {
+ 
+         /* verify that decomposing the input in three chunks gives the
+            same result */
+-        for (i = 0; i < sizeof(in); i++) {
+-                for (j = i; j < sizeof(in); j++) {
++        for (i = 0; i < len; i++) {
++                for (j = i; j < len; j++) {
+                         siphash24_init(&state, key);
+                         siphash24_compress(in, i, &state);
+                         siphash24_compress(&in[i], j - i, &state);
+-                        siphash24_compress(&in[j], sizeof(in) - j, &state);
++                        siphash24_compress(&in[j], len - j, &state);
+                         siphash24_finalize((uint8_t*)&out, &state);
+                         assert_se(out == htole64(0xa129ca6149be45e5));
+                 }
+         }
++        return 0;
+ }
+Index: systemd-227/src/basic/siphash24.c
+===================================================================
+--- systemd-227.orig/src/basic/siphash24.c
++++ systemd-227/src/basic/siphash24.c
+@@ -67,6 +67,7 @@ void siphash24_init(struct siphash *stat
+ 
+ void siphash24_compress(const void *_in, size_t inlen, struct siphash *state) {
+         uint64_t m;
++        _cleanup_free_ uint64_t *in_aligned = NULL;
+         const uint8_t *in = _in;
+         const uint8_t *end = in + inlen;
+         unsigned left = state->inlen & 7;
+@@ -101,6 +102,13 @@ void siphash24_compress(const void *_in,
+                 state->padding = 0;
+         }
+ 
++        if ((in <= end - 8) && ((unsigned long)in & 7)) {
++            in_aligned = malloc((((end - in) >> 3) + ((end - in) & 7 ? 1 : 0))
++                                * sizeof(uint64_t));
++            memcpy(in_aligned, in, (end - in));
++            end = (uint8_t *)in_aligned + (end - in);
++            in = (uint8_t *)in_aligned;
++        }
+         end -= ( state->inlen % sizeof (uint64_t) );
+ 
+         for ( ; in < end; in += 8 ) {
