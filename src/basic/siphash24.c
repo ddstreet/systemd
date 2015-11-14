@@ -67,6 +67,7 @@ void siphash24_init(struct siphash *state, const uint8_t k[16]) {
 
 void siphash24_compress(const void *_in, size_t inlen, struct siphash *state) {
         uint64_t m;
+        _cleanup_free_ uint64_t *in_aligned = NULL;
         const uint8_t *in = _in;
         const uint8_t *end = in + inlen;
         unsigned left = state->inlen & 7;
@@ -101,6 +102,13 @@ void siphash24_compress(const void *_in, size_t inlen, struct siphash *state) {
                 state->padding = 0;
         }
 
+        if ((in <= end - 8) && ((unsigned long)in & 7)) {
+            in_aligned = malloc((((end - in) >> 3) + ((end - in) & 7 ? 1 : 0))
+                                * sizeof(uint64_t));
+            memcpy(in_aligned, in, (end - in));
+            end = (uint8_t *)in_aligned + (end - in);
+            in = (uint8_t *)in_aligned;
+        }
         end -= ( state->inlen % sizeof (uint64_t) );
 
         for ( ; in < end; in += 8 ) {
