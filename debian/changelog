@@ -1,3 +1,10 @@
+systemd (227-2ubuntu2) xenial; urgency=medium
+
+  * debian/patches/siphash24-unaligned.patch: fix siphash24
+    implementation to handle unaligned inputs.  Closes LP: #1512323.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sat, 14 Nov 2015 23:22:39 +0000
+
 systemd (227-2ubuntu1) xenial; urgency=medium
 
   * Merge with Debian unstable. Remaining Ubuntu changes:
