@@ -206,7 +206,7 @@ static int link_stop_clients(Link *link) {
         if (!link->network)
                 return 0;
 
-        if (IN_SET(link->network->dhcp, DHCP_SUPPORT_BOTH, DHCP_SUPPORT_V6)) {
+        if (IN_SET(link->network->dhcp, DHCP_SUPPORT_BOTH, DHCP_SUPPORT_V4)) {
                 assert(link->dhcp_client);
 
                 k = sd_dhcp_client_stop(link->dhcp_client);
