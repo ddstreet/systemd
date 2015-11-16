@@ -1,3 +1,10 @@
+systemd (204-5ubuntu20.17) trusty-proposed; urgency=medium
+
+  * debian/patches/avocent-sc-secure-kvm.patch: Soften assignment rule to
+    pass the package syntax checker.
+
+ -- Bryce Harrington <bryce@ubuntu.com>  Mon, 16 Nov 2015 13:33:13 -0800
+
 systemd (204-5ubuntu20.16) trusty-proposed; urgency=medium
 
   * debian/patches/avocent-sc-secure-kvm.patch: Disable USB autosuspend

@@ -16,7 +16,7 @@ ACTION=="add", SUBSYSTEM=="usb", ATTR{product}=="QEMU USB Keyboard", ATTR{serial
 ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0624", ATTR{bInterfaceClass}=="03", TEST=="../power/control", ATTR{../power/control}="auto"
 
 # Avocent SC Secure KVM should not autosuspend (LP: #1371403)
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0624", ATTR{idProduct}=="0013", ATTR{product}=="SC Secure KVM", TEST=="power/control", ATTR{power/control}:="on"
+ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0624", ATTR{idProduct}=="0013", ATTR{product}=="SC Secure KVM", TEST=="power/control", ATTR{power/control}="on"
 
 # Dell DRAC 4
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="413c", ATTR{idProduct}=="2500", TEST=="power/control", ATTR{power/control}="auto"
