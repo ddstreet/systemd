@@ -66,7 +66,7 @@
                 netdev will not be changed by networkd.</para>
 
                 <para>The <filename>.netdev</filename> files are read from the files located in the
-                system network directory <filename>/usr/lib/systemd/network</filename>,
+                system network directory <filename>/lib/systemd/network</filename>,
                 the volatile runtime network directory
                 <filename>/run/systemd/network</filename> and the local administration
                 network directory <filename>/etc/systemd/network</filename>.
@@ -75,10 +75,10 @@
                 identical filenames replace each other. Files in
                 <filename>/etc</filename> have the highest priority, files in
                 <filename>/run</filename> take precedence over files with the same
-                name in <filename>/usr/lib</filename>. This can be used to override a
+                name in <filename>/lib</filename>. This can be used to override a
                 system-supplied configuration file with a local file if needed; a symlink in
                 <filename>/etc</filename> with the same name as a configuration file in
-                <filename>/usr/lib</filename>, pointing to <filename>/dev/null</filename>,
+                <filename>/lib</filename>, pointing to <filename>/dev/null</filename>,
                 disables the configuration file entirely.</para>
 
         </refsect1>
