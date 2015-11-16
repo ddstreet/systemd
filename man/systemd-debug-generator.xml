@@ -46,7 +46,7 @@
         </refnamediv>
 
         <refsynopsisdiv>
-                <para><filename>/usr/lib/systemd/system-generators/systemd-debug-generator</filename></para>
+                <para><filename>/lib/systemd/system-generators/systemd-debug-generator</filename></para>
         </refsynopsisdiv>
 
         <refsect1>
