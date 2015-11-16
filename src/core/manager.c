@@ -242,7 +242,7 @@ static int manager_dispatch_ask_password_fd(sd_event_source *source,
         if (m->have_ask_password < 0)
                 /* Log error but continue. Negative have_ask_password
                  * is treated as unknown status. */
-                log_error("Failed to list /run/systemd/ask-password: %s", strerror(m->have_ask_password));
+                log_error("Failed to list /run/systemd/ask-password: %s", strerror(-m->have_ask_password));
 
         return 0;
 }
