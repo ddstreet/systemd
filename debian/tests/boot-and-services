@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import shutil
 import time
+import re
 from glob import glob
 
 
@@ -35,6 +36,8 @@ class ServicesTest(unittest.TestCase):
             failed = [f for f in failed if 'apparmor.service' not in f]
         # ignore thermald as it doesn't start in most virtual envs
         failed = [f for f in failed if 'thermald' not in f]
+        # console-setup.service fails on devices without keyboard (LP: #1516591)
+        failed = [f for f in failed if 'console-setup' not in f]
         self.assertEqual(failed, [])
 
     def test_lightdm(self):
@@ -409,6 +412,38 @@ SystemCallFilter=access
         self.assertIn(b'code=killed, signal=SYS', out)
         with open('/etc/machine-id') as f:
             self.assertNotIn(f.read().strip().encode('ASCII'), out)
+
+
+class CoredumpTest(unittest.TestCase):
+    '''Check systemd-coredump'''
+
+    def test_bash_crash(self):
+        subprocess.call("ulimit -c unlimited; bash -c 'kill -SEGV $$'", shell=True,
+                        cwd='/tmp', stderr=subprocess.DEVNULL)
+
+        # with systemd-coredump installed we should get the core dumps in
+        # systemd's dir
+        timeout = 50
+        while timeout > 0:
+            cores = glob('/var/lib/systemd/coredump/core.bash.*')
+            if cores:
+                break
+            time.sleep(0.1)
+            timeout -= 1
+        self.assertNotEqual(cores, [])
+        self.assertEqual(glob('/tmp/core*'), [])
+
+        # we should also get a message and stack trace in journal
+        timeout = 50
+        while timeout > 0:
+            journal = subprocess.check_output(['journalctl', '/lib/systemd/systemd-coredump'])
+            if re.search(b'Process.*bash.*dumped core', journal):
+                break
+            time.sleep(0.1)
+            timeout -= 1
+        self.assertRegex(journal, b'Process.*bash.*dumped core')
+        self.assertIn(b'Stack trace', journal)
+        self.assertRegex(journal, b'#[0-9] .* main.*bash')
 
 
 def pre_boot_setup():
