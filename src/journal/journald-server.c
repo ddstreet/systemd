@@ -19,7 +19,6 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include <linux/sockios.h>
 #ifdef HAVE_SELINUX
 #include <selinux/selinux.h>
 #endif
@@ -27,6 +26,7 @@
 #include <sys/mman.h>
 #include <sys/signalfd.h>
 #include <sys/statvfs.h>
+#include <linux/sockios.h>
 
 #include "libudev.h"
 #include "sd-daemon.h"
@@ -34,18 +34,19 @@
 #include "sd-messages.h"
 
 #include "acl-util.h"
+#include "alloc-util.h"
+#include "audit-util.h"
 #include "cgroup-util.h"
 #include "conf-parser.h"
+#include "dirent-util.h"
+#include "extract-word.h"
+#include "fd-util.h"
+#include "fileio.h"
 #include "formats-util.h"
+#include "fs-util.h"
 #include "hashmap.h"
 #include "hostname-util.h"
-#include "missing.h"
-#include "mkdir.h"
-#include "process-util.h"
-#include "rm-rf.h"
-#include "selinux-util.h"
-#include "signal-util.h"
-#include "socket-util.h"
+#include "io-util.h"
 #include "journal-authenticate.h"
 #include "journal-file.h"
 #include "journal-internal.h"
@@ -57,6 +58,18 @@
 #include "journald-server.h"
 #include "journald-stream.h"
 #include "journald-syslog.h"
+#include "missing.h"
+#include "mkdir.h"
+#include "parse-util.h"
+#include "proc-cmdline.h"
+#include "process-util.h"
+#include "rm-rf.h"
+#include "selinux-util.h"
+#include "signal-util.h"
+#include "socket-util.h"
+#include "string-table.h"
+#include "string-util.h"
+#include "user-util.h"
 
 #define USER_JOURNALS_MAX 1024
 
@@ -229,9 +242,14 @@ void server_fix_perms(Server *s, JournalFile *f, uid_t uid) {
         /* We do not recalculate the mask unconditionally here,
          * so that the fchmod() mask above stays intact. */
         if (acl_get_permset(entry, &permset) < 0 ||
-            acl_add_perm(permset, ACL_READ) < 0 ||
-            calc_acl_mask_if_needed(&acl) < 0) {
+            acl_add_perm(permset, ACL_READ) < 0) {
                 log_warning_errno(errno, "Failed to patch ACL on %s, ignoring: %m", f->path);
+                return;
+        }
+
+        r = calc_acl_mask_if_needed(&acl);
+        if (r < 0) {
+                log_warning_errno(r, "Failed to patch ACL on %s, ignoring: %m", f->path);
                 return;
         }
 
@@ -264,7 +282,7 @@ static JournalFile* find_journal(Server *s, uid_t uid) {
         if (r < 0)
                 return s->system_journal;
 
-        f = ordered_hashmap_get(s->user_journals, UINT32_TO_PTR(uid));
+        f = ordered_hashmap_get(s->user_journals, UID_TO_PTR(uid));
         if (f)
                 return f;
 
@@ -285,7 +303,7 @@ static JournalFile* find_journal(Server *s, uid_t uid) {
 
         server_fix_perms(s, f, uid);
 
-        r = ordered_hashmap_put(s->user_journals, UINT32_TO_PTR(uid), f);
+        r = ordered_hashmap_put(s->user_journals, UID_TO_PTR(uid), f);
         if (r < 0) {
                 journal_file_close(f);
                 return s->system_journal;
@@ -331,7 +349,7 @@ void server_rotate(Server *s) {
         (void) do_rotate(s, &s->system_journal, "system", s->seal, 0);
 
         ORDERED_HASHMAP_FOREACH_KEY(f, k, s->user_journals, i) {
-                r = do_rotate(s, &f, "user", s->seal, PTR_TO_UINT32(k));
+                r = do_rotate(s, &f, "user", s->seal, PTR_TO_UID(k));
                 if (r >= 0)
                         ordered_hashmap_replace(s->user_journals, k, f);
                 else if (!f)
@@ -342,7 +360,6 @@ void server_rotate(Server *s) {
 
 void server_sync(Server *s) {
         JournalFile *f;
-        void *k;
         Iterator i;
         int r;
 
@@ -352,7 +369,7 @@ void server_sync(Server *s) {
                         log_warning_errno(r, "Failed to sync system journal, ignoring: %m");
         }
 
-        ORDERED_HASHMAP_FOREACH_KEY(f, k, s->user_journals, i) {
+        ORDERED_HASHMAP_FOREACH(f, s->user_journals, i) {
                 r = journal_file_set_offline(f);
                 if (r < 0)
                         log_warning_errno(r, "Failed to sync user journal, ignoring: %m");
@@ -932,7 +949,7 @@ finish:
 
 static int system_journal_open(Server *s, bool flush_requested) {
         const char *fn;
-        int r;
+        int r = 0;
 
         if (!s->system_journal &&
             (s->storage == STORAGE_PERSISTENT || s->storage == STORAGE_AUTO) &&
@@ -1224,28 +1241,37 @@ int server_process_datagram(sd_event_source *es, int fd, uint32_t revents, void 
 
 static int dispatch_sigusr1(sd_event_source *es, const struct signalfd_siginfo *si, void *userdata) {
         Server *s = userdata;
+        int r;
 
         assert(s);
 
-        log_info("Received request to flush runtime journal from PID %"PRIu32, si->ssi_pid);
+        log_info("Received request to flush runtime journal from PID " PID_FMT, si->ssi_pid);
 
         server_flush_to_var(s);
         server_sync(s);
         server_vacuum(s, false, false);
 
-        touch("/run/systemd/journal/flushed");
+        r = touch("/run/systemd/journal/flushed");
+        if (r < 0)
+                log_warning_errno(r, "Failed to touch /run/systemd/journal/flushed, ignoring: %m");
 
         return 0;
 }
 
 static int dispatch_sigusr2(sd_event_source *es, const struct signalfd_siginfo *si, void *userdata) {
         Server *s = userdata;
+        int r;
 
         assert(s);
 
-        log_info("Received request to rotate journal from PID %"PRIu32, si->ssi_pid);
+        log_info("Received request to rotate journal from PID " PID_FMT, si->ssi_pid);
         server_rotate(s);
         server_vacuum(s, true, true);
+
+        /* Let clients know when the most recent rotation happened. */
+        r = write_timestamp_file_atomic("/run/systemd/journal/rotated", now(CLOCK_MONOTONIC));
+        if (r < 0)
+                log_warning_errno(r, "Failed to write /run/systemd/journal/rotated, ignoring: %m");
 
         return 0;
 }
@@ -1261,12 +1287,30 @@ static int dispatch_sigterm(sd_event_source *es, const struct signalfd_siginfo *
         return 0;
 }
 
+static int dispatch_sigrtmin1(sd_event_source *es, const struct signalfd_siginfo *si, void *userdata) {
+        Server *s = userdata;
+        int r;
+
+        assert(s);
+
+        log_debug("Received request to sync from PID " PID_FMT, si->ssi_pid);
+
+        server_sync(s);
+
+        /* Let clients know when the most recent sync happened. */
+        r = write_timestamp_file_atomic("/run/systemd/journal/synced", now(CLOCK_MONOTONIC));
+        if (r < 0)
+                log_warning_errno(r, "Failed to write /run/systemd/journal/synced, ignoring: %m");
+
+        return 0;
+}
+
 static int setup_signals(Server *s) {
         int r;
 
         assert(s);
 
-        assert(sigprocmask_many(SIG_SETMASK, NULL, SIGINT, SIGTERM, SIGUSR1, SIGUSR2, -1) >= 0);
+        assert(sigprocmask_many(SIG_SETMASK, NULL, SIGINT, SIGTERM, SIGUSR1, SIGUSR2, SIGRTMIN+1, -1) >= 0);
 
         r = sd_event_add_signal(s->event, &s->sigusr1_event_source, SIGUSR1, dispatch_sigusr1, s);
         if (r < 0)
@@ -1280,7 +1324,32 @@ static int setup_signals(Server *s) {
         if (r < 0)
                 return r;
 
+        /* Let's process SIGTERM late, so that we flush all queued
+         * messages to disk before we exit */
+        r = sd_event_source_set_priority(s->sigterm_event_source, SD_EVENT_PRIORITY_NORMAL+20);
+        if (r < 0)
+                return r;
+
+        /* When journald is invoked on the terminal (when debugging),
+         * it's useful if C-c is handled equivalent to SIGTERM. */
         r = sd_event_add_signal(s->event, &s->sigint_event_source, SIGINT, dispatch_sigterm, s);
+        if (r < 0)
+                return r;
+
+        r = sd_event_source_set_priority(s->sigint_event_source, SD_EVENT_PRIORITY_NORMAL+20);
+        if (r < 0)
+                return r;
+
+        /* SIGRTMIN+1 causes an immediate sync. We process this very
+         * late, so that everything else queued at this point is
+         * really written to disk. Clients can watch
+         * /run/systemd/journal/synced with inotify until its mtime
+         * changes to see when a sync happened. */
+        r = sd_event_add_signal(s->event, &s->sigrtmin1_event_source, SIGRTMIN+1, dispatch_sigrtmin1, s);
+        if (r < 0)
+                return r;
+
+        r = sd_event_source_set_priority(s->sigrtmin1_event_source, SD_EVENT_PRIORITY_NORMAL+15);
         if (r < 0)
                 return r;
 
@@ -1289,8 +1358,7 @@ static int setup_signals(Server *s) {
 
 static int server_parse_proc_cmdline(Server *s) {
         _cleanup_free_ char *line = NULL;
-        const char *w, *state;
-        size_t l;
+        const char *p;
         int r;
 
         r = proc_cmdline(&line);
@@ -1299,12 +1367,16 @@ static int server_parse_proc_cmdline(Server *s) {
                 return 0;
         }
 
-        FOREACH_WORD_QUOTED(w, l, line, state) {
+        p = line;
+        for(;;) {
                 _cleanup_free_ char *word;
 
-                word = strndup(w, l);
-                if (!word)
-                        return -ENOMEM;
+                r = extract_first_word(&p, &word, NULL, 0);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to parse journald syntax \"%s\": %m", line);
+
+                if (r == 0)
+                        break;
 
                 if (startswith(word, "systemd.journald.forward_to_syslog=")) {
                         r = parse_boolean(word + 35);
@@ -1341,8 +1413,8 @@ static int server_parse_proc_cmdline(Server *s) {
 static int server_parse_config_file(Server *s) {
         assert(s);
 
-        return config_parse_many("/etc/systemd/journald.conf",
-                                 CONF_DIRS_NULSTR("systemd/journald.conf"),
+        return config_parse_many(PKGSYSCONFDIR "/journald.conf",
+                                 CONF_PATHS_NULSTR("systemd/journald.conf.d"),
                                  "Journal\0",
                                  config_item_perf_lookup, journald_gperf_lookup,
                                  false, s);
@@ -1453,16 +1525,11 @@ static int dispatch_notify_event(sd_event_source *es, int fd, uint32_t revents, 
         assert(s->notify_event_source == es);
         assert(s->notify_fd == fd);
 
-        if (revents != EPOLLOUT) {
-                log_error("Invalid events on notify file descriptor.");
-                return -EINVAL;
-        }
-
         /* The $NOTIFY_SOCKET is writable again, now send exactly one
-         * message on it. Either it's the initial READY=1 event or an
-         * stdout stream event. If there's nothing to write anymore,
-         * turn our event source off. The next time there's something
-         * to send it will be turned on again. */
+         * message on it. Either it's the wtachdog event, the initial
+         * READY=1 event or an stdout stream event. If there's nothing
+         * to write anymore, turn our event source off. The next time
+         * there's something to send it will be turned on again. */
 
         if (!s->sent_notify_ready) {
                 static const char p[] =
@@ -1481,18 +1548,59 @@ static int dispatch_notify_event(sd_event_source *es, int fd, uint32_t revents, 
                 s->sent_notify_ready = true;
                 log_debug("Sent READY=1 notification.");
 
+        } else if (s->send_watchdog) {
+
+                static const char p[] =
+                        "WATCHDOG=1";
+
+                ssize_t l;
+
+                l = send(s->notify_fd, p, strlen(p), MSG_DONTWAIT);
+                if (l < 0) {
+                        if (errno == EAGAIN)
+                                return 0;
+
+                        return log_error_errno(errno, "Failed to send WATCHDOG=1 notification message: %m");
+                }
+
+                s->send_watchdog = false;
+                log_debug("Sent WATCHDOG=1 notification.");
+
         } else if (s->stdout_streams_notify_queue)
                 /* Dispatch one stream notification event */
                 stdout_stream_send_notify(s->stdout_streams_notify_queue);
 
         /* Leave us enabled if there's still more to to do. */
-        if (s->stdout_streams_notify_queue)
+        if (s->send_watchdog || s->stdout_streams_notify_queue)
                 return 0;
 
         /* There was nothing to do anymore, let's turn ourselves off. */
         r = sd_event_source_set_enabled(es, SD_EVENT_OFF);
         if (r < 0)
                 return log_error_errno(r, "Failed to turn off notify event source: %m");
+
+        return 0;
+}
+
+static int dispatch_watchdog(sd_event_source *es, uint64_t usec, void *userdata) {
+        Server *s = userdata;
+        int r;
+
+        assert(s);
+
+        s->send_watchdog = true;
+
+        r = sd_event_source_set_enabled(s->notify_event_source, SD_EVENT_ON);
+        if (r < 0)
+                log_warning_errno(r, "Failed to turn on notify event source: %m");
+
+        r = sd_event_source_set_time(s->watchdog_event_source, usec + s->watchdog_usec / 2);
+        if (r < 0)
+                return log_error_errno(r, "Failed to restart watchdog event source: %m");
+
+        r = sd_event_source_set_enabled(s->watchdog_event_source, SD_EVENT_ON);
+        if (r < 0)
+                return log_error_errno(r, "Failed to enable watchdog event source: %m");
 
         return 0;
 }
@@ -1559,6 +1667,14 @@ static int server_connect_notify(Server *s) {
         if (r < 0)
                 return log_error_errno(r, "Failed to watch notification socket: %m");
 
+        if (sd_watchdog_enabled(false, &s->watchdog_usec) > 0) {
+                s->send_watchdog = true;
+
+                r = sd_event_add_time(s->event, &s->watchdog_event_source, CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + s->watchdog_usec/2, s->watchdog_usec/4, dispatch_watchdog, s);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to add watchdog time event: %m");
+        }
+
         /* This should fire pretty soon, which we'll use to send the
          * READY=1 event. */
 
@@ -1568,6 +1684,7 @@ static int server_connect_notify(Server *s) {
 int server_init(Server *s) {
         _cleanup_fdset_free_ FDSet *fds = NULL;
         int n, r, fd;
+        bool no_sockets;
 
         assert(s);
 
@@ -1575,6 +1692,8 @@ int server_init(Server *s) {
         s->syslog_fd = s->native_fd = s->stdout_fd = s->dev_kmsg_fd = s->audit_fd = s->hostname_fd = s->notify_fd = -1;
         s->compress = true;
         s->seal = true;
+
+        s->watchdog_usec = USEC_INFINITY;
 
         s->sync_interval_usec = DEFAULT_SYNC_INTERVAL_USEC;
         s->sync_scheduled = false;
@@ -1676,30 +1795,44 @@ int server_init(Server *s) {
                 }
         }
 
-        r = server_open_stdout_socket(s, fds);
-        if (r < 0)
-                return r;
+        /* Try to restore streams, but don't bother if this fails */
+        (void) server_restore_streams(s, fds);
 
         if (fdset_size(fds) > 0) {
                 log_warning("%u unknown file descriptors passed, closing.", fdset_size(fds));
                 fds = fdset_free(fds);
         }
 
+        no_sockets = s->native_fd < 0 && s->stdout_fd < 0 && s->syslog_fd < 0 && s->audit_fd < 0;
+
+        /* always open stdout, syslog, native, and kmsg sockets */
+
+        /* systemd-journald.socket: /run/systemd/journal/stdout */
+        r = server_open_stdout_socket(s);
+        if (r < 0)
+                return r;
+
+        /* systemd-journald-dev-log.socket: /run/systemd/journal/dev-log */
         r = server_open_syslog_socket(s);
         if (r < 0)
                 return r;
 
+        /* systemd-journald.socket: /run/systemd/journal/socket */
         r = server_open_native_socket(s);
         if (r < 0)
                 return r;
 
+        /* /dev/ksmg */
         r = server_open_dev_kmsg(s);
         if (r < 0)
                 return r;
 
-        r = server_open_audit(s);
-        if (r < 0)
-                return r;
+        /* Unless we got *some* sockets and not audit, open audit socket */
+        if (s->audit_fd >= 0 || no_sockets) {
+                r = server_open_audit(s);
+                if (r < 0)
+                        return r;
+        }
 
         r = server_open_kernel_seqnum(s);
         if (r < 0)
@@ -1778,8 +1911,10 @@ void server_done(Server *s) {
         sd_event_source_unref(s->sigusr2_event_source);
         sd_event_source_unref(s->sigterm_event_source);
         sd_event_source_unref(s->sigint_event_source);
+        sd_event_source_unref(s->sigrtmin1_event_source);
         sd_event_source_unref(s->hostname_event_source);
         sd_event_source_unref(s->notify_event_source);
+        sd_event_source_unref(s->watchdog_event_source);
         sd_event_unref(s->event);
 
         safe_close(s->syslog_fd);

@@ -57,8 +57,6 @@ check_kernel_version() {
 
   if [ -e /etc/udev/kernel-upgrade ]; then
     echo "This version of udev requires a kernel >= 2.6.32, but the upgrade was forced."
-    # restart udevd which was killed by the old prerm
-    /lib/systemd/systemd-udevd -d || true
     return 0
   fi
   
@@ -71,8 +69,6 @@ check_kernel_version() {
     db_stop
     echo "A reboot is needed, but proceeding with the upgrade."
     touch /etc/udev/kernel-upgrade
-    # restart udevd which was killed by the old prerm
-    /lib/systemd/systemd-udevd -d || true
     return 0
   fi
 
@@ -85,8 +81,6 @@ check_kernel_version() {
     db_stop
     echo "This version of udev requires a kernel >= 2.6.32, but the upgrade was forced."
     touch /etc/udev/kernel-upgrade
-    # restart udevd which was killed by the old prerm
-    /lib/systemd/systemd-udevd -d || true
     return 0
   fi
   db_stop
@@ -179,14 +173,6 @@ END
   exit 1
 }
 
-mask_systemd_service() {
-  if [ -x '/bin/systemctl' -a -d '/run/systemd/system/' ]; then
-    ln -sf /dev/null /run/systemd/system/systemd-udevd.service
-    ln -sf /dev/null /run/systemd/system/udev.service
-    systemctl daemon-reload || true
-  fi
-}
-
 check_version() {
   # $2 is non-empty when installing from the "config-files" state
   [ "$2" ] || return 0
@@ -217,7 +203,6 @@ case "$1" in
 
     upgrade|abort-upgrade)
     check_version "$@"
-    mask_systemd_service
     ;;
 
     *)

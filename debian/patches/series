@@ -1,10 +1,6 @@
 ## Cherry-picked from upstream
-core-ignore-.slice-and-init.scope-when-isolating.patch
-sd-daemon-simply-code-simplification.patch
-sd-daemon-wipe-out-memory-before-using-CMSG_NXTHDR.patch
-sd-daemon-increase-sd_notify-socket-buffer-size.patch
-sd-daemon-verify-NOTIFY_SOCKET-path-length.patch
-journald-never-block-when-sending-messages-on-NOTIFY.patch
+networkd-ndisc-revert-to-letting-the-kernel-handle-NDisc.patch
+networkd-dhcp4-dirty-link-when-the-lease-changes.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -34,7 +30,6 @@ Don-t-enable-audit-by-default.patch
 util-Add-hidden-suffixes-for-ucf.patch
 Only-start-logind-if-dbus-is-installed.patch
 cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
-syslog-Increase-max_dgram_qlen-by-pulling-in-systemd.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch

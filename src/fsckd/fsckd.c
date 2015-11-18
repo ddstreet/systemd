@@ -42,7 +42,12 @@
 #include "list.h"
 #include "macro.h"
 #include "socket-util.h"
+#include "fd-util.h"
+#include "string-util.h"
+#include "io-util.h"
 #include "util.h"
+#include "alloc-util.h"
+#include "locale-util.h"
 
 #define FSCKD_SOCKET_PATH "/run/systemd/fsck.progress"
 #define IDLE_TIME_SECONDS 30

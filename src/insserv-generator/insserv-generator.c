@@ -30,6 +30,9 @@
 #include "unit-name.h"
 #include "special.h"
 #include "path-util.h"
+#include "string-util.h"
+#include "fd-util.h"
+#include "alloc-util.h"
 #include "util.h"
 #include "strv.h"
 

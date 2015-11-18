@@ -26,23 +26,27 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "sd-messages.h"
-#include "sd-event.h"
 #include "sd-bus.h"
+#include "sd-event.h"
+#include "sd-messages.h"
 
-#include "util.h"
-#include "strv.h"
-#include "def.h"
-#include "clock-util.h"
-#include "path-util.h"
-#include "fileio-label.h"
-#include "bus-util.h"
-#include "bus-error.h"
+#include "alloc-util.h"
 #include "bus-common-errors.h"
+#include "bus-error.h"
+#include "bus-util.h"
+#include "clock-util.h"
+#include "def.h"
 #include "event-util.h"
+#include "fileio-label.h"
+#include "fs-util.h"
+#include "path-util.h"
 #include "selinux-util.h"
+#include "strv.h"
+#include "user-util.h"
+#include "util.h"
 #include "random-util.h"
 #include "copy.h"
+#include "hexdecoct.h"
 
 #define NULL_ADJTIME_UTC "0.0 0 0\n0\nUTC\n"
 #define NULL_ADJTIME_LOCAL "0.0 0 0\n0\nLOCAL\n"
@@ -75,8 +79,8 @@ static int symlink_or_copy(const char *from, const char *to) {
         assert(from);
         assert(to);
 
-        if (path_get_parent(from, &pf) < 0 ||
-            path_get_parent(to, &pt) < 0) {
+        if (!(pf = dirname_malloc(from)) ||
+            !(pt = dirname_malloc(to))) {
                 r = -ENOMEM;
                 goto finish;
         }

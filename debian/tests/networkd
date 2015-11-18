@@ -1,4 +1,29 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
+#
+# networkd integration test
+# This uses temporary configuration in /run and temporary veth devices, and
+# does not write anything on disk or change any system configuration;
+# but it assumes (and checks at the beginning) that networkd is not currently
+# running.
+# This can be run on a normal installation, in QEMU, nspawn, or LXC.
+# ATTENTION: This uses the *installed* networkd, not the one from the built
+# source tree.
+#
+# (C) 2015 Canonical Ltd.
+# Author: Martin Pitt <martin.pitt@ubuntu.com>
+#
+# systemd is free software; you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation; either version 2.1 of the License, or
+# (at your option) any later version.
+
+# systemd is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with systemd; If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import sys
@@ -7,7 +32,11 @@ import unittest
 import tempfile
 import subprocess
 
+networkd_active = subprocess.call(['systemctl', 'is-active', '--quiet',
+                                   'systemd-networkd']) == 0
 
+@unittest.skipIf(networkd_active,
+                 'networkd is already active')
 class TestNetworkd(unittest.TestCase):
     @classmethod
     def setUp(self):
@@ -21,6 +50,15 @@ class TestNetworkd(unittest.TestCase):
 
         # avoid "Failed to open /dev/tty" errors in containers
         os.environ['SYSTEMD_LOG_TARGET'] = 'journal'
+
+        # determine path to systemd-networkd-wait-online
+        for p in ['/usr/lib/systemd/systemd-networkd-wait-online',
+                  '/lib/systemd/systemd-networkd-wait-online']:
+            if os.path.exists(p):
+                self.networkd_wait_online = p
+                break
+        else:
+            self.fail('systemd-networkd-wait-online not found')
 
     def tearDown(self):
         self.shutdown_iface()
@@ -67,12 +105,14 @@ class TestNetworkd(unittest.TestCase):
             self.dnsmasq.wait()
             self.dnsmasq = None
 
-    def do_test(self, coldplug=True, ipv6=False):
+    def do_test(self, coldplug=True, ipv6=False, extra_opts='',
+                online_timeout=10, dhcp_mode='yes'):
         with open(self.config, 'w') as f:
             f.write('''[Match]
 Name=%s
 [Network]
-DHCP=yes''' % self.iface)
+DHCP=%s
+%s''' % (self.iface, dhcp_mode, extra_opts))
 
         if coldplug:
             # create interface first, then start networkd
@@ -83,17 +123,17 @@ DHCP=yes''' % self.iface)
             subprocess.check_call(['systemctl', 'start', 'systemd-networkd'])
             self.create_iface(ipv6=ipv6)
 
-        subprocess.check_call(['/lib/systemd/systemd-networkd-wait-online',
-                               '--interface', self.iface, '--timeout=10'])
-
         try:
+            subprocess.check_call([self.networkd_wait_online, '--interface',
+                                   self.iface, '--timeout=%i' % online_timeout])
+
             if ipv6:
                 # check iface state and IP 6 address; FIXME: we need to wait a bit
-                # longer, as the iface is "configure" already with IPv4
+                # longer, as the iface is "configured" already with IPv4
                 timeout = 10
                 while timeout > 0:
                     out = subprocess.check_output(['ip', '-6', 'a', 'show', 'dev', self.iface])
-                    if b'state UP' in out and 'scope global' in out:
+                    if b'state UP' in out and b'scope global' in out:
                         break
                     time.sleep(1)
                     timeout -= 1
@@ -112,26 +152,31 @@ DHCP=yes''' % self.iface)
             self.assertRegex(out, b'inet 192.168.5.\d+/.* scope global dynamic')
 
             # check networkctl state
-            out = subprocess.check_output(['networkctl'], universal_newlines=True)
-            self.assertRegex(out, '%s\s+ether\s+routable\s+unmanaged' % self.if_router)
-            self.assertRegex(out, '%s\s+ether\s+routable\s+configured' % self.iface)
+            out = subprocess.check_output(['networkctl'])
+            self.assertRegex(out, ('%s\s+ether\s+routable\s+unmanaged' % self.if_router).encode())
+            self.assertRegex(out, ('%s\s+ether\s+routable\s+configured' % self.iface).encode())
 
-            out = subprocess.check_output(['networkctl', 'status', self.iface],
-                                          universal_newlines=True)
-            self.assertRegex(out, 'Type:\s+ether')
-            self.assertRegex(out, 'State:\s+routable.*configured')
-            self.assertRegex(out, 'Address:\s+192.168.5.\d+')
+            out = subprocess.check_output(['networkctl', 'status', self.iface])
+            self.assertRegex(out, b'Type:\s+ether')
+            self.assertRegex(out, b'State:\s+routable.*configured')
+            self.assertRegex(out, b'Address:\s+192.168.5.\d+')
             if ipv6:
-                self.assertRegex(out, '2600::')
+                self.assertRegex(out, b'2600::')
             else:
-                self.assertNotIn('2600::', out)
-            self.assertRegex(out, 'fe80::')
-            self.assertRegex(out, 'Gateway:\s+192.168.5.1')
-            self.assertRegex(out, 'DNS:\s+192.168.5.1')
-        except AssertionError:
-            # show dnsmasq log on failure
+                self.assertNotIn(b'2600::', out)
+            self.assertRegex(out, b'fe80::')
+            self.assertRegex(out, b'Gateway:\s+192.168.5.1')
+            self.assertRegex(out, b'DNS:\s+192.168.5.1')
+        except (AssertionError, subprocess.CalledProcessError):
+            # show networkd status, journal, and dnsmasq log on failure
+            with open(self.config) as f:
+                print('\n---- %s ----\n%s' % (self.config, f.read()))
+            print('---- networkctl status %s ----' % self.iface)
+            subprocess.call(['networkctl', 'status', self.iface])
+            print('---- networkd journal ----')
+            subprocess.call(['journalctl', '-b', '--no-pager', '-u', 'systemd-networkd.service'])
             with open(self.dnsmasq_log) as f:
-                sys.stderr.write('\n\n----- dnsmasq log ----\n%s\n------\n' % f.read())
+                sys.stdout.write('\n\n---- dnsmasq log ----\n%s\n------\n\n' % f.read())
             raise
 
         # verify resolv.conf if it gets dynamically managed
@@ -142,23 +187,42 @@ DHCP=yes''' % self.iface)
                         break
                 time.sleep(0.1)
             else:
+                subprocess.call(['journalctl', '-b', '-u', 'systemd-networkd-resolvconf-update.service'])
                 self.fail('nameserver 192.168.5.1 not found in /etc/resolv.conf')
 
         if not coldplug:
             # check post-down.d hook
             self.shutdown_iface()
 
-    def test_coldplug_dhcp_ip4(self):
-        self.do_test(coldplug=True, ipv6=False)
+    def test_coldplug_dhcp_yes_ip4(self):
+        # we have a 12s timeout on RA, so we need to wait longer
+        self.do_test(coldplug=True, ipv6=False, online_timeout=15)
+
+    def test_coldplug_dhcp_yes_ip4_no_ra(self):
+        # with disabling RA explicitly things should be fast
+        self.do_test(coldplug=True, ipv6=False,
+                     extra_opts='IPv6AcceptRouterAdvertisements=False')
+
+    def test_coldplug_dhcp_ip4_only(self):
+        # we have a 12s timeout on RA, so we need to wait longer
+        self.do_test(coldplug=True, ipv6=False, dhcp_mode='ipv4',
+                     online_timeout=15)
+
+    def test_coldplug_dhcp_ip4_only_no_ra(self):
+        # with disabling RA explicitly things should be fast
+        self.do_test(coldplug=True, ipv6=False, dhcp_mode='ipv4',
+                     extra_opts='IPv6AcceptRouterAdvertisements=False')
 
     def test_coldplug_dhcp_ip6(self):
         self.do_test(coldplug=True, ipv6=True)
 
     def test_hotplug_dhcp_ip4(self):
-        self.do_test(coldplug=False, ipv6=False)
+        # With IPv4 only we have a 12s timeout on RA, so we need to wait longer
+        self.do_test(coldplug=False, ipv6=False, online_timeout=15)
 
     def test_hotplug_dhcp_ip6(self):
         self.do_test(coldplug=False, ipv6=True)
+
 
 if __name__ == '__main__':
     unittest.main(testRunner=unittest.TextTestRunner(stream=sys.stdout,
