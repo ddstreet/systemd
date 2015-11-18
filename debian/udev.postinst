@@ -9,13 +9,6 @@ supported_kernel() {
   return 0
 }
 
-tempdir() {
-  local dir=$(tempfile --prefix=udev.)
-  rm $dir
-  mkdir $dir
-  echo $dir
-}
-
 chrooted() {
   if [ "$(stat -c %d/%i /)" = "$(stat -Lc %d/%i /proc/1/root 2>/dev/null)" ];
   then
@@ -180,8 +173,6 @@ case "$1" in
 	  rm /etc/udev/kernel-upgrade
 	elif can_start_udevd; then
           handle_service_rename
-	  rm -f /run/systemd/system/systemd-udevd.service
-	  rm -f /run/systemd/system/udev.service
           # This is necessary for the handle_service_rename case, but does not
           # hurt in general (invoke-rc.d does it, too).
 	  if [ -d /run/systemd/system ] ; then

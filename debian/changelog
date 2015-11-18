@@ -1,3 +1,68 @@
+systemd (228-1) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * New upstream release:
+    - Fix journald killing by watchdog. (Closes: #805042)
+    - Drop check for /etc/mtab. (Closes: #802025)
+    - Follow unit file symlinks in /usr, but not /etc when looking for
+      [Install] data, to avoid getting confused by Aliases. (Closes: #719695)
+    - journalctl: introduce short options for --since and --until.
+      (Closes: #801390)
+    - journald: Never accept fds from file systems with mandatory locking.
+      (LP: #1514141)
+    - Put nspawn containers in correct slice. (LP: #1455828)
+  * Cherry-pick some networkd fixes from trunk to fix regressions from 228.
+  * debian/rules: Configure with --as-needed to avoid unnecessary binary
+    dependencies.
+  * systemd-networkd-resolvconf-update.service: Increase StartLimitBurst, as
+    this might be legitimately called several times in quick succession. If
+    that part of the "networkd" autopkgtest fails, show the journal log for
+    that service for easier debugging.
+  * debian/tests/boot-and-services: Add test case for systemd-coredump.
+  * Add systemd-coredump postinst/prerm to enable/disable this without a
+    reboot.
+  * debian/tests/networkd: Check for systemd-networkd-wait-online in /usr as
+    well, for usage in other distros.
+  * debian/tests/logind: Skip suspend test if the kernel does not support
+    suspend.
+  * debian/tests/logind: Split tests into functions.
+  * debian/tests/boot-and-services: Ignore failures of console-setup.service,
+    to work around LP: #1516591.
+  * debian/tests/control: Restrict boot-smoke test to isolation-machine, it
+    does not currently work well in LXC.
+  * debian/tests/networkd: Add new test cases for "DHCP=all, IPv4 only,
+    disabling RA" (which should always be fast), "DHCP=all, IPv4 only" (which
+    will require a longer timeout due to waiting 12s for a potential IPv6 RA
+    reply), and "DHCP=ipv4" (with and without RA).
+  * debian/tests/networkd: Fix UnicodeDecodeError under 'C' locale.
+  * debian/tests/networkd: Show networkctl and journal output on failure.
+  * debian/tests/networkd: Fix bytes vs. string TypeError in the IPv6 polling.
+    (LP: #1516009)
+  * debian/tests/networkd: Show contents of test .network file on failure.
+  * debian/tests/networkd: Skip if networkd is already running (safer when
+    running on real systems), and add copyright header.
+  * Bump util-linux dependencies to >= 2.27.1 to ensure that the mount monitor
+    ignores /etc/mtab.
+
+  [ Felipe Sateler ]
+  * Enable elfutils support for getting stack traces for systemd-coredump.
+  * libnss-my{machines,hostname}.postrm: do not remove entries from
+    nsswitch.conf if there are packages from other architectures remaining.
+
+  [ Michael Biebl ]
+  * Drop systemd-setup-dgram-qlen.service. This has been made obsolete by
+    upstream commit 1985486 which bumps net.unix.max_dgram_qlen to 512 early
+    during boot.
+  * Various cleanups to the udev maintainer scripts:
+    - Remove unused tempdir() function.
+    - Properly stop udev daemon on remove.
+    - Stop killing udev daemon on failed upgrades and drop the corresponding
+      starts from preinst.
+    - Stop masking systemd-udevd.service and udev.service during upgrades. We
+      restart the udev daemon in postinst, so those masks seem unnecessary.
+
+ -- Martin Pitt <mpitt@debian.org>  Wed, 18 Nov 2015 16:11:59 +0100
+
 systemd (227-3) unstable; urgency=medium
 
   [ Martin Pitt ]
