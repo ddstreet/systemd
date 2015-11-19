@@ -1,3 +1,12 @@
+systemd (228-2) unstable; urgency=medium
+
+  * Remove wrong endianess conversion in test-siphash24 to fix FTBFS on
+    big-endian machines.
+  * Bump libseccomp-dev build dependency to indicate required versions for
+    backporting to jessie. (Closes: #805497)
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 19 Nov 2015 11:37:45 +0100
+
 systemd (228-1) unstable; urgency=medium
 
   [ Martin Pitt ]
