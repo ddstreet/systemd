@@ -1979,7 +1979,7 @@ int cg_migrate_everywhere(CGroupMask supported, const char *from, const char *to
         int r = 0, unified;
 
         if (!path_equal(from, to))  {
-                r = cg_migrate_recursive(SYSTEMD_CGROUP_CONTROLLER, from, SYSTEMD_CGROUP_CONTROLLER, to, false, true);
+                r = cg_migrate_recursive(SYSTEMD_CGROUP_CONTROLLER, from, SYSTEMD_CGROUP_CONTROLLER, to, true, true);
                 if (r < 0)
                         return r;
         }
@@ -2003,7 +2003,7 @@ int cg_migrate_everywhere(CGroupMask supported, const char *from, const char *to
                 if (!p)
                         p = to;
 
-                (void) cg_migrate_recursive_fallback(SYSTEMD_CGROUP_CONTROLLER, to, cgroup_controller_to_string(c), p, false, false);
+                (void) cg_migrate_recursive_fallback(SYSTEMD_CGROUP_CONTROLLER, to, cgroup_controller_to_string(c), p, true, false);
         }
 
         return 0;
