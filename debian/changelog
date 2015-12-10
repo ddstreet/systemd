@@ -1,4 +1,45 @@
-systemd (228-3) unstable; urgency=medium
+systemd (228-2ubuntu2) xenial; urgency=medium
+
+  * Merge with Debian unstable. Remaining Ubuntu changes:
+    - Hack to support system-image read-only /etc, and modify files in
+      /etc/writable/ instead.
+    - Simpler udev maintainer scripts (all platforms must support udev, no
+      debconf).
+    - Provide shutdown fallback for upstart. (LP: #1370329)
+    - debian/extra/ifup@.service: Additionally run for "auto" class. We don't
+      really support "allow-hotplug" in Ubuntu at the moment, so we need to
+      deal with "auto" devices appearing after "/etc/init.d/networking start"
+      already ran. (LP: #1374521)
+    - ifup@.service: Drop dependency on networking.service (i. e.
+      /etc/init.d/networking), and merely ensure that /run/network exists.
+      This avoids unnecessary dependencies/waiting during boot and dependency
+      cycles if hooks wait for other interfaces to come up (like ifenslave
+      with bonding interfaces). (LP: #1414544)
+    - Add Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch: In
+      Ubuntu we currently keep the setting whether the RTC is in local or UTC
+      time in /etc/default/rcS "UTC=yes|no", instead of /etc/adjtime.
+      (LP: #1377258)
+    - Put session scopes into all cgroup controllers. This makes unprivileged
+      user LXC containers work under systemd. (LP: #1346734)
+    - Change systemd-sysv's conflicts to upstart-sysv. (LP: #1422681)
+    - Build using libseccomp on powerpc and ppc64el (See Debian #800818).
+
+    Upgrade fixes, keep until 16.04 LTS release:
+    - systemd Conflicts/Replaces/Provides systemd-services.
+    - Remove obsolete systemd-logind upstart job.
+    - Clean up obsolete /etc/udev/rules.d/README.
+    - systemd.postinst: Migrate mountall specific fstab options to standard
+      util-linux "nofail" option.
+    - systemctl: Don't forward telinit u to upstart. This works around
+      upstart's Restart() always reexec'ing /sbin/init on Restart(), even if
+      that changes to point to systemd during the upgrade. This avoids running
+      systemd during a dist-upgrade. (LP: #1430479)
+    - Break lvm (<< 2.02.133-1ubuntu1) and remove our dummy /etc/init.d/lvm2
+      on upgrades, as it's shipped by lvm2 now.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 10 Dec 2015 16:56:42 +0100
+
+systemd (228-3) UNRELEASED; urgency=medium
 
   [ Martin Pitt ]
   * debian/rules: Remove temporary debug output from test failures again. All
@@ -30,21 +71,6 @@ systemd (228-3) unstable; urgency=medium
   * debian/extra/initramfs-tools/scripts/init-bottom/udev: Use "rm -rf"
     instead of "nuke". The latter does not exist any more in current
     initramfs-tools.
-  * Ignore test failures during "make check" if /etc/machine-id is missing
-    (like in ancient local schroots). (Closes: #807884)
-  * debian/extra/rules/80-debian-compat.rules: Remember which device got the
-    "cdrw", "dvd", or "dvdrw" symlink to avoid changing links on device
-    events. (Closes: #774080). Drop the rule for the "cdrom" symlink as that
-    is already created in 60-cdrom_id.rules.
-  * Eliminate "hotplug.functions" udev helper and put the logging functions
-    directly into net.agent. This simplifies the migration of the latter to
-    ifupdown.
-  * Adjust manpages to keep /usr/lib/systemd/{user*,boot,ntp-units.d,modules*}
-    paths, only keep /lib/systemd/{system*,network}. (Closes: #808997)
-  * debian/udev.README.Debian: Fix typo and slight wording improvement.
-    (Closes: #809513)
-  * Drop net.agent, 80-networking.rules, and ifup@.service. These moved to
-    ifupdown 0.8.5 now. Add Breaks: to earlier versions.
 
   [ Michael Biebl ]
   * Bump Build-Depends on libdw-dev to (>= 0.158) as per configure.ac.
@@ -58,13 +84,8 @@ systemd (228-3) unstable; urgency=medium
     also takes care of updating the systemd --user environment.
     (Closes: #795761)
   * Stop testing for unknown arguments in udev maintainer scripts.
-  * Drop networking.service.d/systemd.conf. The ifupdown package now ships a
-    proper service file so this drop-in file is no longer necessary.
 
-  [ Andreas Henriksson ]
-  * Fix LSB init hook to not reload masked services. (Closes: #804882)
-
- -- Martin Pitt <mpitt@debian.org>  Sat, 02 Jan 2016 17:42:56 +0100
+ -- Martin Pitt <mpitt@debian.org>  Thu, 19 Nov 2015 12:09:17 +0100
 
 systemd (228-2) unstable; urgency=medium
 
