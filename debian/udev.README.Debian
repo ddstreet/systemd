@@ -51,7 +51,7 @@ First, determine all relevant network interface names: those in
 /etc/udev/rules.d/70-persistent-net.rules, or if that does not exist (in
 virtual machines), in "ip link" or /sys/class/net/.
 
-Then for all of thse use a command like
+Then for every interface name use a command like
 
   grep -r eth0 /etc
 
@@ -97,15 +97,6 @@ interfaces. These can be customized in two different ways:
    details about this. /lib/systemd/network/99-default.link is the default
    policy, and /lib/systemd/network/01-mac-for-usb.link makes it use MAC based
    names for USB devices.
-
-Hotplugged Network Interfaces
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-After receiving events about network interfaces, net.agent will call
-ifupdown using the --allow=hotplug option. This makes the program act
-only on interfaces marked with the "allow-hotplug" statement.
-E.g: "allow-hotplug eth0" instead of the usual "auto eth0".
-Under SysVinit, the loopback interface must always be configured with "auto
-lo". Under systemd it is not necessary to explicitly configure "lo".
 
 Using udev with LDAP or NIS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
