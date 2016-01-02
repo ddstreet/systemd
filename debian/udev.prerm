@@ -24,14 +24,6 @@ case "$1" in
       kill_udevd
     fi
     ;;
-
-    upgrade)
-    ;;
-
-    *)
-    echo "$0 called with unknown argument '$1'" >&2
-    exit 1
-    ;;
 esac
 
 #DEBHELPER#

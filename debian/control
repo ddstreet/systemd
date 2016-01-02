@@ -43,7 +43,9 @@ Build-Depends: debhelper (>= 9.20141010),
                libblkid-dev (>= 2.24),
                libmount-dev (>= 2.27.1),
                libseccomp-dev (>= 2.2.1-2~) [amd64 arm64 armel armhf i386 mips mipsel mips64 mips64el x32],
-               libdw-dev <!stage1>,
+               libdw-dev (>= 0.158) <!stage1>,
+               linux-base <!nocheck>,
+               acl <!nocheck>,
                python3:native,
                python3-lxml:native
 
@@ -69,7 +71,8 @@ Depends: ${shlibs:Depends},
 Breaks: lvm2 (<< 2.02.104-1),
         lsb-base (<< 4.1+Debian4),
         apparmor (<< 2.9.2-1),
-        systemd-shim (<< 8-2)
+        systemd-shim (<< 8-2),
+        ifupdown (<< 0.8.5~),
 Conflicts: klogd
 Description: system and service manager
  systemd is a system and service manager for Linux. It provides aggressive
@@ -290,7 +293,8 @@ Breaks: consolekit (<< 0.4.6-1),
         kmod (<< 14),
         plymouth (<< 0.9.0-7),
         bash-completion (<< 1:2.1),
-        systemd (<< 224-2)
+        systemd (<< 224-2),
+        ifupdown (<< 0.8.5~),
 Replaces: bash-completion (<< 1:2.1),
           systemd (<< 224-2)
 Description: /dev/ and hotplug management daemon
