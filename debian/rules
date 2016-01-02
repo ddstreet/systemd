@@ -134,7 +134,7 @@ endif
 	# fix paths in manpages; manually check the remaining /usr occurrences
 	# occasionally, with filtering out paths which are known to be in /usr:
 	# grep -r /usr debian/install/deb/usr/share/man/|egrep -v '/usr/local|os.*release|factory|zoneinfo|tmpfiles|kernel|foo|machines|sysctl|dbus|include|binfmt'
-	find debian/install/deb/usr/share/man/ -type f | xargs sed -ri 's_/usr(/lib/systemd|/lib/udev|/lib/modules-load.d|/lib/modules\\-load|/lib[^/]|/lib/[^a-z])_\1_g'
+	find debian/install/deb/usr/share/man/ -type f | xargs sed -ri 's_/usr(/lib/systemd/system|/lib/systemd/network|/lib/udev|/lib[^/]|/lib/[^a-z])_\1_g'
 
 override_dh_auto_clean:
 	dh_auto_clean --builddirectory=build-deb
@@ -159,6 +159,7 @@ override_dh_install:
 	rm -rf debian/install/*/usr/lib/rpm/
 	rm -rf debian/install/*/etc/kernel/
 	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
+	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	find debian/install/ -name '*.la' -delete
 	# remove files related to factory-reset feature
 	find debian/install/ \( -name 'systemd-update-done*' -o \
@@ -258,15 +259,16 @@ override_dh_strip:
 override_dh_auto_test:
 ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
 	# some tests hang under fakeroot, so disable fakeroot
-	# temporarily show kernel version and /etc/hosts, for debugging what
-	# they are failing on
+	# some tests are known to fail under ancient kernels
 	env -u LD_PRELOAD make -C build-deb check || ( \
 		cd build-deb; \
 		for f in test-*.log; do echo "==== $$f ===="; cat $$f; done; \
-		echo "==== /etc/hosts ==="; cat /etc/hosts; \
-		echo "==== kernel version ==="; cat /proc/version; \
-		echo "==== machine id ==="; cat /etc/machine-id; \
-		exit 1)
+		if [ ! -e /etc/machine-id ]; then echo "/etc/machine-id missing, ignoring test failures"; exit 0; fi; \
+		if linux-version compare "$$(uname -r)" ge 3.13; then \
+		    exit 1; \
+		else \
+		    echo "Ignoring test failure under too old kernel $$(uname -r)"; \
+		fi)
 endif
 
 %:

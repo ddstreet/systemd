@@ -221,7 +221,7 @@ poweroff\n''')
             stdout=subprocess.PIPE)
         out = systemctl.communicate()[0]
         self.assertEqual(systemctl.returncode, 3, out)
-        self.assertIn(b'Requesting system poweroff', out)
+        self.assertIn(b'Stopped Container c1', out)
 
 
 @unittest.skipUnless(os.path.exists('/sys/kernel/security/apparmor'),
@@ -423,27 +423,24 @@ class CoredumpTest(unittest.TestCase):
 
         # with systemd-coredump installed we should get the core dumps in
         # systemd's dir
-        timeout = 50
-        while timeout > 0:
+        for timeout in range(50):
             cores = glob('/var/lib/systemd/coredump/core.bash.*')
             if cores:
                 break
             time.sleep(0.1)
-            timeout -= 1
         self.assertNotEqual(cores, [])
         self.assertEqual(glob('/tmp/core*'), [])
 
         # we should also get a message and stack trace in journal
-        timeout = 50
-        while timeout > 0:
+        for timeout in range(50):
             journal = subprocess.check_output(['journalctl', '/lib/systemd/systemd-coredump'])
-            if re.search(b'Process.*bash.*dumped core', journal):
+            if re.search(b'Process.*bash.*dumped core', journal) and \
+               re.search(b'#[0-9] .*bash', journal):
                 break
             time.sleep(0.1)
-            timeout -= 1
         self.assertRegex(journal, b'Process.*bash.*dumped core')
         self.assertIn(b'Stack trace', journal)
-        self.assertRegex(journal, b'#[0-9] .* main.*bash')
+        self.assertRegex(journal, b'#[0-9] .*bash')
 
 
 def pre_boot_setup():
