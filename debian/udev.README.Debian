@@ -19,8 +19,14 @@ covered by the old 75-persistent-net-generator.rules will keep their interface
 names, see below.
 
 You can disable these stable names and go back to the kernel-provided ones
-(which don't have a stable order) by putting "net.ifnames=0" into the kernel
-command line (e. g. in /etc/default/grub's GRUB_CMDLINE_LINUX_DEFAULT).
+(which don't have a stable order) in one of two ways:
+
+  - Put "net.ifnames=0" into the kernel command line (e. g. in
+    /etc/default/grub's GRUB_CMDLINE_LINUX_DEFAULT, then run "update-grub").
+
+  - Disable the default *.link rules with
+    "ln -s /dev/null /etc/udev/rules.d/80-net-setup-link.rules"
+    and rebuild the initrd with "update-initramfs -u".
 
 See this page for more information:
 http://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/
@@ -97,6 +103,9 @@ interfaces. These can be customized in two different ways:
    details about this. /lib/systemd/network/99-default.link is the default
    policy, and /lib/systemd/network/01-mac-for-usb.link makes it use MAC based
    names for USB devices.
+
+Any of the above changes require an initrd update with "update-initramfs -u" to
+get effective.
 
 Using udev with LDAP or NIS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,3 +1,14 @@
+systemd (228-4) unstable; urgency=medium
+
+  * debian/udev.README.Debian: Add alternative way of disabling ifnames.
+    (Closes: #809339)
+  * Put back /lib/udev/hotplug.functions, until the three remaining packages
+    that use it stop doing so. (Closes: #810114)
+  * debian/udev.README.Debian: Point out that any change to interface naming
+    rules requires an initrd update.
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 11 Jan 2016 07:12:40 +0100
+
 systemd (228-3) unstable; urgency=medium
 
   [ Martin Pitt ]
