@@ -3,13 +3,9 @@ Enabling persistent logging in journald
 
 To enable persistent logging, create /var/log/journal:
 
-  mkdir -p /var/log/journal
-  systemd-tmpfiles --create --prefix /var/log/journal
+install -d -g systemd-journal /var/log/journal
 
-systemd will make the journal files owned by the "systemd-journal" group and
-add an ACL for read permissions for users in the "adm" group.
-To grant a user read access to the system journal, add them to one of the two
-groups.
+systemd will add an ACL for read permissions for users in the "adm" group.
 
 This will allow you to look at previous boot logs with e. g.
 "journalctl -b -1".

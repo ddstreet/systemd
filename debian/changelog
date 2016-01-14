@@ -1,87 +1,47 @@
-systemd (228-5) unstable; urgency=medium
+systemd (228-4ubuntu1) xenial; urgency=medium
 
-  [ Martin Pitt ]
+  * Merge with Debian unstable. Remaining Ubuntu changes:
+    - Hack to support system-image read-only /etc, and modify files in
+      /etc/writable/ instead.
+    - Simpler udev maintainer scripts (all platforms must support udev, no
+      debconf).
+    - Provide shutdown fallback for upstart. (LP: #1370329)
+    - Add Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch: In
+      Ubuntu we currently keep the setting whether the RTC is in local or UTC
+      time in /etc/default/rcS "UTC=yes|no", instead of /etc/adjtime.
+      (LP: #1377258)
+    - Put session scopes into all cgroup controllers. This makes unprivileged
+      user LXC containers work under systemd. (LP: #1346734)
+    - Change systemd-sysv's conflicts to upstart-sysv. (LP: #1422681)
+    - Build using libseccomp on powerpc and ppc64el (See Debian #800818).
+
+    Upgrade fixes, keep until 16.04 LTS release:
+    - systemd Conflicts/Replaces/Provides systemd-services.
+    - Remove obsolete systemd-logind upstart job.
+    - Clean up obsolete /etc/udev/rules.d/README.
+    - systemd.postinst: Migrate mountall specific fstab options to standard
+      util-linux "nofail" option.
+    - systemctl: Don't forward telinit u to upstart. This works around
+      upstart's Restart() always reexec'ing /sbin/init on Restart(), even if
+      that changes to point to systemd during the upgrade. This avoids running
+      systemd during a dist-upgrade. (LP: #1430479)
+    - Break lvm (<< 2.02.133-1ubuntu1) and remove our dummy /etc/init.d/lvm2
+      on upgrades, as it's shipped by lvm2 now.
+    - Make udev break on mdadm << 3.3-2ubuntu3, as udev's init script dropped
+      the "Provides: raid-mdadm". This needs to be kept until after 16.04 LTS.
+
+  * Adjust our user LXC support patch to only chown the "systemd" controller
+    to the user. Other controllers are now being handled by libpam-cgm. Adjust
+    debian/tests/user-session-cgroups accordingly.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 14 Jan 2016 12:19:58 +0100
+
+systemd (228-5) UNRELEASED; urgency=medium
+
   * Drop systemd-vconsole-setup.service: It has never been installed/used in
     Debian and is not necessary for Ubuntu any more.
-  * Drop halt-local.service. This has never been documented/used in Debian.
-    (LP: #1532553)
-  * debian/extra/initramfs-tools/scripts/init-bottom/udev: Prefer "nuke"
-    again, it comes from klibc-utils. But fall back to "rm" if it does not
-    exist.
-  * systemd-timesyncd.service.d/disable-with-time-daemon.conf: Also don't run
-    if /usr/sbin/VBoxService exists, as virtualbox-guest-utils already
-    provides time synchronization with the host. (Closes: #812522)
-  * Drop Michael Stapelberg from Uploaders:, he stopped maintenance long ago.
-    Thanks Michael for your great work in the past!
-  * Replace "sysv-rc" dependency with Conflicts: openrc, file-rc. The
-    rationale from #739679 still applies, but with the moving of
-    {invoke,update}-rc.d to init-system-helpers we don't actually need
-    anything from sysv-rc any more other than the assumption that SysV init
-    scripts are enabled in /etc/rc?.d/ for the SysV generator to work (and
-    file-rc and openrc don't do that).
-  * debian/tests/timedated: Verify /etc/localtime symlink. Skip verifying the
-    /etc/timezone file (which is Debian specific) if $TEST_UPSTREAM is set.
-  * debian/tests/localed-locale: Check /etc/locale.conf if $TEST_UPSTREAM is
-    set.
-  * debian/tests/localed-x11-keymap: Test /etc/X11/xorg.conf.d/00-keyboard.conf
-    if $TEST_UPSTREAM is set.
-  * debian/tests/boot-and-services: Check for reaching graphical.target
-    instead of default.target, as the latter is a session systemd state only.
-  * debian/tests/boot-and-services: Skip tests which are known to fail/not
-    applicable with testing upstream builds.
-  * Drop Fix-up-tmpfiles.d-permissions-properly.patch:
-    - /run/lock is already created differently by
-      Make-run-lock-tmpfs-an-API-fs.patch, and contradicts to that.
-    - /run/lock/lockdev/ isn't being used anywhere and got dropped
-      upstream; backport the patch (tmpfiles-drop-run-lock-lockdev.patch).
-    - Move dropping of "group:wheel" (which has never existed in Debian) into
-      debian/rules, to also catch occurrences in other parts of the file which
-      the static patch would overlook.
-  * Shorten persistent identifier for CCW network interfaces (on s390x only).
-    (LP: #1526808)
-  * debian/rules: If $TEST_UPSTREAM is set (when building/testing upstream
-    master instead of distro packages), don't fail on non-installed new files
-    or new library symbols.
-  * Add systemd-sysv conflict to upstart-sysv, and version the upstart
-    conflict. This works with both Debian's and Ubuntu's upstart packages.
 
-  [ Michael Biebl ]
-  * Drop support for the /etc/udev/disabled flag file. This was a workaround
-    for udev failing to install with debootstrap because it didn't use
-    invoke-rc.d and therefor was not compliant with policy-rc.d. See #520742
-    for further details. This is no longer the case, so supporting that file
-    only leads to confusion about its purpose.
-  * Retrigger cleanup of org.freedesktop.machine1.conf and
-    hwclock-save.service now that dpkg has been fixed to correctly pass the
-    old version to postinst on upgrade. (Closes: #802545)
-  * Only ship *.link files as part of the udev package. The *.network files
-    are solely used by systemd-networkd and should therefor be shipped by the
-    systemd package. (Closes: #808237)
-  * Cherry-pick a few fixes from upstream:
-    - Fix unaligned access in initialize_srand(). (Closes: #812928)
-    - Don't run kmod-static-nodes.service if module list is empty. This
-      requires kmod v23. (Closes: #810367)
-    - Fix typo in systemctl(1). (Closes: #807462)
-    - Fix systemd-nspawn --link-journal=host to not fail if the directory
-      already exists. (Closes: #808222)
-    - Fix a typo in logind-dbus.c. The polkit action is named
-      org.freedesktop.login1.power-off, not org.freedesktop.login1.poweroff.
-    - Don't log an EIO error in gpt-auto-generator if blkid finds something
-      which is not a partition table. (Closes: #765586)
-    - Apply ACLs to /var/log/journal and also set them explicitly for
-      system.journal.
-  * Only skip the filesystem check for /usr if the /run/initramfs/fsck-usr
-    flag file exists. Otherwise we break booting with dracut which uses
-    systemd inside the initramfs. (Closes: #810748)
-  * Update the instructions in README.Debian for creating /var/log/journal.
-    They are now in line with the documentation in the systemd-journald(8) man
-    page and ensure that ACLs and group permissions are properly set.
-    (Closes: #800947, #805617)
-  * Drop "systemctl daemon-reload" from lsb init-functions hook. This is no
-    longer necessary as invoke-rc.d and init-system-helpers take care of this
-    nowadays.
-
- -- Martin Pitt <mpitt@debian.org>  Wed, 03 Feb 2016 10:09:46 +0100
+ -- Martin Pitt <mpitt@debian.org>  Mon, 11 Jan 2016 14:00:11 +0100
 
 systemd (228-4) unstable; urgency=medium
 
