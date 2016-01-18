@@ -840,7 +840,7 @@ void unit_destroy_cgroup_if_empty(Unit *u) {
         if (!u->cgroup_path)
                 return;
 
-        r = cg_trim_everywhere(u->manager->cgroup_supported, u->cgroup_path, !unit_has_name(u, SPECIAL_ROOT_SLICE));
+        r = cg_trim_everywhere(u->cgroup_realized_mask, u->cgroup_path, !unit_has_name(u, SPECIAL_ROOT_SLICE));
         if (r < 0) {
                 log_debug_errno(r, "Failed to destroy cgroup %s: %m", u->cgroup_path);
                 return;
