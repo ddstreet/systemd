@@ -41,7 +41,8 @@ typedef enum CGroupControllerMask {
         CGROUP_NET_PRIO = (1 << 8),
         CGROUP_FREEZER = (1 << 9),
         CGROUP_PERF_EVENT = (1 << 10),
-        _CGROUP_CONTROLLER_MASK_ALL = (1 << 11) - 1
+        CGROUP_PERF_PIDS = (1 << 11),
+        _CGROUP_CONTROLLER_MASK_ALL = (1 << 12) - 1
 } CGroupControllerMask;
 
 /*
