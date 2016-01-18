@@ -71,7 +71,7 @@ static int context_read_data(Context *c) {
         r = readlink_malloc("/etc/localtime", &t);
         if (r < 0) {
                 if (r == -EINVAL)
-                        log_warning("/etc/localtime should be a symbolic link to a time zone data file in /usr/share/zoneinfo/.");
+                        log_debug("/etc/localtime should be a symbolic link to a time zone data file in /usr/share/zoneinfo/.");
                 else
                         log_warning_errno(r, "Failed to get target of /etc/localtime: %m");
         } else {
@@ -82,12 +82,18 @@ static int context_read_data(Context *c) {
                         e = path_startswith(t, "../usr/share/zoneinfo/");
 
                 if (!e)
-                        log_warning("/etc/localtime should be a symbolic link to a time zone data file in /usr/share/zoneinfo/.");
+                        log_debug("/etc/localtime should be a symbolic link to a time zone data file in /usr/share/zoneinfo/.");
                 else {
                         c->zone = strdup(e);
                         if (!c->zone)
                                 return log_oom();
                 }
+        }
+
+        r = read_one_line_file("/etc/timezone", &c->zone);
+        if (r < 0) {
+                if (r != -ENOENT)
+                        log_warning("Failed to read /etc/timezone: %s", strerror(-r));
         }
 
         if (isempty(c->zone)) {
@@ -103,11 +109,15 @@ static int context_read_data(Context *c) {
 static int context_write_data_timezone(Context *c) {
         _cleanup_free_ char *p = NULL;
         int r = 0;
+        struct stat st;
 
         assert(c);
 
         if (isempty(c->zone)) {
                 if (unlink("/etc/localtime") < 0 && errno != ENOENT)
+                        r = -errno;
+
+                if (unlink("/etc/timezone") < 0 && errno != ENOENT)
                         r = -errno;
 
                 return r;
@@ -120,6 +130,12 @@ static int context_write_data_timezone(Context *c) {
         r = symlink_atomic(p, "/etc/localtime");
         if (r < 0)
                 return r;
+
+        if (stat("/etc/timezone", &st) == 0 && S_ISREG(st.st_mode)) {
+                r = write_string_file("/etc/timezone", c->zone, WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_ATOMIC);
+                if (r < 0)
+                        return r;
+        }
 
         return 0;
 }
