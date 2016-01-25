@@ -12,3 +12,4 @@ lib/udev/rules.d/64-btrfs.rules
 lib/udev/rules.d/75-probe_mtd.rules
 lib/udev/rules.d/80-drivers.rules
 ../../extra/rules/73-idrac.rules lib/udev/rules.d/
+../../extra/rules/75-persistent-net-generator.rules lib/udev/rules.d/
