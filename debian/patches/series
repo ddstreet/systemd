@@ -43,3 +43,4 @@ Provide-shutdown-fallback-for-upstart.patch
 Get-RTC-is-in-local-time-setting-from-etc-default-rc.patch
 core-Make-logind-session-cgroup-user-writable.patch
 systemctl-Don-t-forward-telinit-u-to-upstart.patch
+c248c80dfdfacadb9460a8831ffff45ed382e48a.patch
