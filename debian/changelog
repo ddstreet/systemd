@@ -1,3 +1,10 @@
+systemd (228-4ubuntu2) xenial; urgency=high
+
+  * Use shorter bus_id for ccw net-id interface names. LP: #1526808
+  * Add a snippet to migrate existing network configuration to new names.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 27 Jan 2016 19:01:12 +0000
+
 systemd (228-4ubuntu1) xenial; urgency=medium
 
   * Merge with Debian unstable. Remaining Ubuntu changes:

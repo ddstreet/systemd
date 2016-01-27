@@ -79,6 +79,13 @@ Driver=virtio_net
 NamePolicy=onboard kernel
 EOF
   fi
+
+  # drop in 16.10
+  if dpkg --compare-versions "$2" lt-nl "228-4ubuntu2" &&
+      [ "$(dpkg --print-architecture)" = "s390x" ];
+  then
+    sed 's/enccw[0.]*/enc/' -i /etc/network/interfaces /etc/network/interfaces.d/* 2>/dev/null || true
+  fi
 }
 
 update_hwdb() {
