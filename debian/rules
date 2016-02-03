@@ -12,6 +12,16 @@ else
     DEFAULT_NTP_SERVERS = 0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org
 endif
 
+# fail on missing files and symbols changes on distro builds, but not if we
+# build/test upstream master
+ifeq ($(TEST_UPSTREAM),)
+    DH_INSTALL_MISSING = --fail-missing
+    GENSYMBOLS_LEVEL = 4
+else
+    DH_INSTALL_MISSING = --list-missing
+    GENSYMBOLS_LEVEL = 1
+endif
+
 ifneq (, $(filter noudeb, $(DEB_BUILD_OPTIONS)))
 export DEB_BUILD_PROFILES += noudeb
 endif
@@ -135,6 +145,8 @@ endif
 	# occasionally, with filtering out paths which are known to be in /usr:
 	# grep -r /usr debian/install/deb/usr/share/man/|egrep -v '/usr/local|os.*release|factory|zoneinfo|tmpfiles|kernel|foo|machines|sysctl|dbus|include|binfmt'
 	find debian/install/deb/usr/share/man/ -type f | xargs sed -ri 's_/usr(/lib/systemd/system|/lib/systemd/network|/lib/udev|/lib[^/]|/lib/[^a-z])_\1_g'
+	# we don't have a "wheel" group in Debian; https://github.com/systemd/systemd/issues/2492
+	find debian/install/deb/usr/lib/tmpfiles.d/ -type f | xargs sed -ri 's/,(d:)?group:wheel:[^,]+//'
 
 override_dh_auto_clean:
 	dh_auto_clean --builddirectory=build-deb
@@ -160,6 +172,7 @@ override_dh_install:
 	rm -rf debian/install/*/etc/kernel/
 	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
+	rm -f debian/install/*/lib/systemd/system/halt-local.service
 	find debian/install/ -name '*.la' -delete
 	# remove files related to factory-reset feature
 	find debian/install/ \( -name 'systemd-update-done*' -o \
@@ -176,7 +189,7 @@ endif
 	# fix location of NSS modules
 	cd debian/install/deb/; for f in usr/lib/*/libnss_*; do mv $$f $${f#usr/}; done
 
-	dh_install --remaining-packages --sourcedir=debian/install/deb --fail-missing
+	dh_install --remaining-packages --sourcedir=debian/install/deb $(DH_INSTALL_MISSING)
 
 	# Make sure the runlevel services are known by systemd so their targets
 	# get launched. See https://bugzilla.redhat.com/show_bug.cgi?id=1002806
@@ -214,7 +227,6 @@ endif
 	if dpkg-vendor --is ubuntu; then \
 		install -D --mode=644 debian/extra/udev.py debian/udev/usr/share/apport/package-hooks/udev.py; \
 		install -D --mode=644 debian/extra/systemd.py debian/systemd/usr/share/apport/package-hooks/systemd.py; \
-		install --mode=644 debian/extra/systemd-vconsole-setup.service debian/systemd/lib/systemd/system/; \
 		install --mode=644 debian/extra/rules-ubuntu/*.rules debian/udev/lib/udev/rules.d/; \
 	fi
 
@@ -243,8 +255,8 @@ override_dh_shlibdeps:
 	dh_shlibdeps --remaining-packages
 
 override_dh_makeshlibs:
-	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb -- -c4
-	dh_makeshlibs --remaining-packages -- -c4
+	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb -- -c$(GENSYMBOLS_LEVEL)
+	dh_makeshlibs --remaining-packages -- -c$(GENSYMBOLS_LEVEL)
 
 autoreconf:
 	intltoolize -f -c
