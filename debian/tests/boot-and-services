@@ -75,6 +75,8 @@ class ServicesTest(unittest.TestCase):
         self.assertNotEqual(b'', out)
         self.active_unit('systemd-logind')
 
+    @unittest.skipIf('TEST_UPSTREAM' in os.environ,
+                     'Forwarding to rsyslog is a Debian patch')
     def test_rsyslog(self):
         out = subprocess.check_output(['ps', 'u', '-C', 'rsyslogd'])
         self.assertIn(b'bin/rsyslogd', out)
@@ -84,7 +86,7 @@ class ServicesTest(unittest.TestCase):
         # has kernel messages
         self.assertRegex(log, 'kernel:.*[cC]ommand line:')
         # has init messages
-        self.assertRegex(log, 'systemd.*Reached target Default')
+        self.assertRegex(log, 'systemd.*Reached target Graphical Interface')
         # has other services
         self.assertRegex(log, 'NetworkManager.*:')
 
@@ -115,6 +117,8 @@ class ServicesTest(unittest.TestCase):
             self.assertEqual(status, 3, status_out)
             self.assertNotEqual(findmnt, 0)
 
+    @unittest.skipIf('TEST_UPSTREAM' in os.environ,
+                     'Debian specific configuration, N/A for upstream')
     def test_tmp_cleanup(self):
         # systemd-tmpfiles-clean.timer only runs 15 mins after boot, shortcut
         # it
@@ -154,7 +158,7 @@ class JournalTest(unittest.TestCase):
         # has kernel messages
         self.assertRegex(out, b'kernel:.*[cC]ommand line:')
         # has init messages
-        self.assertRegex(out, b'systemd.*Reached target Default')
+        self.assertRegex(out, b'systemd.*Reached target Graphical Interface')
         # has other services
         self.assertRegex(out, b'NetworkManager.*:.*starting')
 
@@ -352,6 +356,8 @@ ExecStart=/bin/sleep 500
         subprocess.check_call(['systemctl', 'stop', self.service])
         self.assertNoControllers()
 
+    @unittest.skipIf('TEST_UPSTREAM' in os.environ,
+                     'fix not applied upstream')
     def test_custom_cgroup_cleanup(self):
         '''cgroup cleanup does not touch manually created cgroups'''
 
