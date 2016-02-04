@@ -311,6 +311,25 @@ static int scope_start(Unit *u) {
                 return r;
         }
 
+        /* make cgroup for logind sessions user-writable, for LXC user containers */
+        if (UNIT_ISSET(u->slice) && startswith(UNIT_DEREF(u->slice)->id, "user-")) {
+                long uid = atol(UNIT_DEREF(u->slice)->id + 5); /* FIXME: Eww! Is there a better way to get the UID? */
+                if (uid > 0) {
+                        _cleanup_free_ char *fs = NULL;
+                        assert(u->cgroup_path);
+                        r = cg_get_path_and_check(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, NULL, &fs);
+                        if (r >= 0) {
+                                r = chown(fs, (uid_t) uid, (gid_t) -1);
+                                if (r < 0)
+                                        log_unit_warning_errno(u, errno, "Cannot make cgroup %s user writable: %m", u->cgroup_path);
+                        } else {
+                                log_unit_error_errno(u, r, "Cannot get cgroup path %s: %m", u->cgroup_path);
+                        }
+                } else {
+                        log_unit_error(u, "Cannot determine UID from slice %s", UNIT_DEREF(u->slice)->id);
+                }
+        }
+
         s->result = SCOPE_SUCCESS;
 
         scope_set_state(s, SCOPE_RUNNING);
