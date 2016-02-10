@@ -22,9 +22,6 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include "sd-bus.h"
 #include "sd-event.h"
@@ -44,9 +41,6 @@
 #include "strv.h"
 #include "user-util.h"
 #include "util.h"
-#include "random-util.h"
-#include "copy.h"
-#include "hexdecoct.h"
 
 #define NULL_ADJTIME_UTC "0.0 0 0\n0\nUTC\n"
 #define NULL_ADJTIME_LOCAL "0.0 0 0\n0\nLOCAL\n"
@@ -71,94 +65,6 @@ static void context_free(Context *c) {
         bus_verify_polkit_async_registry_free(c->polkit_registry);
 }
 
-static int symlink_or_copy(const char *from, const char *to) {
-        char *pf = NULL, *pt = NULL;
-        struct stat a, b;
-        int r;
-
-        assert(from);
-        assert(to);
-
-        if (!(pf = dirname_malloc(from)) ||
-            !(pt = dirname_malloc(to))) {
-                r = -ENOMEM;
-                goto finish;
-        }
-
-        if (stat(pf, &a) < 0 ||
-            stat(pt, &b) < 0) {
-                r = -errno;
-                goto finish;
-        }
-
-        if (a.st_dev != b.st_dev) {
-                free(pf);
-                free(pt);
-
-                return copy_file(from, to, O_EXCL, 0644, 0);
-        }
-
-        if (symlink(from, to) < 0) {
-                r = -errno;
-                goto finish;
-        }
-
-        r = 0;
-
-finish:
-        free(pf);
-        free(pt);
-
-        return r;
-}
-
-static int symlink_or_copy_atomic(const char *from, const char *to) {
-        char *t, *x;
-        const char *fn;
-        size_t k;
-        uint64_t u;
-        unsigned i;
-        int r;
-
-        assert(from);
-        assert(to);
-
-        t = new(char, strlen(to) + 1 + 16 + 1);
-        if (!t)
-                return -ENOMEM;
-
-        fn = basename(to);
-        k = fn-to;
-        memcpy(t, to, k);
-        t[k] = '.';
-        x = stpcpy(t+k+1, fn);
-
-        u = random_u64();
-        for (i = 0; i < 16; i++) {
-                *(x++) = hexchar(u & 0xF);
-                u >>= 4;
-        }
-
-        *x = 0;
-
-        r = symlink_or_copy(from, t);
-        if (r < 0) {
-                unlink(t);
-                free(t);
-                return r;
-        }
-
-        if (rename(t, to) < 0) {
-                r = -errno;
-                unlink(t);
-                free(t);
-                return r;
-        }
-
-        free(t);
-        return r;
-}
-
 static int context_read_data(Context *c) {
         _cleanup_free_ char *t = NULL;
         int r;
@@ -180,6 +86,25 @@ static int context_read_data(Context *c) {
         return 0;
 }
 
+/* Hack for Ubuntu phone: check if path is an existing symlink to
+ * /etc/writable; if it is, update that instead */
+static const char* writable_filename(const char *path) {
+        ssize_t r;
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
+        const char *result = path;
+        int orig_errno = errno;
+
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
+        }
+
+        errno = orig_errno;
+        return result;
+}
+
 static int context_write_data_timezone(Context *c) {
         _cleanup_free_ char *p = NULL;
         int r = 0;
@@ -188,10 +113,10 @@ static int context_write_data_timezone(Context *c) {
         assert(c);
 
         if (isempty(c->zone)) {
-                if (unlink("/etc/localtime") < 0 && errno != ENOENT)
+                if (unlink(writable_filename("/etc/localtime")) < 0 && errno != ENOENT)
                         r = -errno;
 
-                if (unlink("/etc/timezone") < 0 && errno != ENOENT)
+                if (unlink(writable_filename("/etc/timezone")) < 0 && errno != ENOENT)
                         r = -errno;
 
                 return r;
@@ -201,12 +126,12 @@ static int context_write_data_timezone(Context *c) {
         if (!p)
                 return log_oom();
 
-        r = symlink_or_copy_atomic(p, "/etc/localtime");
+        r = symlink_atomic(p, writable_filename("/etc/localtime"));
         if (r < 0)
                 return r;
 
-        if (stat("/etc/timezone", &st) == 0 && S_ISREG(st.st_mode)) {
-                r = write_string_file("/etc/timezone", c->zone, WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_ATOMIC);
+        if (stat(writable_filename("/etc/timezone"), &st) == 0 && S_ISREG(st.st_mode)) {
+                r = write_string_file(writable_filename("/etc/timezone"), c->zone, WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_ATOMIC);
                 if (r < 0)
                         return r;
         }
@@ -258,7 +183,7 @@ static int context_write_data_local_rtc(Context *c) {
                 *(char*) mempcpy(stpcpy(mempcpy(w, s, a), c->local_rtc ? "LOCAL" : "UTC"), e, b) = 0;
 
                 if (streq(w, NULL_ADJTIME_UTC)) {
-                        if (unlink("/etc/adjtime") < 0)
+                        if (unlink(writable_filename("/etc/adjtime")) < 0)
                                 if (errno != ENOENT)
                                         return -errno;
 
