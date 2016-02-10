@@ -14,11 +14,11 @@ udev-net_id-for-ccw-bus-shorten-the-identifier-and-stip-l.patch
 gpt-auto-don-t-log-an-EIO-error-if-blkid-finds-something-.patch
 tmpfiles-also-set-acls-on-var-log-journal.patch
 tmpfiles-set-acls-on-system.journal-explicitly.patch
+core-do-not-warn-about-Wants-depencencies-on-masked-units.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
 don-t-try-to-start-autovt-units-when-not-running-wit.patch
-timedated-don-t-rely-on-usr-being-mounted-in-the-ini.patch
 Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
 Start-logind-on-demand-via-libpam-systemd.patch
 Update-localed-to-use-the-Debian-config-files.patch
@@ -45,3 +45,8 @@ cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+
+## Ubuntu patches:
+Support-system-image-read-only-etc.patch
+systemctl-Don-t-forward-telinit-u-to-upstart.patch
+Provide-shutdown-fallback-for-upstart.patch
