@@ -1,5 +1,3 @@
-/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
-
 /***
   This file is part of systemd.
 
@@ -22,9 +20,6 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include "sd-bus.h"
 #include "sd-event.h"
@@ -36,7 +31,6 @@
 #include "bus-util.h"
 #include "clock-util.h"
 #include "def.h"
-#include "event-util.h"
 #include "fileio-label.h"
 #include "fs-util.h"
 #include "path-util.h"
@@ -44,9 +38,6 @@
 #include "strv.h"
 #include "user-util.h"
 #include "util.h"
-#include "random-util.h"
-#include "copy.h"
-#include "hexdecoct.h"
 
 #define NULL_ADJTIME_UTC "0.0 0 0\n0\nUTC\n"
 #define NULL_ADJTIME_LOCAL "0.0 0 0\n0\nLOCAL\n"
@@ -69,94 +60,6 @@ static void context_free(Context *c) {
 
         free(c->zone);
         bus_verify_polkit_async_registry_free(c->polkit_registry);
-}
-
-static int symlink_or_copy(const char *from, const char *to) {
-        char *pf = NULL, *pt = NULL;
-        struct stat a, b;
-        int r;
-
-        assert(from);
-        assert(to);
-
-        if (!(pf = dirname_malloc(from)) ||
-            !(pt = dirname_malloc(to))) {
-                r = -ENOMEM;
-                goto finish;
-        }
-
-        if (stat(pf, &a) < 0 ||
-            stat(pt, &b) < 0) {
-                r = -errno;
-                goto finish;
-        }
-
-        if (a.st_dev != b.st_dev) {
-                free(pf);
-                free(pt);
-
-                return copy_file(from, to, O_EXCL, 0644, 0);
-        }
-
-        if (symlink(from, to) < 0) {
-                r = -errno;
-                goto finish;
-        }
-
-        r = 0;
-
-finish:
-        free(pf);
-        free(pt);
-
-        return r;
-}
-
-static int symlink_or_copy_atomic(const char *from, const char *to) {
-        char *t, *x;
-        const char *fn;
-        size_t k;
-        uint64_t u;
-        unsigned i;
-        int r;
-
-        assert(from);
-        assert(to);
-
-        t = new(char, strlen(to) + 1 + 16 + 1);
-        if (!t)
-                return -ENOMEM;
-
-        fn = basename(to);
-        k = fn-to;
-        memcpy(t, to, k);
-        t[k] = '.';
-        x = stpcpy(t+k+1, fn);
-
-        u = random_u64();
-        for (i = 0; i < 16; i++) {
-                *(x++) = hexchar(u & 0xF);
-                u >>= 4;
-        }
-
-        *x = 0;
-
-        r = symlink_or_copy(from, t);
-        if (r < 0) {
-                unlink(t);
-                free(t);
-                return r;
-        }
-
-        if (rename(t, to) < 0) {
-                r = -errno;
-                unlink(t);
-                free(t);
-                return r;
-        }
-
-        free(t);
-        return r;
 }
 
 static int context_read_data(Context *c) {
@@ -201,7 +104,7 @@ static int context_write_data_timezone(Context *c) {
         if (!p)
                 return log_oom();
 
-        r = symlink_or_copy_atomic(p, "/etc/localtime");
+        r = symlink_atomic(p, "/etc/localtime");
         if (r < 0)
                 return r;
 
@@ -271,8 +174,8 @@ static int context_write_data_local_rtc(Context *c) {
 }
 
 static int context_read_ntp(Context *c, sd_bus *bus) {
-        _cleanup_bus_error_free_ sd_bus_error error = SD_BUS_ERROR_NULL;
-        _cleanup_bus_message_unref_ sd_bus_message *reply = NULL;
+        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
         const char *s;
         int r;
 
@@ -754,7 +657,7 @@ static const sd_bus_vtable timedate_vtable[] = {
 };
 
 static int connect_bus(Context *c, sd_event *event, sd_bus **_bus) {
-        _cleanup_bus_flush_close_unref_ sd_bus *bus = NULL;
+        _cleanup_(sd_bus_flush_close_unrefp) sd_bus *bus = NULL;
         int r;
 
         assert(c);
@@ -785,8 +688,8 @@ static int connect_bus(Context *c, sd_event *event, sd_bus **_bus) {
 
 int main(int argc, char *argv[]) {
         Context context = {};
-        _cleanup_event_unref_ sd_event *event = NULL;
-        _cleanup_bus_flush_close_unref_ sd_bus *bus = NULL;
+        _cleanup_(sd_event_unrefp) sd_event *event = NULL;
+        _cleanup_(sd_bus_flush_close_unrefp) sd_bus *bus = NULL;
         int r;
 
         log_set_target(LOG_TARGET_AUTO);

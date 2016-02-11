@@ -37,7 +37,7 @@
 #include "sd-daemon.h"
 #include "build.h"
 #include "def.h"
-#include "event-util.h"
+#include "sd-event.h"
 #include "log.h"
 #include "list.h"
 #include "macro.h"
@@ -659,7 +659,7 @@ int main(int argc, char *argv[]) {
         } else if (n == 1)
                 fd = SD_LISTEN_FDS_START + 0;
         else {
-                fd = make_socket_fd(LOG_DEBUG, FSCKD_SOCKET_PATH, SOCK_STREAM | SOCK_CLOEXEC);
+                fd = make_socket_fd(LOG_DEBUG, FSCKD_SOCKET_PATH, SOCK_STREAM, SOCK_CLOEXEC);
                 if (fd < 0) {
                         r = log_error_errno(fd, "Couldn't create listening socket fd on %s: %m", FSCKD_SOCKET_PATH);
                         goto finish;
