@@ -1,5 +1,3 @@
-/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
-
 /***
   This file is part of systemd.
 
@@ -249,6 +247,7 @@ static int add_mount(
         assert(what);
         assert(where);
         assert(opts);
+        assert(post);
         assert(source);
 
         if (streq_ptr(fstype, "autofs"))
@@ -298,7 +297,7 @@ static int add_mount(
                 "Documentation=man:fstab(5) man:systemd-fstab-generator(8)\n",
                 source);
 
-        if (post && !noauto && !nofail && !automount)
+        if (!noauto && !nofail && !automount)
                 fprintf(f, "Before=%s\n", post);
 
         if (!automount && opts) {
@@ -342,7 +341,7 @@ static int add_mount(
         if (r < 0)
                 return log_error_errno(r, "Failed to write unit file %s: %m", unit);
 
-        if (!noauto && post) {
+        if (!noauto) {
                 lnk = strjoin(arg_dest, "/", post, nofail || automount ? ".wants/" : ".requires/", name, NULL);
                 if (!lnk)
                         return log_oom();
@@ -373,10 +372,7 @@ static int add_mount(
                         "Documentation=man:fstab(5) man:systemd-fstab-generator(8)\n",
                         source);
 
-                if (post)
-                        fprintf(f,
-                                "Before=%s\n",
-                                post);
+                fprintf(f, "Before=%s\n", post);
 
                 if (opts) {
                         r = write_requires_after(f, opts);
@@ -470,8 +466,6 @@ static int parse_fstab(bool initrd) {
                                                       "x-systemd.automount\0");
                         if (initrd)
                                 post = SPECIAL_INITRD_FS_TARGET;
-                        else if (mount_in_initrd(me))
-                                post = SPECIAL_INITRD_ROOT_FS_TARGET;
                         else if (mount_is_network(me))
                                 post = SPECIAL_REMOTE_FS_TARGET;
                         else
@@ -583,7 +577,7 @@ static int add_sysroot_usr_mount(void) {
                          false,
                          false,
                          false,
-                         SPECIAL_INITRD_ROOT_FS_TARGET,
+                         SPECIAL_INITRD_FS_TARGET,
                          "/proc/cmdline");
 }
 
