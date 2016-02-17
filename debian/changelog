@@ -1,3 +1,9 @@
+systemd (229-1ubuntu3) xenial; urgency=medium
+
+  * No-change rebuild for gnutls transition.
+
+ -- Matthias Klose <doko@ubuntu.com>  Wed, 17 Feb 2016 22:28:00 +0000
+
 systemd (229-1ubuntu2) xenial; urgency=medium
 
   * time-util: map ALARM clockids to non-ALARM clockids in now(), to work on
