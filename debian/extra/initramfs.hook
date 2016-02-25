@@ -24,7 +24,7 @@ root_over_the_network() {
 
 mkdir -p $DESTDIR/lib/systemd
 copy_exec /lib/systemd/systemd-udevd      /lib/systemd
-if [ -x /sbin/udevadm.upgrade ]; then
+if [ -x /bin/udevadm.upgrade ]; then
     copy_exec /bin/udevadm.upgrade /bin/udevadm
 else
     copy_exec /bin/udevadm
