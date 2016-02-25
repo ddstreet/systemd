@@ -1,0 +1,25 @@
+From 735e5d83ee3391f8ab0e18218278302c2e87e5f3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Kristian=20H=C3=B8gsberg?= <krh@bitplanet.net>
+Date: Tue, 12 Nov 2013 18:11:43 +0100
+Subject: [PATCH] uaccess: Add new DRM render nodes
+
+---
+ src/login/70-uaccess.rules | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/login/70-uaccess.rules b/src/login/70-uaccess.rules
+index 01484c9..e1cf897 100644
+--- a/src/login/70-uaccess.rules
++++ b/src/login/70-uaccess.rules
+@@ -43,7 +43,7 @@ SUBSYSTEM=="firewire", ATTR{units}=="*0x00a02d:0x010001*", TAG+="uaccess"
+ SUBSYSTEM=="firewire", ATTR{units}=="*0x00a02d:0x014001*", TAG+="uaccess"
+ 
+ # DRI video devices
+-SUBSYSTEM=="drm", KERNEL=="card*", TAG+="uaccess"
++SUBSYSTEM=="drm", KERNEL=="card*|renderD*", TAG+="uaccess"
+ 
+ # KVM
+ SUBSYSTEM=="misc", KERNEL=="kvm", TAG+="uaccess"
+-- 
+2.7.0
+
