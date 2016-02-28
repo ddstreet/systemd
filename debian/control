@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: optional
-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>,
            Marco d'Itri <md@linux.it>,
            Sjoerd Simons <sjoerd@debian.org>,
@@ -73,7 +74,10 @@ Breaks: lvm2 (<< 2.02.104-1),
         ifupdown (<< 0.8.5~),
         udev (<< 228-5),
 Replaces: udev (<< 228-5),
-Conflicts: klogd
+          systemd-services,
+Conflicts: klogd,
+           systemd-services,
+Provides: systemd-services
 Description: system and service manager
  systemd is a system and service manager for Linux. It provides aggressive
  parallelization capabilities, uses socket and D-Bus activation for starting
@@ -304,6 +308,8 @@ Breaks: consolekit (<< 0.4.6-1),
         bash-completion (<< 1:2.1),
         systemd (<< 224-2),
         ifupdown (<< 0.8.5~),
+        lvm2 (<< 2.02.133-1ubuntu1),
+        mdadm (<< 3.3-2ubuntu3),
 Replaces: bash-completion (<< 1:2.1),
           systemd (<< 224-2)
 Description: /dev/ and hotplug management daemon
