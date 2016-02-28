@@ -1,3 +1,43 @@
+systemd (229-2) unstable; urgency=medium
+
+  * time-util: map ALARM clockids to non-ALARM clockids in now(), to work on
+    architectures which don't support CLOCK_BOOTTIME_ALARM. Fixes FTBFS on
+    many architectures.
+  * debian/systemd.postinst: Add missing newline to /etc/adjtime migration.
+    (See #699554)
+  * debian/systemd.postinst: Only try to enable tmp.mount if we actually
+    copied it to /etc. Don't try to enable a generated unit. (LP: #1545707)
+  * debian/tests/boot-and-services: Increase timeouts of test_bash_crash from
+    5 to 10 seconds, and sync the journal after every iteration.
+  * debian/extra/checkout-upstream: Try again after one minute if git checkout
+    fails, to avoid failures from transient network errors.
+  * debian/tests/systemd-fsckd: Use grub.d/50-cloudimg-settings.cfg as a
+    template for generating our custom one instead of 90-autopkgtest.cfg. The
+    latter does not exist on non-x86 architectures and is not relevant for
+    this test.
+  * debian/tests/boot-and-services: Skip journal test for test_bash_crash when
+    running against upstream, as this currently fails most of the time. To be
+    investigated.
+  * debian/tests/networkd: Skip test_coldplug_dhcp_ip6 when running against
+    upstream, as this is brittle there. To be investigated.
+  * debian/tests/bootchart: Skip test if bootchart is not available or
+    testing in upstream mode. bootchart got removed from master and will be
+    moved to a separate repository.
+  * debian/tests/boot-and-services: Show verbose journal output on failure in
+    nspawn test, and sync journal before.
+  * Move systemd-coredump socket and service into systemd-coredump binary
+    package.
+  * Revert changing the default core dump ulimit and core_pattern. This
+    completely breaks core dumps without systemd-coredump. It's also
+    contradicting core(8). (Closes: #815020)
+  * Fix addresses for type "sit" tunnels. (Closes: #816132)
+  * networkd: Go back to letting the kernel handle IPv6 router advertisements,
+    as networkd's own currently has too many regressions. Thanks to Stefan
+    Lippers-Hollmann for investigating this! (Closes: #814566,
+    #814667, #815586, #815884, #815793)
+
+ -- Martin Pitt <mpitt@debian.org>  Sun, 28 Feb 2016 22:16:12 +0100
+
 systemd (229-1) unstable; urgency=medium
 
   * New upstream release 229.
