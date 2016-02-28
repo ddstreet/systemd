@@ -1,4 +1,6 @@
 ## Cherry-picked from upstream
+time-util-map-ALARM-clockids-to-non-ALARM-clockids-in-now.patch
+networkd-tunnel-fix-tunnel-address.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -29,3 +31,5 @@ cgroup-don-t-trim-cgroup-trees-created-by-someone-el.patch
 fsckd-daemon-for-inter-fsckd-communication.patch
 Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Revert-core-set-RLIMIT_CORE-to-unlimited-by-default.patch
+Revert-Revert-networkd-ndisc-revert-to-letting-the-k.patch
