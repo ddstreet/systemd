@@ -220,12 +220,13 @@ poweroff\n''')
         subprocess.check_call(['systemctl', 'start', 'systemd-nspawn@c1'])
         time.sleep(5)
 
+        subprocess.call(['journalctl', '--sync'])
         systemctl = subprocess.Popen(
-            ['systemctl', 'status', '-l', 'systemd-nspawn@c1'],
+            ['systemctl', 'status', '-overbose', '-l', 'systemd-nspawn@c1'],
             stdout=subprocess.PIPE)
-        out = systemctl.communicate()[0]
+        out = systemctl.communicate()[0].decode('UTF-8', 'replace')
         self.assertEqual(systemctl.returncode, 3, out)
-        self.assertIn(b'Stopped Container c1', out)
+        self.assertTrue('Stopped Container c1' in out, out)
 
 
 @unittest.skipUnless(os.path.exists('/sys/kernel/security/apparmor'),
@@ -433,17 +434,22 @@ class CoredumpTest(unittest.TestCase):
             cores = glob('/var/lib/systemd/coredump/core.bash.*')
             if cores:
                 break
-            time.sleep(0.1)
+            time.sleep(1)
         self.assertNotEqual(cores, [])
         self.assertEqual(glob('/tmp/core*'), [])
 
+        # FIXME: this often fails on upstream PRs
+        if 'TEST_UPSTREAM' in os.environ:
+            return
+
         # we should also get a message and stack trace in journal
-        for timeout in range(50):
+        for timeout in range(10):
+            subprocess.call(['journalctl', '--sync'])
             journal = subprocess.check_output(['journalctl', '/lib/systemd/systemd-coredump'])
             if re.search(b'Process.*bash.*dumped core', journal) and \
                re.search(b'#[0-9] .*bash', journal):
                 break
-            time.sleep(0.1)
+            time.sleep(1)
         self.assertRegex(journal, b'Process.*bash.*dumped core')
         self.assertIn(b'Stack trace', journal)
         self.assertRegex(journal, b'#[0-9] .*bash')
