@@ -163,13 +163,11 @@ static bool mount_is_network(struct mntent *me) {
 }
 
 static bool mount_in_initrd(struct mntent *me) {
-        struct stat sb;
-
         assert(me);
 
         return
                 hasmntopt(me, "x-initrd.mount") ||
-                (streq(me->mnt_dir, "/usr") && stat("/run/initramfs/fsck-usr", &sb) == 0);
+                streq(me->mnt_dir, "/usr");
 }
 
 static int add_mount(
@@ -190,6 +188,7 @@ static int add_mount(
                 *filtered = NULL;
         _cleanup_fclose_ FILE *f = NULL;
         int r;
+        struct stat sb;
 
         assert(what);
         assert(where);
@@ -243,9 +242,13 @@ static int add_mount(
                 fprintf(f, "Before=%s\n", post);
 
         if (passno != 0) {
-                r = generator_write_fsck_deps(f, arg_dest, what, where, fstype);
-                if (r < 0)
-                        return r;
+                if (streq(where, "/usr") && stat("/run/initramfs/fsck-usr", &sb) == 0)
+                        ; /* skip /usr fsck if it has already been checked in the initramfs */
+                else {
+                        r = generator_write_fsck_deps(f, arg_dest, what, where, fstype);
+                        if (r < 0)
+                                return r;
+                }
         }
 
         fprintf(f,
