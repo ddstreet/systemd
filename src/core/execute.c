@@ -1406,7 +1406,7 @@ int exec_spawn(ExecCommand *command,
                 }
 
                 if (cgroup_path) {
-                        err = cg_attach_everywhere(cgroup_supported, cgroup_path, 0);
+                        err = cg_attach_everywhere(cgroup_supported, cgroup_path, 0, NULL, NULL);
                         if (err < 0) {
                                 r = EXIT_CGROUP;
                                 goto fail_child;
