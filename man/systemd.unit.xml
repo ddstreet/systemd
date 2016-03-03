@@ -66,7 +66,7 @@
 
                 <para><literallayout><filename>/etc/systemd/system/*</filename>
 <filename>/run/systemd/system/*</filename>
-<filename>/usr/lib/systemd/system/*</filename>
+<filename>/lib/systemd/system/*</filename>
 <filename>...</filename>
                 </literallayout></para>
 
@@ -302,7 +302,7 @@
                         <entry>Runtime units</entry>
                       </row>
                       <row>
-                        <entry><filename>/usr/lib/systemd/system</filename></entry>
+                        <entry><filename>/lib/systemd/system</filename></entry>
                         <entry>Units of installed packages</entry>
                       </row>
                     </tbody>
