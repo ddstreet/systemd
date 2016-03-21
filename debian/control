@@ -6,7 +6,7 @@ Uploaders: Michael Biebl <biebl@debian.org>,
            Marco d'Itri <md@linux.it>,
            Sjoerd Simons <sjoerd@debian.org>,
            Martin Pitt <mpitt@debian.org>
-Standards-Version: 3.9.6
+Standards-Version: 3.9.7
 Vcs-Git: git://anonscm.debian.org/pkg-systemd/systemd.git
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-systemd/systemd.git
 Homepage: http://www.freedesktop.org/wiki/Software/systemd
@@ -129,6 +129,7 @@ Priority: optional
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          systemd
+Recommends: btrfs-tools
 Breaks: systemd (<< 224-2)
 Replaces: systemd (<< 224-2)
 Description: systemd container/nspawn tools
@@ -161,6 +162,7 @@ Section: admin
 Priority: optional
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         adduser,
          systemd
 Conflicts: core-dump-handler
 Replaces: core-dump-handler, systemd (<< 229-2)

@@ -2604,7 +2604,10 @@ static int start_unit_one(
 
                 if (!sd_bus_error_has_name(error, BUS_ERROR_NO_SUCH_UNIT) &&
                     !sd_bus_error_has_name(error, BUS_ERROR_UNIT_MASKED))
-                        log_error("See system logs and 'systemctl status %s' for details.", name);
+                        log_error("See %s logs and 'systemctl%s status %s' for details.",
+                                   arg_scope == UNIT_FILE_SYSTEM ? "system" : "user",
+                                   arg_scope == UNIT_FILE_SYSTEM ? "" : " --user",
+                                   name);
 
                 return r;
         }
@@ -6157,8 +6160,18 @@ static int edit(int argc, char *argv[], void *userdata) {
                 r = daemon_reload(argc, argv, userdata);
 
 end:
-        STRV_FOREACH_PAIR(original, tmp, paths)
+        STRV_FOREACH_PAIR(original, tmp, paths) {
                 (void) unlink(*tmp);
+
+                /* Removing empty dropin dirs */
+                if (!arg_full) {
+                        _cleanup_free_ char *dir = dirname_malloc(*original);
+                        /* no need to check if the dir is empty, rmdir
+                         * does nothing if it is not the case.
+                         */
+                        (void) rmdir(dir);
+                }
+        }
 
         return r;
 }
