@@ -1251,13 +1251,13 @@ AC_ARG_WITH(kbd-loadkeys,
         AS_HELP_STRING([--with-kbd-loadkeys=PATH],
                 [Path to loadkeys]),
         [KBD_LOADKEYS="$withval"],
-        [KBD_LOADKEYS="/bin/loadkeys"])
+        [KBD_LOADKEYS="/usr/bin/loadkeys"])
 
 AC_ARG_WITH(kbd-setfont,
         AS_HELP_STRING([--with-kbd-setfont=PATH],
                 [Path to setfont]),
         [KBD_SETFONT="$withval"],
-        [KBD_SETFONT="/bin/setfont"])
+        [KBD_SETFONT="/usr/bin/setfont"])
 
 AC_DEFINE_UNQUOTED(KBD_LOADKEYS, ["$KBD_LOADKEYS"], [Path of loadkeys])
 AC_DEFINE_UNQUOTED(KBD_SETFONT, ["$KBD_SETFONT"], [Path of setfont])
