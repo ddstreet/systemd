@@ -1,3 +1,44 @@
+systemd (229-3) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * debian/tests/timedated: Add tests for "timedatectl set-local-rtc".
+  * Be more tolerant in parsing /etc/adjtime.
+  * debian/systemd.postinst: Don't fail package installation if systemctl
+    daemon-reload trigger fails. This does not fix the root cause of the
+    reload failures, but at least causes fewer packages to be in a broken
+    state after upgrade, so that a reboot or apt-get -f install have a much
+    higher chance in succeeding. (For bugs like LP #1502097 or LP #1447654)
+  * debian/tests/networkd: Skip test_hogplug_dhcp_ip6 when running against
+    upstream as well.
+  * debian/tests/boot-and-services: Wait for units to stop with a "systemctl
+    is-active" loop instead of static sleeps.
+  * debian/tests/networkd: Skip DHCPv6 tests for downstream packages too. This
+    is an actual regression in networkd-229, to be investigated. But this
+    shouldn't hold up reverse dependencies.
+  * Fix assertion in add_random(). (LP: #1554861)
+  * debian/tests/boot-and-services: Don't assert on "Stopped Container c1"
+    message in NspawnTests.test_service(), this is sometimes not present. Just
+    check that the unit did not fail.
+  * Add "adduser" dependency to systemd-coredump, to quiesce lintian.
+  * Bump Standards-Version to 3.9.7 (no changes necessary).
+  * Fix timespec parsing by correctly initializing microseconds.
+    (Closes: #818698, LP: #1559038)
+  * networkd: Add fallback if FIONREAD is not supported. (Closes: #818488)
+  * Cherry-pick various fixes from upstream master.
+    - Fixes logout when changing the current target. (Closes: #805442)
+
+  [ Evgeny Vereshchagin ]
+  * debian/tests/boot-and-services: Search systemd-coredump's output by
+    SYSLOG_IDENTIFIER.
+  * Add missing "Recommends: btrfs-tools" to systemd-container.
+  * Add systemd-coredump postinst/prerm to start/stop systemd-coredump.socket
+    without a reboot. (Closes: #816767)
+
+  [ Felipe Sateler ]
+  * Set the paths of loadkeys and setfont via configure arguments, not a patch
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 21 Mar 2016 14:11:44 +0100
+
 systemd (229-2) unstable; urgency=medium
 
   * time-util: map ALARM clockids to non-ALARM clockids in now(), to work on
