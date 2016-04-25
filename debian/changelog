@@ -1,3 +1,55 @@
+systemd (229-5) unstable; urgency=medium
+
+  * debian/tests/unit-config: Call "daemon-reload" to clean up generated units
+    in between tests.
+  * debian/tests/unit-config: Check that enable/disable commands are
+    idempotent.
+  * debian/tests/unit-config: Detect if system units are in /usr/, so that the
+    test works on systems with merged /usr.
+  * debian/tests/unit-config: Use systemd-sysv-install instead of update-rc.d
+    directly, so that the test works under Fedora too.
+  * debian/tests/unit-config: Check disabling of a "systemctl link"ed unit,
+    and check "systemctl enable" on a unit with full path which is not in the
+    standard directories.
+  * Rename debian/extra/rules/73-idrac.rules to 73-special-net-names.rules, as
+    it is going to get rules for other devices. Also install it into the
+    initramfs.
+  * debian/extra/rules/73-special-net-names.rules: Add DEVPATH number based
+    naming schema for ibmveth devices. (LP: #1561096)
+  * Don't set SYSTEMD_READY=0 on DM_UDEV_DISABLE_OTHER_RULES_FLAG=1 devmapper
+    devices with "change" events, as this causes spurious unmounting with
+    multipath devices. (LP: #1565969)
+  * Fix bogus "No [Install] section" warning when enabling a unit with full
+    path. (LP: #1563590)
+  * debian/tests/cmdline-upstart-boot: In test_rsyslog(), check for messages
+    from dbus instead of NetworkManager. NM 1.2 does not seem to log to syslog
+    by default any more.
+  * Bump Standards-Version to 3.9.8 (no changes necessary).
+  * debian/tests/boot-smoke: Add some extra debugging if there are pending
+    jobs after 10s, to figure out why lightdm is sometimes "restarting".
+    (for LP #1571673)
+  * debian/tests/boot-smoke: Configure dummy X.org driver (like in the
+    boot-and-services test), to avoid lightdm randomly fail. (LP: #1571673)
+  * Move Debian specific patches into debian/patches/debian (which translates
+    to "Gbp-Pq: Topic debian" with pq). This keeps upstream vs. Debian
+    patches separated without the comments in debian/patches/series (which
+    always get removed by "pq export").
+  * Don't ship an empty /etc/X11/xinit/xinitrc.d/ directory, this isn't
+    supported in Debian. (Closes: #822198)
+  * udev: Mark nbd as inactive until connected. (Closes: #812485)
+  * On shutdown, unmount /tmp before disabling swap. (Closes: #788303)
+  * debian/systemd-coredump.postinst: Do daemon-reload before starting
+    systemd-coredump, as the unit file may have changed on upgrades.
+    (Closes: #820325)
+  * Set MAC based name for USB network interfaces only for universally
+    administered (i. e. stable) MACs, not for locally administered (i. e.
+    randomly generated) ones. Drop /lib/systemd/network/90-mac-for-usb.link
+    (as link files don't currently support globs for MACAddress=) and replace
+    with an udev rule in /lib/udev/rules.d/73-special-net-names.rules.
+    (Closes: #812575, LP: #1574483)
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 25 Apr 2016 11:08:11 +0200
+
 systemd (229-4) unstable; urgency=medium
 
   * Fix assertion crash when processing a (broken) device without a sysfs
