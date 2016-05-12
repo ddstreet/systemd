@@ -289,9 +289,6 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
                 "syslog",               "systemd-journald-dev-log.socket",
                 "time",                 SPECIAL_TIME_SYNC_TARGET,
-                /* Debian defined facilities */
-                "x-display-manager",    "display-manager.service",
-                "mail-transport-agent", "mail-transport-agent.target",
                 /* special rcS init scripts */
                 "cryptdisks",           "cryptsetup.target",
                 "mountall",             SPECIAL_LOCAL_FS_TARGET,

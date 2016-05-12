@@ -18,7 +18,7 @@ remove_nss_entry() {
     perl -i -pe '
         sub remove {
             my $s=shift;
-            $s=~s/\s+\Qresolve\E//g;
+            $s=~s/\s+resolve\b//g;
             return $s;
         }
         s/^(hosts:)(.*)/$1.remove($2)/e;
@@ -27,6 +27,10 @@ remove_nss_entry() {
 
 if [ "$1" = remove ]; then
     remove_nss_entry
+    systemctl disable systemd-resolved.service
+    if [ -d /run/systemd/system ]; then
+        deb-systemd-invoke stop systemd-resolved.service || true
+    fi
 fi
 
 #DEBHELPER#
