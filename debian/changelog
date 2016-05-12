@@ -1,3 +1,55 @@
+systemd (229-6) unstable; urgency=medium
+
+  * systemd-container: Prefer renamed "btrfs-progs" package name over
+    "btrfs-tools". (Closes: #822629)
+  * systemd-container: Recommend libnss-mymachines. (Closes: #822615)
+  * Drop systemd-dbg, in favor of debhelpers' automatic -dbgsym packages.
+  * Drop Add-targets-for-compatibility-with-Debian-insserv-sy.patch; we don't
+    need $x-display-manager any more as most/all DMs ship native services, and
+    $mail-transport-agent is not widely used (not even by our default MTA
+    exim4).
+  * Unify our two patches for Debian specific configuration files.
+  * Drop udev-re-enable-mount-propagation-for-udevd.patch, i. e. run udevd in
+    its own slave mount name space again. laptop-mode-tools 1.68 fixed the
+    original bug (#762018), thus add a Breaks: to earlier versions.
+  * Ship fbdev-blacklist.conf in /lib/modprobe.d/ instead of /etc/modprobe.d/;
+    remove the conffile on upgrades.
+  * Replace util-Add-hidden-suffixes-for-ucf.patch with patch that got
+    committed upstream.
+  * Replace Stop-syslog.socket-when-entering-emergency-mode.patch with patch
+    that got committed upstream.
+  * debian/udev.README.Debian: Adjust documentation of MAC based naming for
+    USB network cards to the udev rule, where this was moved to in 229-5.
+  * debian/extra/init-functions.d/40-systemd: Invoke status command with
+    --no-pager, to avoid blocking scripts that call an init.d script with
+    "status" with an unexpected pager process. (Closes: #765175, LP: #1576409)
+  * Add debian/extra/rules/70-debian-uaccess.rules: Make FIDO U2F dongles
+    accessible to the user session. This avoids having to install libu2f-host0
+    (which isn't discoverable at all) to make those devices work.
+    (LP: #1387908)
+  * libnss-resolve: Enable systemd-resolved.service on package installation,
+    as this package makes little sense without resolved.
+  * Add a DHCP exit hook for pushing received NTP servers into timesyncd.
+    (LP: #1578663)
+  * debian/udev.postinst: Fix migration check from the old persistent-net
+    generator to not apply to chroots. (Closes: #813141)
+  * Revert "enable TasksMax= for all services by default, and set it to 512".
+    Introducing a default limit on number of threads broke a lot of software
+    which regularly needs more, such as MySQL and RabbitMQ, or services that
+    spawn off an indefinite number of subtasks that are not in a scope, like
+    LXC or cron. 512 is way too much for most "simple" services, and it's way
+    too little for the ones mentioned above. Effective (and much stricter)
+    limits should instead be put into units individually.
+    (Closes: #823530, LP: #1578080)
+  * Split out udev rule to name USB network interfaces by MAC address into
+    73-usb-net-by-mac.rules, so that it's easier to disable. (Closes: #824025)
+  * 73-usb-net-by-mac.rules: Disable when net.ifnames=0 is specified on the
+    kernel command line, to be consistent with disabling the *.link files.
+  * 73-special-net-names.rule: Name the IBM integrated management module
+    virtual USB network card "ibmimm". Thanks Marco d'Itri!
+
+ -- Martin Pitt <mpitt@debian.org>  Thu, 12 May 2016 09:40:19 +0200
+
 systemd (229-5) unstable; urgency=medium
 
   * debian/tests/unit-config: Call "daemon-reload" to clean up generated units
