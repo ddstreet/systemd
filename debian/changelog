@@ -1,3 +1,27 @@
+systemd (230-1) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * New upstream release 230.
+    - Fix rare assertion failure in hashmaps. (Closes: #816612)
+    - Fix leaking scope units. (Closes: #805477)
+    - Fix wrong socket ownership after daemon-reload. (LP: #1577001)
+    - udev: Fix touch screen detection. (LP: #1530384)
+  * Drop cmdline-upstart-boot autopkgtest. It was still needed up to Ubuntu
+    16.04 LTS, but upstart-sysv is not supported any more in Debian and Ubuntu
+    now.
+  * udev: Drop hotplug.functions, now that the last remaining user of this got
+    fixed. Add appropriate versioned Breaks:.
+  * debian/extra/rules/70-debian-uaccess.rules: Add some more FIDO u2f devices
+    from different vendors. Thanks Atoyama Tokanawa.
+  * Remove "bootchart" autopkgtest, this upstream version does not ship
+    bootchart any more. It will be packaged separately.
+
+  [ Michael Biebl ]
+  * Drop obsolete --disable-bootchart configure switch from udeb build.
+  * Remove obsolete /etc/systemd/bootchart.conf conffile on upgrades.
+
+ -- Martin Pitt <mpitt@debian.org>  Mon, 23 May 2016 09:42:51 +0200
+
 systemd (229-6) unstable; urgency=medium
 
   * systemd-container: Prefer renamed "btrfs-progs" package name over
