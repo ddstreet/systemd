@@ -19,11 +19,13 @@
 
 #include <netinet/ether.h>
 #include <netinet/icmp6.h>
+#include <netinet/in.h>
 #include <linux/if.h>
 
 #include "sd-ndisc.h"
 
-#include "networkd-link.h"
+#include "networkd.h"
+
 /*
 static int ndisc_netlink_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
         _cleanup_link_unref_ Link *link = userdata;
@@ -32,7 +34,7 @@ static int ndisc_netlink_handler(sd_netlink *rtnl, sd_netlink_message *m, void *
         assert(link);
         assert(link->ndisc_messages > 0);
 
-        link->ndisc_messages --;
+        link->ndisc_messages--;
 
         r = sd_netlink_message_get_errno(m);
         if (r < 0 && r != -EEXIST) {
@@ -75,15 +77,15 @@ static void ndisc_prefix_autonomous_handler(sd_ndisc *nd, const struct in6_addr 
         if (in_addr_is_null(AF_INET6, (const union in_addr_union *) &link->network->ipv6_token) == 0)
                 memcpy(((char *)&address->in_addr.in6) + 8, ((char *)&link->network->ipv6_token) + 8, 8);
         else {
-                address->in_addr.in6.__in6_u.__u6_addr8[8]  = link->mac.ether_addr_octet[0];
-                address->in_addr.in6.__in6_u.__u6_addr8[8] ^= 1 << 1;
-                address->in_addr.in6.__in6_u.__u6_addr8[9]  = link->mac.ether_addr_octet[1];
-                address->in_addr.in6.__in6_u.__u6_addr8[10] = link->mac.ether_addr_octet[2];
-                address->in_addr.in6.__in6_u.__u6_addr8[11] = 0xff;
-                address->in_addr.in6.__in6_u.__u6_addr8[12] = 0xfe;
-                address->in_addr.in6.__in6_u.__u6_addr8[13] = link->mac.ether_addr_octet[3];
-                address->in_addr.in6.__in6_u.__u6_addr8[14] = link->mac.ether_addr_octet[4];
-                address->in_addr.in6.__in6_u.__u6_addr8[15] = link->mac.ether_addr_octet[5];
+                address->in_addr.in6.s6_addr[8]  = link->mac.ether_addr_octet[0];
+                address->in_addr.in6.s6_addr[8] ^= 1 << 1;
+                address->in_addr.in6.s6_addr[9]  = link->mac.ether_addr_octet[1];
+                address->in_addr.in6.s6_addr[10] = link->mac.ether_addr_octet[2];
+                address->in_addr.in6.s6_addr[11] = 0xff;
+                address->in_addr.in6.s6_addr[12] = 0xfe;
+                address->in_addr.in6.s6_addr[13] = link->mac.ether_addr_octet[3];
+                address->in_addr.in6.s6_addr[14] = link->mac.ether_addr_octet[4];
+                address->in_addr.in6.s6_addr[15] = link->mac.ether_addr_octet[5];
         }
         address->prefixlen = prefixlen;
         address->flags = IFA_F_NOPREFIXROUTE|IFA_F_MANAGETEMPADDR;
@@ -97,7 +99,7 @@ static void ndisc_prefix_autonomous_handler(sd_ndisc *nd, const struct in6_addr 
                 return;
         }
 
-        link->ndisc_messages ++;
+        link->ndisc_messages++;
 }
 
 static void ndisc_prefix_onlink_handler(sd_ndisc *nd, const struct in6_addr *prefix, unsigned prefixlen, unsigned lifetime, void *userdata) {
@@ -135,7 +137,7 @@ static void ndisc_prefix_onlink_handler(sd_ndisc *nd, const struct in6_addr *pre
                 return;
         }
 
-        link->ndisc_messages ++;
+        link->ndisc_messages++;
 }
 */
 
@@ -155,6 +157,10 @@ static void ndisc_router_handler(sd_ndisc *nd, uint8_t flags, const struct in6_a
         if (flags & (ND_RA_FLAG_MANAGED | ND_RA_FLAG_OTHER)) {
                 if (flags & ND_RA_FLAG_MANAGED)
                         dhcp6_request_address(link);
+
+                r = sd_dhcp6_client_set_local_address(link->dhcp6_client, &link->ipv6ll_address);
+                if (r < 0 && r != -EBUSY)
+                        log_link_warning_errno(link, r, "Could not set IPv6LL address in DHCP client: %m");
 
                 r = sd_dhcp6_client_start(link->dhcp6_client);
                 if (r < 0 && r != -EBUSY)
@@ -188,7 +194,7 @@ static void ndisc_router_handler(sd_ndisc *nd, uint8_t flags, const struct in6_a
                 return;
         }
 
-        link->ndisc_messages ++;
+        link->ndisc_messages++;
 */
 }
 
@@ -204,6 +210,10 @@ static void ndisc_handler(sd_ndisc *nd, int event, void *userdata) {
         switch (event) {
         case SD_NDISC_EVENT_TIMEOUT:
                 dhcp6_request_address(link);
+
+                r = sd_dhcp6_client_set_local_address(link->dhcp6_client, &link->ipv6ll_address);
+                if (r < 0 && r != -EBUSY)
+                        log_link_warning_errno(link, r, "Could not set IPv6LL address in DHCP client: %m");
 
                 r = sd_dhcp6_client_start(link->dhcp6_client);
                 if (r < 0 && r != -EBUSY)

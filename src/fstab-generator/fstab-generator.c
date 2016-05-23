@@ -341,8 +341,8 @@ static int add_mount(
         if (r < 0)
                 return log_error_errno(r, "Failed to write unit file %s: %m", unit);
 
-        if (!noauto) {
-                lnk = strjoin(arg_dest, "/", post, nofail || automount ? ".wants/" : ".requires/", name, NULL);
+        if (!noauto && !automount) {
+                lnk = strjoin(arg_dest, "/", post, nofail ? ".wants/" : ".requires/", name, NULL);
                 if (!lnk)
                         return log_oom();
 
@@ -384,6 +384,7 @@ static int add_mount(
                 }
 
                 fprintf(f,
+                        "\n"
                         "[Automount]\n"
                         "Where=%s\n",
                         where);
@@ -493,6 +494,7 @@ static int parse_fstab(bool initrd) {
 static int add_sysroot_mount(void) {
         _cleanup_free_ char *what = NULL;
         const char *opts;
+        int r;
 
         if (isempty(arg_root_what)) {
                 log_debug("Could not find a root= entry on the kernel command line.");
@@ -512,6 +514,13 @@ static int add_sysroot_mount(void) {
                 opts = arg_root_options;
 
         log_debug("Found entry what=%s where=/sysroot type=%s", what, strna(arg_root_fstype));
+
+        if (is_device_path(what)) {
+                r = generator_write_initrd_root_device_deps(arg_dest, what);
+                if (r < 0)
+                        return r;
+        }
+
         return add_mount(what,
                          "/sysroot",
                          arg_root_fstype,

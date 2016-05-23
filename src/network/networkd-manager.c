@@ -457,11 +457,9 @@ int manager_rtnl_process_route(sd_netlink *rtnl, sd_netlink_message *message, vo
                 break;
 
         case RTM_DELROUTE:
-
-                if (route)
-                        route_drop(route);
-
+                route_free(route);
                 break;
+
         default:
                 assert_not_reached("Received invalid RTNL message type");
         }
@@ -1036,6 +1034,8 @@ int manager_new(Manager **ret) {
         r = setup_default_address_pool(m);
         if (r < 0)
                 return r;
+
+        m->duid.type = DUID_TYPE_EN;
 
         *ret = m;
         m = NULL;

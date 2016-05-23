@@ -597,7 +597,7 @@ static int transaction_apply(Transaction *tr, Manager *m, JobMode mode) {
                         /* Not invalidating recursively. Avoids triggering
                          * OnFailure= actions of dependent jobs. Also avoids
                          * invalidating our iterator. */
-                        job_finish_and_invalidate(j, JOB_CANCELED, false);
+                        job_finish_and_invalidate(j, JOB_CANCELED, false, false);
                 }
         }
 
@@ -855,7 +855,7 @@ int transaction_add_job_and_dependencies(
          * This matters when jobs are spawned as part of coldplugging itself (see e. g. path_coldplug()).
          * This way, we "recursively" coldplug units, ensuring that we do not look at state of
          * not-yet-coldplugged units. */
-        if (unit->manager->n_reloading > 0)
+        if (MANAGER_IS_RELOADING(unit->manager))
                 unit_coldplug(unit);
 
         /* log_debug("Pulling in %s/%s from %s/%s", */
@@ -939,7 +939,7 @@ int transaction_add_job_and_dependencies(
                                 if (r < 0) {
                                         /* unit masked, job type not applicable and unit not found are not considered as errors. */
                                         log_unit_full(dep,
-                                                      IN_SET(r, -ESHUTDOWN, -EBADR, -ENOENT) ? LOG_DEBUG : LOG_WARNING,
+                                                      IN_SET(r, -ERFKILL, -EBADR, -ENOENT) ? LOG_DEBUG : LOG_WARNING,
                                                       r, "Cannot add dependency job, ignoring: %s",
                                                       bus_error_message(e, r));
                                         sd_bus_error_free(e);
