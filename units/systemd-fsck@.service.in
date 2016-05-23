@@ -12,7 +12,7 @@ DefaultDependencies=no
 BindsTo=%i.device
 Wants=systemd-fsckd.socket
 After=%i.device systemd-fsck-root.service local-fs-pre.target systemd-fsckd.socket
-Before=shutdown.target
+Before=systemd-quotacheck.service shutdown.target
 
 [Service]
 Type=oneshot

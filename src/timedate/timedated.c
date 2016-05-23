@@ -136,15 +136,15 @@ static int context_write_data_local_rtc(Context *c) {
                         return -ENOMEM;
         } else {
                 char *p;
-                char *e = (char*) "\n"; /* default if there are not 3 lines with \n terminator */
+                const char *e = "\n"; /* default if there is less than 3 lines */
                 const char *prepend = "";
                 size_t a, b;
 
                 p = strchrnul(s, '\n');
-                if (*p == '\0') {
+                if (*p == '\0')
                         /* only one line, no \n terminator */
                         prepend = "\n0\n";
-                } else if (p[1] == '\0') {
+                else if (p[1] == '\0') {
                         /* only one line, with \n terminator */
                         ++p;
                         prepend = "0\n";
@@ -183,7 +183,7 @@ static int context_write_data_local_rtc(Context *c) {
                 }
         }
 
-        mac_selinux_init("/etc");
+        mac_selinux_init();
         return write_string_file_atomic_label("/etc/adjtime", w);
 }
 
