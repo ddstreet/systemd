@@ -1,3 +1,13 @@
+systemd (230-1git1) yakkety; urgency=medium
+
+  * Don't add a Breaks: against usb-modeswitch when building on Ubuntu; there
+    it does not use hotplug.functions and is a lower version.
+  * boot-and-services autopkgtest: Add missing xserver-xorg and
+    lightdm-greeter test dependencies, so that lightdm can start.
+    (See LP #1581106)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 25 May 2016 09:37:41 +0200
+
 systemd (230-1) unstable; urgency=medium
 
   [ Martin Pitt ]
