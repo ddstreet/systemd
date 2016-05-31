@@ -1,3 +1,19 @@
+systemd (230-2) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * Don't add a Breaks: against usb-modeswitch when building on Ubuntu; there
+    it does not use hotplug.functions and is a lower version.
+  * boot-and-services autopkgtest: Add missing xserver-xorg and
+    lightdm-greeter test dependencies, so that lightdm can start.
+    (See LP #1581106)
+  * Re-disable logind's KillUserProcesses option by default. (Closes: #825394)
+
+  [ Michael Biebl ]
+  * Drop --disable-silent-rules from debian/rules. This is now handled by dh
+    directly depending on whether the DH_QUIET environment variable is set.
+
+ -- Martin Pitt <mpitt@debian.org>  Tue, 31 May 2016 12:02:14 +0200
+
 systemd (230-1) unstable; urgency=medium
 
   [ Martin Pitt ]
