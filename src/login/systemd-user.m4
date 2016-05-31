@@ -2,11 +2,12 @@
 #
 # Used by systemd --user instances.
 
-account  include system-auth
+@include common-account
 
 m4_ifdef(`HAVE_SELINUX',
 session  required pam_selinux.so close
 session  required pam_selinux.so nottys open
 )m4_dnl
 session  required pam_loginuid.so
-session  include system-auth
+@include common-session-noninteractive
+session optional pam_systemd.so
