@@ -1,3 +1,28 @@
+systemd (230-2git1) yakkety; urgency=medium
+
+  [ Martin Pitt ]
+  * debian/tests/boot-and-services: Adjust test_tmp_mount() for fixed
+    systemctl exit code for "unit not found" in upstream commit ca473d57.
+  * debian/tests/boot-and-services, test_no_failed(): Show journal of failed
+    units.
+  * debian/extra/init-functions.d/40-systemd: Adjust to changed systemctl
+    show behaviour in 231: now this fails for nonexisting units instead of
+    succeeding with "not-found". Make the code compatible to both for now.
+  * resolved: Disable DNSSEC by default again, until the various crashes get
+    fixed. (LP: #1587727, #1587740, #1587762, #1587740)
+  * Fix networkd integration with resolvconf for domain-limited DNS servers,
+    so that these don't appear as global nameservers in resolv.conf. Thanks
+    Andy Whitcroft for the initial fix! Add corresponding test case to
+    debian/tests/networkd. (LP: #1587762)
+
+  [ Michael Biebl ]
+  * Add "systemctl daemon-reload" to lsb init-functions hook if the LoadState
+    of a service is "not-found". This will run systemd-sysv-generator, so SysV
+    init scripts that aren't installed by the package manager should be picked
+    up automatically. (Closes: #825913)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 02 Jun 2016 11:18:32 +0200
+
 systemd (230-2) unstable; urgency=medium
 
   [ Martin Pitt ]

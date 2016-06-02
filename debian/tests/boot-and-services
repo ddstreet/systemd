@@ -51,7 +51,13 @@ class ServicesTest(unittest.TestCase):
         failed = [f for f in failed if 'thermald' not in f]
         # console-setup.service fails on devices without keyboard (LP: #1516591)
         failed = [f for f in failed if 'console-setup' not in f]
-        self.assertEqual(failed, [])
+        if failed:
+            for f in failed:
+                f = f.split()[0]
+                print('-------- journal for failed service %s -----------' % f)
+                sys.stdout.flush()
+                subprocess.call(['journalctl', '-b', '-u', f])
+            self.assertEqual(failed, [])
 
     def test_lightdm(self):
         out = subprocess.check_output(['ps', 'u', '-C', 'lightdm'])
@@ -127,7 +133,8 @@ class ServicesTest(unittest.TestCase):
             self.assertEqual(status, 0, status_out)
             self.assertEqual(findmnt, 0)
         else:
-            self.assertEqual(status, 3, status_out)
+            # 4 is correct (since upstream commit ca473d57), accept 3 for systemd <= 230
+            self.assertIn(status, [3, 4], status_out)
             self.assertNotEqual(findmnt, 0)
 
     @unittest.skipIf('TEST_UPSTREAM' in os.environ,
