@@ -1,3 +1,63 @@
+systemd (230-3) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * debian/tests/boot-and-services: Adjust test_tmp_mount() for fixed
+    systemctl exit code for "unit not found" in upstream commit ca473d57.
+  * debian/tests/boot-and-services, test_no_failed(): Show journal of failed
+    units.
+  * debian/extra/init-functions.d/40-systemd: Adjust to changed systemctl
+    show behaviour in 231: now this fails for nonexisting units instead of
+    succeeding with "not-found". Make the code compatible to both for now.
+  * Fix networkd integration with resolvconf for domain-limited DNS servers,
+    so that these don't appear as global nameservers in resolv.conf. Thanks
+    Andy Whitcroft for the initial fix! Add corresponding test case to
+    debian/tests/networkd. (LP: #1587762)
+  * resolved: Fix comments in resolve.conf for search domain overflows.
+    (LP: #1588229)
+  * On Ubuntu, provide an "ondemand.service" that replaces
+    /etc/init.d/ondemand. The latter does not exist any more when
+    "initscripts" falls out of the default installation. (LP: #1584124) This
+    now does not do a fixed one-minute wait but uses "Type=idle" instead. This
+    also becomes a no-op when the CPU supports "intel_pstate" (≤ 5 years old),
+    as on these the ondemand/powersave schedulers are actually detrimental.
+    (LP: #1579278)
+  * debian/systemd-container.install: Drop *.busname installation, they are
+    going away upstream.
+  * debian/extra/init-functions.d/40-systemd: Do not call systemctl
+    daemon-reload if the script is called as user (like reportbug does). Also
+    make sure that daemon-reload will not invoke polkit.
+  * Install test-udeb from .libs, to avoid installing the automake shell
+    wrapper.
+  * Fix transaction restarting in resolved to avoid async processing of
+    free'd transactions.
+    (Closes: #817210, LP: #1587727, #1587740, #1587762, #1587740)
+  * Add "upstream" autopkgtest that runs the test/TEST* upstream integration
+    tests in QEMU and nspawn.
+  * Build systemd-sysusers binary, for using in rkt. Do not ship the
+    corresponding unit and sysusers.d/ files yet, as these need some
+    Debianization and an autopkgtest. (Closes: #823322)
+  * debian/tests/systemd-fsckd: Adjust was_running() to also work for version
+    230.
+
+  [ Michael Biebl ]
+  * Add "systemctl daemon-reload" to lsb init-functions hook if the LoadState
+    of a service is "not-found". This will run systemd-sysv-generator, so SysV
+    init scripts that aren't installed by the package manager should be picked
+    up automatically. (Closes: #825913)
+  * automount: handle expire_tokens when the mount unit changes its state.
+    (Closes: #826512)
+  * debian/systemd.preinst: Correctly determine whether a service is enabled.
+    Testing for the return code alone is not sufficient as we need to
+    differentiate between "generated" and "enabled" services.
+    (Closes: #825981)
+
+  [ Felipe Sateler ]
+  * Drop configure option --disable-compat-libs. It no longer exists.
+  * Add policykit-1 to Suggests. It is used to allow unprivileged users to
+    execute certain commands. (Closes: #827756)
+
+ -- Martin Pitt <mpitt@debian.org>  Tue, 21 Jun 2016 23:51:07 +0200
+
 systemd (230-2) unstable; urgency=medium
 
   [ Martin Pitt ]
