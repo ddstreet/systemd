@@ -40,11 +40,9 @@ CONFFLAGS = \
 	--with-telinit=/lib/sysvinit/telinit \
 	--without-kill-user-processes \
 	--enable-split-usr \
-	--disable-compat-libs \
 	--disable-qrencode \
 	--disable-libidn \
 	--disable-vconsole \
-	--disable-sysusers \
 	--disable-firstboot \
 	--disable-xkbcommon \
 	--disable-libiptc \
@@ -55,6 +53,7 @@ CONFFLAGS = \
 CONFFLAGS_deb = \
 	--enable-selinux \
 	--enable-hwdb \
+	--enable-sysusers \
 	--enable-efi \
 	PYTHON=python3
 
@@ -119,6 +118,7 @@ CONFFLAGS_udeb = \
 	--disable-efi \
 	--disable-gnuefi \
 	--disable-seccomp \
+	--disable-sysusers \
 	--without-python
 
 override_dh_auto_configure:
@@ -181,6 +181,8 @@ override_dh_install:
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
 	rm -f debian/install/*/lib/systemd/system/halt-local.service
 	find debian/install/ -name '*.la' -delete
+	# remove this in 231
+	find debian/install/ -name '*.busname' -delete
 	# remove files related to factory-reset feature
 	find debian/install/ \( -name 'systemd-update-done*' -o \
 		-name systemd-journal-catalog-update.service -o \
@@ -190,6 +192,9 @@ override_dh_install:
 	rm -rf debian/install/*/usr/share/factory/
 	# remove symlinks enabling default-on services
 	rm -rf debian/install/*/etc/systemd/system/*.target.wants/
+	# FIXME: generate proper sysusers.d/basic.conf for Debian, and add autopkgtest
+	rm -rf debian/install/*/usr/lib/sysusers.d/*
+	rm -f debian/install/*/lib/systemd/system/*sysusers*.service debian/install/*/lib/systemd/system/*/*sysusers*.service
 ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_install -pudev-udeb -plibudev1-udeb --sourcedir=debian/install/udeb
 endif
@@ -231,13 +236,20 @@ endif
 	done
 
 	# ship test-udev, so that we have it for autopkgtests
-	install build-deb/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	if [ -e build-deb/.libs/test-udev ]; then \
+		install build-deb/.libs/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/; \
+	else \
+		install build-deb/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/; \
+	fi
 
 	# Ubuntu specific files
 	if dpkg-vendor --is ubuntu; then \
 		install -D --mode=644 debian/extra/udev.py debian/udev/usr/share/apport/package-hooks/udev.py; \
 		install -D --mode=644 debian/extra/systemd.py debian/systemd/usr/share/apport/package-hooks/systemd.py; \
 		install --mode=644 debian/extra/rules-ubuntu/*.rules debian/udev/lib/udev/rules.d/; \
+		install --mode=644 debian/extra/units-ubuntu/*.service debian/systemd/lib/systemd/system/; \
+		install --mode=755 debian/extra/set-cpufreq debian/systemd/lib/systemd/; \
+		ln -s ../ondemand.service debian/systemd/lib/systemd/system/multi-user.target.wants/ondemand.service; \
 	fi
 
 ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
