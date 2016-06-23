@@ -125,8 +125,8 @@ static bool arg_default_cpu_accounting = false;
 static bool arg_default_io_accounting = false;
 static bool arg_default_blockio_accounting = false;
 static bool arg_default_memory_accounting = false;
-static bool arg_default_tasks_accounting = true;
-static uint64_t arg_default_tasks_max = UINT64_C(512);
+static bool arg_default_tasks_accounting = false;
+static uint64_t arg_default_tasks_max = (uint64_t) -1;
 static sd_id128_t arg_machine_id = {};
 
 noreturn static void freeze_or_reboot(void) {
