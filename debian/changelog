@@ -1,3 +1,27 @@
+systemd (230-3git1) yakkety; urgency=medium
+
+  Upload current Debian packaging git to fix tests.
+
+  [ Martin Pitt ]
+  * tmp.mount: Add nosuid and nodev mount options. This restores compatibility
+    with the original SysV int RAMTMP defaults. (Closes: #826377)
+  * debian/tests/upstream: Some tests fail on platforms without QEMU at the
+    moment due to upstream PR#3587; blacklist these for now if QEMU is not
+    available.
+  * debian/rules: Don't run the "anything links against /usr" check for
+    upstream tests, as those run on Ubuntu 16.04 LTS which does not yet have
+    libidn moved to /lib.
+  * debian/tests/upstream: Clean up old journals before running a test, to
+    avoid printing a wrong one on failure.
+  * debian/tests/upstream: Do not run the QEMU tests on i386. Nested QEMU on
+    i386 causes testbed hangs on Ubuntu's cloud infrastructure, which is the
+    only place where these actually run.
+
+  [ Laurent Bigonville ]
+  * Build with IDN support. (Closes: #814528)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 23 Jun 2016 10:51:14 +0200
+
 systemd (230-3) unstable; urgency=medium
 
   [ Martin Pitt ]
