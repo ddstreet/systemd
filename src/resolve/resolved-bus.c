@@ -642,6 +642,8 @@ static int bus_method_resolve_record(sd_bus_message *message, void *userdata, sd
 
         if (!dns_type_is_valid_query(type))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Specified resource record type %" PRIu16 " may not be used in a query.", type);
+        if (dns_type_is_zone_transer(type))
+                return sd_bus_error_setf(error, SD_BUS_ERROR_NOT_SUPPORTED, "Zone transfers not permitted via this programming interface.");
         if (dns_type_is_obsolete(type))
                 return sd_bus_error_setf(error, SD_BUS_ERROR_NOT_SUPPORTED, "Specified DNS resource record type %" PRIu16 " is obsolete.", type);
 
@@ -664,6 +666,10 @@ static int bus_method_resolve_record(sd_bus_message *message, void *userdata, sd
         r = dns_query_new(m, &q, question, question, ifindex, flags|SD_RESOLVED_NO_SEARCH);
         if (r < 0)
                 return r;
+
+        /* Let's request that the TTL is fixed up for locally cached entries, after all we return it in the wire format
+         * blob */
+        q->clamp_ttl = true;
 
         q->request = sd_bus_message_ref(message);
         q->complete = bus_method_resolve_record_complete;
@@ -1221,7 +1227,7 @@ int bus_dns_server_append(sd_bus_message *reply, DnsServer *s, bool with_ifindex
                 return r;
 
         if (with_ifindex) {
-                r = sd_bus_message_append(reply, "i", s->link ? s->link->ifindex : 0);
+                r = sd_bus_message_append(reply, "i", dns_server_ifindex(s));
                 if (r < 0)
                         return r;
         }
@@ -1409,6 +1415,36 @@ static int bus_property_get_dnssec_supported(
         return sd_bus_message_append(reply, "b", manager_dnssec_supported(m));
 }
 
+static int bus_property_get_ntas(
+                sd_bus *bus,
+                const char *path,
+                const char *interface,
+                const char *property,
+                sd_bus_message *reply,
+                void *userdata,
+                sd_bus_error *error) {
+
+        Manager *m = userdata;
+        const char *domain;
+        Iterator i;
+        int r;
+
+        assert(reply);
+        assert(m);
+
+        r = sd_bus_message_open_container(reply, 'a', "s");
+        if (r < 0)
+                return r;
+
+        SET_FOREACH(domain, m->trust_anchor.negative_by_name, i) {
+                r = sd_bus_message_append(reply, "s", domain);
+                if (r < 0)
+                        return r;
+        }
+
+        return sd_bus_message_close_container(reply);
+}
+
 static int bus_method_reset_statistics(sd_bus_message *message, void *userdata, sd_bus_error *error) {
         Manager *m = userdata;
         DnsScope *s;
@@ -1535,6 +1571,17 @@ static int bus_method_get_link(sd_bus_message *message, void *userdata, sd_bus_e
         return sd_bus_reply_method_return(message, "o", p);
 }
 
+static int bus_method_flush_caches(sd_bus_message *message, void *userdata, sd_bus_error *error) {
+        Manager *m = userdata;
+
+        assert(message);
+        assert(m);
+
+        manager_flush_caches(m);
+
+        return sd_bus_reply_method_return(message, NULL);
+}
+
 static const sd_bus_vtable resolve_vtable[] = {
         SD_BUS_VTABLE_START(0),
         SD_BUS_PROPERTY("LLMNRHostname", "s", NULL, offsetof(Manager, llmnr_hostname), 0),
@@ -1544,12 +1591,14 @@ static const sd_bus_vtable resolve_vtable[] = {
         SD_BUS_PROPERTY("CacheStatistics", "(ttt)", bus_property_get_cache_statistics, 0, 0),
         SD_BUS_PROPERTY("DNSSECStatistics", "(tttt)", bus_property_get_dnssec_statistics, 0, 0),
         SD_BUS_PROPERTY("DNSSECSupported", "b", bus_property_get_dnssec_supported, 0, 0),
+        SD_BUS_PROPERTY("DNSSECNegativeTrustAnchors", "as", bus_property_get_ntas, 0, 0),
 
         SD_BUS_METHOD("ResolveHostname", "isit", "a(iiay)st", bus_method_resolve_hostname, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("ResolveAddress", "iiayt", "a(is)t", bus_method_resolve_address, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("ResolveRecord", "isqqt", "a(iqqay)t", bus_method_resolve_record, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("ResolveService", "isssit", "a(qqqsa(iiay)s)aayssst", bus_method_resolve_service, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("ResetStatistics", NULL, NULL, bus_method_reset_statistics, 0),
+        SD_BUS_METHOD("FlushCaches", NULL, NULL, bus_method_flush_caches, 0),
         SD_BUS_METHOD("GetLink", "i", "o", bus_method_get_link, SD_BUS_VTABLE_UNPRIVILEGED),
         SD_BUS_METHOD("SetLinkDNS", "ia(iay)", NULL, bus_method_set_link_dns_servers, 0),
         SD_BUS_METHOD("SetLinkDomains", "ia(sb)", NULL, bus_method_set_link_domains, 0),

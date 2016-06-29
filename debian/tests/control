@@ -93,7 +93,7 @@ Depends: tree,
   isc-dhcp-client,
   iputils-ping,
   strace,
-  qemu-system-x86 [i386 amd64],
+  qemu-system-x86 [amd64],
   less,
   pkg-config,
   systemd-journal-remote,
@@ -116,12 +116,12 @@ Depends: systemd-sysv,
   isc-dhcp-client,
   iputils-ping,
   strace,
-  qemu-system-x86,
+  qemu-system-x86 [amd64],
   less,
   pkg-config,
   systemd-journal-remote,
   systemd-container,
-Restrictions: needs-recommends, needs-root, isolation-machine, allow-stderr, breaks-testbed
+Restrictions: needs-recommends, needs-root, isolation-container, allow-stderr, breaks-testbed
 
 # NOUPSTREAM: Do not run these tests for upstream builds
 

@@ -41,7 +41,6 @@ CONFFLAGS = \
 	--without-kill-user-processes \
 	--enable-split-usr \
 	--disable-qrencode \
-	--disable-libidn \
 	--disable-vconsole \
 	--disable-firstboot \
 	--disable-xkbcommon \
@@ -64,6 +63,7 @@ CONFFLAGS_deb += \
 	--enable-coredump \
 	--enable-elfutils \
 	--enable-apparmor \
+	--enable-libidn \
 	--enable-libcurl \
 	--enable-importd \
 	--enable-microhttpd \
@@ -75,6 +75,7 @@ CONFFLAGS_deb += \
 	--disable-coredump \
 	--disable-elfutils \
 	--disable-apparmor \
+	--disable-libidn \
 	--disable-libcurl \
 	--disable-importd \
 	--disable-microhttpd \
@@ -89,6 +90,7 @@ CONFFLAGS_udeb = \
 	--disable-audit \
 	--disable-selinux \
 	--disable-apparmor \
+	--disable-libidn \
 	--disable-smack \
 	--disable-ima \
 	--disable-binfmt \
@@ -252,6 +254,7 @@ endif
 		ln -s ../ondemand.service debian/systemd/lib/systemd/system/multi-user.target.wants/ondemand.service; \
 	fi
 
+ifeq ($(TEST_UPSTREAM),)
 ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
 	echo "Checking that executables don't link to libraries in /usr..."
 	set -e; for e in debian/systemd/lib/systemd/systemd* debian/udev/lib/systemd/systemd*; do \
@@ -260,6 +263,7 @@ ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
 	        echo "ERROR: $$e links to /usr"; echo "$$OUT"; exit 1; \
 	    fi; \
 	done
+endif
 endif
 
 override_dh_installinit:
