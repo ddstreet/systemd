@@ -1,3 +1,45 @@
+systemd (230-4) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * tmp.mount: Add nosuid and nodev mount options. This restores compatibility
+    with the original SysV int RAMTMP defaults. (Closes: #826377)
+  * debian/tests/upstream: Some tests fail on platforms without QEMU at the
+    moment due to upstream PR#3587; blacklist these for now if QEMU is not
+    available.
+  * debian/rules: Don't run the "anything links against /usr" check for
+    upstream tests, as those run on Ubuntu 16.04 LTS which does not yet have
+    libidn moved to /lib.
+  * debian/tests/upstream: Clean up old journals before running a test, to
+    avoid printing a wrong one on failure.
+  * debian/tests/upstream: Do not run the QEMU tests on i386. Nested QEMU on
+    i386 causes testbed hangs on Ubuntu's cloud infrastructure, which is the
+    only place where these actually run.
+  * resolved: Fix SERVFAIL handling and introduce a new "Cache=" option to
+    disable local caching.
+  * resolved: Support IPv6 zone indices in resolv.conf. (LP: #1587489)
+  * resolved: Update resolv.conf when calling SetLinkDNS().
+  * debian/tests/storage: Sync and settle udev after luksFormat, to reduce the
+    chance of seeing some half-written signatures.
+  * debian/tests/networkd: Stop skipping the two DHCP6 tests, this regression
+    seems to have been fixed now.
+  * resolved: respond to local resolver requests on 127.0.0.53:53. This
+    provides compatibility with clients that don't use NSS but do DNS queries
+    directly, such as Chrome.
+  * resolved: Don't add route-only domains to /etc/resolv.conf.
+  * systemd-resolve: Add --flush-caches and --status commands.
+  * Add debian/extra/units/systemd-resolved.service.d/resolvconf.conf to tell
+    resolvconf about resolved's builtin DNS server on 127.0.0.53. With that,
+    DNS servers picked up via networkd are respected when using resolvconf,
+    and software like Chrome that does not do NSS (libnss-resolve) still gets
+    proper DNS resolution. Drop the brittle and ugly
+    systemd-networkd-resolvconf-update.{path,service} hack instead.
+  * debian/tests/boot-smoke: Run in containers as well.
+
+  [ Laurent Bigonville ]
+  * Build with IDN support. (Closes: #814528)
+
+ -- Martin Pitt <mpitt@debian.org>  Wed, 29 Jun 2016 15:23:32 +0200
+
 systemd (230-3) unstable; urgency=medium
 
   [ Martin Pitt ]
