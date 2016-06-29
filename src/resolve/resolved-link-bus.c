@@ -23,10 +23,27 @@
 #include "resolve-util.h"
 #include "resolved-bus.h"
 #include "resolved-link-bus.h"
+#include "resolved-resolv-conf.h"
 #include "strv.h"
 
 static BUS_DEFINE_PROPERTY_GET_ENUM(property_get_resolve_support, resolve_support, ResolveSupport);
-static BUS_DEFINE_PROPERTY_GET_ENUM(property_get_dnssec_mode, dnssec_mode, DnssecMode);
+
+static int property_get_dnssec_mode(
+                sd_bus *bus,
+                const char *path,
+                const char *interface,
+                const char *property,
+                sd_bus_message *reply,
+                void *userdata,
+                sd_bus_error *error) {
+
+        Link *l = userdata;
+
+        assert(reply);
+        assert(l);
+
+        return sd_bus_message_append(reply, "s", dnssec_mode_to_string(link_get_dnssec_mode(l)));
+}
 
 static int property_get_dns(
                 sd_bus *bus,
@@ -197,6 +214,9 @@ int bus_link_method_set_dns_servers(sd_bus_message *message, void *userdata, sd_
                 if (sz != FAMILY_ADDRESS_SIZE(family))
                         return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid address size");
 
+                if (!dns_server_address_valid(family, d))
+                        return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid DNS server address");
+
                 r = sd_bus_message_exit_container(message);
                 if (r < 0)
                         return r;
@@ -218,11 +238,11 @@ int bus_link_method_set_dns_servers(sd_bus_message *message, void *userdata, sd_
         for (i = 0; i < n; i++) {
                 DnsServer *s;
 
-                s = dns_server_find(l->dns_servers, dns[i].family, &dns[i].address);
+                s = dns_server_find(l->dns_servers, dns[i].family, &dns[i].address, 0);
                 if (s)
                         dns_server_move_back_and_unmark(s);
                 else {
-                        r = dns_server_new(l->manager, NULL, DNS_SERVER_LINK, l, dns[i].family, &dns[i].address);
+                        r = dns_server_new(l->manager, NULL, DNS_SERVER_LINK, l, dns[i].family, &dns[i].address, 0);
                         if (r < 0)
                                 goto clear;
                 }
@@ -231,6 +251,8 @@ int bus_link_method_set_dns_servers(sd_bus_message *message, void *userdata, sd_
 
         dns_server_unlink_marked(l->dns_servers);
         link_allocate_scopes(l);
+
+        (void) manager_write_resolv_conf(l->manager);
 
         return sd_bus_reply_method_return(message, NULL);
 
@@ -306,6 +328,9 @@ int bus_link_method_set_domains(sd_bus_message *message, void *userdata, sd_bus_
                 goto clear;
 
         dns_search_domain_unlink_marked(l->search_domains);
+
+        (void) manager_write_resolv_conf(l->manager);
+
         return sd_bus_reply_method_return(message, NULL);
 
 clear:
@@ -444,6 +469,8 @@ int bus_link_method_revert(sd_bus_message *message, void *userdata, sd_bus_error
         link_allocate_scopes(l);
         link_add_rrs(l, false);
 
+        (void) manager_write_resolv_conf(l->manager);
+
         return sd_bus_reply_method_return(message, NULL);
 }
 
@@ -455,7 +482,7 @@ const sd_bus_vtable link_vtable[] = {
         SD_BUS_PROPERTY("Domains", "a(sb)", property_get_domains, 0, 0),
         SD_BUS_PROPERTY("LLMNR", "s", property_get_resolve_support, offsetof(Link, llmnr_support), 0),
         SD_BUS_PROPERTY("MulticastDNS", "s", property_get_resolve_support, offsetof(Link, mdns_support), 0),
-        SD_BUS_PROPERTY("DNSSEC", "s", property_get_dnssec_mode, offsetof(Link, dnssec_mode), 0),
+        SD_BUS_PROPERTY("DNSSEC", "s", property_get_dnssec_mode, 0, 0),
         SD_BUS_PROPERTY("DNSSECNegativeTrustAnchors", "as", property_get_ntas, 0, 0),
         SD_BUS_PROPERTY("DNSSECSupported", "b", property_get_dnssec_supported, 0, 0),
 
