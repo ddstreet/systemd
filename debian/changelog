@@ -1,3 +1,24 @@
+systemd (230-5) unstable; urgency=medium
+
+  [ Martin Pitt ]
+  * Sync test/networkd-test.py with current upstream master, and remove our
+    debian/tests/networkd copy. Directly run test/networkd-test.py in
+    autopkgtest.
+  * debian/extra/rules/73-usb-net-by-mac.rules: Disable when
+    /etc/udev/rules.d/80-net-setup-link.rules is a symlink to /dev/null, to be
+    consistent with the documented way to disable ifnames. (Closes: #824491,
+    LP: #1593379)
+  * debian/rules: Ignore libcap-ng.so in the "does anything link against /usr"
+    check, to work around libaudit1 recently gaining a new dependency against
+    that library (#828991). We have no influence on that ourselves. This fixes
+    the FTBFS in the meantime.
+
+  [ Felipe Sateler ]
+  * Convert common code into a private shared library. This saves about 9 MB
+    of installed size in the systemd package, and some more in systemd-*.
+
+ -- Martin Pitt <mpitt@debian.org>  Fri, 01 Jul 2016 09:15:12 +0200
+
 systemd (230-4) unstable; urgency=medium
 
   [ Martin Pitt ]
