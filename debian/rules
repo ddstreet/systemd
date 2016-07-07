@@ -183,6 +183,7 @@ override_dh_install:
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
 	rm -f debian/install/*/lib/systemd/system/halt-local.service
 	find debian/install/ -name '*.la' -delete
+	rm -f debian/install/*/lib/systemd/libsystemd-shared.so
 	# remove this in 231
 	find debian/install/ -name '*.busname' -delete
 	# remove files related to factory-reset feature
@@ -239,9 +240,9 @@ endif
 
 	# ship test-udev, so that we have it for autopkgtests
 	if [ -e build-deb/.libs/test-udev ]; then \
-		install build-deb/.libs/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/; \
+		install -D build-deb/.libs/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/udev/test-udev; \
 	else \
-		install build-deb/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/; \
+		install -D build-deb/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/udev/test-udev; \
 	fi
 
 	# Ubuntu specific files
@@ -282,6 +283,7 @@ override_dh_shlibdeps:
 
 override_dh_makeshlibs:
 	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb -- -c$(GENSYMBOLS_LEVEL)
+	dh_makeshlibs -psystemd -Xlibsystemd-shared  -- -c$(GENSYMBOLS_LEVEL)
 	dh_makeshlibs --remaining-packages -- -c$(GENSYMBOLS_LEVEL)
 
 autoreconf:
