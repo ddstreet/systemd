@@ -1,3 +1,18 @@
+systemd (229-4ubuntu7) xenial-proposed; urgency=medium
+
+  * Add pre-dependency to dpkg >= 1.17.14 on udev, to ensure that
+    dpkg-maintscript-helper symlink_to_dir is available. (LP: #1585406)
+  * Add activation rate limiting for socket units. (LP: #1568094)
+  * Split out udev rule to name USB network interfaces by MAC address into
+    73-usb-net-by-mac.rules, so that it's easier to disable. (Closes: #824025)
+  * 73-usb-net-by-mac.rules: Disable when net.ifnames=0 is specified on the
+    kernel command line or if /etc/udev/rules.d/80-net-setup-link.rules is a
+    symlink to /dev/null, to be consistent with disabling the *.link files and
+    the documented way to disable ifnames. (Closes: #824491, LP: #1593379)
+  * coredump: Fix "Coredump file descriptor missing". (LP: #1602256)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 12 Jul 2016 17:37:25 +0200
+
 systemd (229-4ubuntu6) xenial-proposed; urgency=medium
 
   * Add a DHCP exit hook for pushing received NTP servers into timesyncd.
