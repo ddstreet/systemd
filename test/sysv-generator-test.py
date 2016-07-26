@@ -186,7 +186,7 @@ class SysvGeneratorTest(unittest.TestCase):
         # $local_fs does not need translation, don't expect any dependency
         # fields here
         self.assertEqual(set(s.options('Unit')),
-                         set(['Documentation', 'SourcePath', 'Description', 'After']))
+                         set(['Documentation', 'SourcePath', 'Description']))
 
         self.assertEqual(s.get('Service', 'Type'), 'forking')
         init_script = os.path.join(self.init_d_dir, 'foo')
@@ -262,9 +262,9 @@ class SysvGeneratorTest(unittest.TestCase):
                          ['may1.service', 'must1.service', 'must2.service', 'ne_may2.service'])
 
         # other services should not depend on each other
-        self.assertEqual(results['must1.service'].get('Unit', 'After'), 'local-fs.target')
-        self.assertEqual(results['must2.service'].get('Unit', 'After'), 'local-fs.target')
-        self.assertEqual(results['may1.service'].get('Unit', 'After'), 'local-fs.target')
+        self.assertFalse(results['must1.service'].has_option('Unit', 'After'))
+        self.assertFalse(results['must2.service'].has_option('Unit', 'After'))
+        self.assertFalse(results['may1.service'].has_option('Unit', 'After'))
 
     def test_symlink_prio_deps(self):
         '''script without LSB headers use rcN.d priority'''
@@ -294,7 +294,7 @@ class SysvGeneratorTest(unittest.TestCase):
         err, results = self.run_generator()
         self.assertEqual(list(results), ['foo.service'])
         self.assertEqual(set(results['foo.service'].options('Unit')),
-                         set(['Documentation', 'SourcePath', 'Description', 'After']))
+                         set(['Documentation', 'SourcePath', 'Description']))
         # should create symlinks for the alternative names
         for f in ['bar.service', 'baz.service']:
             self.assertEqual(os.readlink(os.path.join(self.out_dir, f)),

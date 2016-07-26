@@ -611,9 +611,9 @@ static int dns_scope_make_reply_packet(
         assert(s);
         assert(ret);
 
-        if ((!q || q->n_keys <= 0)
-            && (!answer || answer->n_rrs <= 0)
-            && (!soa || soa->n_rrs <= 0))
+        if (dns_question_isempty(q) &&
+            dns_answer_isempty(answer) &&
+            dns_answer_isempty(soa))
                 return -EINVAL;
 
         r = dns_packet_new(&p, s->protocol, 0);
@@ -654,17 +654,17 @@ static int dns_scope_make_reply_packet(
 }
 
 static void dns_scope_verify_conflicts(DnsScope *s, DnsPacket *p) {
-        unsigned n;
+        DnsResourceRecord *rr;
+        DnsResourceKey *key;
 
         assert(s);
         assert(p);
 
-        if (p->question)
-                for (n = 0; n < p->question->n_keys; n++)
-                        dns_zone_verify_conflicts(&s->zone, p->question->keys[n]);
-        if (p->answer)
-                for (n = 0; n < p->answer->n_rrs; n++)
-                        dns_zone_verify_conflicts(&s->zone, p->answer->items[n].rr->key);
+        DNS_QUESTION_FOREACH(key, p->question)
+                dns_zone_verify_conflicts(&s->zone, key);
+
+        DNS_ANSWER_FOREACH(rr, p->answer)
+                dns_zone_verify_conflicts(&s->zone, rr->key);
 }
 
 void dns_scope_process_query(DnsScope *s, DnsStream *stream, DnsPacket *p) {
@@ -704,10 +704,10 @@ void dns_scope_process_query(DnsScope *s, DnsStream *stream, DnsPacket *p) {
                 return;
         }
 
-        assert(p->question->n_keys == 1);
+        assert(dns_question_size(p->question) == 1);
         key = p->question->keys[0];
 
-        r = dns_zone_lookup(&s->zone, key, &answer, &soa, &tentative);
+        r = dns_zone_lookup(&s->zone, key, 0, &answer, &soa, &tentative);
         if (r < 0) {
                 log_debug_errno(r, "Failed to lookup key: %m");
                 return;
@@ -1025,4 +1025,13 @@ bool dns_scope_network_good(DnsScope *s) {
                 return true;
 
         return manager_routable(s->manager, AF_UNSPEC);
+}
+
+int dns_scope_ifindex(DnsScope *s) {
+        assert(s);
+
+        if (s->link)
+                return s->link->ifindex;
+
+        return 0;
 }
