@@ -18,6 +18,7 @@
 ***/
 
 #include "alloc-util.h"
+#include "bus-common-errors.h"
 #include "bus-util.h"
 #include "parse-util.h"
 #include "resolve-util.h"
@@ -174,6 +175,17 @@ static int property_get_dnssec_supported(
         return sd_bus_message_append(reply, "b", link_dnssec_supported(l));
 }
 
+static int verify_unmanaged_link(Link *l, sd_bus_error *error) {
+        assert(l);
+
+        if (l->flags & IFF_LOOPBACK)
+                return sd_bus_error_setf(error, BUS_ERROR_LINK_BUSY, "Link %s is loopback device.", l->name);
+        if (l->is_managed)
+                return sd_bus_error_setf(error, BUS_ERROR_LINK_BUSY, "Link %s is managed.", l->name);
+
+        return 0;
+}
+
 int bus_link_method_set_dns_servers(sd_bus_message *message, void *userdata, sd_bus_error *error) {
         _cleanup_free_ struct in_addr_data *dns = NULL;
         size_t allocated = 0, n = 0;
@@ -183,6 +195,10 @@ int bus_link_method_set_dns_servers(sd_bus_message *message, void *userdata, sd_
 
         assert(message);
         assert(l);
+
+        r = verify_unmanaged_link(l, error);
+        if (r < 0)
+                return r;
 
         r = sd_bus_message_enter_container(message, 'a', "(iay)");
         if (r < 0)
@@ -252,6 +268,7 @@ int bus_link_method_set_dns_servers(sd_bus_message *message, void *userdata, sd_
         dns_server_unlink_marked(l->dns_servers);
         link_allocate_scopes(l);
 
+        (void) link_save_user(l);
         (void) manager_write_resolv_conf(l->manager);
 
         return sd_bus_reply_method_return(message, NULL);
@@ -267,6 +284,10 @@ int bus_link_method_set_domains(sd_bus_message *message, void *userdata, sd_bus_
 
         assert(message);
         assert(l);
+
+        r = verify_unmanaged_link(l, error);
+        if (r < 0)
+                return r;
 
         r = sd_bus_message_enter_container(message, 'a', "(sb)");
         if (r < 0)
@@ -329,6 +350,7 @@ int bus_link_method_set_domains(sd_bus_message *message, void *userdata, sd_bus_
 
         dns_search_domain_unlink_marked(l->search_domains);
 
+        (void) link_save_user(l);
         (void) manager_write_resolv_conf(l->manager);
 
         return sd_bus_reply_method_return(message, NULL);
@@ -347,6 +369,10 @@ int bus_link_method_set_llmnr(sd_bus_message *message, void *userdata, sd_bus_er
         assert(message);
         assert(l);
 
+        r = verify_unmanaged_link(l, error);
+        if (r < 0)
+                return r;
+
         r = sd_bus_message_read(message, "s", &llmnr);
         if (r < 0)
                 return r;
@@ -363,6 +389,8 @@ int bus_link_method_set_llmnr(sd_bus_message *message, void *userdata, sd_bus_er
         link_allocate_scopes(l);
         link_add_rrs(l, false);
 
+        (void) link_save_user(l);
+
         return sd_bus_reply_method_return(message, NULL);
 }
 
@@ -374,6 +402,10 @@ int bus_link_method_set_mdns(sd_bus_message *message, void *userdata, sd_bus_err
 
         assert(message);
         assert(l);
+
+        r = verify_unmanaged_link(l, error);
+        if (r < 0)
+                return r;
 
         r = sd_bus_message_read(message, "s", &mdns);
         if (r < 0)
@@ -391,6 +423,8 @@ int bus_link_method_set_mdns(sd_bus_message *message, void *userdata, sd_bus_err
         link_allocate_scopes(l);
         link_add_rrs(l, false);
 
+        (void) link_save_user(l);
+
         return sd_bus_reply_method_return(message, NULL);
 }
 
@@ -402,6 +436,10 @@ int bus_link_method_set_dnssec(sd_bus_message *message, void *userdata, sd_bus_e
 
         assert(message);
         assert(l);
+
+        r = verify_unmanaged_link(l, error);
+        if (r < 0)
+                return r;
 
         r = sd_bus_message_read(message, "s", &dnssec);
         if (r < 0)
@@ -417,6 +455,8 @@ int bus_link_method_set_dnssec(sd_bus_message *message, void *userdata, sd_bus_e
 
         link_set_dnssec_mode(l, mode);
 
+        (void) link_save_user(l);
+
         return sd_bus_reply_method_return(message, NULL);
 }
 
@@ -429,6 +469,10 @@ int bus_link_method_set_dnssec_negative_trust_anchors(sd_bus_message *message, v
 
         assert(message);
         assert(l);
+
+        r = verify_unmanaged_link(l, error);
+        if (r < 0)
+                return r;
 
         r = sd_bus_message_read_strv(message, &ntas);
         if (r < 0)
@@ -456,19 +500,27 @@ int bus_link_method_set_dnssec_negative_trust_anchors(sd_bus_message *message, v
         l->dnssec_negative_trust_anchors = ns;
         ns = NULL;
 
+        (void) link_save_user(l);
+
         return sd_bus_reply_method_return(message, NULL);
 }
 
 int bus_link_method_revert(sd_bus_message *message, void *userdata, sd_bus_error *error) {
         Link *l = userdata;
+        int r;
 
         assert(message);
         assert(l);
+
+        r = verify_unmanaged_link(l, error);
+        if (r < 0)
+                return r;
 
         link_flush_settings(l);
         link_allocate_scopes(l);
         link_add_rrs(l, false);
 
+        (void) link_save_user(l);
         (void) manager_write_resolv_conf(l->manager);
 
         return sd_bus_reply_method_return(message, NULL);

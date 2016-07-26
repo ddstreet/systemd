@@ -23,6 +23,7 @@
 
 #include "af-list.h"
 #include "alloc-util.h"
+#include "dirent-util.h"
 #include "dns-domain.h"
 #include "fd-util.h"
 #include "fileio-label.h"
@@ -79,11 +80,11 @@ static int manager_process_link(sd_netlink *rtnl, sd_netlink_message *mm, void *
                                 goto fail;
                 }
 
-                r = link_update_rtnl(l, mm);
+                r = link_process_rtnl(l, mm);
                 if (r < 0)
                         goto fail;
 
-                r = link_update_monitor(l);
+                r = link_update(l);
                 if (r < 0)
                         goto fail;
 
@@ -96,6 +97,7 @@ static int manager_process_link(sd_netlink *rtnl, sd_netlink_message *mm, void *
         case RTM_DELLINK:
                 if (l) {
                         log_debug("Removing link %i/%s", l->ifindex, l->name);
+                        link_remove_user(l);
                         link_free(l);
                 }
 
@@ -280,7 +282,7 @@ static int on_network_event(sd_event_source *s, int fd, uint32_t revents, void *
         sd_network_monitor_flush(m->network_monitor);
 
         HASHMAP_FOREACH(l, m->links, i) {
-                r = link_update_monitor(l);
+                r = link_update(l);
                 if (r < 0)
                         log_warning_errno(r, "Failed to update monitor information for %i: %m", l->ifindex);
         }
@@ -475,7 +477,6 @@ static int manager_sigusr2(sd_event_source *s, const struct signalfd_siginfo *si
         assert(m);
 
         manager_flush_caches(m);
-        log_info("Flushed all caches.");
 
         return 0;
 }
@@ -543,6 +544,8 @@ int manager_new(Manager **ret) {
 
         (void) sd_event_add_signal(m->event, &m->sigusr1_event_source, SIGUSR1, manager_sigusr1, m);
         (void) sd_event_add_signal(m->event, &m->sigusr2_event_source, SIGUSR2, manager_sigusr2, m);
+
+        manager_cleanup_saved_user(m);
 
         *ret = m;
         m = NULL;
@@ -669,15 +672,14 @@ int manager_recv(Manager *m, int fd, DnsProtocol protocol, DnsPacket **ret) {
         mh.msg_controllen = sizeof(control);
 
         l = recvmsg(fd, &mh, 0);
+        if (l == 0)
+                return 0;
         if (l < 0) {
                 if (errno == EAGAIN || errno == EINTR)
                         return 0;
 
                 return -errno;
         }
-
-        if (l <= 0)
-                return -EIO;
 
         assert(!(mh.msg_flags & MSG_CTRUNC));
         assert(!(mh.msg_flags & MSG_TRUNC));
@@ -1316,4 +1318,61 @@ void manager_flush_caches(Manager *m) {
 
         LIST_FOREACH(scopes, scope, m->dns_scopes)
                 dns_cache_flush(&scope->cache);
+
+        log_info("Flushed all caches.");
+}
+
+void manager_cleanup_saved_user(Manager *m) {
+        _cleanup_closedir_ DIR *d = NULL;
+        struct dirent *de;
+        int r;
+
+        assert(m);
+
+        /* Clean up all saved per-link files in /run/systemd/resolve/netif/ that don't have a matching interface
+         * anymore. These files are created to persist settings pushed in by the user via the bus, so that resolved can
+         * be restarted without losing this data. */
+
+        d = opendir("/run/systemd/resolve/netif/");
+        if (!d) {
+                if (errno == ENOENT)
+                        return;
+
+                log_warning_errno(errno, "Failed to open interface directory: %m");
+                return;
+        }
+
+        FOREACH_DIRENT_ALL(de, d, log_error_errno(errno, "Failed to read interface directory: %m")) {
+                _cleanup_free_ char *p = NULL;
+                int ifindex;
+                Link *l;
+
+                if (!IN_SET(de->d_type, DT_UNKNOWN, DT_REG))
+                        continue;
+
+                if (STR_IN_SET(de->d_name, ".", ".."))
+                        continue;
+
+                r = parse_ifindex(de->d_name, &ifindex);
+                if (r < 0) /* Probably some temporary file from a previous run. Delete it */
+                        goto rm;
+
+                l = hashmap_get(m->links, INT_TO_PTR(ifindex));
+                if (!l) /* link vanished */
+                        goto rm;
+
+                if (l->is_managed) /* now managed by networkd, hence the bus settings are useless */
+                        goto rm;
+
+                continue;
+
+        rm:
+                p = strappend("/run/systemd/resolve/netif/", de->d_name);
+                if (!p) {
+                        log_oom();
+                        return;
+                }
+
+                (void) unlink(p);
+        }
 }

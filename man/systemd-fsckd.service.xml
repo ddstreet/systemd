@@ -99,7 +99,7 @@
         <varlistentry>
           <term><literal>&lt;string&gt;</literal></term>
           <listitem><para>a translated message ready to be displayed
-          by the plymouth theme displaying the data above. It can be overriden
+          by the plymouth theme displaying the data above. It can be overridden
           by themes supporting i18n.</para></listitem>
         </varlistentry>
       </variablelist>
@@ -112,7 +112,7 @@
           <term><literal>&lt;strings&gt;</literal></term>
           <listitem><para>a translated string ready to be displayed
           by the plymouth theme indicating that Control+C can be used to cancel
-          current checks. It can be overriden (matching only
+          current checks. It can be overridden (matching only
           <literal>fsckd-cancel-msg</literal> prefix)
           by themes supporting i18n.</para></listitem>
         </varlistentry>

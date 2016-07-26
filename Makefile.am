@@ -39,12 +39,12 @@ SUBDIRS = . po
 .PRECIOUS: $(TEST_SUITE_LOG) Makefile
 
 LIBUDEV_CURRENT=7
-LIBUDEV_REVISION=4
+LIBUDEV_REVISION=5
 LIBUDEV_AGE=6
 
-LIBSYSTEMD_CURRENT=15
+LIBSYSTEMD_CURRENT=16
 LIBSYSTEMD_REVISION=0
-LIBSYSTEMD_AGE=15
+LIBSYSTEMD_AGE=16
 
 # Dirs of external packages
 dbuspolicydir=@dbuspolicydir@
@@ -143,6 +143,10 @@ else
 noinst_PROGRAMS =
 TESTS =
 endif
+AM_TESTS_ENVIRONMENT = \
+	export SYSTEMD_KBD_MODEL_MAP=$(abs_top_srcdir)/src/locale/kbd-model-map; \
+	export SYSTEMD_LANGUAGE_FALLBACK_MAP=$(abs_top_srcdir)/src/locale/language-fallback-map;
+
 if ENABLE_BASH_COMPLETION
 dist_bashcompletion_DATA = $(dist_bashcompletion_data)
 nodist_bashcompletion_DATA = $(nodist_bashcompletion_data)
@@ -215,6 +219,7 @@ AM_CPPFLAGS = \
 	-I $(top_srcdir)/src/shared \
 	-I $(top_builddir)/src/shared \
 	-I $(top_srcdir)/src/network \
+	-I $(top_srcdir)/src/locale \
 	-I $(top_srcdir)/src/login \
 	-I $(top_srcdir)/src/journal \
 	-I $(top_builddir)/src/journal \
@@ -237,6 +242,7 @@ AM_CPPFLAGS = \
 	-I $(top_srcdir)/src/libsystemd/sd-network \
 	-I $(top_srcdir)/src/libsystemd/sd-hwdb \
 	-I $(top_srcdir)/src/libsystemd/sd-device \
+	-I $(top_srcdir)/src/libsystemd/sd-id128 \
 	-I $(top_srcdir)/src/libsystemd-network \
 	$(OUR_CPPFLAGS)
 
@@ -409,7 +415,6 @@ rootlibexec_PROGRAMS += \
 endif
 
 systemgenerator_PROGRAMS = \
-	systemd-insserv-generator \
 	systemd-getty-generator \
 	systemd-fstab-generator \
 	systemd-system-update-generator \
@@ -571,7 +576,8 @@ endif
 dist_userunit_DATA = \
 	units/user/basic.target \
 	units/user/default.target \
-	units/user/exit.target
+	units/user/exit.target \
+	units/user/graphical-session.target
 
 nodist_userunit_DATA = \
 	units/user/systemd-exit.service
@@ -753,6 +759,7 @@ noinst_LTLIBRARIES += \
 libbasic_la_SOURCES = \
 	src/basic/missing.h \
 	src/basic/missing_syscall.h \
+	src/basic/raw-clone.h \
 	src/basic/capability-util.c \
 	src/basic/capability-util.h \
 	src/basic/conf-files.c \
@@ -837,8 +844,6 @@ libbasic_la_SOURCES = \
 	src/basic/ordered-set.c \
 	src/basic/bitmap.c \
 	src/basic/bitmap.h \
-	src/basic/fdset.c \
-	src/basic/fdset.h \
 	src/basic/prioq.c \
 	src/basic/prioq.h \
 	src/basic/web-util.c \
@@ -1048,8 +1053,12 @@ libshared_la_SOURCES = \
 	src/shared/resolve-util.h \
 	src/shared/bus-unit-util.c \
 	src/shared/bus-unit-util.h \
+	src/shared/vlan-util.h \
+	src/shared/vlan-util.c \
 	src/shared/tests.h \
-	src/shared/tests.c
+	src/shared/tests.c \
+	src/shared/fdset.c \
+	src/shared/fdset.h
 
 if HAVE_UTMP
 libshared_la_SOURCES += \
@@ -2685,13 +2694,6 @@ systemd_delta_LDADD = \
 	libsystemd-shared.la
 
 # ------------------------------------------------------------------------------
-systemd_insserv_generator_SOURCES = \
-	src/insserv-generator/insserv-generator.c
-
-systemd_insserv_generator_LDADD = \
-	libsystemd-shared.la
-
-# ------------------------------------------------------------------------------
 systemd_getty_generator_SOURCES = \
 	src/getty-generator/getty-generator.c
 
@@ -2971,28 +2973,8 @@ systemd_gpt_auto_generator_CFLAGS = \
 endif
 
 # ------------------------------------------------------------------------------
-systemgenerator_PROGRAMS +=  \
-	systemd-dbus1-generator
-
-systemd_dbus1_generator_SOURCES = \
-	src/dbus1-generator/dbus1-generator.c
-
-systemd_dbus1_generator_LDADD = \
-	libshared.la
-
-dbus1-generator-install-hook:
-	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(usergeneratordir)
-	$(AM_V_RM)rm -f $(DESTDIR)$(usergeneratordir)/systemd-dbus1-generator
-	$(AM_V_LN)$(LN_S) --relative -f $(DESTDIR)$(systemgeneratordir)/systemd-dbus1-generator $(DESTDIR)$(usergeneratordir)/systemd-dbus1-generator
-
-dbus1-generator-uninstall-hook:
-	rm -f $(DESTDIR)$(usergeneratordir)/systemd-dbus1-generator
-
 dist_xinitrc_SCRIPTS = \
 	xorg/50-systemd-user.sh
-
-INSTALL_EXEC_HOOKS += dbus1-generator-install-hook
-UNINSTALL_EXEC_HOOKS += dbus1-generator-uninstall-hook
 
 # ------------------------------------------------------------------------------
 systemd_sysv_generator_SOURCES = \
@@ -3093,6 +3075,8 @@ systemd_nspawn_SOURCES = \
 	src/nspawn/nspawn-expose-ports.h \
 	src/nspawn/nspawn-cgroup.c \
 	src/nspawn/nspawn-cgroup.h \
+	src/nspawn/nspawn-seccomp.c \
+	src/nspawn/nspawn-seccomp.h \
 	src/nspawn/nspawn-register.c \
 	src/nspawn/nspawn-register.h \
 	src/nspawn/nspawn-setuid.c \
@@ -3104,9 +3088,7 @@ systemd_nspawn_SOURCES = \
 	src/core/mount-setup.c \
 	src/core/mount-setup.h \
 	src/core/loopback-setup.c \
-	src/core/loopback-setup.h \
-	src/core/machine-id-setup.c \
-	src/core/machine-id-setup.h
+	src/core/loopback-setup.h
 
 nodist_systemd_nspawn_SOURCES = \
 	src/nspawn/nspawn-gperf.c
@@ -3243,6 +3225,8 @@ libsystemd_internal_la_SOURCES = \
 	src/libsystemd/sd-netlink/local-addresses.h \
 	src/libsystemd/sd-netlink/local-addresses.c \
 	src/libsystemd/sd-id128/sd-id128.c \
+	src/libsystemd/sd-id128/id128-util.h \
+	src/libsystemd/sd-id128/id128-util.c \
 	src/libsystemd/sd-daemon/sd-daemon.c \
 	src/libsystemd/sd-login/sd-login.c \
 	src/libsystemd/sd-path/sd-path.c \
@@ -3506,6 +3490,9 @@ libsystemd_network_la_SOURCES = \
 	src/libsystemd-network/network-internal.c \
 	src/libsystemd-network/network-internal.h \
 	src/libsystemd-network/sd-ndisc.c \
+	src/libsystemd-network/ndisc-internal.h \
+	src/libsystemd-network/ndisc-router.h \
+	src/libsystemd-network/ndisc-router.c \
 	src/libsystemd-network/icmp6-util.h \
 	src/libsystemd-network/icmp6-util.c \
 	src/libsystemd-network/sd-dhcp6-client.c \
@@ -3694,6 +3681,7 @@ dist_udevrules_DATA += \
 	rules/60-serial.rules \
 	rules/64-btrfs.rules \
 	rules/70-mouse.rules \
+	rules/70-touchpad.rules \
 	rules/75-net-description.rules \
 	rules/78-sound-card.rules \
 	rules/80-net-setup-link.rules
@@ -3860,7 +3848,8 @@ dist_udevhwdb_DATA = \
 	hwdb/60-evdev.hwdb \
 	hwdb/60-keyboard.hwdb \
 	hwdb/70-mouse.hwdb \
-	hwdb/70-pointingstick.hwdb
+	hwdb/70-pointingstick.hwdb \
+	hwdb/70-touchpad.hwdb
 
 SYSINIT_TARGET_WANTS += \
 	systemd-hwdb-update.service
@@ -4234,7 +4223,7 @@ test_catalog_SOURCES = \
 
 test_catalog_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
-	-DCATALOG_DIR=\"$(abs_top_srcdir)/catalog\"
+	-DCATALOG_DIR=\"$(abs_top_builddir)/catalog\"
 
 test_catalog_LDADD = \
 	libjournal-core.la
@@ -4438,7 +4427,7 @@ nodist_systemunit_DATA += \
 dist_pkgsysconf_DATA += \
 	src/journal/journald.conf
 
-dist_catalog_DATA = \
+nodist_catalog_DATA = \
 	catalog/systemd.bg.catalog \
 	catalog/systemd.be.catalog \
 	catalog/systemd.be@latin.catalog \
@@ -4450,6 +4439,16 @@ dist_catalog_DATA = \
 	catalog/systemd.zh_CN.catalog \
 	catalog/systemd.zh_TW.catalog \
 	catalog/systemd.catalog
+
+EXTRA_DIST += \
+	$(nodist_catalog_DATA:.catalog=.catalog.in)
+
+# Note that we don't use @@ for replacement markers here, but %%. This is
+# because the catalog uses @@ already for its runtime replacement handling and
+# we don't want to conflict with that.
+catalog/%.catalog: catalog/%.catalog.in
+	$(AM_V_GEN)$(MKDIR_P) $(dir $@) && \
+	$(SED) -e 's~%SUPPORT_URL%~$(SUPPORT_URL)~' < $< > $@
 
 SOCKETS_TARGET_WANTS += \
 	systemd-journald.socket \
@@ -4832,7 +4831,9 @@ BUSNAMES_TARGET_WANTS += \
 # ------------------------------------------------------------------------------
 if ENABLE_LOCALED
 systemd_localed_SOURCES = \
-	src/locale/localed.c
+	src/locale/localed.c \
+	src/locale/keymap-util.c \
+	src/locale/keymap-util.h
 
 systemd_localed_LDADD = \
 	libsystemd-shared.la \
@@ -4869,6 +4870,18 @@ BUSNAMES_TARGET_WANTS += \
 dist_pkgdata_DATA = \
 	src/locale/kbd-model-map \
 	src/locale/language-fallback-map
+
+test_keymap_util_SOURCES = \
+	src/locale/test-keymap-util.c \
+	src/locale/keymap-util.c \
+	src/locale/keymap-util.h
+
+test_keymap_util_LDADD = \
+	libsystemd-shared.la \
+	-ldl
+
+tests += \
+	test-keymap-util
 
 localectl_SOURCES = \
 	src/locale/localectl.c
@@ -5569,6 +5582,8 @@ libnetworkd_core_la_SOURCES = \
 	src/network/networkd-link.c \
 	src/network/networkd-netdev.h \
 	src/network/networkd-netdev.c \
+	src/network/networkd-netdev-vrf.h \
+	src/network/networkd-netdev-vrf.c \
 	src/network/networkd-netdev-tunnel.h \
 	src/network/networkd-netdev-tunnel.c \
 	src/network/networkd-netdev-veth.h \
@@ -5593,6 +5608,7 @@ libnetworkd_core_la_SOURCES = \
 	src/network/networkd-ipv4ll.c \
 	src/network/networkd-dhcp4.c \
 	src/network/networkd-dhcp6.c \
+	src/network/networkd-ndisc.h \
 	src/network/networkd-ndisc.c \
 	src/network/networkd-network.h \
 	src/network/networkd-network.c \
@@ -5605,6 +5621,8 @@ libnetworkd_core_la_SOURCES = \
 	src/network/networkd-manager-bus.c \
 	src/network/networkd-fdb.h \
 	src/network/networkd-fdb.c \
+	src/network/networkd-brvlan.h \
+	src/network/networkd-brvlan.c \
 	src/network/networkd-address-pool.h \
 	src/network/networkd-address-pool.c \
 	src/network/networkd-util.h \
@@ -6381,7 +6399,11 @@ hwdb-update:
 	wget -O ma-large.txt 'http://standards.ieee.org/develop/regauth/oui/oui.txt' && \
 	wget -O ma-medium.txt 'http://standards.ieee.org/develop/regauth/oui28/mam.txt' && \
 	wget -O ma-small.txt 'http://standards.ieee.org/develop/regauth/oui36/oui36.txt' && \
-	./ids-update.pl )
+	wget -O pnp_id_registry.html 'http://www.uefi.org/uefi-pnp-export' && \
+	wget -O acpi_id_registry.html 'http://www.uefi.org/uefi-acpi-export' && \
+	./ids-update.pl && \
+	./acpi-update.py > 20-acpi-vendor.hwdb.base && \
+	patch -p0 -o- 20-acpi-vendor.hwdb.base < 20-acpi-vendor.hwdb.patch > 20-acpi-vendor.hwdb )
 
 .PHONY: built-sources
 built-sources: $(BUILT_SOURCES)
@@ -6411,7 +6433,7 @@ install-tree: all
 .PHONY: valgrind-tests
 valgrind-tests: $(TESTS)
 	$(AM_V_GEN)for f in $(filter-out %.pl %.py, $^); do \
-		if file $$f | grep -q shell; then \
+		if $(LIBTOOL) --mode=execute file $$f | grep -q shell; then \
 		echo -e "$${x}Skipping non-binary $$f"; else \
 		echo -e "$${x}Running $$f"; \
 		$(LIBTOOL) --mode=execute valgrind -q --leak-check=full --max-stackframe=5242880 --error-exitcode=55 $(builddir)/$$f ; fi; \

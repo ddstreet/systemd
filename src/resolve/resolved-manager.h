@@ -73,7 +73,6 @@ struct Manager {
 
         LIST_HEAD(DnsSearchDomain, search_domains);
         unsigned n_search_domains;
-        bool permit_domain_search;
 
         bool need_builtin_fallbacks:1;
 
@@ -180,3 +179,5 @@ void manager_dnssec_verdict(Manager *m, DnssecVerdict verdict, const DnsResource
 bool manager_routable(Manager *m, int family);
 
 void manager_flush_caches(Manager *m);
+
+void manager_cleanup_saved_user(Manager *m);

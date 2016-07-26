@@ -205,7 +205,7 @@ static int resolve_host(sd_bus *bus, const char *name) {
                 if (ifindex > 0 && !if_indextoname(ifindex, ifname))
                         log_warning_errno(errno, "Failed to resolve interface name for index %i: %m", ifindex);
 
-                r = in_addr_to_string(family, a, &pretty);
+                r = in_addr_ifindex_to_string(family, a, ifindex, &pretty);
                 if (r < 0)
                         return log_error_errno(r, "Failed to print address for %s: %m", name);
 
@@ -259,7 +259,7 @@ static int resolve_address(sd_bus *bus, int family, const union in_addr_union *a
         if (ifindex <= 0)
                 ifindex = arg_ifindex;
 
-        r = in_addr_to_string(family, address, &pretty);
+        r = in_addr_ifindex_to_string(family, address, ifindex, &pretty);
         if (r < 0)
                 return log_oom();
 
@@ -348,31 +348,6 @@ static int resolve_address(sd_bus *bus, int family, const union in_addr_union *a
 
         print_source(flags, ts);
 
-        return 0;
-}
-
-static int parse_address(const char *s, int *family, union in_addr_union *address, int *ifindex) {
-        const char *percent, *a;
-        int ifi = 0;
-        int r;
-
-        percent = strchr(s, '%');
-        if (percent) {
-                if (parse_ifindex(percent+1, &ifi) < 0) {
-                        ifi = if_nametoindex(percent+1);
-                        if (ifi <= 0)
-                                return -EINVAL;
-                }
-
-                a = strndupa(s, percent - s);
-        } else
-                a = s;
-
-        r = in_addr_from_string_auto(a, family, address);
-        if (r < 0)
-                return r;
-
-        *ifindex = ifi;
         return 0;
 }
 
@@ -665,10 +640,8 @@ static int resolve_service(sd_bus *bus, const char *name, const char *type, cons
         assert(bus);
         assert(domain);
 
-        if (isempty(name))
-                name = NULL;
-        if (isempty(type))
-                type = NULL;
+        name = empty_to_null(name);
+        type = empty_to_null(type);
 
         if (arg_ifindex > 0 && !if_indextoname(arg_ifindex, ifname))
                 return log_error_errno(errno, "Failed to resolve interface name for index %i: %m", arg_ifindex);
@@ -827,10 +800,8 @@ static int resolve_service(sd_bus *bus, const char *name, const char *type, cons
         if (r < 0)
                 return bus_log_parse_error(r);
 
-        if (isempty(canonical_name))
-                canonical_name = NULL;
-        if (isempty(canonical_type))
-                canonical_type = NULL;
+        canonical_name = empty_to_null(canonical_name);
+        canonical_type = empty_to_null(canonical_type);
 
         if (!streq_ptr(name, canonical_name) ||
             !streq_ptr(type, canonical_type) ||
@@ -1258,8 +1229,8 @@ static int status_ifindex(sd_bus *bus, int ifindex, const char *name, bool *empt
                yes_no(link_info.dnssec_supported));
 
         STRV_FOREACH(i, link_info.dns) {
-                printf("          %s %s\n",
-                       i == link_info.dns ? "DNS Server:" : "           ",
+                printf("         %s %s\n",
+                       i == link_info.dns ? "DNS Servers:" : "            ",
                        *i);
         }
 
@@ -1441,8 +1412,8 @@ static int status_global(sd_bus *bus, bool *empty_line) {
 
         printf("%sGlobal%s\n", ansi_highlight(), ansi_normal());
         STRV_FOREACH(i, global_info.dns) {
-                printf("          %s %s\n",
-                       i == global_info.dns ? "DNS Server:" : "           ",
+                printf("         %s %s\n",
+                       i == global_info.dns ? "DNS Servers:" : "            ",
                        *i);
         }
 
@@ -1475,7 +1446,7 @@ static int status_all(sd_bus *bus) {
         _cleanup_(sd_netlink_message_unrefp) sd_netlink_message *req = NULL, *reply = NULL;
         _cleanup_(sd_netlink_unrefp) sd_netlink *rtnl = NULL;
         sd_netlink_message *i;
-        bool empty_line = true;
+        bool empty_line = false;
         int r;
 
         assert(bus);
@@ -1882,7 +1853,7 @@ int main(int argc, char **argv) {
                         if (startswith(argv[optind], "dns:"))
                                 k = resolve_rfc4501(bus, argv[optind]);
                         else {
-                                k = parse_address(argv[optind], &family, &a, &ifindex);
+                                k = in_addr_ifindex_from_string_auto(argv[optind], &family, &a, &ifindex);
                                 if (k >= 0)
                                         k = resolve_address(bus, family, &a, ifindex);
                                 else

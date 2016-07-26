@@ -74,16 +74,16 @@ Breaks: lvm2 (<< 2.02.104-1),
         systemd-shim (<< 8-2),
         ifupdown (<< 0.8.5~),
         udev (<< 228-5),
-        laptop-mode-tools (<< 1.68~)
+        laptop-mode-tools (<< 1.68~),
+        ${Breaks:rcs-compat}
 Replaces: udev (<< 228-5),
 Conflicts: klogd
 Description: system and service manager
  systemd is a system and service manager for Linux. It provides aggressive
  parallelization capabilities, uses socket and D-Bus activation for starting
- services, offers on-demand starting of daemons, keeps track of processes
- using Linux control groups, supports snapshotting and restoring of the system
- state, maintains mount and automount points and implements an elaborate
- transactional dependency-based service control logic.
+ services, offers on-demand starting of daemons, keeps track of processes using
+ Linux control groups, maintains mount and automount points and implements an
+ elaborate transactional dependency-based service control logic.
  .
  systemd is compatible with SysV and LSB init scripts and can work as a
  drop-in replacement for sysvinit.
@@ -99,8 +99,9 @@ Priority: important
 Conflicts: sysvinit-core,
            upstart (<< 1.13.2-0ubuntu10~),
            upstart-sysv,
-           openrc,
+           openrc (<< 0.20.4-2.1),
            file-rc,
+           systemd-shim,
 Replaces: sysvinit (<< 2.88dsf-44~),
           sysvinit-core,
           upstart (<< 1.13.2-0ubuntu10~),
@@ -111,10 +112,9 @@ Depends: ${shlibs:Depends},
 Description: system and service manager - SysV links
  systemd is a system and service manager for Linux. It provides aggressive
  parallelization capabilities, uses socket and D-Bus activation for starting
- services, offers on-demand starting of daemons, keeps track of processes
- using Linux control groups, supports snapshotting and restoring of the system
- state, maintains mount and automount points and implements an elaborate
- transactional dependency-based service control logic.
+ services, offers on-demand starting of daemons, keeps track of processes using
+ Linux control groups, maintains mount and automount points and implements an
+ elaborate transactional dependency-based service control logic.
  .
  systemd is compatible with SysV and LSB init scripts and can work as a
  drop-in replacement for sysvinit.
@@ -131,7 +131,8 @@ Section: admin
 Priority: optional
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         systemd
+         systemd,
+         dbus
 Recommends: btrfs-progs | btrfs-tools,
             libnss-mymachines,
 Breaks: systemd (<< 224-2)

@@ -42,36 +42,19 @@
 #include "unit-name.h"
 #include "util.h"
 
-typedef enum RunlevelType {
-        RUNLEVEL_SYSINIT,
-        RUNLEVEL_UP,
-        RUNLEVEL_DOWN
-} RunlevelType;
-
 static const struct {
         const char *path;
         const char *target;
-        const RunlevelType type;
 } rcnd_table[] = {
-        /* Debian SysV runlevel for early boot */
-        { "rcS.d",  SPECIAL_SYSINIT_TARGET,   RUNLEVEL_SYSINIT },
-
         /* Standard SysV runlevels for start-up */
-        { "rc1.d",  SPECIAL_RESCUE_TARGET,     RUNLEVEL_UP },
-        { "rc2.d",  SPECIAL_MULTI_USER_TARGET, RUNLEVEL_UP },
-        { "rc3.d",  SPECIAL_MULTI_USER_TARGET, RUNLEVEL_UP },
-        { "rc4.d",  SPECIAL_MULTI_USER_TARGET, RUNLEVEL_UP },
-        { "rc5.d",  SPECIAL_GRAPHICAL_TARGET,  RUNLEVEL_UP },
+        { "rc1.d",  SPECIAL_RESCUE_TARGET     },
+        { "rc2.d",  SPECIAL_MULTI_USER_TARGET },
+        { "rc3.d",  SPECIAL_MULTI_USER_TARGET },
+        { "rc4.d",  SPECIAL_MULTI_USER_TARGET },
+        { "rc5.d",  SPECIAL_GRAPHICAL_TARGET  },
 
-        /* Standard SysV runlevels for shutdown */
-        { "rc0.d",  SPECIAL_POWEROFF_TARGET,  RUNLEVEL_DOWN },
-        { "rc6.d",  SPECIAL_REBOOT_TARGET,    RUNLEVEL_DOWN }
-
-        /* Note that the order here matters, as we read the
-           directories in this order, and we want to make sure that
-           sysv_start_priority is known when we first load the
-           unit. And that value we only know from S links. Hence
-           UP must be read before DOWN */
+        /* We ignore the SysV runlevels for shutdown here, as SysV services get default dependencies anyway, and that
+         * means they are shut down anyway at system power off if running. */
 };
 
 static const char *arg_dest = "/tmp";
@@ -80,14 +63,12 @@ typedef struct SysvStub {
         char *name;
         char *path;
         char *description;
-        bool sysinit;
         int sysv_start_priority;
         char *pid_file;
         char **before;
         char **after;
         char **wants;
         char **wanted_by;
-        char **conflicts;
         bool has_lsb;
         bool reload;
         bool loaded;
@@ -105,7 +86,6 @@ static void free_sysvstub(SysvStub *s) {
         strv_free(s->after);
         strv_free(s->wants);
         strv_free(s->wanted_by);
-        strv_free(s->conflicts);
         free(s);
 }
 
@@ -197,8 +177,6 @@ static int generate_unit_file(SysvStub *s) {
 
         if (s->description)
                 fprintf(f, "Description=%s\n", s->description);
-        if (s->sysinit)
-                fprintf(f, "DefaultDependencies=no\n");
 
         STRV_FOREACH(p, s->before)
                 fprintf(f, "Before=%s\n", *p);
@@ -206,19 +184,16 @@ static int generate_unit_file(SysvStub *s) {
                 fprintf(f, "After=%s\n", *p);
         STRV_FOREACH(p, s->wants)
                 fprintf(f, "Wants=%s\n", *p);
-        STRV_FOREACH(p, s->conflicts)
-                fprintf(f, "Conflicts=%s\n", *p);
 
         fprintf(f,
                 "\n[Service]\n"
                 "Type=forking\n"
                 "Restart=no\n"
-                "TimeoutSec=%s\n"
+                "TimeoutSec=5min\n"
                 "IgnoreSIGPIPE=no\n"
                 "KillMode=process\n"
                 "GuessMainPID=no\n"
                 "RemainAfterExit=%s\n",
-                s->sysinit ? "0" : "5min",
                 yes_no(!s->pid_file));
 
         if (s->pid_file)
@@ -282,19 +257,13 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
 
         static const char * const table[] = {
                 /* LSB defined facilities */
-                "local_fs",             SPECIAL_LOCAL_FS_TARGET,
+                "local_fs",             NULL,
                 "network",              SPECIAL_NETWORK_ONLINE_TARGET,
                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
                 "portmap",              SPECIAL_RPCBIND_TARGET,
                 "remote_fs",            SPECIAL_REMOTE_FS_TARGET,
-                "syslog",               "systemd-journald-dev-log.socket",
+                "syslog",               NULL,
                 "time",                 SPECIAL_TIME_SYNC_TARGET,
-                /* special rcS init scripts */
-                "cryptdisks",           "cryptsetup.target",
-                "mountall",             SPECIAL_LOCAL_FS_TARGET,
-                "mountnfs",             SPECIAL_REMOTE_FS_TARGET,
-                "checkroot",            "systemd-remount-fs.service",
-                "dbus",                 "dbus.socket",
         };
 
         char *filename_no_sh, *e, *m;
@@ -541,9 +510,7 @@ static int load_sysv(SysvStub *s) {
                                         t[k-1] = 0;
                                 }
 
-                                j = strstrip(t+12);
-                                if (isempty(j))
-                                        j = NULL;
+                                j = empty_to_null(strstrip(t+12));
 
                                 r = free_and_strdup(&chkconfig_description, j);
                                 if (r < 0)
@@ -619,9 +586,7 @@ static int load_sysv(SysvStub *s) {
 
                                 state = LSB_DESCRIPTION;
 
-                                j = strstrip(t+12);
-                                if (isempty(j))
-                                        j = NULL;
+                                j = empty_to_null(strstrip(t+12));
 
                                 r = free_and_strdup(&long_description, j);
                                 if (r < 0)
@@ -632,9 +597,7 @@ static int load_sysv(SysvStub *s) {
 
                                 state = LSB;
 
-                                j = strstrip(t+18);
-                                if (isempty(j))
-                                        j = NULL;
+                                j = empty_to_null(strstrip(t+18));
 
                                 r = free_and_strdup(&short_description, j);
                                 if (r < 0)
@@ -723,11 +686,6 @@ static int fix_order(SysvStub *s, Hashmap *all_services) {
                 /* If both units have modern headers we don't care
                  * about the priorities */
                 if (s->has_lsb && other->has_lsb)
-                        continue;
-
-                /* Don't order units between sysinit and regular sysv services,
-                 * they are ordered before and after basic.target anyway. */
-                if (other->sysinit != s->sysinit)
                         continue;
 
                 if (other->sysv_start_priority < s->sysv_start_priority) {
@@ -860,7 +818,6 @@ static int enumerate_sysv(const LookupPaths *lp, Hashmap *all_services) {
 
 static int set_dependencies_from_rcnd(const LookupPaths *lp, Hashmap *all_services) {
         Set *runlevel_services[ELEMENTSOF(rcnd_table)] = {};
-        _cleanup_set_free_ Set *shutdown_services = NULL;
         _cleanup_strv_free_ char **sysvrcnd_path = NULL;
         SysvStub *service;
         unsigned i;
@@ -899,7 +856,7 @@ static int set_dependencies_from_rcnd(const LookupPaths *lp, Hashmap *all_servic
                                 _cleanup_free_ char *name = NULL, *fpath = NULL;
                                 int a, b;
 
-                                if (de->d_name[0] != 'S' && de->d_name[0] != 'K')
+                                if (de->d_name[0] != 'S')
                                         continue;
 
                                 if (strlen(de->d_name) < 4)
@@ -929,46 +886,22 @@ static int set_dependencies_from_rcnd(const LookupPaths *lp, Hashmap *all_servic
                                         continue;
                                 }
 
-                                if (de->d_name[0] == 'S')  {
-                                        if (rcnd_table[i].type == RUNLEVEL_SYSINIT) {
-                                                service->sysinit = true;
-                                                service->sysv_start_priority = a*10 + b;
-                                        }
+                                service->sysv_start_priority = MAX(a*10 + b, service->sysv_start_priority);
 
-                                        if (rcnd_table[i].type == RUNLEVEL_UP && !service->sysinit)
-                                                service->sysv_start_priority = MAX(a*10 + b, service->sysv_start_priority);
+                                r = set_ensure_allocated(&runlevel_services[i], NULL);
+                                if (r < 0) {
+                                        log_oom();
+                                        goto finish;
+                                }
 
-                                        r = set_ensure_allocated(&runlevel_services[i], NULL);
-                                        if (r < 0) {
-                                                log_oom();
-                                                goto finish;
-                                        }
-
-                                        r = set_put(runlevel_services[i], service);
-                                        if (r < 0) {
-                                                log_oom();
-                                                goto finish;
-                                        }
-
-                                } else if (de->d_name[0] == 'K' &&
-                                           (rcnd_table[i].type == RUNLEVEL_DOWN)) {
-
-                                        r = set_ensure_allocated(&shutdown_services, NULL);
-                                        if (r < 0) {
-                                                log_oom();
-                                                goto finish;
-                                        }
-
-                                        r = set_put(shutdown_services, service);
-                                        if (r < 0) {
-                                                log_oom();
-                                                goto finish;
-                                        }
+                                r = set_put(runlevel_services[i], service);
+                                if (r < 0) {
+                                        log_oom();
+                                        goto finish;
                                 }
                         }
                 }
         }
-
 
         for (i = 0; i < ELEMENTSOF(rcnd_table); i ++)
                 SET_FOREACH(service, runlevel_services[i], j) {
@@ -983,19 +916,6 @@ static int set_dependencies_from_rcnd(const LookupPaths *lp, Hashmap *all_servic
                                 goto finish;
                         }
                 }
-
-        SET_FOREACH(service, shutdown_services, j) {
-                r = strv_extend(&service->before, SPECIAL_SHUTDOWN_TARGET);
-                if (r < 0) {
-                        log_oom();
-                        goto finish;
-                }
-                r = strv_extend(&service->conflicts, SPECIAL_SHUTDOWN_TARGET);
-                if (r < 0) {
-                        log_oom();
-                        goto finish;
-                }
-        }
 
         r = 0;
 
