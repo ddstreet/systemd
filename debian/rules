@@ -4,7 +4,7 @@
 #export DEB_BUILD_OPTIONS = nostrip
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
-UPSTREAM_VERSION = $(shell dpkg-parsechangelog -SVersion | sed 's/-[^-]\+$$//')
+UPSTREAM_VERSION = $(shell dpkg-parsechangelog -SVersion | sed 's/[+-].*$$//')
 
 ifeq ($(shell dpkg-vendor --query vendor),Ubuntu)
     DEFAULT_NTP_SERVERS = ntp.ubuntu.com
@@ -243,6 +243,7 @@ override_dh_install:
 	rm -f debian/install/*/lib/systemd/system/halt-local.service
 	find debian/install/ -name '*.la' -delete
 	rm -f debian/install/*/lib/systemd/libsystemd-shared.so
+	find debian/install/ -name '*.busname' -delete
 	# remove files related to factory-reset feature
 	find debian/install/ \( -name 'systemd-update-done*' -o \
 		-name systemd-journal-catalog-update.service -o \
@@ -315,9 +316,11 @@ endif
 ifeq ($(TEST_UPSTREAM),)
 ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
 	echo "Checking that executables don't link to libraries in /usr..."
-	set -e; for e in debian/systemd/lib/systemd/systemd* debian/udev/lib/systemd/systemd*; do \
+	set -e; for e in $(patsubst %,debian/systemd/lib/systemd/%,systemd systemd-cgroups-agent systemd-cryptsetup systemd-journald systemd-shutdown) \
+                         debian/systemd/lib/systemd/system-generators/* \
+                         debian/udev/lib/systemd/systemd*; do \
 	    echo " $$e"; \
-	    OUT=`env -u LD_PRELOAD ldd $$e` || continue; if echo "$$OUT" | grep -v libcap-ng.so | grep -q /usr; then \
+	    OUT=`env -u LD_PRELOAD ldd $$e` || continue; if echo "$$OUT" | grep -q /usr; then \
 	        echo "ERROR: $$e links to /usr"; echo "$$OUT"; exit 1; \
 	    fi; \
 	done
