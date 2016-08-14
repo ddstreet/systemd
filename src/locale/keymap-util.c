@@ -188,7 +188,11 @@ static int x11_read_data(Context *c) {
                            "XKBVARIANT",        &c->x11_variant,
                            "XKBOPTIONS",        &c->x11_options,
                            NULL);
-        return r;
+
+        if (r < 0 && r != -ENOENT)
+                return r;
+
+        return 0;
 }
 
 int context_read_data(Context *c) {
