@@ -20,4 +20,3 @@ PrivateDevices=yes
 PrivateNetwork=yes
 ProtectSystem=yes
 ProtectHome=yes
-MemoryDenyWriteExecute=yes

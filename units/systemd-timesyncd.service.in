@@ -28,7 +28,6 @@ PrivateDevices=yes
 ProtectSystem=full
 ProtectHome=yes
 WatchdogSec=3min
-MemoryDenyWriteExecute=yes
 
 [Install]
 WantedBy=sysinit.target
