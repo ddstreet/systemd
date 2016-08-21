@@ -1,0 +1,15 @@
+Description: Let graphical-session-pre.target be manually started, until https://github.com/systemd/systemd/issues/3750 is fixed
+Forwarded: not-needed
+Author: Iain Lane <iain.lane@canonical.com>
+Bug-Ubuntu: https://launchpad.net/bugs/1615341
+
+Index: b/units/user/graphical-session-pre.target
+===================================================================
+--- a/units/user/graphical-session-pre.target
++++ b/units/user/graphical-session-pre.target
+@@ -10,5 +10,4 @@
+ Documentation=man:systemd.special(7)
+ Requires=basic.target
+ Before=graphical-session.target
+-RefuseManualStart=yes
+ StopWhenUnneeded=yes

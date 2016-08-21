@@ -25,3 +25,4 @@ debian/Revert-core-set-RLIMIT_CORE-to-unlimited-by-default.patch
 debian/Revert-core-enable-TasksMax-for-all-services-by-default-a.patch
 debian/Revert-units-add-a-basic-SystemCallFilter-3471.patch
 debian/Revert-pid1-reconnect-to-the-console-before-being-re-exec.patch
+units-graphical-session-pre-dont-refusemanualstart.patch
