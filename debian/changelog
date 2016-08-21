@@ -1,3 +1,11 @@
+systemd (231-4ubuntu1) yakkety; urgency=medium
+
+  * debian/patches/units-graphical-session-pre-dont-refusemanualstart.patch:
+    Add a new patch to let graphical-session-pre.target be manually started
+    for now (LP: #1615341)
+
+ -- Iain Lane <iain@orangesquash.org.uk>  Sun, 21 Aug 2016 13:46:28 +0100
+
 systemd (231-4) unstable; urgency=medium
 
   * Revert "pid1: reconnect to the console before being re-executed"
