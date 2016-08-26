@@ -103,7 +103,6 @@ CONFFLAGS = \
 	--disable-vconsole \
 	--disable-firstboot \
 	--disable-xkbcommon \
-	--disable-libiptc \
 	--with-ntp-servers="$(DEFAULT_NTP_SERVERS)"  \
 	--with-system-uid-max=999 \
 	--with-system-gid-max=999
@@ -123,6 +122,7 @@ CONFFLAGS_deb += \
 	--enable-elfutils \
 	--enable-apparmor \
 	--enable-libidn \
+	--enable-libiptc \
 	--enable-libcurl \
 	--enable-importd \
 	--enable-microhttpd \
@@ -135,6 +135,7 @@ CONFFLAGS_deb += \
 	--disable-elfutils \
 	--disable-apparmor \
 	--disable-libidn \
+	--disable-libiptc \
 	--disable-libcurl \
 	--disable-importd \
 	--disable-microhttpd \
@@ -150,6 +151,7 @@ CONFFLAGS_udeb = \
 	--disable-selinux \
 	--disable-apparmor \
 	--disable-libidn \
+	--disable-libiptc \
 	--disable-smack \
 	--disable-ima \
 	--disable-binfmt \
@@ -229,14 +231,8 @@ override_dh_install:
 	rm -f debian/install/*/usr/share/doc/systemd/LICENSE.*
 	rm -f debian/install/*/var/log/README
 	rm -f debian/install/*/etc/init.d/README
-	rm -f debian/install/*/usr/share/man/man8/kernel-install.8
-	rm -f debian/install/*/usr/bin/kernel-install
-	rm -f debian/install/*/usr/share/zsh/vendor-completions/_kernel-install
-	rm -f debian/install/*/usr/share/bash-completion/completions/kernel-install
-	rm -rf debian/install/*/usr/lib/kernel/install.d
 	rm -rf debian/install/*/etc/rpm/
 	rm -rf debian/install/*/usr/lib/rpm/
-	rm -rf debian/install/*/etc/kernel/
 	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
