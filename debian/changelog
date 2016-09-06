@@ -1,3 +1,22 @@
+systemd (229-4ubuntu8) xenial-proposed; urgency=medium
+
+  * Queue loading transient units after setting their properties. Fixes
+    starting VMs with libvirt. (LP: #1529079)
+  * Connect pid1's stdin/out/err fds to /dev/null also for containers. This
+    fixes generators which expect a valid stdout/err fd in some container
+    technologies. (LP: #1608953)
+  * 73-usb-net-by-mac.rules: Do not run readlink for *every* uevent, and
+    merely check if /etc/udev/rules.d/80-net-setup-link.rules exists.
+    A common way to disable an udev rule is to just "touch" it in
+    /etc/udev/rule.d/ (i. e. empty file), and if the rule is customized we
+    cannot really predict anyway if the user wants MAC-based USB net names or
+    not. (LP: #1615021)
+  * systemd-networkd-resolvconf-update.service: Also pick up DNS servers from
+    individual link leases, as they sometimes don't appear in the global
+    ifstate. (LP: #1620559)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 06 Sep 2016 14:16:29 +0200
+
 systemd (229-4ubuntu7) xenial-proposed; urgency=medium
 
   * Add pre-dependency to dpkg >= 1.17.14 on udev, to ensure that
