@@ -55,6 +55,7 @@ core-timer-downgrade-message-about-random-time-addition-5.patch
 Cherrypick-addition-of-uint16-config-parser-from-networkd.patch
 test-resolved-packet-add-a-simple-test-for-our-alloc.patch
 resolved-simplify-alloc-size-calculation.patch
+shared-recognize-DNS-names-with-more-than-one-trailing-do.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
