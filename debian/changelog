@@ -1,3 +1,35 @@
+systemd (231-6git1) yakkety; urgency=medium
+
+  Upload current Debian packaging git.
+
+  [ Michael Biebl ]
+  * fsckd: Do not exit on idle timeout if there are still clients connected
+    systemd-fsckd's event loop terminates if nothing happens for 30 seconds.
+    Exiting prematurely while fsck is still running but simply too slow to
+    send us progress updates would close the socket and fsck would receive
+    SIGPIPE when it writes to the socket. If this happens, the fsck process
+    is aborted and the file system check is not completed. (Closes: #788050)
+    (LP: #1547844)
+
+  [ Martin Pitt ]
+  * 73-usb-net-by-mac.rules: Split kernel command line import line.
+    Reportedly this makes the rule actually work on some platforms. Thanks Alp
+    Toker! (LP: #1593379)
+  * debian/tests/boot-smoke: Only run 5 iterations
+  * systemd.postinst: Drop obsolete setcap call for systemd-detect-virt.
+    Drop corresponding libcap2-bin dependency.
+  * debian/tests/systemd-fsckd: Robustify check for "unit was running"
+    (LP: #1624406)
+  * debian/extra/set-cpufreq: Use powersave with intel_pstate.
+    This is what we did on xenial, and apparently powersave is still actually
+    better than performance. Thanks to Doug Smythies for the measurements!
+    (LP: #1579278)
+  * Ubuntu: Move ondemand.service from static to runtime enablement.
+    This makes it easier to keep performance, by disabling ondemand.service.
+    Side issue in LP: #1579278
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 19 Sep 2016 22:37:51 +0200
+
 systemd (231-6) unstable; urgency=medium
 
   [ Martin Pitt ]
