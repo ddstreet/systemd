@@ -41,6 +41,11 @@ if dpkg --compare-versions "$2" lt "218-11~"; then
     systemctl enable systemd-timesyncd.service || true
 fi
 
+# Enable ondemand by default on new installs installs and upgrades
+if [ -e /lib/systemd/system/ondemand.service ] && dpkg --compare-versions "$2" lt "231-7~"; then
+    systemctl enable ondemand.service || true
+fi
+
 # Do a one-time migration of the local time setting
 if dpkg --compare-versions "$2" lt "33-1"; then
     if [ -f /etc/default/rcS ]; then
@@ -110,9 +115,6 @@ adduser --quiet --system --group --no-create-home --home /run/systemd \
 
 # Initial update of the Message Catalogs database
 _update_catalog
-
-# Make systemd-detect-virt utility usable for non-root users
-setcap cap_dac_override,cap_sys_ptrace=ep /usr/bin/systemd-detect-virt || true
 
 # Re-run systemctl enable for any service that was enabled when preinst was run.
 if dpkg --compare-versions "$2" ge "204" && [ -e /run/systemd/was-enabled ]; then
