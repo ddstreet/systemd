@@ -1,3 +1,17 @@
+systemd (229-4ubuntu9) xenial; urgency=medium
+
+  * 73-usb-net-by-mac.rules: Split kernel command line import line.
+    Reportedly this makes the rule actually work on some platforms. Thanks
+    Alp Toker! (LP: #1593379)
+  * fsckd: Do not exit on idle timeout if there are still clients connected
+    (Closes: #788050, LP: #1547844)
+  * libnss-*.prerm: Remove possible [key=value] options from NSS modules as
+    well. (LP: #1625584)
+  * networkd: Re-enable cleanup of foreign addresses on startup.
+    (LP: #1627641)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Mon, 26 Sep 2016 18:03:50 +0200
+
 systemd (229-4ubuntu8) xenial-proposed; urgency=medium
 
   * Queue loading transient units after setting their properties. Fixes
