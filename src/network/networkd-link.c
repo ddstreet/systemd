@@ -623,9 +623,6 @@ void link_check_ready(Link *link) {
              !link->dhcp4_configured && !link->dhcp6_configured))
                 return;
 
-        if (link_ipv6_accept_ra_enabled(link) && !link->ndisc_configured)
-                return;
-
         SET_FOREACH(a, link->addresses, i)
                 if (!address_is_ready(a))
                         return;
@@ -1923,6 +1920,7 @@ static int link_set_ipv6_privacy_extensions(Link *link) {
 
 static int link_set_ipv6_accept_ra(Link *link) {
         const char *p = NULL;
+        const char *v;
         int r;
 
         /* Make this a NOP if IPv6 is not available */
@@ -1935,12 +1933,16 @@ static int link_set_ipv6_accept_ra(Link *link) {
         if (!link->network)
                 return 0;
 
+        if (link_ipv6_accept_ra_enabled(link))
+                v = "1";
+        else
+                v = "0";
+
         p = strjoina("/proc/sys/net/ipv6/conf/", link->ifname, "/accept_ra");
 
-        /* We handle router advertisments ourselves, tell the kernel to GTFO */
-        r = write_string_file(p, "0", WRITE_STRING_FILE_VERIFY_ON_FAILURE);
+        r = write_string_file(p, v, WRITE_STRING_FILE_VERIFY_ON_FAILURE);
         if (r < 0)
-                log_link_warning_errno(link, r, "Cannot disable kernel IPv6 accept_ra for interface: %m");
+                log_link_warning_errno(link, r, "Cannot configure kernel IPv6 accept_ra for interface: %m");
 
         return 0;
 }
