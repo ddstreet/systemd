@@ -20,12 +20,12 @@ This reverts commit fe30727643a7c53faa29f1caa8dcabcb2b6f6fcb.
 
 Signed-off-by: Stefan Lippers-Hollmann <s.l-h@gmx.de>
 ---
- src/network/networkd-link.c  | 20 ++++++++++++--------
+ src/network/networkd-link.c  | 14 ++++++++------
  src/network/networkd-ndisc.c | 13 ++++++++-----
- 2 files changed, 20 insertions(+), 13 deletions(-)
+ 2 files changed, 16 insertions(+), 11 deletions(-)
 
 diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
-index 692c0bf..16c9927 100644
+index 692c0bf..e4ed6cd 100644
 --- a/src/network/networkd-link.c
 +++ b/src/network/networkd-link.c
 @@ -623,9 +623,6 @@ void link_check_ready(Link *link) {
@@ -66,52 +66,6 @@ index 692c0bf..16c9927 100644
  
          return 0;
  }
-@@ -2001,6 +2003,7 @@ static int link_set_ipv6_hop_limit(Link *link) {
-         return 0;
- }
- 
-+/*
- static int link_drop_foreign_config(Link *link) {
-         Address *address;
-         Route *route;
-@@ -2008,7 +2011,6 @@ static int link_drop_foreign_config(Link *link) {
-         int r;
- 
-         SET_FOREACH(address, link->addresses_foreign, i) {
--                /* we consider IPv6LL addresses to be managed by the kernel */
-                 if (address->family == AF_INET6 && in_addr_is_link_local(AF_INET6, &address->in_addr) == 1)
-                         continue;
- 
-@@ -2018,7 +2020,6 @@ static int link_drop_foreign_config(Link *link) {
-         }
- 
-         SET_FOREACH(route, link->routes_foreign, i) {
--                /* do not touch routes managed by the kernel */
-                 if (route->protocol == RTPROT_KERNEL)
-                         continue;
- 
-@@ -2029,6 +2030,7 @@ static int link_drop_foreign_config(Link *link) {
- 
-         return 0;
- }
-+*/
- 
- static int link_configure(Link *link) {
-         int r;
-@@ -2039,11 +2041,13 @@ static int link_configure(Link *link) {
- 
-         /* Drop foreign config, but ignore loopback or critical devices.
-          * We do not want to remove loopback address or addresses used for root NFS. */
-+/*
-         if (!(link->flags & IFF_LOOPBACK) && !(link->network->dhcp_critical)) {
-                 r = link_drop_foreign_config(link);
-                 if (r < 0)
-                         return r;
-         }
-+*/
- 
-         r = link_set_bridge_fdb(link);
-         if (r < 0)
 diff --git a/src/network/networkd-ndisc.c b/src/network/networkd-ndisc.c
 index f2287be..5f362e9 100644
 --- a/src/network/networkd-ndisc.c
