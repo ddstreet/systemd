@@ -9,5 +9,6 @@ session  required pam_selinux.so close
 session  required pam_selinux.so nottys open
 )m4_dnl
 session  required pam_loginuid.so
+session  required pam_limits.so
 @include common-session-noninteractive
 session optional pam_systemd.so
