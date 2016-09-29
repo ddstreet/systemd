@@ -157,6 +157,7 @@ nodist_zshcompletion_DATA = $(nodist_zshcompletion_data)
 endif
 udevlibexec_PROGRAMS =
 gperf_gperf_sources =
+rootlib_LTLIBRARIES =
 
 in_files = $(filter %.in,$(EXTRA_DIST))
 in_in_files = $(filter %.in.in, $(in_files))
@@ -250,16 +251,6 @@ AM_CFLAGS = $(OUR_CFLAGS)
 AM_LDFLAGS = $(OUR_LDFLAGS)
 
 # ------------------------------------------------------------------------------
-define move-to-rootlibdir
-	if test "$(libdir)" != "$(rootlibdir)"; then \
-		$(MKDIR_P) $(DESTDIR)$(rootlibdir) && \
-		so_img_name=$$(readlink $(DESTDIR)$(libdir)/$$libname) && \
-		rm -f $(DESTDIR)$(libdir)/$$libname && \
-		$(LN_S) --relative -f $(DESTDIR)$(rootlibdir)/$$so_img_name $(DESTDIR)$(libdir)/$$libname && \
-		mv $(DESTDIR)$(libdir)/$$libname.* $(DESTDIR)$(rootlibdir); \
-	fi
-endef
-
 INSTALL_DIRS =
 
 SHUTDOWN_TARGET_WANTS =
@@ -3269,15 +3260,6 @@ libsystemd_la_LIBADD = \
 	libbasic.la \
 	libsystemd-journal-internal.la
 
-libsystemd-install-hook:
-	libname=libsystemd.so && $(move-to-rootlibdir)
-
-libsystemd-uninstall-hook:
-	rm -f $(DESTDIR)$(rootlibdir)/libsystemd.so*
-
-INSTALL_EXEC_HOOKS += libsystemd-install-hook
-UNINSTALL_EXEC_HOOKS += libsystemd-uninstall-hook
-
 pkgconfiglib_DATA += \
 	src/libsystemd/libsystemd.pc
 
@@ -3290,7 +3272,7 @@ pkginclude_HEADERS += \
 	src/systemd/sd-id128.h \
 	src/systemd/sd-daemon.h
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libsystemd.la
 
 tests += \
@@ -3611,7 +3593,7 @@ tests += \
 include_HEADERS += \
 	src/libudev/libudev.h
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libudev.la
 
 libudev_la_SOURCES =\
@@ -3642,16 +3624,6 @@ pkgconfiglib_DATA += \
 
 EXTRA_DIST += \
 	src/libudev/libudev.pc.in
-
-# move lib from $(libdir) to $(rootlibdir) and update devel link, if needed
-libudev-install-hook:
-	libname=libudev.so && $(move-to-rootlibdir)
-
-libudev-uninstall-hook:
-	rm -f $(DESTDIR)$(rootlibdir)/libudev.so*
-
-INSTALL_EXEC_HOOKS += libudev-install-hook
-UNINSTALL_EXEC_HOOKS += libudev-uninstall-hook
 
 # ------------------------------------------------------------------------------
 noinst_LTLIBRARIES += \
@@ -5033,7 +5005,7 @@ libnss_myhostname_la_LIBADD = \
 	libsystemd-internal.la \
 	libbasic.la
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libnss_myhostname.la
 endif
 
@@ -5132,7 +5104,7 @@ libnss_mymachines_la_LIBADD = \
 	libsystemd-internal.la \
 	libbasic.la
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libnss_mymachines.la
 
 endif
@@ -5431,7 +5403,7 @@ libnss_resolve_la_LIBADD = \
 	libbasic.la \
         -ldl
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libnss_resolve.la
 
 systemd_resolve_SOURCES = \
