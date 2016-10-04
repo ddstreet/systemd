@@ -617,16 +617,18 @@ int manager_recv(Manager *m, int fd, DnsProtocol protocol, DnsPacket **ret) {
         struct msghdr mh = {};
         struct cmsghdr *cmsg;
         struct iovec iov;
-        ssize_t ms, l;
-        int r;
+        int ms = 0, r;
+        ssize_t l;
 
         assert(m);
         assert(fd >= 0);
         assert(ret);
 
-        ms = next_datagram_size_fd(fd);
+        r = ioctl(fd, FIONREAD, &ms);
+        if (r < 0)
+                return -errno;
         if (ms < 0)
-                return ms;
+                return -EIO;
 
         r = dns_packet_new(&p, protocol, ms);
         if (r < 0)
