@@ -554,8 +554,9 @@ static int manager_new(Manager **ret, int fd) {
         return 0;
 }
 
-static int run_event_loop_with_timeout(sd_event *e, usec_t timeout) {
+static int run_event_loop_with_timeout(Manager *m, usec_t timeout) {
         int r, code;
+        sd_event *e = m->event;
 
         assert(e);
 
@@ -570,8 +571,12 @@ static int run_event_loop_with_timeout(sd_event *e, usec_t timeout) {
                 if (r < 0)
                         return r;
 
-                /* timeout reached */
-                if (r == 0) {
+                /* Exit if we reached the idle timeout and no more clients are
+                   connected. If there is still an fsck process running but
+                   simply slow to send us progress updates, exiting would mean
+                   that this fsck process receives SIGPIPE resulting in an
+                   aborted file system check. */
+                if (r == 0 && m->n_clients == 0) {
                         sd_event_exit(e, 0);
                         break;
                 }
@@ -672,7 +677,7 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
-        r = run_event_loop_with_timeout(m->event, IDLE_TIME_SECONDS * USEC_PER_SEC);
+        r = run_event_loop_with_timeout(m, IDLE_TIME_SECONDS * USEC_PER_SEC);
         if (r < 0) {
                 log_error_errno(r, "Failed to run event loop: %m");
                 goto finish;

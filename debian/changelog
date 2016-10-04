@@ -1,4 +1,31 @@
-systemd (229-4ubuntu10) xenial-security; urgency=medium
+systemd (229-4ubuntu11) xenial; urgency=medium
+
+  * 73-usb-net-by-mac.rules: Split kernel command line import line.
+    Reportedly this makes the rule actually work on some platforms. Thanks
+    Alp Toker! (LP: #1593379)
+  * fsckd: Do not exit on idle timeout if there are still clients connected
+    (Closes: #788050, LP: #1547844)
+  * libnss-*.prerm: Remove possible [key=value] options from NSS modules as
+    well. (LP: #1625584)
+  * Backport networkd 231. Compared to 229 this has a lot of fixes, some of
+    which we need for good netplan support. Backporting them individually
+    would be a lot more work and a lot less robust, and we did not use/support
+    networkd in 16.04 so far. Drop the other network related patches as they
+    are included in this backport now. (LP: #1627641)
+  * debian/tests/networkd: Re-enable the the DHCPv6 tests. The DHCPv6
+    behaviour is fixed with the above backport now.
+  * pid1: process zero-length notification messages again. Just remove the
+    assertion, the "n" value was not used anyway. This fixes a local DoS due
+    to unprocessed/unclosed fds which got introduced by the previous fix.
+    (LP: #1628687)
+  * pid1: Robustify manager_dispatch_notify_fd(). If
+    manager_dispatch_notify_fd() fails and returns an error then the handling
+    of service notifications will be disabled entirely leading to a
+    compromised system. (side issue of LP: #1628687)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Tue, 04 Oct 2016 21:43:04 +0200
+
+systemd (229-4ubuntu10) xenial; urgency=medium
 
   * SECURITY UPDATE: zero-length notify message triggers abort/denial of
     service
