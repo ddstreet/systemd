@@ -189,6 +189,11 @@ typedef enum BusFocus {
 
 static sd_bus *busses[_BUS_FOCUS_MAX] = {};
 
+static UnitFileFlags args_to_flags(void) {
+        return (arg_runtime ? UNIT_FILE_RUNTIME : 0) |
+               (arg_force   ? UNIT_FILE_FORCE   : 0);
+}
+
 static int acquire_bus(BusFocus focus, sd_bus **ret) {
         int r;
 
@@ -362,22 +367,24 @@ static int compare_unit_info(const void *a, const void *b) {
         return strcasecmp(u->id, v->id);
 }
 
+static const char* unit_type_suffix(const char *name) {
+        const char *dot;
+
+        dot = strrchr(name, '.');
+        if (!dot)
+                return "";
+
+        return dot + 1;
+}
+
 static bool output_show_unit(const UnitInfo *u, char **patterns) {
         assert(u);
 
         if (!strv_fnmatch_or_empty(patterns, u->id, FNM_NOESCAPE))
                 return false;
 
-        if (arg_types) {
-                const char *dot;
-
-                dot = strrchr(u->id, '.');
-                if (!dot)
-                        return false;
-
-                if (!strv_find(arg_types, dot+1))
-                        return false;
-        }
+        if (arg_types && !strv_find(arg_types, unit_type_suffix(u->id)))
+                return false;
 
         if (arg_all)
                 return true;
@@ -403,7 +410,7 @@ static bool output_show_unit(const UnitInfo *u, char **patterns) {
 }
 
 static int output_units_list(const UnitInfo *unit_infos, unsigned c) {
-        unsigned circle_len = 0, id_len, max_id_len, load_len, active_len, sub_len, job_len, desc_len;
+        unsigned circle_len = 0, id_len, max_id_len, load_len, active_len, sub_len, job_len, desc_len, max_desc_len;
         const UnitInfo *u;
         unsigned n_shown = 0;
         int job_count = 0;
@@ -413,13 +420,14 @@ static int output_units_list(const UnitInfo *unit_infos, unsigned c) {
         active_len = strlen("ACTIVE");
         sub_len = strlen("SUB");
         job_len = strlen("JOB");
-        desc_len = 0;
+        max_desc_len = strlen("DESCRIPTION");
 
         for (u = unit_infos; u < unit_infos + c; u++) {
                 max_id_len = MAX(max_id_len, strlen(u->id) + (u->machine ? strlen(u->machine)+1 : 0));
                 load_len = MAX(load_len, strlen(u->load_state));
                 active_len = MAX(active_len, strlen(u->active_state));
                 sub_len = MAX(sub_len, strlen(u->sub_state));
+                max_desc_len = MAX(max_desc_len, strlen(u->description));
 
                 if (u->job_id != 0) {
                         job_len = MAX(job_len, strlen(u->job_type));
@@ -435,7 +443,7 @@ static int output_units_list(const UnitInfo *unit_infos, unsigned c) {
         if (!arg_full && original_stdout_is_tty) {
                 unsigned basic_len;
 
-                id_len = MIN(max_id_len, 25u);
+                id_len = MIN(max_id_len, 25u); /* as much as it needs, but at most 25 for now */
                 basic_len = circle_len + 5 + id_len + 5 + active_len + sub_len;
 
                 if (job_count)
@@ -448,34 +456,38 @@ static int output_units_list(const UnitInfo *unit_infos, unsigned c) {
                         /* Either UNIT already got 25, or is fully satisfied.
                          * Grant up to 25 to DESC now. */
                         incr = MIN(extra_len, 25u);
-                        desc_len += incr;
+                        desc_len = incr;
                         extra_len -= incr;
 
-                        /* split the remaining space between UNIT and DESC,
-                         * but do not give UNIT more than it needs. */
+                        /* Of the remainder give as much as the ID needs to the ID, and give the rest to the
+                         * description but not more than it needs. */
                         if (extra_len > 0) {
-                                incr = MIN(extra_len / 2, max_id_len - id_len);
+                                incr = MIN(max_id_len - id_len, extra_len);
                                 id_len += incr;
-                                desc_len += extra_len - incr;
+                                desc_len += MIN(extra_len - incr, max_desc_len - desc_len);
                         }
                 }
-        } else
+        } else {
                 id_len = max_id_len;
+                desc_len = max_desc_len;
+        }
 
         for (u = unit_infos; u < unit_infos + c; u++) {
                 _cleanup_free_ char *e = NULL, *j = NULL;
+                const char *on_underline = "", *off_underline = "";
                 const char *on_loaded = "", *off_loaded = "";
                 const char *on_active = "", *off_active = "";
                 const char *on_circle = "", *off_circle = "";
                 const char *id;
-                bool circle = false;
+                bool circle = false, underline = false;
 
                 if (!n_shown && !arg_no_legend) {
 
                         if (circle_len > 0)
                                 fputs("  ", stdout);
 
-                        printf("%-*s %-*s %-*s %-*s ",
+                        printf("%s%-*s %-*s %-*s %-*s ",
+                               ansi_underline(),
                                id_len, "UNIT",
                                load_len, "LOAD",
                                active_len, "ACTIVE",
@@ -484,23 +496,34 @@ static int output_units_list(const UnitInfo *unit_infos, unsigned c) {
                         if (job_count)
                                 printf("%-*s ", job_len, "JOB");
 
-                        if (!arg_full && arg_no_pager)
-                                printf("%.*s\n", desc_len, "DESCRIPTION");
-                        else
-                                printf("%s\n", "DESCRIPTION");
+                        printf("%-*.*s%s\n",
+                               desc_len,
+                               !arg_full && arg_no_pager ? (int) desc_len : -1,
+                               "DESCRIPTION",
+                               ansi_normal());
                 }
 
                 n_shown++;
 
+                if (u + 1 < unit_infos + c &&
+                    !streq(unit_type_suffix(u->id), unit_type_suffix((u + 1)->id))) {
+                        on_underline = ansi_underline();
+                        off_underline = ansi_normal();
+                        underline = true;
+                }
+
                 if (STR_IN_SET(u->load_state, "error", "not-found", "masked") && !arg_plain) {
-                        on_loaded = ansi_highlight_red();
                         on_circle = ansi_highlight_yellow();
-                        off_loaded = off_circle = ansi_normal();
+                        off_circle = ansi_normal();
                         circle = true;
+                        on_loaded = underline ? ansi_highlight_red_underline() : ansi_highlight_red();
+                        off_loaded = underline ? on_underline : ansi_normal();
                 } else if (streq(u->active_state, "failed") && !arg_plain) {
-                        on_circle = on_active = ansi_highlight_red();
-                        off_circle = off_active = ansi_normal();
+                        on_circle = ansi_highlight_red();
+                        off_circle = ansi_normal();
                         circle = true;
+                        on_active = underline ? ansi_highlight_red_underline() : ansi_highlight_red();
+                        off_active = underline ? on_underline : ansi_normal();
                 }
 
                 if (u->machine) {
@@ -523,17 +546,19 @@ static int output_units_list(const UnitInfo *unit_infos, unsigned c) {
                 if (circle_len > 0)
                         printf("%s%s%s ", on_circle, circle ? special_glyph(BLACK_CIRCLE) : " ", off_circle);
 
-                printf("%s%-*s%s %s%-*s%s %s%-*s %-*s%s %-*s",
+                printf("%s%s%-*s%s %s%-*s%s %s%-*s %-*s%s %-*s",
+                       on_underline,
                        on_active, id_len, id, off_active,
                        on_loaded, load_len, u->load_state, off_loaded,
                        on_active, active_len, u->active_state,
                        sub_len, u->sub_state, off_active,
                        job_count ? job_len + 1 : 0, u->job_id ? u->job_type : "");
 
-                if (desc_len > 0)
-                        printf("%.*s\n", desc_len, u->description);
-                else
-                        printf("%s\n", u->description);
+                printf("%-*.*s%s\n",
+                       desc_len,
+                       !arg_full && arg_no_pager ? (int) desc_len : -1,
+                       u->description,
+                       off_underline);
         }
 
         if (!arg_no_legend) {
@@ -1395,35 +1420,46 @@ static void output_unit_file_list(const UnitFileList *units, unsigned c) {
                 id_cols = max_id_len;
 
         if (!arg_no_legend && c > 0)
-                printf("%-*s %-*s\n",
+                printf("%s%-*s %-*s%s\n",
+                       ansi_underline(),
                        id_cols, "UNIT FILE",
-                       state_cols, "STATE");
+                       state_cols, "STATE",
+                       ansi_normal());
 
         for (u = units; u < units + c; u++) {
                 _cleanup_free_ char *e = NULL;
-                const char *on, *off;
+                const char *on, *off, *on_underline = "", *off_underline = "";
                 const char *id;
+                bool underline = false;
+
+                if (u + 1 < units + c &&
+                    !streq(unit_type_suffix(u->path), unit_type_suffix((u + 1)->path))) {
+                        on_underline = ansi_underline();
+                        off_underline = ansi_normal();
+                        underline = true;
+                }
 
                 if (IN_SET(u->state,
                            UNIT_FILE_MASKED,
                            UNIT_FILE_MASKED_RUNTIME,
                            UNIT_FILE_DISABLED,
-                           UNIT_FILE_BAD)) {
-                        on  = ansi_highlight_red();
-                        off = ansi_normal();
-                } else if (u->state == UNIT_FILE_ENABLED) {
-                        on  = ansi_highlight_green();
-                        off = ansi_normal();
-                } else
-                        on = off = "";
+                           UNIT_FILE_BAD))
+                        on  = underline ? ansi_highlight_red_underline() : ansi_highlight_red();
+                else if (u->state == UNIT_FILE_ENABLED)
+                        on  = underline ? ansi_highlight_green_underline() : ansi_highlight_green();
+                else
+                        on = on_underline;
+                off = off_underline;
 
                 id = basename(u->path);
 
                 e = arg_full ? NULL : ellipsize(id, id_cols, 33);
 
-                printf("%-*s %s%-*s%s\n",
+                printf("%s%-*s %s%-*s%s%s\n",
+                       on_underline,
                        id_cols, e ? e : id,
-                       on, state_cols, unit_file_state_to_string(u->state), off);
+                       on, state_cols, unit_file_state_to_string(u->state), off,
+                       off_underline);
         }
 
         if (!arg_no_legend)
@@ -2111,7 +2147,7 @@ static int set_default(int argc, char *argv[], void *userdata) {
                 return log_error_errno(r, "Failed to mangle unit name: %m");
 
         if (install_client_side()) {
-                r = unit_file_set_default(arg_scope, arg_root, unit, true, &changes, &n_changes);
+                r = unit_file_set_default(arg_scope, UNIT_FILE_FORCE, arg_root, unit, &changes, &n_changes);
                 unit_file_dump_changes(r, "set default", changes, n_changes, arg_quiet);
 
                 if (r > 0)
@@ -2690,7 +2726,7 @@ typedef struct {
 static void wait_context_free(WaitContext *c) {
         c->match = sd_bus_slot_unref(c->match);
         c->event = sd_event_unref(c->event);
-        c->unit_paths = set_free(c->unit_paths);
+        c->unit_paths = set_free_free(c->unit_paths);
 }
 
 static int on_properties_changed(sd_bus_message *m, void *userdata, sd_bus_error *error) {
@@ -2707,31 +2743,37 @@ static int on_properties_changed(sd_bus_message *m, void *userdata, sd_bus_error
         r = sd_bus_message_skip(m, "s");
         if (r < 0)
                 return bus_log_parse_error(r);
+
         r = sd_bus_message_enter_container(m, SD_BUS_TYPE_ARRAY, "{sv}");
         if (r < 0)
                 return bus_log_parse_error(r);
 
         while ((r = sd_bus_message_enter_container(m, SD_BUS_TYPE_DICT_ENTRY, "sv")) > 0) {
                 const char *s;
-                bool is_failed;
 
                 r = sd_bus_message_read(m, "s", &s);
                 if (r < 0)
                         return bus_log_parse_error(r);
+
                 if (streq(s, "ActiveState")) {
+                        bool is_failed;
+
                         r = sd_bus_message_enter_container(m, SD_BUS_TYPE_VARIANT, "s");
                         if (r < 0)
                                 return bus_log_parse_error(r);
+
                         r = sd_bus_message_read(m, "s", &s);
                         if (r < 0)
                                 return bus_log_parse_error(r);
+
                         is_failed = streq(s, "failed");
                         if (streq(s, "inactive") || is_failed) {
                                 log_debug("%s became %s, dropping from --wait tracking", path, s);
-                                set_remove(c->unit_paths, path);
-                                c->any_failed |= is_failed;
+                                free(set_remove(c->unit_paths, path));
+                                c->any_failed = c->any_failed || is_failed;
                         } else
                                 log_debug("ActiveState on %s changed to %s", path, s);
+
                         break; /* no need to dissect the rest of the message */
                 } else {
                         /* other property */
@@ -2828,9 +2870,10 @@ static int start_unit_one(
 
                 if (!sd_bus_error_has_name(error, BUS_ERROR_NO_SUCH_UNIT) &&
                     !sd_bus_error_has_name(error, BUS_ERROR_UNIT_MASKED))
-                        log_error("See %s logs and 'systemctl%s status %s' for details.",
+                        log_error("See %s logs and 'systemctl%s status%s %s' for details.",
                                    arg_scope == UNIT_FILE_SYSTEM ? "system" : "user",
                                    arg_scope == UNIT_FILE_SYSTEM ? "" : " --user",
+                                   name[0] == '-' ? " --" : "",
                                    name);
 
                 return r;
@@ -3270,7 +3313,7 @@ static int logind_check_inhibitors(enum action a) {
                 if (sd_session_get_class(*s, &class) < 0 || !streq(class, "user"))
                         continue;
 
-                if (sd_session_get_type(*s, &type) < 0 || (!streq(type, "x11") && !streq(type, "tty")))
+                if (sd_session_get_type(*s, &type) < 0 || !STR_IN_SET(type, "x11", "tty"))
                         continue;
 
                 sd_session_get_tty(*s, &tty);
@@ -3534,9 +3577,9 @@ static int kill_unit(int argc, char *argv[], void *userdata) {
                                 "KillUnit",
                                 &error,
                                 NULL,
-                                "ssi", *names, kill_who ? kill_who : arg_kill_who, arg_signal);
+                                "ssi", *name, kill_who ? kill_who : arg_kill_who, arg_signal);
                 if (q < 0) {
-                        log_error_errno(q, "Failed to kill unit %s: %s", *names, bus_error_message(&error, q));
+                        log_error_errno(q, "Failed to kill unit %s: %s", *name, bus_error_message(&error, q));
                         if (r == 0)
                                 r = q;
                 }
@@ -3721,6 +3764,7 @@ typedef struct UnitStatusInfo {
         uint64_t memory_low;
         uint64_t memory_high;
         uint64_t memory_max;
+        uint64_t memory_swap_max;
         uint64_t memory_limit;
         uint64_t cpu_usage_nsec;
         uint64_t tasks_current;
@@ -3770,7 +3814,7 @@ static void print_status_info(
         if (streq_ptr(i->active_state, "failed")) {
                 active_on = ansi_highlight_red();
                 active_off = ansi_normal();
-        } else if (streq_ptr(i->active_state, "active") || streq_ptr(i->active_state, "reloading")) {
+        } else if (STRPTR_IN_SET(i->active_state, "active", "reloading")) {
                 active_on = ansi_highlight_green();
                 active_off = ansi_normal();
         } else
@@ -3851,12 +3895,10 @@ static void print_status_info(
         if (!isempty(i->result) && !streq(i->result, "success"))
                 printf(" (Result: %s)", i->result);
 
-        timestamp = (streq_ptr(i->active_state, "active")      ||
-                     streq_ptr(i->active_state, "reloading"))   ? i->active_enter_timestamp :
-                    (streq_ptr(i->active_state, "inactive")    ||
-                     streq_ptr(i->active_state, "failed"))      ? i->inactive_enter_timestamp :
-                    streq_ptr(i->active_state, "activating")    ? i->inactive_exit_timestamp :
-                                                                  i->active_exit_timestamp;
+        timestamp = STRPTR_IN_SET(i->active_state, "active", "reloading") ? i->active_enter_timestamp :
+                    STRPTR_IN_SET(i->active_state, "inactive", "failed")  ? i->inactive_enter_timestamp :
+                    STRPTR_IN_SET(i->active_state, "activating")          ? i->inactive_exit_timestamp :
+                                                                            i->active_exit_timestamp;
 
         s1 = format_timestamp_relative(since1, sizeof(since1), timestamp);
         s2 = format_timestamp(since2, sizeof(since2), timestamp);
@@ -3936,7 +3978,7 @@ static void print_status_info(
                 argv = strv_join(p->argv, " ");
                 printf("  Process: "PID_FMT" %s=%s ", p->pid, p->name, strna(argv));
 
-                good = is_clean_exit_lsb(p->code, p->status, NULL);
+                good = is_clean_exit(p->code, p->status, EXIT_CLEAN_DAEMON, NULL);
                 if (!good) {
                         on = ansi_highlight_red();
                         off = ansi_normal();
@@ -4033,7 +4075,8 @@ static void print_status_info(
 
                 printf("   Memory: %s", format_bytes(buf, sizeof(buf), i->memory_current));
 
-                if (i->memory_low > 0 || i->memory_high != CGROUP_LIMIT_MAX || i->memory_max != CGROUP_LIMIT_MAX ||
+                if (i->memory_low > 0 || i->memory_high != CGROUP_LIMIT_MAX ||
+                    i->memory_max != CGROUP_LIMIT_MAX || i->memory_swap_max != CGROUP_LIMIT_MAX ||
                     i->memory_limit != CGROUP_LIMIT_MAX) {
                         const char *prefix = "";
 
@@ -4048,6 +4091,10 @@ static void print_status_info(
                         }
                         if (i->memory_max != CGROUP_LIMIT_MAX) {
                                 printf("%smax: %s", prefix, format_bytes(buf, sizeof(buf), i->memory_max));
+                                prefix = " ";
+                        }
+                        if (i->memory_swap_max != CGROUP_LIMIT_MAX) {
+                                printf("%sswap max: %s", prefix, format_bytes(buf, sizeof(buf), i->memory_swap_max));
                                 prefix = " ";
                         }
                         if (i->memory_limit != CGROUP_LIMIT_MAX) {
@@ -4290,6 +4337,8 @@ static int status_property(const char *name, sd_bus_message *m, UnitStatusInfo *
                         i->memory_high = u;
                 else if (streq(name, "MemoryMax"))
                         i->memory_max = u;
+                else if (streq(name, "MemorySwapMax"))
+                        i->memory_swap_max = u;
                 else if (streq(name, "MemoryLimit"))
                         i->memory_limit = u;
                 else if (streq(name, "TasksCurrent"))
@@ -4724,7 +4773,8 @@ static int print_property(const char *name, sd_bus_message *m, const char *conte
 
                         return 0;
 
-                } else if (contents[1] == SD_BUS_TYPE_STRUCT_BEGIN && (streq(name, "IODeviceWeight") || streq(name, "BlockIODeviceWeight"))) {
+                } else if (contents[1] == SD_BUS_TYPE_STRUCT_BEGIN &&
+                           STR_IN_SET(name, "IODeviceWeight", "BlockIODeviceWeight")) {
                         const char *path;
                         uint64_t weight;
 
@@ -4743,8 +4793,9 @@ static int print_property(const char *name, sd_bus_message *m, const char *conte
 
                         return 0;
 
-                } else if (contents[1] == SD_BUS_TYPE_STRUCT_BEGIN && (cgroup_io_limit_type_from_string(name) >= 0 ||
-                                                                       streq(name, "BlockIOReadBandwidth") || streq(name, "BlockIOWriteBandwidth"))) {
+                } else if (contents[1] == SD_BUS_TYPE_STRUCT_BEGIN &&
+                           (cgroup_io_limit_type_from_string(name) >= 0 ||
+                            STR_IN_SET(name, "BlockIOReadBandwidth", "BlockIOWriteBandwidth"))) {
                         const char *path;
                         uint64_t bandwidth;
 
@@ -4805,6 +4856,7 @@ static int show_one(
                 .memory_current = (uint64_t) -1,
                 .memory_high = CGROUP_LIMIT_MAX,
                 .memory_max = CGROUP_LIMIT_MAX,
+                .memory_swap_max = CGROUP_LIMIT_MAX,
                 .memory_limit = (uint64_t) -1,
                 .cpu_usage_nsec = (uint64_t) -1,
                 .tasks_current = (uint64_t) -1,
@@ -4835,12 +4887,14 @@ static int show_one(
                         return log_error_errno(r, "Failed to map properties: %s", bus_error_message(&error, r));
 
                 if (streq_ptr(info.load_state, "not-found") && streq_ptr(info.active_state, "inactive")) {
-                        log_error("Unit %s could not be found.", unit);
+                        log_full(streq(verb, "status") ? LOG_ERR : LOG_DEBUG,
+                                 "Unit %s could not be found.", unit);
 
                         if (streq(verb, "status"))
                                 return EXIT_PROGRAM_OR_SERVICES_STATUS_UNKNOWN;
 
-                        return -ENOENT;
+                        if (!streq(verb, "show"))
+                                return -ENOENT;
                 }
 
                 r = sd_bus_message_rewind(reply, true);
@@ -4905,10 +4959,11 @@ static int show_one(
         r = 0;
         if (show_properties) {
                 char **pp;
+                int not_found_level = streq(verb, "show") ? LOG_DEBUG : LOG_WARNING;
 
                 STRV_FOREACH(pp, arg_properties)
                         if (!set_contains(found_properties, *pp)) {
-                                log_warning("Property %s does not exist.", *pp);
+                                log_full(not_found_level, "Property %s does not exist.", *pp);
                                 r = -ENXIO;
                         }
 
@@ -5222,6 +5277,20 @@ static int cat(int argc, char *argv[], void *userdata) {
                 else
                         puts("");
 
+                if (need_daemon_reload(bus, *name) > 0) /* ignore errors (<0), this is informational output */
+                        fprintf(stderr,
+                                "%s# Warning: %s changed on disk, the version systemd has loaded is outdated.\n"
+                                "%s# This output shows the current version of the unit's original fragment and drop-in files.\n"
+                                "%s# If fragments or drop-ins were added or removed, they are not properly reflected in this output.\n"
+                                "%s# Run 'systemctl%s daemon-reload' to reload units.%s\n",
+                                ansi_highlight_red(),
+                                *name,
+                                ansi_highlight_red(),
+                                ansi_highlight_red(),
+                                ansi_highlight_red(),
+                                arg_scope == UNIT_FILE_SYSTEM ? "" : " --user",
+                                ansi_normal());
+
                 if (fragment_path) {
                         r = cat_file(fragment_path, false);
                         if (r < 0)
@@ -5243,7 +5312,6 @@ static int set_property(int argc, char *argv[], void *userdata) {
         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
         _cleanup_free_ char *n = NULL;
         sd_bus *bus;
-        char **i;
         int r;
 
         r = acquire_bus(BUS_MANAGER, &bus);
@@ -5274,11 +5342,9 @@ static int set_property(int argc, char *argv[], void *userdata) {
         if (r < 0)
                 return bus_log_create_error(r);
 
-        STRV_FOREACH(i, strv_skip(argv, 2)) {
-                r = bus_append_unit_property_assignment(m, *i);
-                if (r < 0)
-                        return r;
-        }
+        r = bus_append_unit_property_assignment_many(m, strv_skip(argv, 2));
+        if (r < 0)
+                return r;
 
         r = sd_bus_message_close_container(m);
         if (r < 0)
@@ -5716,10 +5782,12 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!found_sysv)
                         continue;
 
-                if (found_native)
-                        log_info("Synchronizing state of %s with SysV service script with %s.", name, argv[0]);
-                else
-                        log_info("%s is not a native service, redirecting to systemd-sysv-install.", name);
+                if (!arg_quiet) {
+                        if (found_native)
+                                log_info("Synchronizing state of %s with SysV service script with %s.", name, argv[0]);
+                        else
+                                log_info("%s is not a native service, redirecting to systemd-sysv-install.", name);
+                }
 
                 if (!isempty(arg_root))
                         argv[c++] = q = strappend("--root=", arg_root);
@@ -5820,6 +5888,29 @@ static int mangle_names(char **original_names, char ***mangled_names) {
         return 0;
 }
 
+static int normalize_names(char **names, bool warn_if_path) {
+        char **u;
+        bool was_path = false;
+
+        STRV_FOREACH(u, names) {
+                int r;
+
+                if (!is_path(*u))
+                        continue;
+
+                r = free_and_strdup(u, basename(*u));
+                if (r < 0)
+                        return log_error_errno(r, "Failed to normalize unit file path: %m");
+
+                was_path = true;
+        }
+
+        if (warn_if_path && was_path)
+                log_warning("Warning: Can't execute disable on the unit file path. Proceeding with the unit name.");
+
+        return 0;
+}
+
 static int unit_exists(const char *unit) {
         _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
@@ -5887,23 +5978,32 @@ static int enable_unit(int argc, char *argv[], void *userdata) {
                 return daemon_reload(argc, argv, userdata);
         }
 
+        if (streq(verb, "disable")) {
+                r = normalize_names(names, true);
+                if (r < 0)
+                        return r;
+        }
+
         if (install_client_side()) {
+                UnitFileFlags flags;
+
+                flags = args_to_flags();
                 if (streq(verb, "enable")) {
-                        r = unit_file_enable(arg_scope, arg_runtime, arg_root, names, arg_force, &changes, &n_changes);
+                        r = unit_file_enable(arg_scope, flags, arg_root, names, &changes, &n_changes);
                         carries_install_info = r;
                 } else if (streq(verb, "disable"))
-                        r = unit_file_disable(arg_scope, arg_runtime, arg_root, names, &changes, &n_changes);
+                        r = unit_file_disable(arg_scope, flags, arg_root, names, &changes, &n_changes);
                 else if (streq(verb, "reenable")) {
-                        r = unit_file_reenable(arg_scope, arg_runtime, arg_root, names, arg_force, &changes, &n_changes);
+                        r = unit_file_reenable(arg_scope, flags, arg_root, names, &changes, &n_changes);
                         carries_install_info = r;
                 } else if (streq(verb, "link"))
-                        r = unit_file_link(arg_scope, arg_runtime, arg_root, names, arg_force, &changes, &n_changes);
+                        r = unit_file_link(arg_scope, flags, arg_root, names, &changes, &n_changes);
                 else if (streq(verb, "preset")) {
-                        r = unit_file_preset(arg_scope, arg_runtime, arg_root, names, arg_preset_mode, arg_force, &changes, &n_changes);
+                        r = unit_file_preset(arg_scope, flags, arg_root, names, arg_preset_mode, &changes, &n_changes);
                 } else if (streq(verb, "mask"))
-                        r = unit_file_mask(arg_scope, arg_runtime, arg_root, names, arg_force, &changes, &n_changes);
+                        r = unit_file_mask(arg_scope, flags, arg_root, names, &changes, &n_changes);
                 else if (streq(verb, "unmask"))
-                        r = unit_file_unmask(arg_scope, arg_runtime, arg_root, names, &changes, &n_changes);
+                        r = unit_file_unmask(arg_scope, flags, arg_root, names, &changes, &n_changes);
                 else if (streq(verb, "revert"))
                         r = unit_file_revert(arg_scope, arg_root, names, &changes, &n_changes);
                 else
@@ -6085,7 +6185,7 @@ static int add_dependency(int argc, char *argv[], void *userdata) {
                 assert_not_reached("Unknown verb");
 
         if (install_client_side()) {
-                r = unit_file_add_dependency(arg_scope, arg_runtime, arg_root, names, target, dep, arg_force, &changes, &n_changes);
+                r = unit_file_add_dependency(arg_scope, args_to_flags(), arg_root, names, target, dep, &changes, &n_changes);
                 unit_file_dump_changes(r, "add dependency on", changes, n_changes, arg_quiet);
 
                 if (r > 0)
@@ -6147,7 +6247,7 @@ static int preset_all(int argc, char *argv[], void *userdata) {
         int r;
 
         if (install_client_side()) {
-                r = unit_file_preset_all(arg_scope, arg_runtime, arg_root, arg_preset_mode, arg_force, &changes, &n_changes);
+                r = unit_file_preset_all(arg_scope, args_to_flags(), arg_root, arg_preset_mode, &changes, &n_changes);
                 unit_file_dump_changes(r, "preset", changes, n_changes, arg_quiet);
 
                 if (r > 0)
@@ -6196,6 +6296,63 @@ finish:
         return r;
 }
 
+static int show_installation_targets_client_side(const char *name) {
+        UnitFileChange *changes = NULL;
+        unsigned n_changes = 0, i;
+        UnitFileFlags flags;
+        char **p;
+        int r;
+
+        p = STRV_MAKE(name);
+        flags = UNIT_FILE_DRY_RUN |
+                (arg_runtime ? UNIT_FILE_RUNTIME : 0);
+
+        r = unit_file_disable(UNIT_FILE_SYSTEM, flags, NULL, p, &changes, &n_changes);
+        if (r < 0)
+                return log_error_errno(r, "Failed to get file links for %s: %m", name);
+
+        for (i = 0; i < n_changes; i++)
+                if (changes[i].type == UNIT_FILE_UNLINK)
+                        printf("  %s\n", changes[i].path);
+
+        return 0;
+}
+
+static int show_installation_targets(sd_bus *bus, const char *name) {
+        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
+        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+        const char *link;
+        int r;
+
+        r = sd_bus_call_method(
+                        bus,
+                        "org.freedesktop.systemd1",
+                        "/org/freedesktop/systemd1",
+                        "org.freedesktop.systemd1.Manager",
+                        "GetUnitFileLinks",
+                        &error,
+                        &reply,
+                        "sb", name, arg_runtime);
+        if (r < 0)
+                return log_error_errno(r, "Failed to get unit file links for %s: %s", name, bus_error_message(&error, r));
+
+        r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "s");
+        if (r < 0)
+                return bus_log_parse_error(r);
+
+        while ((r = sd_bus_message_read(reply, "s", &link)) > 0)
+                printf("  %s\n", link);
+
+        if (r < 0)
+                return bus_log_parse_error(r);
+
+        r = sd_bus_message_exit_container(reply);
+        if (r < 0)
+                return bus_log_parse_error(r);
+
+        return 0;
+}
+
 static int unit_is_enabled(int argc, char *argv[], void *userdata) {
 
         _cleanup_strv_free_ char **names = NULL;
@@ -6214,7 +6371,6 @@ static int unit_is_enabled(int argc, char *argv[], void *userdata) {
         enabled = r > 0;
 
         if (install_client_side()) {
-
                 STRV_FOREACH(name, names) {
                         UnitFileState state;
 
@@ -6230,8 +6386,14 @@ static int unit_is_enabled(int argc, char *argv[], void *userdata) {
                                    UNIT_FILE_GENERATED))
                                 enabled = true;
 
-                        if (!arg_quiet)
+                        if (!arg_quiet) {
                                 puts(unit_file_state_to_string(state));
+                                if (arg_full) {
+                                        r = show_installation_targets_client_side(*name);
+                                        if (r < 0)
+                                                return r;
+                                }
+                        }
                 }
 
                 r = 0;
@@ -6266,8 +6428,14 @@ static int unit_is_enabled(int argc, char *argv[], void *userdata) {
                         if (STR_IN_SET(s, "enabled", "enabled-runtime", "static", "indirect", "generated"))
                                 enabled = true;
 
-                        if (!arg_quiet)
+                        if (!arg_quiet) {
                                 puts(s);
+                                if (arg_full) {
+                                        r = show_installation_targets(bus, *name);
+                                        if (r < 0)
+                                                return r;
+                                }
+                        }
                 }
         }
 
@@ -6680,9 +6848,9 @@ static void systemctl_help(void) {
                "  -t --type=TYPE      List units of a particular type\n"
                "     --state=STATE    List units with particular LOAD or SUB or ACTIVE state\n"
                "  -p --property=NAME  Show only properties by this name\n"
-               "  -a --all            Show all loaded units/properties, including dead/empty\n"
-               "                      ones. To list all units installed on the system, use\n"
-               "                      the 'list-unit-files' command instead.\n"
+               "  -a --all            Show all properties/all units currently in memory,\n"
+               "                      including dead/empty ones. To list all units installed on\n"
+               "                      the system, use the 'list-unit-files' command instead.\n"
                "  -l --full           Don't ellipsize unit names on output\n"
                "  -r --recursive      Show unit list of host and local containers\n"
                "     --reverse        Show reverse dependencies with 'list-dependencies'\n"
@@ -6711,15 +6879,17 @@ static void systemctl_help(void) {
                "     --preset-mode=   Apply only enable, only disable, or all presets\n"
                "     --root=PATH      Enable unit files in the specified root directory\n"
                "  -n --lines=INTEGER  Number of journal entries to show\n"
-               "  -o --output=STRING  Change journal output mode (short, short-iso,\n"
-               "                              short-precise, short-monotonic, verbose,\n"
-               "                              export, json, json-pretty, json-sse, cat)\n"
+               "  -o --output=STRING  Change journal output mode (short, short-precise,\n"
+               "                             short-iso, short-full, short-monotonic, short-unix,\n"
+               "                             verbose, export, json, json-pretty, json-sse, cat)\n"
                "     --firmware-setup Tell the firmware to show the setup menu on next boot\n"
                "     --plain          Print unit dependencies as a list instead of a tree\n\n"
                "Unit Commands:\n"
-               "  list-units [PATTERN...]         List loaded units\n"
-               "  list-sockets [PATTERN...]       List loaded sockets ordered by address\n"
-               "  list-timers [PATTERN...]        List loaded timers ordered by next elapse\n"
+               "  list-units [PATTERN...]         List units currently in memory\n"
+               "  list-sockets [PATTERN...]       List socket units currently in memory, ordered\n"
+               "                                  by address\n"
+               "  list-timers [PATTERN...]        List timer units currently in memory, ordered\n"
+               "                                  by next elapse\n"
                "  start NAME...                   Start (activate) one or more units\n"
                "  stop NAME...                    Stop (deactivate) one or more units\n"
                "  reload NAME...                  Reload one or more units\n"

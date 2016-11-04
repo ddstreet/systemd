@@ -32,15 +32,19 @@ struct track_item {
 
 struct sd_bus_track {
         unsigned n_ref;
+        unsigned n_adding; /* are we in the process of adding a new name? */
         sd_bus *bus;
         sd_bus_track_handler_t handler;
         void *userdata;
         Hashmap *names;
         LIST_FIELDS(sd_bus_track, queue);
         Iterator iterator;
-        bool in_queue:1;
+        bool in_list:1;    /* In bus->tracks? */
+        bool in_queue:1;   /* In bus->track_queue? */
         bool modified:1;
         bool recursive:1;
+
+        LIST_FIELDS(sd_bus_track, tracks);
 };
 
 #define MATCH_PREFIX                                        \
@@ -70,9 +74,7 @@ static struct track_item* track_item_free(struct track_item *i) {
 
         sd_bus_slot_unref(i->slot);
         free(i->name);
-        free(i);
-
-        return NULL;
+        return mfree(i);
 }
 
 DEFINE_TRIVIAL_CLEANUP_FUNC(struct track_item*, track_item_free);
@@ -80,10 +82,28 @@ DEFINE_TRIVIAL_CLEANUP_FUNC(struct track_item*, track_item_free);
 static void bus_track_add_to_queue(sd_bus_track *track) {
         assert(track);
 
+        /* Adds the bus track object to the queue of objects we should dispatch next, subject to a number of
+         * conditions. */
+
+        /* Already in the queue? */
         if (track->in_queue)
                 return;
 
+        /* if we are currently in the process of adding a new name, then let's not enqueue this just yet, let's wait
+         * until the addition is complete. */
+        if (track->n_adding > 0)
+                return;
+
+        /* still referenced? */
+        if (hashmap_size(track->names) > 0)
+                return;
+
+        /* Nothing to call? */
         if (!track->handler)
+                return;
+
+        /* Already closed? */
+        if (!track->in_list)
                 return;
 
         LIST_PREPEND(queue, track->bus->track_queue, track);
@@ -112,8 +132,7 @@ static int bus_track_remove_name_fully(sd_bus_track *track, const char *name) {
 
         track_item_free(i);
 
-        if (hashmap_isempty(track->names))
-                bus_track_add_to_queue(track);
+        bus_track_add_to_queue(track);
 
         track->modified = true;
         return 1;
@@ -141,6 +160,9 @@ _public_ int sd_bus_track_new(
         t->handler = handler;
         t->userdata = userdata;
         t->bus = sd_bus_ref(bus);
+
+        LIST_PREPEND(tracks, bus->tracks, t);
+        t->in_list = true;
 
         bus_track_add_to_queue(t);
 
@@ -176,12 +198,13 @@ _public_ sd_bus_track* sd_bus_track_unref(sd_bus_track *track) {
         while ((i = hashmap_steal_first(track->names)))
                 track_item_free(i);
 
+        if (track->in_list)
+                LIST_REMOVE(tracks, track->bus->tracks, track);
+
         bus_track_remove_from_queue(track);
         hashmap_free(track->names);
         sd_bus_unref(track->bus);
-        free(track);
-
-        return NULL;
+        return mfree(track);
 }
 
 static int on_name_owner_changed(sd_bus_message *message, void *userdata, sd_bus_error *error) {
@@ -237,18 +260,30 @@ _public_ int sd_bus_track_add_name(sd_bus_track *track, const char *name) {
 
         /* First, subscribe to this name */
         match = MATCH_FOR_NAME(name);
+
+        bus_track_remove_from_queue(track); /* don't dispatch this while we work in it */
+
+        track->n_adding++; /* make sure we aren't dispatched while we synchronously add this match */
         r = sd_bus_add_match(track->bus, &n->slot, match, on_name_owner_changed, track);
-        if (r < 0)
+        track->n_adding--;
+        if (r < 0) {
+                bus_track_add_to_queue(track);
                 return r;
+        }
 
         r = hashmap_put(track->names, n->name, n);
-        if (r < 0)
+        if (r < 0) {
+                bus_track_add_to_queue(track);
                 return r;
+        }
 
         /* Second, check if it is currently existing, or maybe doesn't, or maybe disappeared already. */
+        track->n_adding++; /* again, make sure this isn't dispatch while we are working in it */
         r = sd_bus_get_name_creds(track->bus, name, 0, NULL);
+        track->n_adding--;
         if (r < 0) {
                 hashmap_remove(track->names, name);
+                bus_track_add_to_queue(track);
                 return r;
         }
 
@@ -377,7 +412,6 @@ void bus_track_dispatch(sd_bus_track *track) {
         int r;
 
         assert(track);
-        assert(track->in_queue);
         assert(track->handler);
 
         bus_track_remove_from_queue(track);
@@ -391,6 +425,34 @@ void bus_track_dispatch(sd_bus_track *track) {
                 bus_track_add_to_queue(track);
 
         sd_bus_track_unref(track);
+}
+
+void bus_track_close(sd_bus_track *track) {
+        struct track_item *i;
+
+        assert(track);
+
+        /* Called whenever our bus connected is closed. If so, and our track object is non-empty, dispatch it
+         * immediately, as we are closing now, but first flush out all names. */
+
+        if (!track->in_list)
+                return; /* We already closed this one, don't close it again. */
+
+        /* Remember that this one is closed now */
+        LIST_REMOVE(tracks, track->bus->tracks, track);
+        track->in_list = false;
+
+        /* If there's no name in this one anyway, we don't have to dispatch */
+        if (hashmap_isempty(track->names))
+                return;
+
+        /* Let's flush out all names */
+        while ((i = hashmap_steal_first(track->names)))
+                track_item_free(i);
+
+        /* Invoke handler */
+        if (track->handler)
+                bus_track_dispatch(track);
 }
 
 _public_ void *sd_bus_track_get_userdata(sd_bus_track *track) {

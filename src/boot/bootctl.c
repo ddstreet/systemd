@@ -26,6 +26,7 @@
 #include <ftw.h>
 #include <getopt.h>
 #include <limits.h>
+#include <linux/magic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +51,7 @@
 #include "util.h"
 #include "verbs.h"
 #include "virt.h"
+#include "stat-util.h"
 
 static char *arg_path = NULL;
 static bool arg_touch_variables = true;
@@ -83,7 +85,7 @@ static int verify_esp(
                 return log_error_errno(errno, "Failed to check file system type of \"%s\": %m", p);
         }
 
-        if (sfs.f_type != 0x4d44) {
+        if (!F_TYPE_EQUAL(sfs.f_type, MSDOS_SUPER_MAGIC)) {
 
                 if (searching)
                         return -EADDRNOTAVAIL;
@@ -273,14 +275,16 @@ static int get_file_version(int fd, char **v) {
         assert(v);
 
         if (fstat(fd, &st) < 0)
-                return -errno;
+                return log_error_errno(errno, "Failed to stat EFI binary: %m");
 
-        if (st.st_size < 27)
+        if (st.st_size < 27) {
+                *v = NULL;
                 return 0;
+        }
 
         buf = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
         if (buf == MAP_FAILED)
-                return -errno;
+                return log_error_errno(errno, "Failed to memory map EFI binary: %m");
 
         s = memmem(buf, st.st_size - 8, "#### LoaderInfo: ", 17);
         if (!s)
@@ -302,7 +306,7 @@ static int get_file_version(int fd, char **v) {
         r = 1;
 
 finish:
-        munmap(buf, st.st_size);
+        (void) munmap(buf, st.st_size);
         *v = x;
         return r;
 }
@@ -412,9 +416,10 @@ static int status_variables(void) {
 
         n_options = efi_get_boot_options(&options);
         if (n_options == -ENOENT)
-                return log_error_errno(ENOENT, "Failed to access EFI variables, efivarfs"
+                return log_error_errno(n_options,
+                                       "Failed to access EFI variables, efivarfs"
                                        " needs to be available at /sys/firmware/efi/efivars/.");
-        else if (n_options < 0)
+        if (n_options < 0)
                 return log_error_errno(n_options, "Failed to read EFI boot entries: %m");
 
         n_order = efi_get_boot_order(&order);
@@ -434,10 +439,11 @@ static int status_variables(void) {
 
                 for (j = 0; j < n_order; j++)
                         if (options[i] == order[j])
-                                goto next;
+                                goto next_option;
 
                 print_efi_option(options[i], false);
-        next:
+
+        next_option:
                 continue;
         }
 
@@ -597,15 +603,6 @@ error:
         return r;
 }
 
-static char* strupper(char *s) {
-        char *p;
-
-        for (p = s; *p; p++)
-                *p = toupper(*p);
-
-        return s;
-}
-
 static int mkdir_one(const char *prefix, const char *suffix) {
         char *p;
 
@@ -624,15 +621,16 @@ static const char *efi_subdirs[] = {
         "EFI/systemd",
         "EFI/BOOT",
         "loader",
-        "loader/entries"
+        "loader/entries",
+        NULL
 };
 
 static int create_dirs(const char *esp_path) {
+        const char **i;
         int r;
-        unsigned i;
 
-        for (i = 0; i < ELEMENTSOF(efi_subdirs); i++) {
-                r = mkdir_one(esp_path, efi_subdirs[i]);
+        STRV_FOREACH(i, efi_subdirs) {
+                r = mkdir_one(esp_path, *i);
                 if (r < 0)
                         return r;
         }
@@ -654,7 +652,7 @@ static int copy_one_file(const char *esp_path, const char *name, bool force) {
 
                 /* Create the EFI default boot loader name (specified for removable devices) */
                 v = strjoina(esp_path, "/EFI/BOOT/BOOT", name + strlen("systemd-boot"));
-                strupper(strrchr(v, '/') + 1);
+                ascii_strupper(strrchr(v, '/') + 1);
 
                 k = copy_file(p, v, force);
                 if (k < 0 && r == 0)
@@ -825,8 +823,8 @@ static int install_variables(const char *esp_path,
         if (access(p, F_OK) < 0) {
                 if (errno == ENOENT)
                         return 0;
-                else
-                        return log_error_errno(errno, "Cannot access \"%s\": %m", p);
+
+                return log_error_errno(errno, "Cannot access \"%s\": %m", p);
         }
 
         r = find_slot(uuid, path, &slot);
@@ -836,7 +834,7 @@ static int install_variables(const char *esp_path,
                                        "Failed to access EFI variables. Is the \"efivarfs\" filesystem mounted?" :
                                        "Failed to determine current boot order: %m");
 
-        if (first || r == false) {
+        if (first || r == 0) {
                 r = efi_add_boot_option(slot, "Linux Boot Manager",
                                         part, pstart, psize,
                                         uuid, path);
@@ -920,7 +918,7 @@ static int remove_binaries(const char *esp_path) {
         if (q < 0 && r == 0)
                 r = q;
 
-        for (i = ELEMENTSOF(efi_subdirs); i > 0; i--) {
+        for (i = ELEMENTSOF(efi_subdirs)-1; i > 0; i--) {
                 q = rmdir_one(esp_path, efi_subdirs[i-1]);
                 if (q < 0 && r == 0)
                         r = q;
@@ -946,41 +944,33 @@ static int remove_variables(sd_id128_t uuid, const char *path, bool in_order) {
 
         if (in_order)
                 return remove_from_order(slot);
-        else
-                return 0;
+
+        return 0;
 }
 
 static int install_loader_config(const char *esp_path) {
-        char *p;
-        char line[64];
-        char *machine = NULL;
-        _cleanup_fclose_ FILE *f = NULL, *g = NULL;
 
-        f = fopen("/etc/machine-id", "re");
-        if (!f)
-                return errno == ENOENT ? 0 : -errno;
+        _cleanup_fclose_ FILE *f = NULL;
+        char machine_string[SD_ID128_STRING_MAX];
+        sd_id128_t machine_id;
+        const char *p;
+        int r;
 
-        if (fgets(line, sizeof(line), f) != NULL) {
-                char *s;
-
-                s = strchr(line, '\n');
-                if (s)
-                        s[0] = '\0';
-                if (strlen(line) == 32)
-                        machine = line;
-        }
-
-        if (!machine)
-                return -ESRCH;
+        r = sd_id128_get_machine(&machine_id);
+        if (r < 0)
+                return log_error_errno(r, "Failed to get machine did: %m");
 
         p = strjoina(esp_path, "/loader/loader.conf");
-        g = fopen(p, "wxe");
-        if (g) {
-                fprintf(g, "#timeout 3\n");
-                fprintf(g, "default %s-*\n", machine);
-                if (ferror(g))
-                        return log_error_errno(EIO, "Failed to write \"%s\": %m", p);
-        }
+        f = fopen(p, "wxe");
+        if (!f)
+                return log_error_errno(errno, "Failed to open loader.conf for writing: %m");
+
+        fprintf(f, "#timeout 3\n");
+        fprintf(f, "default %s-*\n", sd_id128_to_string(machine_id, machine_string));
+
+        r = fflush_and_check(f);
+        if (r < 0)
+                return log_error_errno(r, "Failed to write \"%s\": %m", p);
 
         return 0;
 }
@@ -1108,7 +1098,7 @@ static int verb_status(int argc, char *argv[], void *userdata) {
                 if (r < 0)
                         log_warning_errno(r, "Failed to query secure boot status: %m");
                 else
-                        printf("  Secure Boot: %s\n", r ? "enabled" : "disabled");
+                        printf("  Secure Boot: %sd\n", enable_disable(r));
 
                 r = is_efi_secure_boot_setup_mode();
                 if (r < 0)
@@ -1119,7 +1109,7 @@ static int verb_status(int argc, char *argv[], void *userdata) {
 
                 printf("Loader:\n");
                 printf("      Product: %s\n", strna(loader));
-                if (!sd_id128_equal(loader_part_uuid, SD_ID128_NULL))
+                if (!sd_id128_is_null(loader_part_uuid))
                         printf("    Partition: /dev/disk/by-partuuid/%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x\n",
                                SD_ID128_FORMAT_VAL(loader_part_uuid));
                 else
