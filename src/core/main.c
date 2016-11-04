@@ -89,14 +89,14 @@
 #include "user-util.h"
 #include "virt.h"
 #include "watchdog.h"
+#include "emergency-action.h"
 
 static enum {
         ACTION_RUN,
         ACTION_HELP,
         ACTION_VERSION,
         ACTION_TEST,
-        ACTION_DUMP_CONFIGURATION_ITEMS,
-        ACTION_DONE
+        ACTION_DUMP_CONFIGURATION_ITEMS
 } arg_action = ACTION_RUN;
 static char *arg_default_unit = NULL;
 static bool arg_system = false;
@@ -132,6 +132,7 @@ static bool arg_default_memory_accounting = false;
 static bool arg_default_tasks_accounting = true;
 static uint64_t arg_default_tasks_max = UINT64_MAX;
 static sd_id128_t arg_machine_id = {};
+static EmergencyAction arg_cad_burst_action = EMERGENCY_ACTION_REBOOT_FORCE;
 
 noreturn static void freeze_or_reboot(void) {
 
@@ -203,7 +204,7 @@ noreturn static void crash(int sig) {
                                               pid, sigchld_code_to_string(status.si_code),
                                               status.si_status,
                                               strna(status.si_code == CLD_EXITED
-                                                    ? exit_status_to_string(status.si_status, EXIT_STATUS_FULL)
+                                                    ? exit_status_to_string(status.si_status, EXIT_STATUS_MINIMAL)
                                                     : signal_to_string(status.si_status)));
                         else
                                 log_emergency("Caught <%s>, dumped core as pid "PID_FMT".", signal_to_string(sig), pid);
@@ -307,7 +308,7 @@ static int set_machine_id(const char *m) {
         return 0;
 }
 
-static int parse_proc_cmdline_item(const char *key, const char *value) {
+static int parse_proc_cmdline_item(const char *key, const char *value, void *data) {
 
         int r;
 
@@ -703,6 +704,7 @@ static int parse_config_file(void) {
                 { "Manager", "DefaultMemoryAccounting",   config_parse_bool,             0, &arg_default_memory_accounting         },
                 { "Manager", "DefaultTasksAccounting",    config_parse_bool,             0, &arg_default_tasks_accounting          },
                 { "Manager", "DefaultTasksMax",           config_parse_tasks_max,        0, &arg_default_tasks_max                 },
+                { "Manager", "CtrlAltDelBurstAction",     config_parse_emergency_action, 0, &arg_cad_burst_action                  },
                 {}
         };
 
@@ -716,7 +718,7 @@ static int parse_config_file(void) {
                 CONF_PATHS_NULSTR("systemd/system.conf.d") :
                 CONF_PATHS_NULSTR("systemd/user.conf.d");
 
-        config_parse_many(fn, conf_dirs_nulstr, "Manager\0", config_item_table_lookup, items, false, NULL);
+        config_parse_many_nulstr(fn, conf_dirs_nulstr, "Manager\0", config_item_table_lookup, items, false, NULL);
 
         /* Traditionally "0" was used to turn off the default unit timeouts. Fix this up so that we used USEC_INFINITY
          * like everywhere else. */
@@ -997,10 +999,8 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case ARG_MACHINE_ID:
                         r = set_machine_id(optarg);
-                        if (r < 0) {
-                                log_error("MachineID '%s' is not valid.", optarg);
-                                return r;
-                        }
+                        if (r < 0)
+                                return log_error_errno(r, "MachineID '%s' is not valid.", optarg);
                         break;
 
                 case 'h':
@@ -1123,7 +1123,7 @@ static int bump_rlimit_nofile(struct rlimit *saved_rlimit) {
          * later when transitioning from the initrd to the main
          * systemd or suchlike. */
         if (getrlimit(RLIMIT_NOFILE, saved_rlimit) < 0)
-                return log_error_errno(errno, "Reading RLIMIT_NOFILE failed: %m");
+                return log_warning_errno(errno, "Reading RLIMIT_NOFILE failed, ignoring: %m");
 
         /* Make sure forked processes get the default kernel setting */
         if (!arg_default_rlimit[RLIMIT_NOFILE]) {
@@ -1140,7 +1140,7 @@ static int bump_rlimit_nofile(struct rlimit *saved_rlimit) {
         nl.rlim_cur = nl.rlim_max = 64*1024;
         r = setrlimit_closest(RLIMIT_NOFILE, &nl);
         if (r < 0)
-                return log_error_errno(r, "Setting RLIMIT_NOFILE failed: %m");
+                return log_warning_errno(r, "Setting RLIMIT_NOFILE failed, ignoring: %m");
 
         return 0;
 }
@@ -1325,7 +1325,7 @@ static int fixup_environment(void) {
                 return r;
 
         if (r == 0) {
-                term = strdup(default_term_for_tty("/dev/console") + 5);
+                term = strdup(default_term_for_tty("/dev/console"));
                 if (!term)
                         return -ENOMEM;
         }
@@ -1421,11 +1421,11 @@ int main(int argc, char *argv[]) {
                         if (mac_selinux_setup(&loaded_policy) < 0) {
                                 error_message = "Failed to load SELinux policy";
                                 goto finish;
-                        } else if (ima_setup() < 0) {
-                                error_message = "Failed to load IMA policy";
-                                goto finish;
                         } else if (mac_smack_setup(&loaded_policy) < 0) {
                                 error_message = "Failed to load SMACK policy";
+                                goto finish;
+                        } else if (ima_setup() < 0) {
+                                error_message = "Failed to load IMA policy";
                                 goto finish;
                         }
                         dual_timestamp_get(&security_finish_timestamp);
@@ -1519,15 +1519,9 @@ int main(int argc, char *argv[]) {
                  * need to do that for user instances since they never log
                  * into the console. */
                 log_show_color(colors_enabled());
-                make_null_stdio();
-        }
-
-        /* Initialize default unit */
-        r = free_and_strdup(&arg_default_unit, SPECIAL_DEFAULT_TARGET);
-        if (r < 0) {
-                log_emergency_errno(r, "Failed to set default unit %s: %m", SPECIAL_DEFAULT_TARGET);
-                error_message = "Failed to set default unit";
-                goto finish;
+                r = make_null_stdio();
+                if (r < 0)
+                        log_warning_errno(r, "Failed to redirect standard streams to /dev/null: %m");
         }
 
         r = initialize_join_controllers();
@@ -1555,7 +1549,7 @@ int main(int argc, char *argv[]) {
         (void) reset_all_signal_handlers();
         (void) ignore_signals(SIGNALS_IGNORE, -1);
 
-        arg_default_tasks_max = system_tasks_max_scale(15U, 100U); /* 15% the system PIDs equals 4915 by default. */
+        arg_default_tasks_max = system_tasks_max_scale(DEFAULT_TASKS_MAX_PERCENTAGE, 100U);
 
         if (parse_config_file() < 0) {
                 error_message = "Failed to parse config file";
@@ -1563,7 +1557,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (arg_system) {
-                r = parse_proc_cmdline(parse_proc_cmdline_item);
+                r = parse_proc_cmdline(parse_proc_cmdline_item, NULL, false);
                 if (r < 0)
                         log_warning_errno(r, "Failed to parse kernel command line, ignoring: %m");
         }
@@ -1575,6 +1569,16 @@ int main(int argc, char *argv[]) {
         if (parse_argv(argc, argv) < 0) {
                 error_message = "Failed to parse commandline arguments";
                 goto finish;
+        }
+
+        /* Initialize default unit */
+        if (!arg_default_unit) {
+                arg_default_unit = strdup(SPECIAL_DEFAULT_TARGET);
+                if (!arg_default_unit) {
+                        r = log_oom();
+                        error_message = "Failed to set default unit";
+                        goto finish;
+                }
         }
 
         if (arg_action == ACTION_TEST &&
@@ -1597,11 +1601,10 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
-        if (arg_action == ACTION_TEST)
-                skip_setup = true;
-
-        if (arg_action == ACTION_TEST || arg_action == ACTION_HELP)
+        if (arg_action == ACTION_TEST || arg_action == ACTION_HELP) {
                 pager_open(arg_no_pager, false);
+                skip_setup = true;
+        }
 
         if (arg_action == ACTION_HELP) {
                 retval = help();
@@ -1610,10 +1613,8 @@ int main(int argc, char *argv[]) {
                 retval = version();
                 goto finish;
         } else if (arg_action == ACTION_DUMP_CONFIGURATION_ITEMS) {
+                pager_open(arg_no_pager, false);
                 unit_dump_config_items(stdout);
-                retval = EXIT_SUCCESS;
-                goto finish;
-        } else if (arg_action == ACTION_DONE) {
                 retval = EXIT_SUCCESS;
                 goto finish;
         }
@@ -1761,10 +1762,10 @@ int main(int argc, char *argv[]) {
                         log_warning_errno(errno, "Failed to make us a subreaper: %m");
 
         if (arg_system) {
-                bump_rlimit_nofile(&saved_rlimit_nofile);
+                (void) bump_rlimit_nofile(&saved_rlimit_nofile);
 
                 if (empty_etc) {
-                        r = unit_file_preset_all(UNIT_FILE_SYSTEM, false, NULL, UNIT_FILE_PRESET_ENABLE_ONLY, false, NULL, 0);
+                        r = unit_file_preset_all(UNIT_FILE_SYSTEM, 0, NULL, UNIT_FILE_PRESET_ENABLE_ONLY, NULL, 0);
                         if (r < 0)
                                 log_full_errno(r == -EEXIST ? LOG_NOTICE : LOG_WARNING, r, "Failed to populate /etc with preset unit settings, ignoring: %m");
                         else
@@ -1787,6 +1788,7 @@ int main(int argc, char *argv[]) {
         m->initrd_timestamp = initrd_timestamp;
         m->security_start_timestamp = security_start_timestamp;
         m->security_finish_timestamp = security_finish_timestamp;
+        m->cad_burst_action = arg_cad_burst_action;
 
         manager_set_defaults(m);
         manager_set_show_status(m, arg_show_status);

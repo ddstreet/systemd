@@ -42,9 +42,9 @@ LIBUDEV_CURRENT=7
 LIBUDEV_REVISION=5
 LIBUDEV_AGE=6
 
-LIBSYSTEMD_CURRENT=16
+LIBSYSTEMD_CURRENT=17
 LIBSYSTEMD_REVISION=0
-LIBSYSTEMD_AGE=16
+LIBSYSTEMD_AGE=17
 
 # Dirs of external packages
 dbuspolicydir=@dbuspolicydir@
@@ -375,6 +375,7 @@ bin_PROGRAMS = \
 	systemd-delta \
 	systemd-analyze \
 	systemd-run \
+	systemd-mount \
 	systemd-stdio-bridge \
 	systemd-path
 
@@ -493,7 +494,6 @@ dist_systemunit_DATA = \
 	units/swap.target \
 	units/slices.target \
 	units/system.slice \
-	units/x-.slice \
 	units/systemd-fsckd.socket \
 	units/systemd-initctl.socket \
 	units/syslog.socket \
@@ -525,7 +525,6 @@ dist_systemunit_DATA_busnames += \
 nodist_systemunit_DATA = \
 	units/getty@.service \
 	units/serial-getty@.service \
-	units/console-shell.service \
 	units/console-getty.service \
 	units/container-getty@.service \
 	units/systemd-initctl.service \
@@ -569,7 +568,16 @@ dist_userunit_DATA = \
 	units/user/default.target \
 	units/user/exit.target \
 	units/user/graphical-session.target \
-	units/user/graphical-session-pre.target
+	units/user/graphical-session-pre.target \
+	units/user/bluetooth.target \
+	units/user/busnames.target \
+	units/user/paths.target \
+	units/user/printer.target \
+	units/user/shutdown.target \
+	units/user/smartcard.target \
+	units/user/sockets.target \
+	units/user/sound.target \
+	units/user/timers.target
 
 nodist_userunit_DATA = \
 	units/user/systemd-exit.service
@@ -580,7 +588,6 @@ dist_systempreset_DATA = \
 EXTRA_DIST += \
 	units/getty@.service.m4 \
 	units/serial-getty@.service.m4 \
-	units/console-shell.service.m4.in \
 	units/console-getty.service.m4.in \
 	units/container-getty@.service.m4.in \
 	units/rescue.service.in \
@@ -629,16 +636,9 @@ EXTRA_DIST += \
 	units/rc-local.service.in \
 	units/halt-local.service.in
 
-# automake is broken and can't handle files with a dash in front
-# http://debbugs.gnu.org/cgi/bugreport.cgi?bug=14728#8
-units-install-hook:
-	mv $(DESTDIR)$(systemunitdir)/x-.slice $(DESTDIR)/$(systemunitdir)/-.slice
-
-units-uninstall-hook:
-	rm -f $(DESTDIR)/$(systemunitdir)/-.slice
-
-INSTALL_DATA_HOOKS += units-install-hook
-UNINSTALL_DATA_HOOKS += units-uninstall-hook
+GENERAL_ALIASES += \
+	$(systemunitdir)/reboot.target $(pkgsysconfdir)/system/ctrl-alt-del.target \
+	$(systemunitdir)/machines.target $(pkgsysconfdir)/system/multi-user.target.wants/machines.target
 
 dist_doc_DATA = \
 	README \
@@ -1195,6 +1195,8 @@ libcore_la_SOURCES = \
 	src/core/load-dropin.h \
 	src/core/execute.c \
 	src/core/execute.h \
+	src/core/dynamic-user.c \
+	src/core/dynamic-user.h \
 	src/core/kill.c \
 	src/core/kill.h \
 	src/core/dbus.c \
@@ -1265,8 +1267,8 @@ libcore_la_SOURCES = \
 	src/core/audit-fd.h \
 	src/core/show-status.c \
 	src/core/show-status.h \
-	src/core/failure-action.c \
-	src/core/failure-action.h
+	src/core/emergency-action.c \
+	src/core/emergency-action.h
 
 nodist_libcore_la_SOURCES = \
 	src/core/load-fragment-gperf.c \
@@ -1560,6 +1562,11 @@ tests += \
 	test-acl-util
 endif
 
+if HAVE_SECCOMP
+tests += \
+	test-seccomp
+endif
+
 EXTRA_DIST += \
 	test/a.service \
 	test/basic.target \
@@ -1617,15 +1624,36 @@ EXTRA_DIST += \
 	test/test-execute/exec-passenvironment.service \
 	test/test-execute/exec-group.service \
 	test/test-execute/exec-group-nfsnobody.service \
+	test/test-execute/exec-supplementarygroups.service \
+	test/test-execute/exec-supplementarygroups-single-group.service \
+	test/test-execute/exec-supplementarygroups-single-group-user.service \
+	test/test-execute/exec-supplementarygroups-multiple-groups-default-group-user.service \
+	test/test-execute/exec-supplementarygroups-multiple-groups-withgid.service \
+	test/test-execute/exec-supplementarygroups-multiple-groups-withuid.service \
+	test/test-execute/exec-dynamicuser-fixeduser.service \
+	test/test-execute/exec-dynamicuser-fixeduser-one-supplementarygroup.service \
+	test/test-execute/exec-dynamicuser-supplementarygroups.service \
 	test/test-execute/exec-ignoresigpipe-no.service \
 	test/test-execute/exec-ignoresigpipe-yes.service \
 	test/test-execute/exec-personality-x86-64.service \
 	test/test-execute/exec-personality-x86.service \
 	test/test-execute/exec-personality-s390.service \
+	test/test-execute/exec-personality-ppc64.service \
+	test/test-execute/exec-personality-ppc64le.service \
+	test/test-execute/exec-personality-aarch64.service \
 	test/test-execute/exec-privatedevices-no.service \
 	test/test-execute/exec-privatedevices-yes.service \
+	test/test-execute/exec-privatedevices-no-capability-mknod.service \
+	test/test-execute/exec-privatedevices-yes-capability-mknod.service \
+	test/test-execute/exec-protectkernelmodules-no-capabilities.service \
+	test/test-execute/exec-protectkernelmodules-yes-capabilities.service \
+	test/test-execute/exec-protectkernelmodules-yes-mount-propagation.service \
 	test/test-execute/exec-privatetmp-no.service \
 	test/test-execute/exec-privatetmp-yes.service \
+	test/test-execute/exec-readonlypaths.service \
+	test/test-execute/exec-readonlypaths-mount-propagation.service \
+	test/test-execute/exec-readwritepaths-mount-propagation.service \
+	test/test-execute/exec-inaccessiblepaths-mount-propagation.service \
 	test/test-execute/exec-spec-interpolation.service \
 	test/test-execute/exec-systemcallerrornumber.service \
 	test/test-execute/exec-systemcallfilter-failing2.service \
@@ -2009,6 +2037,13 @@ test_acl_util_SOURCES = \
 
 test_acl_util_LDADD = \
 	libsystemd-shared.la
+
+test_seccomp_SOURCES = \
+	src/test/test-seccomp.c
+
+test_seccomp_LDADD = \
+	libsystemd-shared.la \
+	$(SECCOMP_LIBS)
 
 test_namespace_LDADD = \
 	libcore.la
@@ -3131,6 +3166,13 @@ systemd_run_LDADD = \
 	libsystemd-shared.la
 
 # ------------------------------------------------------------------------------
+systemd_mount_SOURCES = \
+	src/mount/mount-tool.c
+
+systemd_mount_LDADD = \
+	libsystemd-shared.la
+
+# ------------------------------------------------------------------------------
 systemd_stdio_bridge_SOURCES = \
 	src/stdio-bridge/stdio-bridge.c
 
@@ -3291,6 +3333,7 @@ tests += \
 	test-bus-error \
 	test-bus-creds \
 	test-bus-gvariant \
+	test-bus-track \
 	test-event \
 	test-netlink \
 	test-local-addresses \
@@ -3332,6 +3375,16 @@ test_bus_cleanup_CFLAGS = \
 	$(SECCOMP_CFLAGS)
 
 test_bus_cleanup_LDADD = \
+	libsystemd-shared.la
+
+test_bus_track_SOURCES = \
+	src/libsystemd/sd-bus/test-bus-track.c
+
+test_bus_track_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(SECCOMP_CFLAGS)
+
+test_bus_track_LDADD = \
 	libsystemd-shared.la
 
 test_bus_server_SOURCES = \
@@ -3851,7 +3904,8 @@ TESTS += \
 
 if HAVE_PYTHON
 TESTS += \
-	test/rule-syntax-check.py
+	test/rule-syntax-check.py \
+	hwdb/parse_hwdb.py
 
 if HAVE_SYSV_COMPAT
 TESTS += \
@@ -3903,7 +3957,8 @@ EXTRA_DIST += \
 	test/udev-test.pl \
 	test/rule-syntax-check.py \
 	test/sysv-generator-test.py \
-	test/mocks/fsck
+	test/mocks/fsck \
+	hwdb/parse_hwdb.py
 
 # ------------------------------------------------------------------------------
 ata_id_SOURCES = \
@@ -4615,9 +4670,6 @@ nodist_udevrules_DATA += \
 
 nodist_systemunit_DATA += \
 	units/systemd-vconsole-setup.service
-
-SYSINIT_TARGET_WANTS += \
-	systemd-vconsole-setup.service
 endif
 
 EXTRA_DIST += \
@@ -4985,6 +5037,27 @@ test_nss_LDADD = \
 
 manual_tests += \
 	test-nss
+
+# ------------------------------------------------------------------------------
+libnss_systemd_la_SOURCES = \
+	src/nss-systemd/nss-systemd.sym \
+	src/nss-systemd/nss-systemd.c
+
+libnss_systemd_la_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	-module \
+	-export-dynamic \
+	-avoid-version \
+	-shared \
+	-shrext .so.2 \
+	-Wl,--version-script=$(top_srcdir)/src/nss-systemd/nss-systemd.sym
+
+libnss_systemd_la_LIBADD = \
+	libsystemd-internal.la \
+	libbasic.la
+
+rootlib_LTLIBRARIES += \
+	libnss_systemd.la
 
 # ------------------------------------------------------------------------------
 if HAVE_MYHOSTNAME
@@ -5577,6 +5650,8 @@ libnetworkd_core_la_SOURCES = \
 	src/network/networkd-netdev-bond.c \
 	src/network/networkd-netdev-bridge.h \
 	src/network/networkd-netdev-bridge.c \
+	src/network/networkd-netdev-vcan.h \
+	src/network/networkd-netdev-vcan.c \
 	src/network/networkd-link-bus.c \
 	src/network/networkd-ipv4ll.c \
 	src/network/networkd-dhcp4.c \
@@ -5976,6 +6051,9 @@ EXTRA_DIST += \
 	test/TEST-11-ISSUE-3166/test.sh \
 	test/TEST-12-ISSUE-3171/Makefile \
 	test/TEST-12-ISSUE-3171/test.sh \
+	test/TEST-13-NSPAWN-SMOKE/Makefile \
+	test/TEST-13-NSPAWN-SMOKE/create-busybox-container \
+	test/TEST-13-NSPAWN-SMOKE/test.sh \
 	test/test-functions
 
 EXTRA_DIST += \
@@ -6253,19 +6331,6 @@ SYSTEM_UNIT_ALIASES += \
 	reboot.target ctrl-alt-del.target \
 	getty@.service autovt@.service
 
-USER_UNIT_ALIASES += \
-	$(systemunitdir)/shutdown.target shutdown.target \
-	$(systemunitdir)/sockets.target sockets.target \
-	$(systemunitdir)/timers.target timers.target \
-	$(systemunitdir)/paths.target paths.target \
-	$(systemunitdir)/bluetooth.target bluetooth.target \
-	$(systemunitdir)/printer.target printer.target \
-	$(systemunitdir)/sound.target sound.target \
-	$(systemunitdir)/smartcard.target smartcard.target
-
-USER_UNIT_ALIASES += \
-	$(systemunitdir)/busnames.target busnames.target
-
 GENERAL_ALIASES += \
 	$(systemunitdir)/remote-fs.target $(pkgsysconfdir)/system/multi-user.target.wants/remote-fs.target \
 	$(systemunitdir)/getty@.service $(pkgsysconfdir)/system/getty.target.wants/getty@tty1.service \
@@ -6518,7 +6583,7 @@ print-%:
 	@echo $($*)
 
 git-contrib:
-	@git shortlog -s `git describe --abbrev=0`.. | cut -c8- | awk '{ print $$0 "," }' | sort -u
+	@git shortlog -s `git describe --abbrev=0`.. | cut -c8- | sed 's/ / /g' | awk '{ print $$0 "," }' | sort -u
 
 EXTRA_DIST += \
         tools/gdb-sd_dump_hashmaps.py
