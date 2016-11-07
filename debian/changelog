@@ -1,3 +1,16 @@
+systemd (232-2git1) zesty; urgency=medium
+
+  Upload current packaging git head to fix autopkgtest.
+
+  [ Felipe Sateler ]
+  * Make systemd-delta less confused on merged-usr systems. (Closes: #843070)
+
+  [ Martin Pitt ]
+  * debian/tests/logind: Split out "pid in logind session" test
+  * debian/tests/logind: Adjust "in logind session" test for unified cgroup hierarchy
+
+ -- Felipe Sateler <fsateler@debian.org>  Mon, 07 Nov 2016 13:09:01 +0100
+
 systemd (232-2) unstable; urgency=medium
 
   * Drop RestrictAddressFamilies from service files.
