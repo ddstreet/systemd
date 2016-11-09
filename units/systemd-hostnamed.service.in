@@ -24,5 +24,4 @@ ProtectControlGroups=yes
 ProtectKernelTunables=yes
 MemoryDenyWriteExecute=yes
 RestrictRealtime=yes
-RestrictAddressFamilies=AF_UNIX
 SystemCallFilter=~@clock @cpu-emulation @debug @keyring @module @mount @obsolete @raw-io
