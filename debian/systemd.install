@@ -1,4 +1,5 @@
-etc/
+etc/systemd/
+etc/dbus-1/system.d/org.freedesktop.systemd1.conf
 bin/systemctl
 bin/journalctl
 bin/systemd-notify
@@ -38,3 +39,8 @@ usr/lib/modules-load.d/
 usr/lib/sysctl.d/
 usr/lib/systemd/
 usr/lib/tmpfiles.d/
+# units that we want to run as deputy init
+lib/systemd/system/*.target lib/systemd/upstart/
+lib/systemd/system/systemd-journal* lib/systemd/upstart/
+lib/systemd/system/sockets.target.wants/systemd-journald.socket lib/systemd/upstart/sockets.target.wants/
+../../extra/dbus.service lib/systemd/upstart/

@@ -1,0 +1,10 @@
+description "run systemd deputy init"
+author "Martin Pitt <martin.pitt@ubuntu.com>"
+
+start on started dbus
+stop on stopping dbus
+
+pre-start exec mkdir -p /run/systemd/system
+exec /lib/systemd/systemd --system
+
+post-stop exec rm -rf /run/systemd/system
