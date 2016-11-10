@@ -61,3 +61,7 @@
 # Mount separate tmpfs file systems for /run/user and /run/lock
 /lib/systemd/system/run-user.mount /lib/systemd/system/local-fs.target.wants/run-user.mount
 /lib/systemd/system/run-lock.mount /lib/systemd/system/local-fs.target.wants/run-lock.mount
+
+# dummy unit for deputy systemd
+/dev/null /lib/systemd/upstart/dbus.socket
+/lib/systemd/upstart/dbus.service /lib/systemd/upstart/multi-user.target.wants/dbus.service

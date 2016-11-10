@@ -1,0 +1,40 @@
+Description: Do not read units from /lib/systemd/system, but from /lib/systemd/upstart/
+ In Ubuntu 14.04 there are a lot of packages which ship a systemd system unit,
+ but almost all of these must not run for running systemd's service manager as
+ a "deputy" init alongside upstart. We do need some of them though, so read
+ units from /lib/systemd/upstart.
+Author: Martin Pitt <martin.pitt@ubuntu.com>
+
+Index: systemd/src/shared/path-lookup.c
+===================================================================
+--- systemd.orig/src/shared/path-lookup.c
++++ systemd/src/shared/path-lookup.c
+@@ -303,11 +303,7 @@ int lookup_paths_init(
+                                         "/run/systemd/system",
+                                         STRV_IFNOTNULL(generator),
+                                         "/usr/local/lib/systemd/system",
+-                                        SYSTEM_DATA_UNIT_PATH,
+-                                        "/usr/lib/systemd/system",
+-#ifdef HAVE_SPLIT_USR
+-                                        "/lib/systemd/system",
+-#endif
++                                        "/lib/systemd/upstart",
+                                         STRV_IFNOTNULL(generator_late),
+                                         NULL);
+ 
+Index: systemd/src/core/load-fragment.c
+===================================================================
+--- systemd.orig/src/core/load-fragment.c
++++ systemd/src/core/load-fragment.c
+@@ -2113,6 +2113,11 @@ static int open_follow(char **filename,
+                 r = readlink_and_make_absolute(*filename, &target);
+                 if (r < 0)
+                         return r;
++                /* Ignore linked units in /lib/systemd/system/ for deputy systemd init */
++                if (strneq(target, "/lib/systemd/system/", strlen("/lib/systemd/system/"))) {
++                        log_warning("Ignoring %s -> %s for systemd deputy init", *filename, target);
++                        return -ENOENT;
++                }
+ 
+                 free(*filename);
+                 *filename = target;
