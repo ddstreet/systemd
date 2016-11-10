@@ -6,15 +6,15 @@
 VERSION = $(shell dpkg-parsechangelog | sed -n -e '/^Version:/s/.*: //p')
 
 # Ubuntu: systemd{,-sysv} not yet approved for universe
-BINARY_BLACKLIST = -Nsystemd -Nsystemd-sysv
+BINARY_BLACKLIST = -Nsystemd-sysv
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 CONFFLAGS = \
 	--with-rootprefix= \
 	--with-rootlibdir=/lib/$(DEB_HOST_MULTIARCH) \
-	--with-sysvinit-path=/etc/init.d \
-	--with-sysvrcnd-path=/etc \
+	--with-sysvinit-path= \
+	--with-sysvrcnd-path= \
 	--with-firmware-path=/lib/firmware \
 	--with-debug-shell=/bin/bash \
 	--enable-libcryptsetup \
@@ -129,8 +129,6 @@ override_dh_install:
 		debian/udev/lib/udev/rules.d/README
 	# systemd
 	cp -a debian/pam-configs debian/libpam-systemd/usr/share/
-	install -D --mode=644 debian/init-functions.d/40-systemd \
-		debian/systemd/lib/lsb/init-functions.d/40-systemd
 	install --mode=644 debian/tmpfiles.d/debian.conf \
 		debian/systemd/usr/lib/tmpfiles.d/
 	install --mode=644 debian/debian-fixup.service debian/ifup@.service \
@@ -154,7 +152,6 @@ override_dh_install:
 	# files shipped by libpam-systemd
 	rm debian/systemd/usr/share/man/man8/pam_systemd.8
 	# files shipped by udev
-	rm -r debian/systemd/etc/udev/
 	rm debian/systemd/lib/systemd/system/systemd-udev*
 	rm debian/systemd/lib/systemd/system/*.target.wants/systemd-udev*
 	rm debian/systemd/lib/systemd/systemd-udevd
@@ -168,6 +165,7 @@ override_dh_install:
 	rm debian/systemd/lib/systemd/systemd-hostnamed
 	rm debian/systemd/lib/systemd/systemd-localed
 	rm debian/systemd/lib/systemd/systemd-timedated
+	rm debian/systemd/lib/systemd/systemd-multi-seat-x
 	rm debian/systemd/usr/share/man/man5/logind*
 	rm debian/systemd/usr/share/man/man8/systemd-logind*
 	rm debian/systemd/usr/share/man/man8/systemd-hostnamed*
@@ -179,11 +177,16 @@ override_dh_install:
 	# files shipped by systemd
 	rm debian/udev/lib/udev/rules.d/99-systemd.rules
 
+	# Remove all actual services on system startup for running systemd as a
+	# deputy init; we use /lib/systemd/upstart/ as a unit path
+	rm -r debian/systemd/lib/systemd/system
+
 	# we continue to use the old net iface naming schema for the time being
 	rm -f debian/udev/lib/udev/rules.d/80-net-name-slot.rules
 	rm -f debian/udev-udeb/lib/udev/rules.d/80-net-name-slot.rules
 
 override_dh_installinit:
+	dh_installinit --upstart-only --verbose -p systemd --no-restart-on-upgrade
 	dh_installinit --upstart-only --no-start
 	dh_installinit --upstart-only --name=udev-finish --no-start
 	dh_installinit --upstart-only --name=udevtrigger --no-start

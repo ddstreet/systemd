@@ -1,3 +1,37 @@
+systemd (204-5ubuntu20.20) trusty-proposed; urgency=medium
+
+  * Build systemd binary package.
+    Drop installation of /etc/* aside from systemd's own config files. This
+    avoids a package conflict with systemd-services and we don't want to
+    support the full feature set anyway. (LP: #1616422)
+  * Disable SysV init support.
+    This just gets in the way when running systemd as a "deputy init".
+  * systemd: Add Conflicts: to systemd-shim
+  * Create/use private D-Bus socket also for systemd --system.
+    Without this we cannot use systemctl as root or when D-Bus is not running.
+  * Do not read units from /lib/systemd/system, but from /lib/systemd/upstart/
+    In Ubuntu 14.04 there are a lot of packages which ship a systemd system unit,
+    but almost all of these must not run for running systemd's service manager as a
+    "deputy" init alongside upstart. We do need some of them though, so read units
+    from /lib/systemd/upstart.
+    Only install the system units that we actually need for a deputy init (journal
+    and all targets).
+  * Add Breaks: to init-system-helpers that does not yet have a disabled
+    deb-systemd-invoke, to complete the previous change.
+  * Add upstart job for deputy systemd init.
+    We also need to clean up /run/systemd/system after stop, so that things which
+    check if systemd is running don't get confused.
+  * Add dummy D-Bus units.
+    These are built in for exposing systemd itself onto the system bus.
+  * Drop LSB init hook.
+    We must not redirect SysV init scripts to systemd when running as deputy init.
+  * Stop systemd deputy upstart job on dist-upgrades.
+    Also drop the removal guard as we do want to be able to remove the systemd
+    package while it's only running the deputy init.
+  * Update Vcs-Git: for new trusty git branch.
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 10 Nov 2016 15:14:54 +0100
+
 systemd (204-5ubuntu20.19) trusty-proposed; urgency=medium
 
   * Add upstream-uaccess-Add-new-DRM-render-nodes.patch: Add uaccess tag for
