@@ -35,7 +35,7 @@ Build-Depends: debhelper (>= 9.20160114),
                libacl1-dev,
                liblzma-dev,
                liblz4-dev (>= 0.0~r125),
-               liblz4-tool <!stage1>,
+               liblz4-tool <!nocheck>,
                libbz2-dev <!stage1>,
                zlib1g-dev <!stage1> | libz-dev <!stage1>,
                libcurl4-gnutls-dev <!stage1> | libcurl-dev <!stage1>,
@@ -50,7 +50,8 @@ Build-Depends: debhelper (>= 9.20160114),
                linux-base <!nocheck>,
                acl <!nocheck>,
                python3:native,
-               python3-lxml:native
+               python3-lxml:native,
+               python3-pyparsing <!nocheck>,
 
 Package: systemd
 Architecture: linux-any
@@ -208,6 +209,7 @@ Priority: extra
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         systemd (= ${binary:Version}),
 Breaks: systemd (<< 222-1)
 Replaces: systemd (<< 222-1)
 Description: nss module providing fallback resolution for the current hostname
@@ -231,6 +233,7 @@ Priority: extra
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         systemd-container (= ${binary:Version}),
 Breaks: systemd (<< 222-1)
 Replaces: systemd (<< 222-1)
 Description: nss module to resolve hostnames for local container instances
@@ -249,7 +252,7 @@ Priority: extra
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         systemd,
+         systemd (= ${binary:Version}),
 Breaks: systemd (<< 227-3)
 Replaces: systemd (<< 227-3)
 Description: nss module to resolve names via systemd-resolved
@@ -258,6 +261,24 @@ Description: nss module to resolve names via systemd-resolved
  the systemd-resolved daemon (provided in the systemd package).
  .
  Installing this package automatically adds resolve to /etc/nsswitch.conf.
+
+Package: libnss-systemd
+Architecture: linux-any
+Multi-Arch: same
+Section: admin
+Priority: extra
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         systemd (= ${binary:Version}),
+Description: nss module providing dynamic user and group name resolution
+ nss-systemd is a plug-in module for the GNU Name Service Switch (NSS)
+ functionality of the GNU C Library (glibc), providing UNIX user and group name
+ resolution for dynamic users and groups allocated through the DynamicUser=
+ option in systemd unit files. See systemd.exec(5) for details on this
+ option.
+ .
+ Installing this package automatically adds the module to /etc/nsswitch.conf.
 
 Package: libsystemd0
 Architecture: linux-any
