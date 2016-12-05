@@ -2337,9 +2337,7 @@ void udev_rules_apply_to_event(struct udev_rules *rules,
 
                         /* allow  multiple symlinks separated by spaces */
                         udev_event_apply_format(event, rules_str(rules, cur->key.value_off), temp, sizeof(temp));
-                        if (esc == ESCAPE_UNSET)
-                                count = util_replace_chars(temp, "/ ");
-                        else if (esc == ESCAPE_REPLACE)
+                        if (esc == ESCAPE_UNSET || esc == ESCAPE_REPLACE)
                                 count = util_replace_chars(temp, "/");
                         if (count > 0)
                                 log_debug("%i character(s) replaced" , count);
