@@ -728,7 +728,7 @@ EOF
                 devpath         => "/devices/pci0000:00/0000:00:1d.7/usb5/5-2/5-2:1.0/tty/ttyACM0",
                 exp_name        => "symlink2-ttyACM0",
                 rules           => <<EOF
-KERNEL=="ttyACM[0-9]*", SYMLINK="symlink1-%n symlink2-%k symlink3-%b"
+KERNEL=="ttyACM[0-9]*", SYMLINK="symlink1-%n symlink2-%k symlink3-%b", OPTIONS+="string_escape=none"
 EOF
         },
         {
@@ -737,7 +737,7 @@ EOF
                 exp_name        => "one",
                 not_exp_name        => " ",
                 rules           => <<EOF
-KERNEL=="ttyACM[0-9]*", SYMLINK="  one     two        "
+KERNEL=="ttyACM[0-9]*", SYMLINK="  one     two        ", OPTIONS+="string_escape=none"
 EOF
         },
         {
@@ -753,7 +753,7 @@ EOF
                 devpath         => "/devices/pci0000:00/0000:00:1d.7/usb5/5-2/5-2:1.0/tty/ttyACM0",
                 exp_name        => "second-0" ,
                 rules           => <<EOF
-KERNEL=="ttyACM0", SYMLINK="first-%n second-%n third-%n"
+KERNEL=="ttyACM0", SYMLINK="first-%n second-%n third-%n", OPTIONS+="string_escape=none"
 EOF
         },
         {
@@ -830,7 +830,7 @@ EOF
                 devpath         => "/devices/pci0000:00/0000:00:1d.7/usb5/5-2/5-2:1.0/tty/ttyACM0",
                 exp_name        => "this",
                 rules           => <<EOF
-KERNEL=="ttyACM[0-9]*", PROGRAM=="/bin/echo symlink test this", SYMLINK+="%c{2+}"
+KERNEL=="ttyACM[0-9]*", PROGRAM=="/bin/echo symlink test this", SYMLINK+="%c{2+}", OPTIONS+="string_escape=none"
 EOF
         },
         {
@@ -838,7 +838,7 @@ EOF
                 devpath         => "/devices/pci0000:00/0000:00:1f.2/host0/target0:0:0/0:0:0:0/block/sda",
                 exp_name        => "test",
                 rules           => <<EOF
-SUBSYSTEMS=="scsi", KERNEL=="sda", PROGRAM=="/bin/echo link test this" SYMLINK+="%c{2+}"
+SUBSYSTEMS=="scsi", KERNEL=="sda", PROGRAM=="/bin/echo link test this" SYMLINK+="%c{2+}", OPTIONS+="string_escape=none"
 EOF
         },
         {
@@ -854,7 +854,7 @@ EOF
                 devpath         => "/devices/pci0000:00/0000:00:1f.2/host0/target0:0:0/0:0:0:0/block/sda/sda5",
                 exp_name        => "link1",
                 rules           => <<EOF
-SUBSYSTEMS=="scsi", PROGRAM=="/bin/echo -n node link1 link2", RESULT=="node *", SYMLINK+="%c{2} %c{3}"
+SUBSYSTEMS=="scsi", PROGRAM=="/bin/echo -n node link1 link2", RESULT=="node *", SYMLINK+="%c{2} %c{3}", OPTIONS+="string_escape=none"
 EOF
         },
         {
@@ -862,7 +862,7 @@ EOF
                 devpath         => "/devices/pci0000:00/0000:00:1f.2/host0/target0:0:0/0:0:0:0/block/sda/sda5",
                 exp_name        => "link4",
                 rules           => <<EOF
-SUBSYSTEMS=="scsi", PROGRAM=="/bin/echo -n node link1 link2 link3 link4", RESULT=="node *", SYMLINK+="%c{2+}"
+SUBSYSTEMS=="scsi", PROGRAM=="/bin/echo -n node link1 link2 link3 link4", RESULT=="node *", SYMLINK+="%c{2+}", OPTIONS+="string_escape=none"
 EOF
         },
         {
