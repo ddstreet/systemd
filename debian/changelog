@@ -1,3 +1,14 @@
+systemd (204-5ubuntu20.21) trusty; urgency=medium
+
+  [ Dan Streetman ]
+  * rules: introduce disk/by-id (wwid and model_serial) symlinks
+    for NVMe drives (LP: #1642903)
+
+  [ Yu Ning ]
+  * keymap: Some HP refactoring, add Probook 440 G3 keys (LP: #1562344)
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 15 Dec 2016 19:46:52 -0800
+
 systemd (204-5ubuntu20.20) trusty-proposed; urgency=medium
 
   * Build systemd binary package.
