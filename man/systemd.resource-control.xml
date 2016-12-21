@@ -191,7 +191,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           <literal>memory.limit_in_bytes</literal> control group
           attribute. For details about this control group attribute,
           see <ulink
-          url="https://www.kernel.org/doc/Documentation/cgroups/memory.txt">memory.txt</ulink>.</para>
+          url="https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt">memory.txt</ulink>.</para>
 
           <para>Implies <literal>MemoryAccounting=true</literal>.</para>
         </listitem>
@@ -222,7 +222,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
         the <literal>blkio.weight</literal> control group attribute,
         which defaults to 1000. For details about this control group
         attribute, see <ulink
-        url="https://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt">blkio-controller.txt</ulink>.
+        url="https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt">blkio-controller.txt</ulink>.
         The available IO bandwidth is split up among all units within
         one slice relative to their block IO weight.</para>
 
@@ -254,7 +254,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           attribute, which defaults to 1000. Use this option multiple
           times to set weights for multiple devices. For details about
           this control group attribute, see <ulink
-          url="https://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt">blkio-controller.txt</ulink>.</para>
+          url="https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt">blkio-controller.txt</ulink>.</para>
 
           <para>Implies
           <literal>BlockIOAccounting=true</literal>.</para>
@@ -282,7 +282,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           attributes. Use this option multiple times to set bandwidth
           limits for multiple devices. For details about these control
           group attributes, see <ulink
-          url="https://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt">blkio-controller.txt</ulink>.
+          url="https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt">blkio-controller.txt</ulink>.
           </para>
 
           <para>Implies
@@ -306,7 +306,7 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
           <literal>devices.deny</literal> control group
           attributes. For details about these control group
           attributes, see <ulink
-          url="https://www.kernel.org/doc/Documentation/cgroups/devices.txt">devices.txt</ulink>.</para>
+          url="https://www.kernel.org/doc/Documentation/cgroup-v1/devices.txt">devices.txt</ulink>.</para>
 
           <para>The device node specifier is either a path to a device
           node in the file system, starting with
@@ -411,10 +411,10 @@ along with systemd; If not, see <http://www.gnu.org/licenses/>.
       <citerefentry><refentrytitle>systemd.directives</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
       <citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry>,
       The documentation for control groups and specific controllers in the Linux kernel:
-      <ulink url="https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt">cgroups.txt</ulink>,
-      <ulink url="https://www.kernel.org/doc/Documentation/cgroups/cpuacct.txt">cpuacct.txt</ulink>,
-      <ulink url="https://www.kernel.org/doc/Documentation/cgroups/memory.txt">memory.txt</ulink>,
-      <ulink url="https://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt">blkio-controller.txt</ulink>.
+      <ulink url="https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt">cgroups.txt</ulink>,
+      <ulink url="https://www.kernel.org/doc/Documentation/cgroup-v1/cpuacct.txt">cpuacct.txt</ulink>,
+      <ulink url="https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt">memory.txt</ulink>,
+      <ulink url="https://www.kernel.org/doc/Documentation/cgroup-v1/blkio-controller.txt">blkio-controller.txt</ulink>.
     </para>
   </refsect1>
 </refentry>
