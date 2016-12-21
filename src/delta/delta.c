@@ -491,7 +491,7 @@ static int parse_flags(const char *flag_str, int flags) {
         char *w, *state;
         size_t l;
 
-        FOREACH_WORD(w, l, flag_str, state) {
+        FOREACH_WORD_SEPARATOR(w, l, flag_str, ",", state) {
                 if (strneq("masked", w, l))
                         flags |= SHOW_MASKED;
                 else if (strneq ("equivalent", w, l))
