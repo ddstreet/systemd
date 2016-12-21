@@ -91,6 +91,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->dhcp_domainname = true;
         network->dhcp_routes = true;
         network->dhcp_sendhost = true;
+        network->dhcp_broadcast = true;
 
         r = config_parse(NULL, filename, file, "Match\0Network\0Address\0Route\0DHCP\0DHCPv4\0", config_item_perf_lookup,
                         (void*) network_network_gperf_lookup, false, false, network);
