@@ -513,7 +513,7 @@
                                 directories checked are
                                 <filename>/usr/local/lib/systemd/system</filename>
                                 and
-                                <filename>/usr/lib/systemd/system</filename>. User
+                                <filename>/lib/systemd/system</filename>. User
                                 configuration always takes
                                 precedence. <command>pkg-config
                                 systemd

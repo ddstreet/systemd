@@ -50,7 +50,7 @@
 
         <refsynopsisdiv>
                 <para><filename>systemd-networkd-wait-online.service</filename></para>
-                <para><filename>/usr/lib/systemd/systemd-networkd-wait-online</filename></para>
+                <para><filename>/lib/systemd/systemd-networkd-wait-online</filename></para>
         </refsynopsisdiv>
 
         <refsect1>
