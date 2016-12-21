@@ -70,3 +70,28 @@ int fsck_exists(const char *fstype);
 /* Same as PATH_FOREACH_PREFIX but also includes the specified path itself */
 #define PATH_FOREACH_PREFIX_MORE(prefix, path) \
         for (char *_slash = ({ path_kill_slashes(strcpy(prefix, path)); if (streq(prefix, "/")) prefix[0] = 0; strrchr(prefix, 0); }); _slash && !(*_slash = 0); _slash = strrchr((prefix), '/'))
+
+/* Note: the search terminates on the first NULL item. */
+#define PATH_IN_SET(p, ...)                                     \
+        ({                                                      \
+                char **s;                                       \
+                bool _found = false;                            \
+                STRV_FOREACH(s, STRV_MAKE(__VA_ARGS__))         \
+                        if (path_equal(p, *s)) {                \
+                               _found = true;                   \
+                               break;                           \
+                        }                                       \
+                _found;                                         \
+        })
+
+#define PATH_STARTSWITH_SET(p, ...)                             \
+        ({                                                      \
+                char **s;                                       \
+                bool _found = false;                            \
+                STRV_FOREACH(s, STRV_MAKE(__VA_ARGS__))         \
+                        if (path_startswith(p, *s)) {           \
+                               _found = true;                   \
+                               break;                           \
+                        }                                       \
+                _found;                                         \
+        })
