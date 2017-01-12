@@ -117,6 +117,7 @@ CONFFLAGS = \
 	--disable-vconsole \
 	--disable-firstboot \
 	--disable-xkbcommon \
+	--disable-wheel-group \
 	--with-ntp-servers="$(DEFAULT_NTP_SERVERS)"  \
 	--with-system-uid-max=999 \
 	--with-system-gid-max=999
@@ -229,8 +230,6 @@ endif
 	# occasionally, with filtering out paths which are known to be in /usr:
 	# grep -r /usr debian/install/deb/usr/share/man/|egrep -v '/usr/local|os.*release|factory|zoneinfo|tmpfiles|kernel|foo|machines|sysctl|dbus|include|binfmt'
 	find debian/install/deb/usr/share/man/ -type f | xargs sed -ri 's_/usr(/lib/systemd/system|/lib/systemd/network|/lib/udev|/lib[^/]|/lib/[^a-z])_\1_g'
-	# we don't have a "wheel" group in Debian; https://github.com/systemd/systemd/issues/2492
-	find debian/install/deb/usr/lib/tmpfiles.d/ -type f | xargs sed -ri 's/,(d:)?group:wheel:[^,]+//'
 
 override_dh_auto_clean:
 ifneq (, $(TEST_UPSTREAM))
@@ -272,7 +271,7 @@ override_dh_install:
 	rm -f debian/install/*/lib/systemd/system/*sysusers*.service debian/install/*/lib/systemd/system/*/*sysusers*.service
 	# FIXME: RestrictAddressFamilies= is broken on several architectures,
 	# see https://github.com/systemd/systemd/issues/4575 (#843160)
-	[ "$(DEB_HOST_ARCH)" = amd64 ] || sed --follow-symlinks -i '/RestrictAddressFamilies/d' debian/install/*/lib/systemd/system/*.service
+	[ "$(DEB_HOST_ARCH)" = amd64 ] || [ "$(UPSTREAM_PULL_REQUEST)" = 4991 ] || sed --follow-symlinks -i '/RestrictAddressFamilies/d' debian/install/*/lib/systemd/system/*.service
 ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_install -pudev-udeb -plibudev1-udeb --sourcedir=debian/install/udeb
 endif
@@ -304,11 +303,7 @@ endif
 	done
 
 	# ship test-udev, so that we have it for autopkgtests
-	if [ -e build-deb/.libs/test-udev ]; then \
-		install -D build-deb/.libs/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/udev/test-udev; \
-	else \
-		install -D build-deb/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/udev/test-udev; \
-	fi
+	install -D build-deb/.libs/test-udev debian/libudev-dev/usr/lib/$(DEB_HOST_MULTIARCH)/udev/test-udev
 
 	# Ubuntu specific files
 ifeq ($(DEB_VENDOR),Ubuntu)
