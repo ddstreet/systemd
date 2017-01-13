@@ -1,3 +1,14 @@
+systemd (229-4ubuntu15) xenial; urgency=medium
+
+  * d/p/0001-libudev-util-change-util_replace_whitespace-to-retur.patch,
+    d/p/0002-udev-event-add-replace_whitespace-param-to-udev_even.patch,
+    d/p/0003-udev-rules-perform-whitespace-replacement-for-symlin.patch:
+    Cherry-pick upstream fixes from Dan Streetman <ddstreet@ieee.org> to
+    fix by-id symlinks for devices whose IDs contain whitespace.
+    LP: #1647485.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Fri, 13 Jan 2017 13:41:23 +0200
+
 systemd (229-4ubuntu14) xenial; urgency=medium
 
   * Make systemd-networkd-resolvconf-update.service run earlier

@@ -44,6 +44,9 @@ units-add-graphical-session-pre.target-user-unit-3848.patch
 rules-add-NVMe-rules-3136.patch
 rules-introduce-disk-by-id-model_serial-symlinks-for.patch
 networkd-allow-networkd-to-start-in-early-boot.patch
+0001-libudev-util-change-util_replace_whitespace-to-retur.patch
+0002-udev-event-add-replace_whitespace-param-to-udev_even.patch
+0003-udev-rules-perform-whitespace-replacement-for-symlin.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
