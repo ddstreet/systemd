@@ -3816,7 +3816,7 @@ int config_parse_namespace_path_strv(
 
                 path_kill_slashes(resolved);
 
-                joined = strjoin(ignore_enoent ? "-" : "", resolved);
+                joined = strjoin(ignore_enoent ? "-" : "", resolved, NULL);
 
                 r = strv_push(sv, joined);
                 if (r < 0)
