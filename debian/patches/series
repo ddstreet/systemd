@@ -42,3 +42,6 @@ debian/Revert-core-one-step-back-again-for-nspawn-we-actual.patch
 debian/Revert-core-set-RLIMIT_CORE-to-unlimited-by-default.patch
 debian/Revert-core-enable-TasksMax-for-all-services-by-default-a.patch
 debian/Let-graphical-session-pre.target-be-manually-started.patch
+0001-libudev-util-change-util_replace_whitespace-to-retur.patch
+0002-udev-event-add-replace_whitespace-param-to-udev_even.patch
+0003-udev-rules-perform-whitespace-replacement-for-symlin.patch
