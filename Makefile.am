@@ -157,6 +157,7 @@ nodist_zshcompletion_DATA = $(nodist_zshcompletion_data)
 endif
 udevlibexec_PROGRAMS =
 gperf_gperf_sources =
+rootlib_LTLIBRARIES =
 
 in_files = $(filter %.in,$(EXTRA_DIST))
 in_in_files = $(filter %.in.in, $(in_files))
@@ -5021,7 +5022,7 @@ libnss_myhostname_la_LIBADD = \
 	libsystemd-internal.la \
 	libbasic.la
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libnss_myhostname.la
 endif
 
@@ -5120,7 +5121,7 @@ libnss_mymachines_la_LIBADD = \
 	libsystemd-internal.la \
 	libbasic.la
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libnss_mymachines.la
 
 endif
@@ -5419,7 +5420,7 @@ libnss_resolve_la_LIBADD = \
 	libbasic.la \
         -ldl
 
-lib_LTLIBRARIES += \
+rootlib_LTLIBRARIES += \
 	libnss_resolve.la
 
 systemd_resolve_SOURCES = \
