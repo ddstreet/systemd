@@ -33,3 +33,5 @@ Advertise-hibernation-only-if-there-s-enough-free-sw.patch
 ProLiant-power-button.patch
 private-bus-for-nonpid1.patch
 deputy_unit_path.patch
+deputy_shutdown.patch
+deputy_cgroup.patch

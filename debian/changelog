@@ -1,3 +1,28 @@
+systemd (204-5ubuntu20.22) trusty; urgency=medium
+
+  * Add support for installing deputy systemd for snapd on Ubuntu
+    Desktop 14.04.5 (LP: #1656280)
+
+  [ Dimitri John Ledkov ]
+  * debian/patches/deputy_shutdown.patch: Use system poweroff, halt,
+    reboot, pm-suspend, pm-hibernate commands in the systemd units for
+    power management via systemd/systemctl. Use /bin/false for kexec.
+  * debian/systemd.postinst: Drop restaring systemd-initctl.socket and
+    systemd-logind.service, as neither are supposed to be managed by
+    deputy systemd.
+  * debian/patches/deputy_cgroup.patch: Make deputy systemd use
+    alternative dsystemd cgroups path and nonpid1 systemd should setup
+    these mountpoints.
+  * debian/patches/private-bus-for-nonpid1.patch: Make deputy systemd not
+    connect to system D-Bus, to avoid conflict with systemd-shim.
+  * debian/control: remove conflicts with systemd-shim
+
+  [ Thomas Voß ]
+  * debian/patches/add-cgmanager-support: Only free result if != NULL,
+    preventing crash in the error handling code-path.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 17 Jan 2017 10:43:30 +0000
+
 systemd (204-5ubuntu20.21) trusty; urgency=medium
 
   [ Dan Streetman ]
