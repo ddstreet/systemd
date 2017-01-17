@@ -983,31 +983,8 @@ fail:
 }
 
 static int bus_init_system(Manager *m) {
-        int r;
-
-        if (m->system_bus)
-                return 0;
-
-        m->system_bus = manager_bus_connect_private(m, DBUS_BUS_SYSTEM);
-        if (!m->system_bus) {
-                log_debug("Failed to connect to system D-Bus, retrying later");
-                r = 0;
-                goto fail;
-        }
-
-        r = bus_setup_loop(m, m->system_bus);
-        if (r < 0)
-                goto fail;
-
-        r = manager_bus_async_register(m, &m->system_bus);
-        if (r < 0)
-                goto fail;
-
+        /* no need to connect to system D-Bus for the subordinate systemd */
         return 0;
-fail:
-        bus_done_system(m);
-
-        return r;
 }
 
 static int bus_init_api(Manager *m) {

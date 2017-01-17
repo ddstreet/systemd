@@ -1,0 +1,48 @@
+--- a/units/systemd-halt.service.in
++++ b/units/systemd-halt.service.in
+@@ -14,4 +14,4 @@
+ 
+ [Service]
+ Type=oneshot
+-ExecStart=@SYSTEMCTL@ --force halt
++ExecStart=/sbin/halt
+--- a/units/systemd-kexec.service.in
++++ b/units/systemd-kexec.service.in
+@@ -14,4 +14,4 @@
+ 
+ [Service]
+ Type=oneshot
+-ExecStart=@SYSTEMCTL@ --force kexec
++ExecStart=/bin/false
+--- a/units/systemd-poweroff.service.in
++++ b/units/systemd-poweroff.service.in
+@@ -14,4 +14,4 @@
+ 
+ [Service]
+ Type=oneshot
+-ExecStart=@SYSTEMCTL@ --force poweroff
++ExecStart=/sbin/poweroff
+--- a/units/systemd-reboot.service.in
++++ b/units/systemd-reboot.service.in
+@@ -14,4 +14,4 @@
+ 
+ [Service]
+ Type=oneshot
+-ExecStart=@SYSTEMCTL@ --force reboot
++ExecStart=/sbin/reboot
+--- a/units/systemd-hibernate.service.in
++++ b/units/systemd-hibernate.service.in
+@@ -14,4 +14,4 @@
+ 
+ [Service]
+ Type=oneshot
+-ExecStart=@rootlibexecdir@/systemd-sleep hibernate
++ExecStart=/usr/sbin/pm-hibernate
+--- a/units/systemd-suspend.service.in
++++ b/units/systemd-suspend.service.in
+@@ -14,4 +14,4 @@
+ 
+ [Service]
+ Type=oneshot
+-ExecStart=@rootlibexecdir@/systemd-sleep suspend
++ExecStart=/usr/sbin/pm-suspend
