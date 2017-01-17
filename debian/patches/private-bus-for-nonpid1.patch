@@ -1,11 +1,42 @@
 Description: Create/use private D-Bus socket also for systemd --system
 
 Without this we cannot use systemctl as root or when D-Bus is not running.
-Index: systemd/src/core/dbus.c
-===================================================================
---- systemd.orig/src/core/dbus.c
-+++ systemd/src/core/dbus.c
-@@ -1064,11 +1064,6 @@ static int bus_init_private(Manager *m)
+--- a/src/core/dbus.c
++++ b/src/core/dbus.c
+@@ -983,31 +983,8 @@
+ }
+ 
+ static int bus_init_system(Manager *m) {
+-        int r;
+-
+-        if (m->system_bus)
+-                return 0;
+-
+-        m->system_bus = manager_bus_connect_private(m, DBUS_BUS_SYSTEM);
+-        if (!m->system_bus) {
+-                log_debug("Failed to connect to system D-Bus, retrying later");
+-                r = 0;
+-                goto fail;
+-        }
+-
+-        r = bus_setup_loop(m, m->system_bus);
+-        if (r < 0)
+-                goto fail;
+-
+-        r = manager_bus_async_register(m, &m->system_bus);
+-        if (r < 0)
+-                goto fail;
+-
++        /* no need to connect to system D-Bus for the subordinate systemd */
+         return 0;
+-fail:
+-        bus_done_system(m);
+-
+-        return r;
+ }
+ 
+ static int bus_init_api(Manager *m) {
+@@ -1064,11 +1041,6 @@
                  return 0;
  
          if (m->running_as == SYSTEMD_SYSTEM) {

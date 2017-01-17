@@ -1,0 +1,150 @@
+Description: deputy systemd should use alternative cgroups path
+Author: Dimitri John Ledkov <xnox@ubuntu.com>
+
+--- a/src/cgtop/cgtop.c
++++ b/src/cgtop/cgtop.c
+@@ -350,7 +350,11 @@
+ 
+         assert(a);
+ 
++#ifdef HAVE_DEPUTY
++        r = refresh_one("name=dsystemd", "/", a, b, iteration, 0);
++#else
+         r = refresh_one("name=systemd", "/", a, b, iteration, 0);
++#endif
+         if (r < 0)
+                 if (r != -ENOENT)
+                     return r;
+--- a/src/core/mount-setup.c
++++ b/src/core/mount-setup.c
+@@ -88,11 +88,21 @@
+         { "tmpfs",      "/sys/fs/cgroup",            "tmpfs",      "mode=755", MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME,
+           NULL,       MNT_IN_CONTAINER },
+ #ifdef HAVE_XATTR
++#ifdef HAVE_DEPUTY
++        { "cgroup",     "/sys/fs/cgroup/dsystemd",    "cgroup",     "none,name=dsystemd,xattr", MS_NOSUID|MS_NOEXEC|MS_NODEV,
++          NULL,       MNT_IN_CONTAINER },
++#else
+         { "cgroup",     "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd,xattr", MS_NOSUID|MS_NOEXEC|MS_NODEV,
+           NULL,       MNT_IN_CONTAINER },
+ #endif
++#endif
++#ifdef HAVE_DEPUTY
++        { "cgroup",     "/sys/fs/cgroup/dsystemd",    "cgroup",     "none,name=dsystemd", MS_NOSUID|MS_NOEXEC|MS_NODEV,
++          NULL,       MNT_IN_CONTAINER },
++#else
+         { "cgroup",     "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV,
+           NULL,       MNT_IN_CONTAINER },
++#endif
+         { "pstore",     "/sys/fs/pstore",            "pstore",     NULL, MS_NOSUID|MS_NOEXEC|MS_NODEV,
+           NULL,       MNT_NONE },
+ #ifdef ENABLE_EFI
+--- a/src/shared/cgroup-util.c
++++ b/src/shared/cgroup-util.c
+@@ -583,7 +583,11 @@
+         assert(controller);
+ 
+         if (streq(controller, SYSTEMD_CGROUP_CONTROLLER))
++#ifdef HAVE_DEPUTY
++                return "dsystemd";
++#else
+                 return "systemd";
++#endif
+         else if (startswith(controller, "name="))
+                 return controller + 5;
+         else
+@@ -1324,7 +1328,11 @@
+         assert(path);
+ 
+         if (!controller)
++#ifdef HAVE_DEPUTY
++                controller = "dsystemd";
++#else
+                 controller = "systemd";
++#endif
+         else {
+                 if (!cg_controller_is_valid(controller, true))
+                         return -EINVAL;
+@@ -1479,7 +1487,11 @@
+ 
+                 p = normalize_controller(*f);
+ 
++#ifdef HAVE_DEPUTY
++                if (streq(p, "dsystemd")) {
++#else
+                 if (streq(p, "systemd")) {
++#endif
+                         free(*f);
+                         continue;
+                 }
+--- a/src/shared/def.h
++++ b/src/shared/def.h
+@@ -29,7 +29,11 @@
+ 
+ #define DEFAULT_EXIT_USEC (5*USEC_PER_MINUTE)
+ 
++#ifdef HAVE_DEPUTY
++#define SYSTEMD_CGROUP_CONTROLLER "name=dsystemd"
++#else
+ #define SYSTEMD_CGROUP_CONTROLLER "name=systemd"
++#endif
+ 
+ #define SIGNALS_CRASH_HANDLER SIGSEGV,SIGILL,SIGFPE,SIGBUS,SIGQUIT,SIGABRT
+ #define SIGNALS_IGNORE SIGKILL,SIGPIPE
+--- a/configure.ac
++++ b/configure.ac
+@@ -796,6 +796,18 @@
+ 	PKG_CHECK_MODULES([DBUS], [dbus-1 >= 1.2.16])
+ 	])
+ 
++
++# ------------------------------------------------------------------------------
++
++AC_ARG_ENABLE([deputy],
++        AS_HELP_STRING([--enable-deputy], [Enable deputy mode]),
++        [],
++        enable_deputy=no)
++
++AS_IF([test "x${enable_deputy}" = "xyes"], [
++        AC_DEFINE(HAVE_DEPUTY, 1, [Enable deputy mode])
++])
++
+ # ------------------------------------------------------------------------------
+ 
+ # Location of the init scripts as mandated by LSB
+@@ -965,6 +977,7 @@
+         Split /usr:              ${enable_split_usr}
+         SysV compatibility:      ${SYSTEM_SYSV_COMPAT}
+         CGManager                ${enable_cgmanager}
++        Deputy                   ${enable_deputy}
+ 
+         prefix:                  ${prefix}
+         rootprefix:              ${with_rootprefix}
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -327,7 +327,11 @@
+         assert(m);
+ 
+         /* 0. Be nice to Ingo Molnar #628004 */
++#ifdef HAVE_DEPUTY
++        if (path_is_mount_point("/sys/fs/cgroup/dsystemd", false) <= 0) {
++#else
+         if (path_is_mount_point("/sys/fs/cgroup/systemd", false) <= 0) {
++#endif
+                 log_warning("No control group support available, not creating root group.");
+                 return 0;
+         }
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -1399,7 +1399,11 @@
+ 
+         /* Mount /proc, /sys and friends, so that /proc/cmdline and
+          * /proc/$PID/fd is available. */
++#ifdef HAVE_DEPUTY
++        if (true) {
++#else
+         if (getpid() == 1) {
++#endif
+                 r = mount_setup(loaded_policy);
+                 if (r < 0)
+                         goto finish;
