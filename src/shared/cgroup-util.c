@@ -583,7 +583,11 @@ const char *normalize_controller(const char *controller) {
         assert(controller);
 
         if (streq(controller, SYSTEMD_CGROUP_CONTROLLER))
+#ifdef HAVE_DEPUTY
+                return "dsystemd";
+#else
                 return "systemd";
+#endif
         else if (startswith(controller, "name="))
                 return controller + 5;
         else
@@ -1324,7 +1328,11 @@ int cg_join_spec(const char *controller, const char *path, char **spec) {
         assert(path);
 
         if (!controller)
+#ifdef HAVE_DEPUTY
+                controller = "dsystemd";
+#else
                 controller = "systemd";
+#endif
         else {
                 if (!cg_controller_is_valid(controller, true))
                         return -EINVAL;
@@ -1479,7 +1487,11 @@ char **cg_shorten_controllers(char **controllers) {
 
                 p = normalize_controller(*f);
 
+#ifdef HAVE_DEPUTY
+                if (streq(p, "dsystemd")) {
+#else
                 if (streq(p, "systemd")) {
+#endif
                         free(*f);
                         continue;
                 }
