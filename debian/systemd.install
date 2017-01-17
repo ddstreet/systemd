@@ -43,4 +43,10 @@ usr/lib/tmpfiles.d/
 lib/systemd/system/*.target lib/systemd/upstart/
 lib/systemd/system/systemd-journal* lib/systemd/upstart/
 lib/systemd/system/sockets.target.wants/systemd-journald.socket lib/systemd/upstart/sockets.target.wants/
+lib/systemd/system/systemd-poweroff.service lib/systemd/upstart/
+lib/systemd/system/systemd-halt.service lib/systemd/upstart/
+lib/systemd/system/systemd-reboot.service lib/systemd/upstart/
+lib/systemd/system/systemd-kexec.service lib/systemd/upstart/
+lib/systemd/system/systemd-suspend.service lib/systemd/upstart/
+lib/systemd/system/systemd-hibernate.service lib/systemd/upstart/
 ../../extra/dbus.service lib/systemd/upstart/

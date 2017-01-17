@@ -58,7 +58,7 @@ Depends: ${shlibs:Depends},
 Breaks: lvm2 (<< 2.02.84-1),
         init-system-helpers (<< 1.14ubuntu1),
         lsb-base (<< 4.1+Debian4)
-Conflicts: klogd, systemd-shim
+Conflicts: klogd
 Description: system and service manager
  systemd is a replacement for sysvinit.  It is dependency-based and
  able to read the LSB init script headers in addition to parsing rcN.d
@@ -100,7 +100,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          udev (>= 175-0ubuntu23),
          dbus,
-         systemd | systemd-shim (>= 3),
+         systemd-shim (>= 3),
 Replaces: systemd (<< 198-1), logind, ubuntu-system-service
 Breaks: systemd (<< 198-1)
 Conflicts: logind
