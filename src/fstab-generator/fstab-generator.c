@@ -80,7 +80,7 @@ static int add_swap(
         if (r < 0)
                 return log_error_errno(r, "Failed to generate unit name: %m");
 
-        unit = strjoin(arg_dest, "/", name, NULL);
+        unit = strjoin(arg_dest, "/", name);
         if (!unit)
                 return log_oom();
 
@@ -287,7 +287,7 @@ static int add_mount(
         if (r < 0)
                 return log_error_errno(r, "Failed to generate unit name: %m");
 
-        unit = strjoin(arg_dest, "/", name, NULL);
+        unit = strjoin(arg_dest, "/", name);
         if (!unit)
                 return log_oom();
 
@@ -355,7 +355,7 @@ static int add_mount(
                 return log_error_errno(r, "Failed to write unit file %s: %m", unit);
 
         if (!noauto && !automount) {
-                lnk = strjoin(arg_dest, "/", post, nofail ? ".wants/" : ".requires/", name, NULL);
+                lnk = strjoin(arg_dest, "/", post, nofail ? ".wants/" : ".requires/", name);
                 if (!lnk)
                         return log_oom();
 
@@ -369,7 +369,7 @@ static int add_mount(
                 if (r < 0)
                         return log_error_errno(r, "Failed to generate unit name: %m");
 
-                automount_unit = strjoin(arg_dest, "/", automount_name, NULL);
+                automount_unit = strjoin(arg_dest, "/", automount_name);
                 if (!automount_unit)
                         return log_oom();
 
@@ -411,7 +411,7 @@ static int add_mount(
                         return log_error_errno(r, "Failed to write unit file %s: %m", automount_unit);
 
                 free(lnk);
-                lnk = strjoin(arg_dest, "/", post, nofail ? ".wants/" : ".requires/", automount_name, NULL);
+                lnk = strjoin(arg_dest, "/", post, nofail ? ".wants/" : ".requires/", automount_name);
                 if (!lnk)
                         return log_oom();
 
@@ -639,7 +639,7 @@ static int parse_proc_cmdline_item(const char *key, const char *value, void *dat
                 char *o;
 
                 o = arg_root_options ?
-                        strjoin(arg_root_options, ",", value, NULL) :
+                        strjoin(arg_root_options, ",", value) :
                         strdup(value);
                 if (!o)
                         return log_oom();
@@ -661,7 +661,7 @@ static int parse_proc_cmdline_item(const char *key, const char *value, void *dat
                 char *o;
 
                 o = arg_usr_options ?
-                        strjoin(arg_usr_options, ",", value, NULL) :
+                        strjoin(arg_usr_options, ",", value) :
                         strdup(value);
                 if (!o)
                         return log_oom();
