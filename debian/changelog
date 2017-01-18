@@ -1,3 +1,14 @@
+systemd (229-4ubuntu16) xenial; urgency=medium
+
+  * d/p/0001-libudev-util-change-util_replace_whitespace-to-retur.patch,
+    d/p/0002-udev-event-add-replace_whitespace-param-to-udev_even.patch,
+    d/p/0003-udev-rules-perform-whitespace-replacement-for-symlin.patch:
+    Cherry-pick upstream fixes from Dan Streetman <ddstreet@ieee.org> to
+    fix by-id symlinks for devices whose IDs contain whitespace.
+    LP: #1647485.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Wed, 18 Jan 2017 13:37:19 -0800
+
 systemd (229-4ubuntu13) xenial; urgency=medium
 
   [ Martin Pitt ]
