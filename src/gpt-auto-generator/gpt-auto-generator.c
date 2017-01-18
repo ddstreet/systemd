@@ -54,7 +54,7 @@ static bool arg_enabled = true;
 static bool arg_root_enabled = true;
 static bool arg_root_rw = false;
 
-static int add_cryptsetup(const char *id, const char *what, bool rw, char **device) {
+static int add_cryptsetup(const char *id, const char *what, bool rw, bool require, char **device) {
         _cleanup_free_ char *e = NULL, *n = NULL, *p = NULL, *d = NULL, *to = NULL;
         _cleanup_fclose_ FILE *f = NULL;
         char *from, *ret;
@@ -62,7 +62,6 @@ static int add_cryptsetup(const char *id, const char *what, bool rw, char **devi
 
         assert(id);
         assert(what);
-        assert(device);
 
         r = unit_name_from_path(what, ".device", &d);
         if (r < 0)
@@ -76,7 +75,7 @@ static int add_cryptsetup(const char *id, const char *what, bool rw, char **devi
         if (r < 0)
                 return log_error_errno(r, "Failed to generate unit name: %m");
 
-        p = strjoin(arg_dest, "/", n, NULL);
+        p = strjoin(arg_dest, "/", n);
         if (!p)
                 return log_oom();
 
@@ -111,7 +110,7 @@ static int add_cryptsetup(const char *id, const char *what, bool rw, char **devi
 
         from = strjoina("../", n);
 
-        to = strjoin(arg_dest, "/", d, ".wants/", n, NULL);
+        to = strjoin(arg_dest, "/", d, ".wants/", n);
         if (!to)
                 return log_oom();
 
@@ -119,26 +118,29 @@ static int add_cryptsetup(const char *id, const char *what, bool rw, char **devi
         if (symlink(from, to) < 0)
                 return log_error_errno(errno, "Failed to create symlink %s: %m", to);
 
-        free(to);
-        to = strjoin(arg_dest, "/cryptsetup.target.requires/", n, NULL);
-        if (!to)
-                return log_oom();
+        if (require) {
+                free(to);
 
-        mkdir_parents_label(to, 0755);
-        if (symlink(from, to) < 0)
-                return log_error_errno(errno, "Failed to create symlink %s: %m", to);
+                to = strjoin(arg_dest, "/cryptsetup.target.requires/", n);
+                if (!to)
+                        return log_oom();
 
-        free(to);
-        to = strjoin(arg_dest, "/dev-mapper-", e, ".device.requires/", n, NULL);
-        if (!to)
-                return log_oom();
+                mkdir_parents_label(to, 0755);
+                if (symlink(from, to) < 0)
+                        return log_error_errno(errno, "Failed to create symlink %s: %m", to);
 
-        mkdir_parents_label(to, 0755);
-        if (symlink(from, to) < 0)
-                return log_error_errno(errno, "Failed to create symlink %s: %m", to);
+                free(to);
+                to = strjoin(arg_dest, "/dev-mapper-", e, ".device.requires/", n);
+                if (!to)
+                        return log_oom();
+
+                mkdir_parents_label(to, 0755);
+                if (symlink(from, to) < 0)
+                        return log_error_errno(errno, "Failed to create symlink %s: %m", to);
+        }
 
         free(p);
-        p = strjoin(arg_dest, "/dev-mapper-", e, ".device.d/50-job-timeout-sec-0.conf", NULL);
+        p = strjoin(arg_dest, "/dev-mapper-", e, ".device.d/50-job-timeout-sec-0.conf");
         if (!p)
                 return log_oom();
 
@@ -155,7 +157,8 @@ static int add_cryptsetup(const char *id, const char *what, bool rw, char **devi
         if (!ret)
                 return log_oom();
 
-        *device = ret;
+        if (device)
+                *device = ret;
         return 0;
 }
 
@@ -182,7 +185,7 @@ static int add_mount(
 
         if (streq_ptr(fstype, "crypto_LUKS")) {
 
-                r = add_cryptsetup(id, what, rw, &crypto_what);
+                r = add_cryptsetup(id, what, rw, true, &crypto_what);
                 if (r < 0)
                         return r;
 
@@ -194,7 +197,7 @@ static int add_mount(
         if (r < 0)
                 return log_error_errno(r, "Failed to generate unit name: %m");
 
-        p = strjoin(arg_dest, "/", unit, NULL);
+        p = strjoin(arg_dest, "/", unit);
         if (!p)
                 return log_oom();
 
@@ -236,7 +239,7 @@ static int add_mount(
                 return log_error_errno(r, "Failed to write unit file %s: %m", p);
 
         if (post) {
-                lnk = strjoin(arg_dest, "/", post, ".requires/", unit, NULL);
+                lnk = strjoin(arg_dest, "/", post, ".requires/", unit);
                 if (!lnk)
                         return log_oom();
 
@@ -340,7 +343,7 @@ static int add_swap(const char *path) {
         if (r < 0)
                 return log_error_errno(r, "Failed to generate unit name: %m");
 
-        unit = strjoin(arg_dest, "/", name, NULL);
+        unit = strjoin(arg_dest, "/", name);
         if (!unit)
                 return log_oom();
 
@@ -361,7 +364,7 @@ static int add_swap(const char *path) {
         if (r < 0)
                 return log_error_errno(r, "Failed to write unit file %s: %m", unit);
 
-        lnk = strjoin(arg_dest, "/" SPECIAL_SWAP_TARGET ".wants/", name, NULL);
+        lnk = strjoin(arg_dest, "/" SPECIAL_SWAP_TARGET ".wants/", name);
         if (!lnk)
                 return log_oom();
 
@@ -393,7 +396,7 @@ static int add_automount(
         assert(description);
 
         if (options)
-                opt = strjoin(options, ",noauto", NULL);
+                opt = strjoin(options, ",noauto");
         else
                 opt = strdup("noauto");
         if (!opt)
@@ -414,7 +417,7 @@ static int add_automount(
         if (r < 0)
                 return log_error_errno(r, "Failed to generate unit name: %m");
 
-        p = strjoin(arg_dest, "/", unit, NULL);
+        p = strjoin(arg_dest, "/", unit);
         if (!p)
                 return log_oom();
 
@@ -438,7 +441,7 @@ static int add_automount(
         if (r < 0)
                 return log_error_errno(r, "Failed to write unit file %s: %m", p);
 
-        lnk = strjoin(arg_dest, "/" SPECIAL_LOCAL_FS_TARGET ".wants/", unit, NULL);
+        lnk = strjoin(arg_dest, "/" SPECIAL_LOCAL_FS_TARGET ".wants/", unit);
         if (!lnk)
                 return log_oom();
         mkdir_parents_label(lnk, 0755);
@@ -935,6 +938,16 @@ static int parse_proc_cmdline_item(const char *key, const char *value, void *dat
         return 0;
 }
 
+#ifdef ENABLE_EFI
+static int add_root_cryptsetup(void) {
+
+        /* If a device /dev/gpt-auto-root-luks appears, then make it pull in systemd-cryptsetup-root.service, which
+         * sets it up, and causes /dev/gpt-auto-root to appear which is all we are looking for. */
+
+        return add_cryptsetup("root", "/dev/gpt-auto-root-luks", true, false, NULL);
+}
+#endif
+
 static int add_root_mount(void) {
 
 #ifdef ENABLE_EFI
@@ -960,6 +973,10 @@ static int add_root_mount(void) {
                 r = generator_write_initrd_root_device_deps(arg_dest, "/dev/gpt-auto-root");
                 if (r < 0)
                         return 0;
+
+                r = add_root_cryptsetup();
+                if (r < 0)
+                        return r;
         }
 
         return add_mount(
