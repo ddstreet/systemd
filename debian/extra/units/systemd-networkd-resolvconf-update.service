@@ -3,7 +3,6 @@ Description=Update resolvconf for networkd DNS
 ConditionPathIsSymbolicLink=/etc/resolv.conf
 ConditionPathExists=/run/resolvconf/enable-updates
 After=resolvconf.service
-Before=network-online.target
 
 [Service]
 Type=oneshot

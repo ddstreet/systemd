@@ -1,4 +1,4 @@
-systemd (229-4ubuntu15) xenial; urgency=medium
+systemd (229-4ubuntu16) xenial; urgency=medium
 
   * d/p/0001-libudev-util-change-util_replace_whitespace-to-retur.patch,
     d/p/0002-udev-event-add-replace_whitespace-param-to-udev_even.patch,
@@ -7,15 +7,7 @@ systemd (229-4ubuntu15) xenial; urgency=medium
     fix by-id symlinks for devices whose IDs contain whitespace.
     LP: #1647485.
 
- -- Steve Langasek <steve.langasek@ubuntu.com>  Fri, 13 Jan 2017 13:41:23 +0200
-
-systemd (229-4ubuntu14) xenial; urgency=medium
-
-  * Make systemd-networkd-resolvconf-update.service run earlier
-    to ensure DNS is up prior to reaching network-online.target
-    (LP: #1649931)
-
- -- Ryan Harper <ryan.harper@canonical.com>  Thu, 15 Dec 2016 13:44:08 -0600
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Wed, 18 Jan 2017 13:37:19 -0800
 
 systemd (229-4ubuntu13) xenial; urgency=medium
 
