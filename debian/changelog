@@ -1,3 +1,11 @@
+systemd (229-4ubuntu17) xenial; urgency=medium
+
+  * Make systemd-networkd-resolvconf-update.{service,path} run earlier
+    to ensure DNS is configured prior to reaching network-online.target.
+    (LP: #1649931)
+
+ -- Ryan Harper <ryan.harper@canonical.com>  Thu, 02 Feb 2017 15:41:48 -0600
+
 systemd (229-4ubuntu16) xenial; urgency=medium
 
   * d/p/0001-libudev-util-change-util_replace_whitespace-to-retur.patch,
