@@ -1,0 +1,15 @@
+Description: Do not create /run/nologin
+ systemd in trusty is not responsible for handling startup/shutdown scenarios.
+ With that, it should not interfere with pam_nologin and should not touch
+ /run/nologin.
+Author: Thomas Voß
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1660573
+
+--- a/tmpfiles.d/systemd.conf
++++ b/tmpfiles.d/systemd.conf
+@@ -20,5 +20,3 @@
+ d /run/systemd/sessions 0755 root root -
+ d /run/systemd/users 0755 root root -
+ d /run/systemd/shutdown 0755 root root -
+-
+-F /run/nologin 0644 - - - "System is booting up."

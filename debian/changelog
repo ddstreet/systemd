@@ -1,3 +1,22 @@
+systemd (204-5ubuntu20.24) trusty; urgency=medium
+
+  [ Thomas Voß ]
+  * Do not create /run/nologin, and thus make sure deputy systemd does not
+    prevent system logins. LP: #1660573.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 02 Feb 2017 10:29:19 +0000
+
+systemd (204-5ubuntu20.23) trusty; urgency=medium
+
+  * d/p/0001-libudev-util-change-util_replace_whitespace-to-retur.patch,
+    d/p/0002-udev-event-add-replace_whitespace-param-to-udev_even.patch,
+    d/p/0003-udev-rules-perform-whitespace-replacement-for-symlin.patch:
+    Cherry-pick upstream fixes from Dan Streetman <ddstreet@ieee.org> to
+    fix by-id symlinks for devices whose IDs contain whitespace.
+    LP: #1647485.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 01 Feb 2017 10:59:36 +0000
+
 systemd (204-5ubuntu20.22) trusty; urgency=medium
 
   * Add support for installing deputy systemd for snapd on Ubuntu
