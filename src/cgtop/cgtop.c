@@ -350,7 +350,11 @@ static int refresh(Hashmap *a, Hashmap *b, unsigned iteration) {
 
         assert(a);
 
+#ifdef HAVE_DEPUTY
+        r = refresh_one("name=dsystemd", "/", a, b, iteration, 0);
+#else
         r = refresh_one("name=systemd", "/", a, b, iteration, 0);
+#endif
         if (r < 0)
                 if (r != -ENOENT)
                     return r;
