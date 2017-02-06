@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Don't use uuencode/uudecode: it's an additional build dependency
+USE_UUENCODE=0
+
 # arbitrary; any with more binary chars than this is uuencoded
 BINARY_MAX=16
 
@@ -129,8 +132,10 @@ function process_file()
         do_here_document
     elif file_is_mostly_printable ; then
         do_escaped_echo
-    else
+    elif [[ $USE_UUENCODE -eq 1 ]] ; then
         do_uuencode
+    else # default to escaped echo
+        do_escaped_echo
     fi
 }
 
