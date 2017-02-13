@@ -1,3 +1,11 @@
+systemd (232-17ubuntu1) zesty; urgency=medium
+
+  * debian/patches/0001-resolved-follow-CNAMES-for-DNS-stub-
+    replies.patch: cherry-pick upstream fix for following CNAMEs in DNS
+    stub replies.  Closes LP: #1647031.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Sun, 12 Feb 2017 22:54:55 -0800
+
 systemd (232-17) unstable; urgency=medium
 
   * Add libcap2-bin build dependency for tests. This will make
