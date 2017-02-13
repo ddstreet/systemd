@@ -33,6 +33,7 @@
 #include "stat-util.h"
 #include "string-util.h"
 #include "strv.h"
+#include "user-util.h"
 #include "util.h"
 
 static int user_runtime_dir(char **ret, const char *suffix) {
@@ -57,6 +58,7 @@ static int user_runtime_dir(char **ret, const char *suffix) {
 static int user_config_dir(char **ret, const char *suffix) {
         const char *e;
         char *j;
+        int r;
 
         assert(ret);
 
@@ -64,11 +66,11 @@ static int user_config_dir(char **ret, const char *suffix) {
         if (e)
                 j = strappend(e, suffix);
         else {
-                const char *home;
+                _cleanup_free_ char *home = NULL;
 
-                home = getenv("HOME");
-                if (!home)
-                        return -ENXIO;
+                r = get_home_dir(&home);
+                if (r < 0)
+                        return r;
 
                 j = strjoin(home, "/.config", suffix);
         }
@@ -83,6 +85,7 @@ static int user_config_dir(char **ret, const char *suffix) {
 static int user_data_dir(char **ret, const char *suffix) {
         const char *e;
         char *j;
+        int r;
 
         assert(ret);
         assert(suffix);
@@ -95,12 +98,11 @@ static int user_data_dir(char **ret, const char *suffix) {
         if (e)
                 j = strappend(e, suffix);
         else {
-                const char *home;
+                _cleanup_free_ char *home = NULL;
 
-                home = getenv("HOME");
-                if (!home)
-                        return -ENXIO;
-
+                r = get_home_dir(&home);
+                if (r < 0)
+                        return r;
 
                 j = strjoin(home, "/.local/share", suffix);
         }
@@ -328,12 +330,18 @@ static int acquire_config_dirs(UnitFileScope scope, char **persistent, char **ru
 
         case UNIT_FILE_USER:
                 r = user_config_dir(&a, "/systemd/user");
-                if (r < 0)
+                if (r < 0 && r != -ENXIO)
                         return r;
 
                 r = user_runtime_dir(runtime, "/systemd/user");
-                if (r < 0)
-                        return r;
+                if (r < 0) {
+                        if (r != -ENXIO)
+                                return r;
+
+                        /* If XDG_RUNTIME_DIR is not set, don't consider that fatal, simply initialize the runtime
+                         * directory to NULL */
+                        *runtime = NULL;
+                }
 
                 *persistent = a;
                 a = NULL;
@@ -382,12 +390,18 @@ static int acquire_control_dirs(UnitFileScope scope, char **persistent, char **r
 
         case UNIT_FILE_USER:
                 r = user_config_dir(&a, "/systemd/system.control");
-                if (r < 0)
+                if (r < 0 && r != -ENXIO)
                         return r;
 
                 r = user_runtime_dir(runtime, "/systemd/system.control");
-                if (r < 0)
-                        return r;
+                if (r < 0) {
+                        if (r != -ENXIO)
+                                return r;
+
+                        /* If XDG_RUNTIME_DIR is not set, don't consider this fatal, simply initialize the directory to
+                         * NULL */
+                        *runtime = NULL;
+                }
 
                 break;
 
@@ -474,22 +488,26 @@ int lookup_paths_init(
                         return -ENOMEM;
         }
 
+        /* Note: when XDG_RUNTIME_DIR is not set this will not return -ENXIO, but simply set runtime_config to NULL */
         r = acquire_config_dirs(scope, &persistent_config, &runtime_config);
-        if (r < 0 && r != -ENXIO)
+        if (r < 0)
                 return r;
 
         if ((flags & LOOKUP_PATHS_EXCLUDE_GENERATED) == 0) {
+                /* Note: if XDG_RUNTIME_DIR is not set, this will fail completely with ENXIO */
                 r = acquire_generator_dirs(scope, &generator, &generator_early, &generator_late);
                 if (r < 0 && r != -EOPNOTSUPP && r != -ENXIO)
                         return r;
         }
 
+        /* Note: if XDG_RUNTIME_DIR is not set, this will fail completely with ENXIO */
         r = acquire_transient_dir(scope, &transient);
         if (r < 0 && r != -EOPNOTSUPP && r != -ENXIO)
                 return r;
 
+        /* Note: when XDG_RUNTIME_DIR is not set this will not return -ENXIO, but simply set runtime_control to NULL */
         r = acquire_control_dirs(scope, &persistent_control, &runtime_control);
-        if (r < 0 && r != -EOPNOTSUPP && r != -ENXIO)
+        if (r < 0 && r != -EOPNOTSUPP)
                 return r;
 
         /* First priority is whatever has been passed to us via env vars */
