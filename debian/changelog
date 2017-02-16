@@ -1,3 +1,21 @@
+systemd (232-18ubuntu1) zesty; urgency=medium
+
+  [ Martin Pitt ]
+  * debian/README.source: Update patch and changelog handling to current reality.
+    We've used gbp dch for a fair while now, let's document it as official
+    policy.
+    Update documentation about patch handling: using quilt directly is
+    not really "welcome" any more as it creates a lot of noise in pq, so
+    only document pq now. Also document the usage of topic branches, and our
+    shiny debian/git-cherry-pick tool.
+
+  [ Dimitri John Ledkov ]
+  * Fix resolved failing to follow CNAMES for DNS stub replies (LP: #1647031)
+  * Fix emitting change signals with a sessions property in logind.
+    (LP: #1661568)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 16 Feb 2017 22:33:24 +0000
+
 systemd (232-18) unstable; urgency=medium
 
   * udev autopkgtest: Adjust to script-based test /sys creation.
