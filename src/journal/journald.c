@@ -22,7 +22,7 @@
 #include "sd-daemon.h"
 #include "sd-messages.h"
 
-#include "formats-util.h"
+#include "format-util.h"
 #include "journal-authenticate.h"
 #include "journald-kmsg.h"
 #include "journald-server.h"
@@ -56,7 +56,8 @@ int main(int argc, char *argv[]) {
         server_flush_dev_kmsg(&server);
 
         log_debug("systemd-journald running as pid "PID_FMT, getpid());
-        server_driver_message(&server, SD_MESSAGE_JOURNAL_START,
+        server_driver_message(&server,
+                              "MESSAGE_ID=" SD_MESSAGE_JOURNAL_START_STR,
                               LOG_MESSAGE("Journal started"),
                               NULL);
 
@@ -114,7 +115,8 @@ int main(int argc, char *argv[]) {
         }
 
         log_debug("systemd-journald stopped as pid "PID_FMT, getpid());
-        server_driver_message(&server, SD_MESSAGE_JOURNAL_STOP,
+        server_driver_message(&server,
+                              "MESSAGE_ID=" SD_MESSAGE_JOURNAL_STOP_STR,
                               LOG_MESSAGE("Journal stopped"),
                               NULL);
 

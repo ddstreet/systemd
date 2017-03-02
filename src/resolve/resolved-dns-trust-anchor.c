@@ -577,10 +577,33 @@ int dns_trust_anchor_lookup_positive(DnsTrustAnchor *d, const DnsResourceKey *ke
 }
 
 int dns_trust_anchor_lookup_negative(DnsTrustAnchor *d, const char *name) {
+        int r;
+
         assert(d);
         assert(name);
 
-        return set_contains(d->negative_by_name, name);
+        for (;;) {
+                /* If the domain is listed as-is in the NTA database, then that counts */
+                if (set_contains(d->negative_by_name, name))
+                        return true;
+
+                /* If the domain isn't listed as NTA, but is listed as positive trust anchor, then that counts. See RFC
+                 * 7646, section 1.1 */
+                if (hashmap_contains(d->positive_by_key, &DNS_RESOURCE_KEY_CONST(DNS_CLASS_IN, DNS_TYPE_DS, name)))
+                        return false;
+
+                if (hashmap_contains(d->positive_by_key, &DNS_RESOURCE_KEY_CONST(DNS_CLASS_IN, DNS_TYPE_KEY, name)))
+                        return false;
+
+                /* And now, let's look at the parent, and check that too */
+                r = dns_name_parent(&name);
+                if (r < 0)
+                        return r;
+                if (r == 0)
+                        break;
+        }
+
+        return false;
 }
 
 static int dns_trust_anchor_revoked_put(DnsTrustAnchor *d, DnsResourceRecord *rr) {
@@ -624,7 +647,7 @@ static int dns_trust_anchor_remove_revoked(DnsTrustAnchor *d, DnsResourceRecord 
 
         /* We found the key! Warn the user */
         log_struct(LOG_WARNING,
-                   LOG_MESSAGE_ID(SD_MESSAGE_DNSSEC_TRUST_ANCHOR_REVOKED),
+                   "MESSAGE_ID=" SD_MESSAGE_DNSSEC_TRUST_ANCHOR_REVOKED_STR,
                    LOG_MESSAGE("DNSSEC Trust anchor %s has been revoked. Please update the trust anchor, or upgrade your operating system."), strna(dns_resource_record_to_string(rr)),
                    "TRUST_ANCHOR=%s", dns_resource_record_to_string(rr),
                    NULL);
