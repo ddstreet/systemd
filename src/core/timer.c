@@ -232,7 +232,7 @@ static void timer_dump(Unit *u, FILE *f, const char *prefix) {
                 if (v->base == TIMER_CALENDAR) {
                         _cleanup_free_ char *p = NULL;
 
-                        calendar_spec_to_string(v->calendar_spec, &p);
+                        (void) calendar_spec_to_string(v->calendar_spec, &p);
 
                         fprintf(f,
                                 "%s%s: %s\n",
@@ -350,7 +350,7 @@ static void add_random(Timer *t, usec_t *v) {
         else
                 *v += add;
 
-        log_unit_info(UNIT(t), "Adding %s random time.", format_timespan(s, sizeof(s), add, 0));
+        log_unit_debug(UNIT(t), "Adding %s random time.", format_timespan(s, sizeof(s), add, 0));
 }
 
 static void timer_enter_waiting(Timer *t, bool initial) {
@@ -422,7 +422,8 @@ static void timer_enter_waiting(Timer *t, bool initial) {
                                 }
                                 /* In a container we don't want to include the time the host
                                  * was already up when the container started, so count from
-                                 * our own startup. Fall through. */
+                                 * our own startup. */
+                                /* fall through */
                         case TIMER_STARTUP:
                                 base = UNIT(t)->manager->userspace_timestamp.monotonic;
                                 break;

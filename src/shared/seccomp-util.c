@@ -245,28 +245,47 @@ finish:
 }
 
 static bool is_basic_seccomp_available(void) {
-        int r;
-        r = prctl(PR_GET_SECCOMP, 0, 0, 0, 0);
-        return r >= 0;
+        return prctl(PR_GET_SECCOMP, 0, 0, 0, 0) >= 0;
 }
 
 static bool is_seccomp_filter_available(void) {
-        int r;
-        r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, NULL, 0, 0);
-        return r < 0 && errno == EFAULT;
+        return prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, NULL, 0, 0) < 0 &&
+                errno == EFAULT;
 }
 
 bool is_seccomp_available(void) {
         static int cached_enabled = -1;
+
         if (cached_enabled < 0)
-                cached_enabled = is_basic_seccomp_available() && is_seccomp_filter_available();
+                cached_enabled =
+                        is_basic_seccomp_available() &&
+                        is_seccomp_filter_available();
+
         return cached_enabled;
 }
 
 const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
+        [SYSCALL_FILTER_SET_DEFAULT] = {
+                .name = "@default",
+                .help = "System calls that are always permitted",
+                .value =
+                "clock_getres\0"
+                "clock_gettime\0"
+                "clock_nanosleep\0"
+                "execve\0"
+                "exit\0"
+                "exit_group\0"
+                "getrlimit\0"      /* make sure processes can query stack size and such */
+                "gettimeofday\0"
+                "nanosleep\0"
+                "pause\0"
+                "rt_sigreturn\0"
+                "sigreturn\0"
+                "time\0"
+        },
         [SYSCALL_FILTER_SET_BASIC_IO] = {
-                /* Basic IO */
                 .name = "@basic-io",
+                .help = "Basic IO",
                 .value =
                 "close\0"
                 "dup2\0"
@@ -283,8 +302,8 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "writev\0"
         },
         [SYSCALL_FILTER_SET_CLOCK] = {
-                /* Clock */
                 .name = "@clock",
+                .help = "Change the system time",
                 .value =
                 "adjtimex\0"
                 "clock_adjtime\0"
@@ -293,8 +312,8 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "stime\0"
         },
         [SYSCALL_FILTER_SET_CPU_EMULATION] = {
-                /* CPU emulation calls */
                 .name = "@cpu-emulation",
+                .help = "System calls for CPU emulation functionality",
                 .value =
                 "modify_ldt\0"
                 "subpage_prot\0"
@@ -303,8 +322,8 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "vm86old\0"
         },
         [SYSCALL_FILTER_SET_DEBUG] = {
-                /* Debugging/Performance Monitoring/Tracing */
                 .name = "@debug",
+                .help = "Debugging, performance monitoring and tracing functionality",
                 .value =
                 "lookup_dcookie\0"
                 "perf_event_open\0"
@@ -317,27 +336,82 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
 #endif
                 "sys_debug_setcontext\0"
         },
-        [SYSCALL_FILTER_SET_DEFAULT] = {
-                /* Default list: the most basic of operations */
-                .name = "@default",
+        [SYSCALL_FILTER_SET_FILE_SYSTEM] = {
+                .name = "@file-system",
+                .help = "File system operations",
                 .value =
-                "clock_getres\0"
-                "clock_gettime\0"
-                "clock_nanosleep\0"
-                "execve\0"
-                "exit\0"
-                "exit_group\0"
-                "getrlimit\0"      /* make sure processes can query stack size and such */
-                "gettimeofday\0"
-                "nanosleep\0"
-                "pause\0"
-                "rt_sigreturn\0"
-                "sigreturn\0"
-                "time\0"
+                "access\0"
+                "chdir\0"
+                "chmod\0"
+                "close\0"
+                "creat\0"
+                "faccessat\0"
+                "fallocate\0"
+                "fchdir\0"
+                "fchmod\0"
+                "fchmodat\0"
+                "fcntl64\0"
+                "fcntl\0"
+                "fgetxattr\0"
+                "flistxattr\0"
+                "fsetxattr\0"
+                "fstat64\0"
+                "fstat\0"
+                "fstatat64\0"
+                "fstatfs64\0"
+                "fstatfs\0"
+                "ftruncate64\0"
+                "ftruncate\0"
+                "futimesat\0"
+                "getcwd\0"
+                "getdents64\0"
+                "getdents\0"
+                "getxattr\0"
+                "inotify_add_watch\0"
+                "inotify_init1\0"
+                "inotify_rm_watch\0"
+                "lgetxattr\0"
+                "link\0"
+                "linkat\0"
+                "listxattr\0"
+                "llistxattr\0"
+                "lremovexattr\0"
+                "lsetxattr\0"
+                "lstat64\0"
+                "lstat\0"
+                "mkdir\0"
+                "mkdirat\0"
+                "mknod\0"
+                "mknodat\0"
+                "mmap2\0"
+                "mmap\0"
+                "munmap\0"
+                "newfstatat\0"
+                "open\0"
+                "openat\0"
+                "readlink\0"
+                "readlinkat\0"
+                "removexattr\0"
+                "rename\0"
+                "renameat2\0"
+                "renameat\0"
+                "rmdir\0"
+                "setxattr\0"
+                "stat64\0"
+                "stat\0"
+                "statfs\0"
+                "symlink\0"
+                "symlinkat\0"
+                "truncate64\0"
+                "truncate\0"
+                "unlink\0"
+                "unlinkat\0"
+                "utimensat\0"
+                "utimes\0"
         },
         [SYSCALL_FILTER_SET_IO_EVENT] = {
-                /* Event loop use */
                 .name = "@io-event",
+                .help = "Event loop system calls",
                 .value =
                 "_newselect\0"
                 "epoll_create1\0"
@@ -355,9 +429,10 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "select\0"
         },
         [SYSCALL_FILTER_SET_IPC] = {
-                /* Message queues, SYSV IPC or other IPC */
                 .name = "@ipc",
-                .value = "ipc\0"
+                .help = "SysV IPC, POSIX Message Queues or other IPC",
+                .value =
+                "ipc\0"
                 "memfd_create\0"
                 "mq_getsetattr\0"
                 "mq_notify\0"
@@ -383,24 +458,24 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "shmget\0"
         },
         [SYSCALL_FILTER_SET_KEYRING] = {
-                /* Keyring */
                 .name = "@keyring",
+                .help = "Kernel keyring access",
                 .value =
                 "add_key\0"
                 "keyctl\0"
                 "request_key\0"
         },
         [SYSCALL_FILTER_SET_MODULE] = {
-                /* Kernel module control */
                 .name = "@module",
+                .help = "Loading and unloading of kernel modules",
                 .value =
                 "delete_module\0"
                 "finit_module\0"
                 "init_module\0"
         },
         [SYSCALL_FILTER_SET_MOUNT] = {
-                /* Mounting */
                 .name = "@mount",
+                .help = "Mounting and unmounting of file systems",
                 .value =
                 "chroot\0"
                 "mount\0"
@@ -409,8 +484,8 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "umount\0"
         },
         [SYSCALL_FILTER_SET_NETWORK_IO] = {
-                /* Network or Unix socket IO, should not be needed if not network facing */
                 .name = "@network-io",
+                .help = "Network or Unix socket IO, should not be needed if not network facing",
                 .value =
                 "accept4\0"
                 "accept\0"
@@ -435,11 +510,13 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "socketpair\0"
         },
         [SYSCALL_FILTER_SET_OBSOLETE] = {
-                /* Unusual, obsolete or unimplemented, some unknown even to libseccomp */
+                /* some unknown even to libseccomp */
                 .name = "@obsolete",
+                .help = "Unusual, obsolete or unimplemented system calls",
                 .value =
                 "_sysctl\0"
                 "afs_syscall\0"
+                "bdflush\0"
                 "break\0"
                 "create_module\0"
                 "ftime\0"
@@ -464,14 +541,13 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "vserver\0"
         },
         [SYSCALL_FILTER_SET_PRIVILEGED] = {
-                /* Nice grab-bag of all system calls which need superuser capabilities */
                 .name = "@privileged",
+                .help = "All system calls which need super-user capabilities",
                 .value =
                 "@clock\0"
                 "@module\0"
                 "@raw-io\0"
                 "acct\0"
-                "bdflush\0"
                 "bpf\0"
                 "capset\0"
                 "chown32\0"
@@ -506,8 +582,8 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "vhangup\0"
         },
         [SYSCALL_FILTER_SET_PROCESS] = {
-                /* Process control, execution, namespaces */
                 .name = "@process",
+                .help = "Process control, execution, namespaceing operations",
                 .value =
                 "arch_prctl\0"
                 "clone\0"
@@ -522,8 +598,8 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "vfork\0"
         },
         [SYSCALL_FILTER_SET_RAW_IO] = {
-                /* Raw I/O ports */
                 .name = "@raw-io",
+                .help = "Raw I/O port access",
                 .value =
                 "ioperm\0"
                 "iopl\0"
@@ -537,9 +613,17 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "s390_pci_mmio_write\0"
 #endif
         },
+        [SYSCALL_FILTER_SET_REBOOT] = {
+                .name = "@reboot",
+                .help = "Reboot and reboot preparation/kexec",
+                .value =
+                "kexec\0"
+                "kexec_file_load\0"
+                "reboot\0"
+        },
         [SYSCALL_FILTER_SET_RESOURCES] = {
-                /* Alter resource settings */
                 .name = "@resources",
+                .help = "Alter resource settings",
                 .value =
                 "sched_setparam\0"
                 "sched_setscheduler\0"
@@ -552,6 +636,13 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "mbind\0"
                 "sched_setattr\0"
                 "prlimit64\0"
+        },
+        [SYSCALL_FILTER_SET_SWAP] = {
+                .name = "@swap",
+                .help = "Enable/disable swap devices",
+                .value =
+                "swapoff\0"
+                "swapon\0"
         },
 };
 
@@ -711,6 +802,8 @@ int seccomp_restrict_namespaces(unsigned long retain) {
                 case SCMP_ARCH_X86_64:
                 case SCMP_ARCH_X86:
                 case SCMP_ARCH_X32:
+                case SCMP_ARCH_PPC64:
+                case SCMP_ARCH_PPC64LE:
                         clone_reversed_order = 0;
                         break;
 
@@ -722,8 +815,8 @@ int seccomp_restrict_namespaces(unsigned long retain) {
 
                 /* Please add more definitions here, if you port systemd to other architectures! */
 
-#if !defined(__i386__) && !defined(__x86_64__) && !defined(__s390__) && !defined(__s390x__)
-#warning "Consider adding the right clone() syscall definitions here!"
+#if SECCOMP_RESTRICT_NAMESPACES_BROKEN
+#  warning "Consider adding the right clone() syscall definitions here!"
 #endif
                 }
 

@@ -34,15 +34,18 @@ bool is_seccomp_available(void);
 
 typedef struct SyscallFilterSet {
         const char *name;
+        const char *help;
         const char *value;
 } SyscallFilterSet;
 
 enum {
+        /* Please leave DEFAULT first, but sort the rest alphabetically */
+        SYSCALL_FILTER_SET_DEFAULT,
         SYSCALL_FILTER_SET_BASIC_IO,
         SYSCALL_FILTER_SET_CLOCK,
         SYSCALL_FILTER_SET_CPU_EMULATION,
         SYSCALL_FILTER_SET_DEBUG,
-        SYSCALL_FILTER_SET_DEFAULT,
+        SYSCALL_FILTER_SET_FILE_SYSTEM,
         SYSCALL_FILTER_SET_IO_EVENT,
         SYSCALL_FILTER_SET_IPC,
         SYSCALL_FILTER_SET_KEYRING,
@@ -53,7 +56,9 @@ enum {
         SYSCALL_FILTER_SET_PRIVILEGED,
         SYSCALL_FILTER_SET_PROCESS,
         SYSCALL_FILTER_SET_RAW_IO,
+        SYSCALL_FILTER_SET_REBOOT,
         SYSCALL_FILTER_SET_RESOURCES,
+        SYSCALL_FILTER_SET_SWAP,
         _SYSCALL_FILTER_SET_MAX
 };
 
@@ -87,7 +92,7 @@ int seccomp_memory_deny_write_execute(void);
 #endif
 
 /* we don't know the right order of the clone() parameters except for these archs, for now */
-#if defined(__x86_64__) || defined(__i386__) || defined(__s390x__) || defined(__s390__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__s390x__) || defined(__s390__) || defined(__powerpc64__)
 #define SECCOMP_RESTRICT_NAMESPACES_BROKEN 0
 #else
 #define SECCOMP_RESTRICT_NAMESPACES_BROKEN 1

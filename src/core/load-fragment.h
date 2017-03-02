@@ -117,9 +117,10 @@ int config_parse_sec_fix_0(const char *unit, const char *filename, unsigned line
 int config_parse_user_group(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_user_group_strv(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_restrict_namespaces(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+int config_parse_bind_paths(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 
 /* gperf prototypes */
-const struct ConfigPerfItem* load_fragment_gperf_lookup(const char *key, unsigned length);
+const struct ConfigPerfItem* load_fragment_gperf_lookup(const char *key, GPERF_LEN_TYPE length);
 extern const char load_fragment_gperf_nulstr[];
 
 typedef enum Disabled {

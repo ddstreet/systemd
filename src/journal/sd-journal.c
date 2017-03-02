@@ -35,7 +35,7 @@
 #include "dirent-util.h"
 #include "fd-util.h"
 #include "fileio.h"
-#include "formats-util.h"
+#include "format-util.h"
 #include "fs-util.h"
 #include "hashmap.h"
 #include "hostname-util.h"
@@ -1660,6 +1660,9 @@ static int add_search_paths(sd_journal *j) {
 
         NULSTR_FOREACH(p, search_paths)
                 (void) add_root_directory(j, p, true);
+
+        if (!(j->flags & SD_JOURNAL_LOCAL_ONLY))
+                (void) add_root_directory(j, "/var/log/journal/remote", true);
 
         return 0;
 }

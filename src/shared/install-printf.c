@@ -22,7 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "formats-util.h"
+#include "format-util.h"
 #include "install-printf.h"
 #include "install.h"
 #include "macro.h"
@@ -93,9 +93,9 @@ static int specifier_instance(char specifier, void *data, void *userdata, char *
                 return r;
 
         if (isempty(instance)) {
-                instance = strdup(i->default_instance ?: "");
-                if (!instance)
-                        return -ENOMEM;
+                r = free_and_strdup(&instance, i->default_instance ?: "");
+                if (r < 0)
+                        return r;
         }
 
         *ret = instance;

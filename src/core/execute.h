@@ -106,7 +106,7 @@ struct ExecContext {
         char **pass_environment;
 
         struct rlimit *rlimit[_RLIMIT_MAX];
-        char *working_directory, *root_directory;
+        char *working_directory, *root_directory, *root_image;
         bool working_directory_missing_ok;
         bool working_directory_home;
 
@@ -161,6 +161,8 @@ struct ExecContext {
 
         char **read_write_paths, **read_only_paths, **inaccessible_paths;
         unsigned long mount_flags;
+        BindMount *bind_mounts;
+        unsigned n_bind_mounts;
 
         uint64_t capability_bounding_set;
         uint64_t capability_ambient_set;
@@ -181,6 +183,7 @@ struct ExecContext {
         bool protect_kernel_tunables;
         bool protect_kernel_modules;
         bool protect_control_groups;
+        bool mount_apivfs;
 
         bool no_new_privileges;
 
@@ -216,7 +219,6 @@ struct ExecContext {
         bool nice_set:1;
         bool ioprio_set:1;
         bool cpu_sched_set:1;
-        bool no_new_privileges_set:1;
 };
 
 static inline bool exec_context_restrict_namespaces_set(const ExecContext *c) {
@@ -226,10 +228,10 @@ static inline bool exec_context_restrict_namespaces_set(const ExecContext *c) {
 }
 
 typedef enum ExecFlags {
-        EXEC_CONFIRM_SPAWN     = 1U << 0,
-        EXEC_APPLY_PERMISSIONS = 1U << 1,
-        EXEC_APPLY_CHROOT      = 1U << 2,
-        EXEC_APPLY_TTY_STDIN   = 1U << 3,
+        EXEC_APPLY_PERMISSIONS = 1U << 0,
+        EXEC_APPLY_CHROOT      = 1U << 1,
+        EXEC_APPLY_TTY_STDIN   = 1U << 2,
+        EXEC_NEW_KEYRING       = 1U << 3,
 
         /* The following are not used by execute.c, but by consumers internally */
         EXEC_PASS_FDS          = 1U << 4,
@@ -254,6 +256,8 @@ struct ExecParameters {
         const char *cgroup_path;
 
         const char *runtime_prefix;
+
+        const char *confirm_spawn;
 
         usec_t watchdog_usec;
 
