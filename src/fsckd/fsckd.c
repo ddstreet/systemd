@@ -382,7 +382,7 @@ static int client_progress_handler(sd_event_source *s, int fd, uint32_t revents,
                 size_t cur, max;
                 _cleanup_free_ char *device = NULL, *old_device_id = NULL;
 
-                if (sscanf(line, "%i %lu %lu %ms", &pass, &cur, &max, &device) == 4) {
+                if (sscanf(line, "%i %zu %zu %ms", &pass, &cur, &max, &device) == 4) {
                         if (!client->device_name) {
                                 client->device_name = strdup(device);
                                 if (!client->device_name) {
@@ -403,7 +403,7 @@ static int client_progress_handler(sd_event_source *s, int fd, uint32_t revents,
                         client->max = max;
                         client->bad_input = false;
                         client->percent = compute_percent(client->pass, client->cur, client->max);
-                        log_debug("Getting progress for %s (%lu, %lu, %d) : %3.1f%%", client->device_id,
+                        log_debug("Getting progress for %s (%zu, %zu, %d) : %3.1f%%", client->device_id,
                                   client->cur, client->max, client->pass, client->percent);
                 } else {
                         if (errno == ENOMEM) {
