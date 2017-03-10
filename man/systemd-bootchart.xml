@@ -63,7 +63,7 @@
                         a running system. Collected results are output
                         as an SVG graph. Normally, systemd-bootchart
                         is invoked by the kernel by passing
-                        <option>init=<filename>/usr/lib/systemd/systemd-bootchart</filename></option>
+                        <option>init=<filename>/lib/systemd/systemd-bootchart</filename></option>
                         on the kernel commandline. systemd-bootchart will then
                         fork the real init off to resume normal system
                         startup, while monitoring and logging startup

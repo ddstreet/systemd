@@ -50,7 +50,7 @@
         </refnamediv>
 
         <refsynopsisdiv>
-                <para><filename>/usr/lib/systemd/system-generators/systemd-gpt-auto-generator</filename></para>
+                <para><filename>/lib/systemd/system-generators/systemd-gpt-auto-generator</filename></para>
         </refsynopsisdiv>
 
         <refsect1>
