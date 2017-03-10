@@ -50,12 +50,12 @@ static bool arg_discards = false;
 static bool arg_tcrypt_hidden = false;
 static bool arg_tcrypt_system = false;
 static char **arg_tcrypt_keyfiles = NULL;
+static uint64_t arg_offset = 0;
+static uint64_t arg_skip = 0;
 static usec_t arg_timeout = 0;
 
 /* Options Debian's crypttab knows we don't:
 
-    offset=
-    skip=
     precheck=
     check=
     checkargs=
@@ -166,6 +166,20 @@ static int parse_one_option(const char *option) {
                 if (parse_sec(option+8, &arg_timeout) < 0) {
                         log_error("timeout= parse failure, ignoring.");
                         return 0;
+                }
+
+        } else if (startswith(option, "offset=")) {
+
+                if (safe_atou64(option+7, &arg_offset) < 0) {
+                        log_error("offset= parse failure, refusing.");
+                        return -EINVAL;
+                }
+
+        } else if (startswith(option, "skip=")) {
+
+                if (safe_atou64(option+5, &arg_skip) < 0) {
+                        log_error("skip= parse failure, refusing.");
+                        return -EINVAL;
                 }
 
         } else if (!streq(option, "none"))
@@ -402,6 +416,9 @@ static int attach_luks_or_plain(struct crypt_device *cd,
                                 params.hash = arg_hash;
                 } else
                         params.hash = "ripemd160";
+
+                params.offset = arg_offset;
+                params.skip = arg_skip;
 
                 if (arg_cipher) {
                         size_t l;
