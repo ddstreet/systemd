@@ -332,8 +332,21 @@ static int user_mkdir_runtime_path(User *u) {
 
                 r = mount("tmpfs", p, "tmpfs", MS_NODEV|MS_NOSUID, t);
                 if (r < 0) {
-                        log_error("Failed to mount per-user tmpfs directory %s: %s", p, strerror(-r));
-                        goto fail;
+                        r = -errno;
+                        if (r != -EPERM) {
+                                log_error("Failed to mount per-user tmpfs directory %s: %m", p);
+                                goto fail;
+                        }
+
+                        /* Lacking permissions, maybe
+                         * CAP_SYS_ADMIN-less container? In this case,
+                         * just use a normal director. */
+
+                        r = chmod_and_chown(p, 0700, u->uid, u->gid);
+                        if (r < 0) {
+                                log_error("Failed to change runtime directory ownership and mode: %s", strerror(-r));
+                                goto fail;
+                        }
                 }
         }
 
@@ -341,7 +354,11 @@ static int user_mkdir_runtime_path(User *u) {
         return 0;
 
 fail:
-        free(p);
+        if (p) {
+                /* Try to clean up, but ignore errors */
+                (void) rmdir(p);
+                free(p);
+        }
         u->runtime_path = NULL;
         return r;
 }
