@@ -4998,9 +4998,8 @@ static int enable_sysv_units(const char *verb, char **args) {
                 return 0;
 
         if (!streq(verb, "enable") &&
-            !streq(verb, "disable"))
-            // update-rc.d currently does not provide is-enabled
-            //!streq(verb, "is-enabled"))
+            !streq(verb, "disable") &&
+            !streq(verb, "is-enabled"))
                 return 0;
 
         /* Processes all SysV units, and reshuffles the array so that
@@ -5045,6 +5044,12 @@ static int enable_sysv_units(const char *verb, char **args) {
                                 break;
                 }
 
+                /* If we have both a native unit and a SysV script,
+                 * enable/disable them both (below); for is-enabled,
+                 * prefer the native unit */
+                if (found_native && streq(verb, "is-enabled"))
+                        continue;
+
                 if (!isempty(arg_root))
                         asprintf(&p, "%s/" SYSTEM_SYSVINIT_PATH "/%s", arg_root, name);
                 else
@@ -5063,6 +5068,21 @@ static int enable_sysv_units(const char *verb, char **args) {
                 if (!found_native) {
                         /* Mark this entry, so that we don't try enabling it as native unit */
                         args[f] = (char*) "";
+                }
+
+                if (streq(verb, "is-enabled")) {
+                        _cleanup_free_ char *g = NULL;
+                        asprintf(&g, "%s%s", "/etc/rc[S5].d/S??", basename(p));
+                        if (glob_exists(g)) {
+                                if (!arg_quiet)
+                                        puts("enabled");
+                                r = 1;
+                                continue;
+                        } else {
+                                if (!arg_quiet)
+                                        puts("disabled");
+                                continue;
+                        }
                 }
 
                 log_info("Synchronizing state for %s with sysvinit using update-rc.d...", name);
@@ -5149,17 +5169,7 @@ static int enable_sysv_units(const char *verb, char **args) {
                 }
 
                 if (status.si_code == CLD_EXITED) {
-                        if (streq(verb, "is-enabled")) {
-                                if (status.si_status == 0) {
-                                        if (!arg_quiet)
-                                                puts("enabled");
-                                        r = 1;
-                                } else {
-                                        if (!arg_quiet)
-                                                puts("disabled");
-                                }
-
-                        } else if (status.si_status != 0) {
+                        if (status.si_status != 0) {
                                 r = -EINVAL;
                                 goto finish;
                         }
