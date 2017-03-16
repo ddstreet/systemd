@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
         r = khash_new(&h, "foobar");
         if (r == -EAFNOSUPPORT) {
                 puts("khash not supported on this kernel, skipping");
-                return 0;
+                return EXIT_TEST_SKIP;
         }
         assert_se(r == -EOPNOTSUPP);
 

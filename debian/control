@@ -47,6 +47,7 @@ Build-Depends: debhelper (>= 9.20160114),
                libmount-dev (>= 2.27.1),
                libseccomp-dev (>= 2.3.1) [amd64 arm64 armel armhf i386 mips mipsel mips64 mips64el x32 powerpc ppc64 ppc64el s390x],
                libdw-dev (>= 0.158) <!stage1>,
+               libpolkit-gobject-1-dev <!stage1>,
                linux-base <!nocheck>,
                acl <!nocheck>,
                python3:native,
@@ -317,12 +318,12 @@ Depends: ${shlibs:Depends},
          util-linux (>= 2.27.1),
          s390-tools (>> 1.6.2) [s390],
          procps
-Breaks: systemd (<< 232-11),
+Breaks: systemd (<< 233-4),
         ifupdown (<< 0.8.5~),
         ifplugd (<< 0.28-19.1~),
         joystick (<< 1:1.4.9-1~),
         ${Breaks:usb-modeswitch},
-Replaces: systemd (<< 224-2)
+Replaces: systemd (<< 233-4)
 Description: /dev/ and hotplug management daemon
  udev is a daemon which dynamically creates and removes device nodes from
  /dev/, handles hotplug events and loads drivers at boot time.
