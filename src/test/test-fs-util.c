@@ -146,7 +146,7 @@ static void test_chase_symlinks(void) {
         assert_se(r > 0 && path_equal(result, "/etc"));
 
         result = mfree(result);
-        r = chase_symlinks("/etc/machine-id/foo", NULL, 0, &result);
+        r = chase_symlinks("/etc/issue/foo", NULL, 0, &result);
         assert_se(r == -ENOTDIR);
 
         /* Path that loops back to self */
