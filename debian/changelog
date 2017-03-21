@@ -6,6 +6,9 @@ systemd (231-9ubuntu4) UNRELEASED; urgency=medium
   * debian/patches/resolved-follow-CNAMES-for-DNS-stub-replies.patch:
     Cherry-pick upstream fix for resolved failing to follow CNAMES for DNS
     stub replies. LP: #1647031.
+  * debian/patches/logind-update-empty-and-infinity-handling-for-User-T.patch:
+    Cherry-pick upstream fix to handle empty and "infinity" values for
+    [User]TasksMax.  Closes LP: #1651518.
 
  -- Steve Langasek <steve.langasek@ubuntu.com>  Fri, 17 Mar 2017 17:18:17 -0700
 
