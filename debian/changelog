@@ -1,4 +1,4 @@
-systemd (231-9ubuntu4) UNRELEASED; urgency=medium
+systemd (231-9ubuntu4) yakkety; urgency=medium
 
   * debian/extra/units/systemd-resolved.service.d/resolvconf.conf: if
     resolved is going to be started, make sure this blocks
@@ -10,7 +10,7 @@ systemd (231-9ubuntu4) UNRELEASED; urgency=medium
     Cherry-pick upstream fix to handle empty and "infinity" values for
     [User]TasksMax.  Closes LP: #1651518.
 
- -- Steve Langasek <steve.langasek@ubuntu.com>  Fri, 17 Mar 2017 17:18:17 -0700
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 20 Mar 2017 22:14:14 -0700
 
 systemd (231-9ubuntu3) yakkety; urgency=medium
 
