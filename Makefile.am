@@ -415,6 +415,7 @@ rootlibexec_PROGRAMS = \
 	systemd-volatile-root \
 	systemd-reply-password \
 	systemd-fsck \
+	systemd-fsckd \
 	systemd-ac-power \
 	systemd-sysctl \
 	systemd-sleep \
@@ -524,6 +525,7 @@ dist_systemunit_DATA = \
 	units/swap.target \
 	units/slices.target \
 	units/system.slice \
+	units/systemd-fsckd.socket \
 	units/systemd-initctl.socket \
 	units/syslog.socket \
 	units/dev-hugepages.mount \
@@ -574,6 +576,7 @@ nodist_systemunit_DATA = \
 	units/systemd-exit.service \
 	units/systemd-fsck@.service \
 	units/systemd-fsck-root.service \
+	units/systemd-fsckd.service \
 	units/systemd-machine-id-commit.service \
 	units/systemd-udevd.service \
 	units/systemd-udev-trigger.service \
@@ -639,6 +642,7 @@ EXTRA_DIST += \
 	units/user/systemd-exit.service.in \
 	units/systemd-fsck@.service.in \
 	units/systemd-fsck-root.service.in \
+	units/systemd-fsckd.service.in \
 	units/systemd-machine-id-commit.service.in \
 	units/user@.service.m4.in \
 	units/debug-shell.service.in \
@@ -2797,6 +2801,14 @@ systemd_fsck_SOURCES = \
 	src/fsck/fsck.c
 
 systemd_fsck_LDADD = \
+	libsystemd-shared.la
+
+# ------------------------------------------------------------------------------
+systemd_fsckd_SOURCES = \
+	src/fsckd/fsckd.c \
+	$(NULL)
+
+systemd_fsckd_LDADD = \
 	libsystemd-shared.la
 
 # ------------------------------------------------------------------------------
