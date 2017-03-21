@@ -1219,10 +1219,11 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
         if (q < 0 && r == 0)
                 r = q;
 
-        /* We might have deserialized the kdbus control fd, but if we
-         * didn't, then let's create the bus now. */
-        manager_connect_bus(m, !!serialization);
-        bus_track_coldplug(m, &m->subscribed, &m->deserialized_subscribed);
+        /* We might have deserialized the kdbus control fd, but if we didn't, then let's create the bus now. */
+        (void) manager_connect_bus(m, !!serialization);
+
+        (void) bus_track_coldplug(m, &m->subscribed, false, m->deserialized_subscribed);
+        m->deserialized_subscribed = strv_free(m->deserialized_subscribed);
 
         /* Third, fire things up! */
         manager_coldplug(m);
@@ -2401,7 +2402,7 @@ int manager_serialize(Manager *m, FILE *f, FDSet *fds, bool switching_root) {
                 fprintf(f, "kdbus-fd=%i\n", copy);
         }
 
-        bus_track_serialize(m->subscribed, f);
+        bus_track_serialize(m->subscribed, f, "subscribed");
 
         fputc('\n', f);
 
@@ -2579,15 +2580,14 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
                                 m->kdbus_fd = fdset_remove(fds, fd);
                         }
 
-                } else {
-                        int k;
+                } else if (startswith(l, "subscribed=")) {
 
-                        k = bus_track_deserialize_item(&m->deserialized_subscribed, l);
-                        if (k < 0)
-                                log_debug_errno(k, "Failed to deserialize bus tracker object: %m");
-                        else if (k == 0)
-                                log_debug("Unknown serialization item '%s'", l);
-                }
+                        if (strv_extend(&m->deserialized_subscribed, l+11) < 0)
+                                log_oom();
+
+                } else
+                        log_debug("Unknown serialization item '%s'", l);
+
         }
 
         for (;;) {
