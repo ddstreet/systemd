@@ -31,6 +31,7 @@ networkd-use-proper-cast-to-access-VTI6-4399.patch
 rules-introduce-disk-by-id-model_serial-symlinks-for.patch
 networkd-allow-networkd-to-start-in-early-boot.patch
 resolved-follow-CNAMES-for-DNS-stub-replies.patch
+networkd-Add-bridge-port-priority-setting-5545.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
