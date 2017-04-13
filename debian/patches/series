@@ -47,6 +47,7 @@ networkd-allow-networkd-to-start-in-early-boot.patch
 0001-libudev-util-change-util_replace_whitespace-to-retur.patch
 0002-udev-event-add-replace_whitespace-param-to-udev_even.patch
 0003-udev-rules-perform-whitespace-replacement-for-symlin.patch
+networkd-Add-bridge-port-priority-setting-5545.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
