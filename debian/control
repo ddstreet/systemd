@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: optional
-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>,
            Marco d'Itri <md@linux.it>,
            Sjoerd Simons <sjoerd@debian.org>,
@@ -64,8 +65,7 @@ Section: admin
 Priority: important
 Recommends: libpam-systemd,
             dbus
-Suggests: systemd-ui,
-          systemd-container,
+Suggests: systemd-container,
           policykit-1
 Pre-Depends: ${shlibs:Pre-Depends},
              ${misc:Pre-Depends}
@@ -181,6 +181,17 @@ Description: tools for storing and retrieving coredumps
  This package provides systemd tools for storing and retrieving coredumps:
   * systemd-coredump
   * coredumpctl
+
+Package: systemd-tests
+Architecture: linux-any
+Section: admin
+Priority: optional
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         systemd (= ${binary:Version}),
+Description: tests for systemd
+ This package contains the test binaries. Those binaries are primarily used
+ for autopkgtest and not meant to be installed on regular user systems.
 
 Package: libpam-systemd
 Architecture: linux-any
@@ -318,6 +329,7 @@ Depends: ${shlibs:Depends},
          util-linux (>= 2.27.1),
          s390-tools (>> 1.6.2) [s390],
          procps
+Conflicts: hal
 Breaks: systemd (<< 233-4),
         ifupdown (<< 0.8.5~),
         ifplugd (<< 0.28-19.1~),
