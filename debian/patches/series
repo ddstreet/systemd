@@ -63,6 +63,7 @@ journal-fix-up-syslog-facility-when-forwarding-native-mes.patch
 networkd-Add-bridge-port-priority-setting-5545.patch
 test-TEST-12-ISSUE-3171-specify-w1-option-to-netcat-due-t.patch
 main-improve-RLIMIT_NOFILE-handling-5795.patch
+udev-net_id-add-support-for-platform-bus-ACPI-mostly-arm6.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
