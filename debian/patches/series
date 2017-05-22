@@ -65,6 +65,7 @@ test-TEST-12-ISSUE-3171-specify-w1-option-to-netcat-due-t.patch
 main-improve-RLIMIT_NOFILE-handling-5795.patch
 udev-net_id-add-support-for-platform-bus-ACPI-mostly-arm6.patch
 resolved-fix-null-pointer-dereference-crash.patch
+core-timer-downgrade-message-about-random-time-addition-5.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
