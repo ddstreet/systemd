@@ -1,3 +1,19 @@
+systemd (232-21ubuntu4) zesty; urgency=medium
+
+  * Cherrypick upstream commit to enable system use kernel maximum limit for
+    RLIMIT_NOFILE isntead of hard-coded (low) limit of 65536.  (LP: #1686361)
+  * debian/tests/root-unittests: disable execute and seccomp tests on arm
+    test-seccomp and test-execute fail on arm64 kernels. Marking both tests as
+    expected failures. An upstream bug report is filed to resolve these.
+    (LP: #1672499)
+  * Cherrypick upstream patch for platform predictable interface names.
+    (LP: #1686784)
+  * resolved: fix null pointer dereference crash (LP: #1621396)
+  * Cherrypick core/timer downgrade message about random time addition
+    (LP: #1692136)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 24 May 2017 16:26:16 +0100
+
 systemd (232-21ubuntu3) zesty; urgency=medium
 
   [ Martin Pitt ]
