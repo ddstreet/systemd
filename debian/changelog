@@ -1,3 +1,21 @@
+systemd (231-9ubuntu5) yakkety; urgency=medium
+
+  * networkd: cherry-pick support for setting bridge port's priority.
+    This is a useful feature/bugfix to improve feature parity of networkd with
+    ifupdown. This matches netplan's expectations to be able to set bridge port's
+    priorities via networked. This featue is to be used by netplan/MAAS/OpenStack.
+    (LP: #1668347)
+  * Cherrypick upstream commit to enable system use kernel maximum limit for RLIMIT_NOFILE isntead of hard-coded (low) limit of 65536.
+    (LP: #1686361)
+  * Cherrypick upstream patch for platform predictable interface names.
+    (LP: #1686784)
+  * resolved: fix null pointer dereference crash (LP: #1621396)
+    CVE-2017-9217
+  * Cherrypick core/timer downgrade message about random time addition
+    (LP: #1692136)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 20 Jun 2017 17:27:14 +0100
+
 systemd (231-9ubuntu4) yakkety; urgency=medium
 
   * debian/extra/units/systemd-resolved.service.d/resolvconf.conf: if
