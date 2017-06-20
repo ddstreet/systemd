@@ -36,6 +36,7 @@ main-improve-RLIMIT_NOFILE-handling-5795.patch
 udev-net_id-add-support-for-platform-bus-ACPI-mostly-arm6.patch
 resolved-fix-null-pointer-dereference-crash.patch
 core-timer-downgrade-message-about-random-time-addition-5.patch
+Cherrypick-addition-of-uint16-config-parser-from-networkd.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
@@ -63,4 +64,4 @@ debian/Let-graphical-session-pre.target-be-manually-started.patch
 0001-libudev-util-change-util_replace_whitespace-to-retur.patch
 0002-udev-event-add-replace_whitespace-param-to-udev_even.patch
 0003-udev-rules-perform-whitespace-replacement-for-symlin.patch
-logind-update-empty-and-infinity-handling-for-User-T.patch 
+logind-update-empty-and-infinity-handling-for-User-T.patch
