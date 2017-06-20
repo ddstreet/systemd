@@ -52,6 +52,7 @@ main-improve-RLIMIT_NOFILE-handling-5795.patch
 udev-net_id-add-support-for-platform-bus-ACPI-mostly-arm6.patch
 resolved-fix-null-pointer-dereference-crash.patch
 core-timer-downgrade-message-about-random-time-addition-5.patch
+Cherrypick-addition-of-uint16-config-parser-from-networkd.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
