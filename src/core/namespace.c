@@ -386,7 +386,7 @@ int setup_namespace(
                 strv_length(inaccessible_paths) +
                 private_dev +
                 (protect_home != PROTECT_HOME_NO ? 3 : 0) +
-                (protect_system != PROTECT_SYSTEM_NO ? 2 : 0) +
+                (protect_system != PROTECT_SYSTEM_NO ? 6 : 0) +
                 (protect_system == PROTECT_SYSTEM_FULL ? 1 : 0);
 
         if (n > 0) {
@@ -439,15 +439,21 @@ int setup_namespace(
 
                 if (protect_system != PROTECT_SYSTEM_NO) {
                         const char *usr_dir, *boot_dir, *etc_dir;
+                        const char *bin_dir, *sbin_dir, *lib_dir, *lib64_dir;
 
                         usr_dir = prefix_roota(root_directory, "/usr");
                         boot_dir = prefix_roota(root_directory, "/boot");
                         boot_dir = strjoina("-", boot_dir);
                         etc_dir = prefix_roota(root_directory, "/etc");
+                        bin_dir = prefix_roota(root_directory, "/bin");
+                        sbin_dir = prefix_roota(root_directory, "/sbin");
+                        lib_dir = prefix_roota(root_directory, "/lib");
+                        lib64_dir = prefix_roota(root_directory, "/lib64");
+                        lib64_dir = strjoina("-", lib64_dir);
 
                         r = append_mounts(&m, protect_system == PROTECT_SYSTEM_FULL
-                                ? STRV_MAKE(usr_dir, boot_dir, etc_dir)
-                                : STRV_MAKE(usr_dir, boot_dir), READONLY);
+                                ? STRV_MAKE(usr_dir, boot_dir, etc_dir, bin_dir, sbin_dir, lib_dir, lib64_dir)
+                                : STRV_MAKE(usr_dir, boot_dir, bin_dir, sbin_dir, lib_dir, lib64_dir), READONLY);
                         if (r < 0)
                                 return r;
                 }
