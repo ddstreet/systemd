@@ -90,3 +90,5 @@ debian/Revert-core-enable-TasksMax-for-all-services-by-default-a.patch
 debian/Let-graphical-session-pre.target-be-manually-started.patch
 debian/Add-env-variable-for-machine-ID-path.patch
 cryptsetup-generator-run-cryptsetup-service-before-swap-u.patch
+test-resolved-packet-add-a-simple-test-for-our-alloc.patch
+resolved-simplify-alloc-size-calculation.patch
