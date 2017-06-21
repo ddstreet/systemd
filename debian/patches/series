@@ -58,4 +58,6 @@ debian/Let-graphical-session-pre.target-be-manually-started.patch
 0001-libudev-util-change-util_replace_whitespace-to-retur.patch
 0002-udev-event-add-replace_whitespace-param-to-udev_even.patch
 0003-udev-rules-perform-whitespace-replacement-for-symlin.patch
-logind-update-empty-and-infinity-handling-for-User-T.patch 
+logind-update-empty-and-infinity-handling-for-User-T.patch
+test-resolved-packet-add-a-simple-test-for-our-alloc.patch
+resolved-simplify-alloc-size-calculation.patch
