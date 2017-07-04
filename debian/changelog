@@ -1,4 +1,4 @@
-systemd (231-9ubuntu5) yakkety; urgency=medium
+systemd (231-9ubuntu6) yakkety; urgency=medium
 
   * networkd: cherry-pick support for setting bridge port's priority.
     This is a useful feature/bugfix to improve feature parity of networkd with
@@ -15,6 +15,17 @@ systemd (231-9ubuntu5) yakkety; urgency=medium
     (LP: #1692136)
 
  -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 20 Jun 2017 17:27:14 +0100
+
+systemd (231-9ubuntu5) yakkety-security; urgency=medium
+
+  * SECURITY UPDATE: Out-of-bounds write in systemd-resolved (LP: #1695546)
+    - debian/patches/test-resolved-packet-add-a-simple-test-for-our-alloc.patch:
+      Add a simple allocation test
+    - debian/patches/resolved-simplify-alloc-size-calculation.patch: Simply
+      allocation size calculation
+    - CVE-2017-9445
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Wed, 21 Jun 2017 16:35:26 +0100
 
 systemd (231-9ubuntu4) yakkety; urgency=medium
 

@@ -37,6 +37,8 @@ udev-net_id-add-support-for-platform-bus-ACPI-mostly-arm6.patch
 resolved-fix-null-pointer-dereference-crash.patch
 core-timer-downgrade-message-about-random-time-addition-5.patch
 Cherrypick-addition-of-uint16-config-parser-from-networkd.patch
+test-resolved-packet-add-a-simple-test-for-our-alloc.patch
+resolved-simplify-alloc-size-calculation.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
