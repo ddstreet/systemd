@@ -1,0 +1,24 @@
+From: =?utf-8?q?Zbigniew_J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Sun, 5 Feb 2017 03:37:46 -0500
+Subject: core/timer: downgrade message about random time addition (#5229)
+
+This seems like something that shouldn't be higher then debug level, even
+if it does not get emitted too often.
+
+Fixes #5228.
+(cherry picked from commit 382852fd581efe3cc0ae11154102ab9f435adea1)
+---
+ src/core/timer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/src/core/timer.c
++++ b/src/core/timer.c
+@@ -348,7 +348,7 @@
+         else
+                 *v += add;
+ 
+-        log_unit_info(UNIT(t), "Adding %s random time.", format_timespan(s, sizeof(s), add, 0));
++        log_unit_debug(UNIT(t), "Adding %s random time.", format_timespan(s, sizeof(s), add, 0));
+ }
+ 
+ static void timer_enter_waiting(Timer *t, bool initial) {

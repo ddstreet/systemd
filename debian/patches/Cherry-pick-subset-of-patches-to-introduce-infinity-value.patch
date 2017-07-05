@@ -1,0 +1,108 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 19 Jul 2016 17:19:58 +0200
+Subject: Cherry-pick subset of patches to introduce infinity value in
+ logind.conf for UserTasksMax
+
+This is a partial cherrypick of:
+c06eec15d5816236c11e35b35e444f62f37b6ef6
+f50582649f8eee73f59aff95fadd9a963ed4ffea
+
+Custom parsing function was taken from the first patch, but not the change from
+the absolute default value, nor the ability to specify percentage of maximum
+value.
+
+A hunk that allows infinity value for the UsesTasksMax in logind.conf, plus
+manpage updates, were taken from the second patch.  But not all the other
+updates to unit configurations and/or accpeting percentage updates.
+---
+ man/logind.conf.xml          |  3 ++-
+ src/login/logind-gperf.gperf |  2 +-
+ src/login/logind-user.c      | 41 +++++++++++++++++++++++++++++++++++++++++
+ src/login/logind.h           |  1 +
+ 4 files changed, 45 insertions(+), 2 deletions(-)
+
+diff --git a/man/logind.conf.xml b/man/logind.conf.xml
+index 597759e..01021c5 100644
+--- a/man/logind.conf.xml
++++ b/man/logind.conf.xml
+@@ -288,7 +288,8 @@
+         <varname>TasksMax=</varname> setting of the per-user slice
+         unit, see
+         <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+-        for details. Defaults to 12288 (12K).</para></listitem>
++        for details. Defaults to 12288 (12K). If assigned the special value <literal>infinity</literal>, no tasks limit
++        is applied.</para></listitem>
+       </varlistentry>
+ 
+       <varlistentry>
+diff --git a/src/login/logind-gperf.gperf b/src/login/logind-gperf.gperf
+index 8552c46..9145dc9 100644
+--- a/src/login/logind-gperf.gperf
++++ b/src/login/logind-gperf.gperf
+@@ -34,4 +34,4 @@ Login.IdleAction,                  config_parse_handle_action, 0, offsetof(Manag
+ Login.IdleActionSec,               config_parse_sec,           0, offsetof(Manager, idle_action_usec)
+ Login.RuntimeDirectorySize,        config_parse_tmpfs_size,    0, offsetof(Manager, runtime_dir_size)
+ Login.RemoveIPC,                   config_parse_bool,          0, offsetof(Manager, remove_ipc)
+-Login.UserTasksMax,                config_parse_uint64,        0, offsetof(Manager, user_tasks_max)
++Login.UserTasksMax,                config_parse_user_tasks_max,0, offsetof(Manager, user_tasks_max)
+diff --git a/src/login/logind-user.c b/src/login/logind-user.c
+index 6b9c69c..75b39fd 100644
+--- a/src/login/logind-user.c
++++ b/src/login/logind-user.c
+@@ -890,3 +890,44 @@ int config_parse_tmpfs_size(
+ 
+         return 0;
+ }
++
++int config_parse_user_tasks_max(
++                const char* unit,
++                const char *filename,
++                unsigned line,
++                const char *section,
++                unsigned section_line,
++                const char *lvalue,
++                int ltype,
++                const char *rvalue,
++                void *data,
++                void *userdata) {
++
++        uint64_t *m = data;
++        uint64_t k;
++        int r;
++
++        assert(filename);
++        assert(lvalue);
++        assert(rvalue);
++        assert(data);
++
++        if (streq(rvalue, "infinity")) {
++                *m = (uint64_t) -1;
++                return 0;
++        }
++
++        r = safe_atou64(rvalue, &k);
++        if (r < 0) {
++                log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse tasks maximum, ignoring: %s", rvalue);
++                return 0;
++        }
++
++        if (k <= 0 || k >= UINT64_MAX) {
++                log_syntax(unit, LOG_ERR, filename, line, 0, "Tasks maximum out of range, ignoring: %s", rvalue);
++                return 0;
++        }
++
++        *m = k;
++        return 0;
++}
+diff --git a/src/login/logind.h b/src/login/logind.h
+index 6748af3..babc290 100644
+--- a/src/login/logind.h
++++ b/src/login/logind.h
+@@ -185,6 +185,7 @@ const struct ConfigPerfItem* logind_gperf_lookup(const char *key, unsigned lengt
+ int manager_set_lid_switch_ignore(Manager *m, usec_t until);
+ 
+ int config_parse_tmpfs_size(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
++int config_parse_user_tasks_max(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ 
+ int manager_get_session_from_creds(Manager *m, sd_bus_message *message, const char *name, sd_bus_error *error, Session **ret);
+ int manager_get_user_from_creds(Manager *m, sd_bus_message *message, uid_t uid, sd_bus_error *error, User **ret);
