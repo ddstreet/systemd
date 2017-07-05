@@ -34,13 +34,7 @@ int dns_packet_new(DnsPacket **ret, DnsProtocol protocol, size_t mtu) {
 
         assert(ret);
 
-        if (mtu <= UDP_PACKET_HEADER_SIZE)
-                a = DNS_PACKET_SIZE_START;
-        else
-                a = mtu - UDP_PACKET_HEADER_SIZE;
-
-        if (a < DNS_PACKET_HEADER_SIZE)
-                a = DNS_PACKET_HEADER_SIZE;
+        a = MAX(mtu, DNS_PACKET_HEADER_SIZE);
 
         /* round up to next page size */
         a = PAGE_ALIGN(ALIGN(sizeof(DnsPacket)) + a) - ALIGN(sizeof(DnsPacket));
@@ -2258,6 +2252,9 @@ int dns_packet_is_reply_for(DnsPacket *p, const DnsResourceKey *key) {
         r = dns_packet_extract(p);
         if (r < 0)
                 return r;
+
+        if (p->question == NULL)
+                return 0;
 
         if (p->question->n_keys != 1)
                 return 0;

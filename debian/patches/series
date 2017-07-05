@@ -47,6 +47,14 @@ networkd-allow-networkd-to-start-in-early-boot.patch
 0001-libudev-util-change-util_replace_whitespace-to-retur.patch
 0002-udev-event-add-replace_whitespace-param-to-udev_even.patch
 0003-udev-rules-perform-whitespace-replacement-for-symlin.patch
+networkd-Add-bridge-port-priority-setting-5545.patch
+main-improve-RLIMIT_NOFILE-handling-5795.patch
+udev-net_id-add-support-for-platform-bus-ACPI-mostly-arm6.patch
+resolved-fix-null-pointer-dereference-crash.patch
+core-timer-downgrade-message-about-random-time-addition-5.patch
+Cherrypick-addition-of-uint16-config-parser-from-networkd.patch
+test-resolved-packet-add-a-simple-test-for-our-alloc.patch
+resolved-simplify-alloc-size-calculation.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
@@ -85,3 +93,4 @@ Support-system-image-read-only-etc.patch
 systemctl-Don-t-forward-telinit-u-to-upstart.patch
 Provide-shutdown-fallback-for-upstart.patch
 udev-Don-t-kill-peer-processes-if-we-don-t-run-in-a-cgrou.patch
+Cherry-pick-subset-of-patches-to-introduce-infinity-value.patch
