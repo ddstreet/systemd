@@ -69,6 +69,7 @@ void journal_importer_cleanup(JournalImporter *imp) {
                 safe_close(imp->fd);
         }
 
+        free(imp->name);
         free(imp->buf);
         iovw_free_contents(&imp->iovw);
 }
@@ -315,7 +316,7 @@ int journal_importer_process_data(JournalImporter *imp) {
                         return r;
                 if (r == 0) {
                         imp->state = IMPORTER_STATE_EOF;
-                        return r;
+                        return 0;
                 }
                 assert(n > 0);
                 assert(line[n-1] == '\n');
