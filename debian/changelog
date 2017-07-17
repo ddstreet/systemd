@@ -1,3 +1,11 @@
+systemd (229-4ubuntu19) xenial; urgency=medium
+
+  * debian/extra/units/systemd-resolved.service.d/resolvconf.conf: partially
+    revert, by removing ExecStart|StopPost lines, as these are not needed on
+    xenial and generate warnings in the journal. (LP: #1704677)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 17 Jul 2017 17:00:42 +0100
+
 systemd (229-4ubuntu18) xenial; urgency=medium
 
   * debian/extra/units/systemd-resolved.service.d/resolvconf.conf: if resolved
