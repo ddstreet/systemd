@@ -5320,10 +5320,35 @@ bin_PROGRAMS += \
 
 tests += \
 	test-dns-domain \
+	test-resolved-packet \
 	test-dnssec
 
 manual_tests += \
 	test-dnssec-complex
+
+test_resolved_packet_SOURCES = \
+	src/resolve/test-resolved-packet.c \
+	src/resolve/resolved-dns-packet.c \
+	src/resolve/resolved-dns-packet.h \
+	src/resolve/resolved-dns-rr.c \
+	src/resolve/resolved-dns-rr.h \
+	src/resolve/resolved-dns-answer.c \
+	src/resolve/resolved-dns-answer.h \
+	src/resolve/resolved-dns-question.c \
+	src/resolve/resolved-dns-question.h \
+	src/resolve/resolved-dns-dnssec.c \
+	src/resolve/resolved-dns-dnssec.h \
+	src/resolve/dns-type.c \
+	src/resolve/dns-type.h
+
+test_resolved_packet_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(GCRYPT_CFLAGS)
+
+test_resolved_packet_LDADD = \
+	libjournal-core.la \
+	$(GCRYPT_LIBS) \
+	-lm
 
 test_dnssec_SOURCES = \
 	src/resolve/test-dnssec.c \
