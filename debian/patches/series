@@ -1,3 +1,4 @@
+test-condition-don-t-assume-that-all-non-root-users-are-n.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
@@ -23,3 +24,4 @@ debian/Let-graphical-session-pre.target-be-manually-started.patch
 debian/Add-env-variable-for-machine-ID-path.patch
 debian/Mark-test-timesync-as-manual.patch
 debian/Avoid-requiring-a-kvm-system-group.patch
+debian/Revert-units-Tell-login-to-preserve-environment.patch
