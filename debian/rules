@@ -10,9 +10,11 @@ include /usr/share/dpkg/default.mk
 ifeq ($(DEB_VENDOR),Ubuntu)
     DEFAULT_NTP_SERVERS = ntp.ubuntu.com
     SUPPORT_URL = http://www.ubuntu.com/support
+    CONFFLAGS_DISTRO = -Ddns-servers=''
 else
     DEFAULT_NTP_SERVERS = 0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org
     SUPPORT_URL = https://www.debian.org/support
+    CONFFLAGS_DISTRO =
 endif
 
 # fail on missing files and symbols changes on distro builds, but not if we
@@ -146,10 +148,10 @@ CONFFLAGS_udeb = \
 
 override_dh_auto_configure:
 	dh_auto_configure --builddirectory=build-deb \
-		-- $(CONFFLAGS) $(CONFFLAGS_deb)
+		-- $(CONFFLAGS) $(CONFFLAGS_DISTRO) $(CONFFLAGS_deb)
 ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_auto_configure --builddirectory=build-udeb \
-		-- $(CONFFLAGS) $(CONFFLAGS_udeb)
+		-- $(CONFFLAGS) $(CONFFLAGS_DISTRO) $(CONFFLAGS_udeb)
 endif
 
 override_dh_auto_build:
@@ -249,6 +251,7 @@ ifeq ($(DEB_VENDOR),Ubuntu)
 	install --mode=644 debian/extra/rules-ubuntu/*.rules debian/udev/lib/udev/rules.d/
 	cp -a debian/extra/units-ubuntu/* debian/systemd/lib/systemd/system/
 	install --mode=755 debian/extra/set-cpufreq debian/systemd/lib/systemd/
+	install -D --mode=755 debian/extra/write_persistent_net_s390x_virtio debian/udev/usr/share/systemd/write_persistent_net_s390x_virtio
 endif
 
 override_dh_installinit:

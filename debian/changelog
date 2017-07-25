@@ -1,3 +1,64 @@
+systemd (234-2ubuntu1) artful; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * ubuntu: udev.postinst preserve virtio interfaces names on upgrades, on s390x.
+    New udev generates stable interface names on s390x kvm instances, however, upon
+    upgrades existing ethX names should be preserved to prevent breaking networking
+    and software configurations.
+    This patch only affects Ubuntu systems. (Closes: #860246) (LP: #1682437)
+  * Set UseDomains to true, by default, on Ubuntu.
+    On Ubuntu, fallback DNS servers are disabled, therefore we do not leak queries
+    to a preset 3rd party by default. In resolved, dnssec is also disabled by
+    default, as too much of the internet is broken and using Ubuntu users to debug
+    the internet is not very productive - most of the time the end-user cannot fix
+    or know how to notify the site owners about the dnssec mistakes. Inherintally
+    the DHCP acquired DNS servers are therefore trusted, and are free to spoof
+    records. Not trusting DNS search domains, in such scenario, provides limited
+    security or privacy benefits. From user point of view, this also appears to be
+    a regression from previous Ubuntu releases which do trust DHCP acquired search
+    domains by default.
+    Therefore we are enabling UseDomains by default on Ubuntu.
+    Users may override this setting in the .network files by specifying
+    [DHCP|IPv6AcceptRA] UseDomains=no|route options.
+  * resolved: create private stub resolve file for integration with resolvconf.
+    The stub-resolve.conf file points at resolved stub resolver, but also lists the
+    available search domains. This is required to correctly resolve domains without
+    using resolve nss module.
+  * Enable systemd-resolved by default
+  * Create /etc/resolv.conf at postinst, pointing at the stub resolver.
+    The stub resolver file is dynamically managed by systemd-resolved. It points at
+    the stub resolver as the nameserver, however it also dynamically updates the
+    search stanza, thus non-nss dns tools work correctly with unqualified names and
+    correctly use the DHCP acquired search domains.
+  * libnss-resolve: do not disable and stop systemd-resolved
+    resolved is always used by default on ubuntu via stub resolver, therefore it
+    should continue to operate without libnss-resolve module installed.
+  * modprobe.d: set max_bonds=0 for bonding module to prevent bond0 creation.
+    This prevents confusing networkd, and allows networkd to manage bond0.
+  * Cherrypick upstream networkd-test.py assertion/check fixes.
+    This resolves ADT test suite failures, when running tests under lxc/lxd
+    providers.
+  * Cherrypick arm* seccomp fixes.
+    This should resolve ADT test failures, on arm64, when running as root.
+  * Re-enable seccomp and execute tests on arm.
+
+  [ Balint Reczey ]
+  * Skip starting systemd-remount-fs.service in containers
+    even when /etc/fstab is present.
+    This allows entering fully running state even when /etc/fstab
+    lists / to be mounted from a device which is not present in the
+    container. (LP: #1576341)
+
+  [ Michael Biebl ]
+  * selinux: Enable labeling and access checks for unprivileged users.
+    Revert commit that inadvertently broke a lot of SELinux related
+    functionality for both unprivileged users and systemd instances running
+    as MANAGER_USER and instead deal with the auditd issue by checking for
+    the CAP_AUDIT_WRITE capability before opening an audit netlink socket.
+    (Closes: #863800)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 25 Jul 2017 13:30:58 +0100
+
 systemd (234-2) unstable; urgency=medium
 
   [ Martin Pitt ]
@@ -17,6 +78,64 @@ systemd (234-2) unstable; urgency=medium
     (Closes: #868695)
 
  -- Michael Biebl <biebl@debian.org>  Thu, 20 Jul 2017 15:13:42 +0200
+
+systemd (234-1ubuntu2) artful; urgency=medium
+
+  * Set UseDomains to true, by default, on Ubuntu.
+    On Ubuntu, fallback DNS servers are disabled, therefore we do not leak queries
+    to a preset 3rd party by default. In resolved, dnssec is also disabled by
+    default, as too much of the internet is broken and using Ubuntu users to debug
+    the internet is not very productive - most of the time the end-user cannot fix
+    or know how to notify the site owners about the dnssec mistakes. Inherintally
+    the DHCP acquired DNS servers are therefore trusted, and are free to spoof
+    records. Not trusting DNS search domains, in such scenario, provides limited
+    security or privacy benefits. From user point of view, this also appears to be
+    a regression from previous Ubuntu releases which do trust DHCP acquired search
+    domains by default.
+    Therefore we are enabling UseDomains by default on Ubuntu.
+    Users may override this setting in the .network files by specifying
+    [DHCP|IPv6AcceptRA] UseDomains=no|route options.
+  * resolved: create private stub resolve file for integration with resolvconf.
+    The stub-resolve.conf file points at resolved stub resolver, but also lists the
+    available search domains. This is required to correctly resolve domains without
+    using resolve nss module.
+  * Enable systemd-resolved by default
+  * Create /etc/resolv.conf at postinst, pointing at the stub resolver.
+    The stub resolver file is dynamically managed by systemd-resolved. It points at
+    the stub resolver as the nameserver, however it also dynamically updates the
+    search stanza, thus non-nss dns tools work correctly with unqualified names and
+    correctly use the DHCP acquired search domains.
+  * libnss-resolve: do not disable and stop systemd-resolved
+    resolved is always used by default on ubuntu via stub resolver, therefore it
+    should continue to operate without libnss-resolve module installed.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Fri, 21 Jul 2017 17:07:17 +0100
+
+systemd (234-1ubuntu1) artful; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * Merge with debian, outstanding delta below.
+  * ubuntu: udev.postinst preserve virtio interfaces names on upgrades, on s390x.
+    New udev generates stable interface names on s390x kvm instances, however, upon
+    upgrades existing ethX names should be preserved to prevent breaking networking
+    and software configurations.
+    This patch only affects Ubuntu systems. (Closes: #860246) (LP: #1682437)
+  * debian/tests/root-unittests: disable execute and seccomp tests on arm
+    test-seccomp and test-execute fail on arm64 kernels. Marking both tests as
+    expected failures. An upstream bug report is filed to resolve these.
+    (LP: #1672499)
+  * Disable fallback DNS servers.
+    This causes resolved to call-home to google, attempt to access network when
+    none is available, and spams logs. (LP: #1449001, #1698734)
+
+  [ Balint Reczey ]
+  * Skip starting systemd-remount-fs.service in containers
+    even when /etc/fstab is present.
+    This allows entering fully running state even when /etc/fstab
+    lists / to be mounted from a device which is not present in the
+    container. (LP: #1576341)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 17 Jul 2017 10:59:34 +0100
 
 systemd (234-1) unstable; urgency=medium
 
@@ -99,6 +218,52 @@ systemd (233-9) unstable; urgency=medium
 
  -- Michael Biebl <biebl@debian.org>  Mon, 19 Jun 2017 15:10:14 +0200
 
+systemd (233-8ubuntu2) artful; urgency=medium
+
+  * Disable fallback DNS servers.
+    This causes resolved to call-home to google, attempt to access network when
+    none is available, and spams logs. (LP: #1449001, #1698734)
+  * SECURITY UPDATE: Out-of-bounds write in systemd-resolved.
+    CVE-2017-9445 (LP: #1695546)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 28 Jun 2017 13:27:28 +0100
+
+systemd (233-8ubuntu1) artful; urgency=medium
+
+  Merge from experimental. Existing Ubuntu cherry-picks:
+  * TEST-12: cherry-pick upstream fix for compat with new netcat-openbsd.
+  * networkd: cherry-pick support for setting bridge port's priority.
+    This is a useful feature/bugfix to improve feature parity of networkd with
+    ifupdown. This matches netplan's expectations to be able to set bridge port's
+    priorities via networked. This featue is to be used by netplan/MAAS/OpenStack.
+  * Cherrypick upstream commit to enable system use kernel maximum limit for RLIMIT_NOFILE isntead of hard-coded (low) limit of 65536.
+  * debian/tests/root-unittests: disable execute and seccomp tests on arm
+    test-seccomp and test-execute fail on arm64 kernels. Marking both tests as
+    expected failures. An upstream bug report is filed to resolve these.
+  * Cherrypick upstream patch for vio predictable interface names.
+  * Cherrypick upstream patch for platform predictable interface names.
+
+  Ubuntu cherry-picks, now also applied in Debian:
+  * resolved: fix null pointer dereference crash
+
+  Remaining Ubuntu delta:
+  * ubuntu: udev.postinst preserve virtio interfaces names on upgrades, on s390x.
+    New udev generates stable interface names on s390x kvm instances, however, upon
+    upgrades existing ethX names should be preserved to prevent breaking networking
+    and software configurations.
+    This patch only affects Ubuntu systems.
+  * Skip starting systemd-remount-fs.service in containers
+    even when /etc/fstab is present.
+    This allows entering fully running state even when /etc/fstab
+    lists / to be mounted from a device which is not present in the
+    container.
+
+  New Ubuntu cherry-picks:
+  * loginctl: Chrerry-pick upstream fix to not ignore multiple session ids.
+    (LP: #1682154)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 19 Jun 2017 15:24:30 +0100
+
 systemd (233-8) experimental; urgency=medium
 
   * Bump debhelper compatibility level to 10
@@ -136,6 +301,57 @@ systemd (233-7) experimental; urgency=medium
     exist on debian systems.
 
  -- Michael Biebl <biebl@debian.org>  Wed, 24 May 2017 12:26:18 +0200
+
+systemd (233-6ubuntu3) artful; urgency=medium
+
+  * resolved: fix null pointer dereference crash (LP: #1621396)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 22 May 2017 09:29:22 +0100
+
+systemd (233-6ubuntu2) artful; urgency=medium
+
+  [ Michael Biebl ]
+  * basic/journal-importer: Fix unaligned access in get_data_size()
+    (Closes: #862062)
+
+  [ Dimitri John Ledkov ]
+  * ubuntu: disable dnssec on any ubuntu releases (LP: #1690605)
+  * Cherrypick upstream patch for vio predictable interface names.
+  * Cherrypick upstream patch for platform predictable interface names.
+    (LP: #1686784)
+
+  [ Balint Reczey ]
+  * Skip starting systemd-remount-fs.service in containers
+    even when /etc/fstab is present.
+    This allows entering fully running state even when /etc/fstab
+    lists / to be mounted from a device which is not present in the
+    container. (LP: #1576341)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 17 May 2017 19:24:03 +0100
+
+systemd (233-6ubuntu1) artful; urgency=medium
+
+  Merge from Debian, existing changes: 
+  * ubuntu: udev.postinst preserve virtio interfaces names on upgrades, on s390x.
+    New udev generates stable interface names on s390x kvm instances, however, upon
+    upgrades existing ethX names should be preserved to prevent breaking networking
+    and software configurations.
+    This patch only affects Ubuntu systems. (Closes: #860246) (LP: #1682437)
+  * TEST-12: cherry-pick upstream fix for compat with new netcat-openbsd.
+  * networkd: cherry-pick support for setting bridge port's priority.
+    This is a useful feature/bugfix to improve feature parity of networkd with
+    ifupdown. This matches netplan's expectations to be able to set bridge port's
+    priorities via networked. This featue is to be used by netplan/MAAS/OpenStack.
+
+  New changes:
+  * Cherrypick upstream commit to enable system use kernel maximum limit for
+    RLIMIT_NOFILE isntead of hard-coded (low) limit of 65536.  (LP: #1686361)
+  * debian/tests/root-unittests: disable execute and seccomp tests on arm
+    test-seccomp and test-execute fail on arm64 kernels. Marking both tests as
+    expected failures. An upstream bug report is filed to resolve these.
+    (LP: #1672499)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 02 May 2017 11:23:19 +0100
 
 systemd (233-6) experimental; urgency=medium
 
@@ -176,6 +392,52 @@ systemd (233-6) experimental; urgency=medium
     when strictly needed. (Closes: #861158)
 
  -- Michael Biebl <biebl@debian.org>  Fri, 28 Apr 2017 21:47:14 +0200
+
+systemd (233-5ubuntu1) artful; urgency=medium
+
+  [ Felipe Sateler ]
+  * Backport upstream PR #5531.
+    This delays opening the mdns and llmnr sockets until a network has enabled them.
+    This silences annoying messages when networkd receives such packets without
+    expecting them:
+      Got mDNS UDP packet on unknown scope.
+
+  [ Martin Pitt ]
+  * resolved: Disable DNSSEC by default on stretch and zesty.
+    Both Debian stretch and Ubuntu zesty are close to releasing, switch to
+    DNSSEC=off by default for those. Users can still turn it back on with
+    DNSSEC=allow-downgrade (or even "yes").
+
+  [ Michael Biebl ]
+  * Add Conflicts against hal.
+    Since v183, udev no longer supports RUN+="socket:". This feature is
+    still used by hal, but now generates vast amounts of errors in the
+    journal. Thus force the removal of hal by adding a Conflicts to the udev
+    package. This is safe, as hal is long dead and no longer useful.
+  * Drop systemd-ui Suggests
+    systemd-ui is unmaintained upstream and not particularly useful anymore.
+  * journal: fix up syslog facility when forwarding native messages.
+    Native journal messages (_TRANSPORT=journal) typically don't have a
+    syslog facility attached to it. As a result when forwarding the
+    messages to syslog they ended up with facility 0 (LOG_KERN).
+    Apply syslog_fixup_facility() so we use LOG_USER instead. (Closes: #837893)
+  * Split upstream tests into systemd-tests binary package (Closes: #859152)
+  * Get PACKAGE_VERSION from config.h.
+    This also works with meson and is not autotools specific.
+
+  [ Dimitri John Ledkov ]
+  * ubuntu: udev.postinst preserve virtio interfaces names on upgrades, on s390x.
+    New udev generates stable interface names on s390x kvm instances, however, upon
+    upgrades existing ethX names should be preserved to prevent breaking networking
+    and software configurations.
+    This patch only affects Ubuntu systems. (Closes: #860246) (LP: #1682437)
+  * TEST-12: cherry-pick upstream fix for compat with new netcat-openbsd.
+  * networkd: cherry-pick support for setting bridge port's priority.
+    This is a useful feature/bugfix to improve feature parity of networkd with
+    ifupdown. This matches netplan's expectations to be able to set bridge port's
+    priorities via networked. This featue is to be used by netplan/MAAS/OpenStack.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Fri, 21 Apr 2017 14:36:34 +0100
 
 systemd (233-5) experimental; urgency=medium
 
