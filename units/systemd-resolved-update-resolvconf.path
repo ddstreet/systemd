@@ -1,0 +1,2 @@
+[Path]
+PathChanged=/run/systemd/resolve/stub-resolv.conf
