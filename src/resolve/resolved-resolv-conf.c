@@ -228,11 +228,27 @@ static int write_resolv_conf_contents(FILE *f, OrderedSet *dns, OrderedSet *doma
         return fflush_and_check(f);
 }
 
+static int write_stub_resolv_conf_contents(FILE *f, OrderedSet *dns, OrderedSet *domains) {
+        Iterator i;
+
+        fputs("# This file is managed by man:systemd-resolved(8). Do not edit.\n#\n"
+              "# 127.0.0.53 is the systemd-resolved stub resolver.\n"
+              "# run \"systemd-resolve --status\" to see details about the actual nameservers.\n"
+              "nameserver 127.0.0.53\n\n", f);
+
+        if (!ordered_set_isempty(domains))
+                write_resolv_conf_search(domains, f);
+
+        return fflush_and_check(f);
+}
+
 int manager_write_resolv_conf(Manager *m) {
 
         _cleanup_ordered_set_free_ OrderedSet *dns = NULL, *domains = NULL;
         _cleanup_free_ char *temp_path = NULL;
+        _cleanup_free_ char *temp_path_stub = NULL;
         _cleanup_fclose_ FILE *f = NULL;
+        _cleanup_fclose_ FILE *f_stub = NULL;
         int r;
 
         assert(m);
@@ -252,8 +268,11 @@ int manager_write_resolv_conf(Manager *m) {
         r = fopen_temporary_label(PRIVATE_RESOLV_CONF, PRIVATE_RESOLV_CONF, &f, &temp_path);
         if (r < 0)
                 return log_warning_errno(r, "Failed to open private resolv.conf file for writing: %m");
-
+        r = fopen_temporary_label(PRIVATE_STUB_RESOLV_CONF, PRIVATE_STUB_RESOLV_CONF, &f_stub, &temp_path_stub);
+        if (r < 0)
+                return log_warning_errno(r, "Failed to open private stub-resolv.conf file for writing: %m");
         (void) fchmod(fileno(f), 0644);
+        (void) fchmod(fileno(f_stub), 0644);
 
         r = write_resolv_conf_contents(f, dns, domains);
         if (r < 0) {
@@ -266,11 +285,24 @@ int manager_write_resolv_conf(Manager *m) {
                 goto fail;
         }
 
+        r = write_stub_resolv_conf_contents(f_stub, dns, domains);
+        if (r < 0) {
+                log_error_errno(r, "Failed to write private stub-resolv.conf contents: %m");
+                goto fail;
+        }
+
+        if (rename(temp_path_stub, PRIVATE_STUB_RESOLV_CONF) < 0) {
+                r = log_error_errno(errno, "Failed to move private stub-resolv.conf file into place: %m");
+                goto fail;
+        }
+
         return 0;
 
 fail:
         (void) unlink(PRIVATE_RESOLV_CONF);
         (void) unlink(temp_path);
+        (void) unlink(PRIVATE_STUB_RESOLV_CONF);
+        (void) unlink(temp_path_stub);
 
         return r;
 }
