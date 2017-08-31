@@ -1,3 +1,28 @@
+systemd (232-21ubuntu6) zesty; urgency=medium
+
+  * link: Fix offload features initialization.
+    This fixes a regression introduced in v232 which caused TCP
+    segmentation offloads being disabled by default, resulting in
+    significant performance issues under certain conditions. (Closes: #864073)
+    (LP: #1703393)
+  * loginctl: Fix loginctl ignoring user given session IDs at command-line
+    (LP: #1682154)
+  * Disable fallback DNS servers.
+    This causes resolved to call-home to google, attempt to access network when
+    none is available, and spams logs. (LP: #1449001)
+  * initramfs-tools: trigger udevadm add actions with subsystems first.
+    This updates the initramfs-tools init-top udev script to trigger udevadm
+    actions with type specified. This mimicks the
+    systemd-udev-trigger.service. Without type specified only devices are
+    triggered, but triggering subsystems may also be required and should happen
+    before triggering the devices. This is the case for example on s390x with zdev
+    generated udev rules. (LP: #1713536)
+  * Enable systemd-resolved by default. (LP: #1710410)
+  * core: fix systemd failing to serialize tasks correctly on daemon-reload.
+    (LP: #1702823)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 31 Aug 2017 13:27:39 +0100
+
 systemd (232-21ubuntu5) zesty-security; urgency=medium
 
   * SECURITY UPDATE: Out-of-bounds write in systemd-resolved (LP: #1695546)

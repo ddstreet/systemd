@@ -1,0 +1,85 @@
+From: Franck Bui <fbui@suse.com>
+Date: Mon, 27 Mar 2017 18:00:54 +0200
+Subject: core: when deserializing a unit, fully restore its cgroup state
+
+The state of a unit was not fully restored, especially the
+"cgroup_realized_mask/cgroup_enabled_mask" fields were missing.
+
+This could be seen with the following sequence:
+
+ $ systemctl show -p TasksCurrent sshd
+ TasksCurrent=1
+
+ $ systemctl daemon-reload
+
+ $ systemctl show -p TasksCurrent sshd
+ TasksCurrent=18446744073709551615
+
+This was also visible with the "status" command: "Tasks: " row wasn't
+showed in status of a service after a "daemon-reload" command.
+
+(cherry picked from commit 8b108bd0ef46f05fa7938abc787e919249459874)
+---
+ src/core/unit.c | 35 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index ef6dd57..7f731c3 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -2646,6 +2646,25 @@ bool unit_can_serialize(Unit *u) {
+         return UNIT_VTABLE(u)->serialize && UNIT_VTABLE(u)->deserialize_item;
+ }
+ 
++static int unit_serialize_cgroup_mask(FILE *f, const char *key, CGroupMask mask) {
++        _cleanup_free_ char *s = NULL;
++        int r = 0;
++
++        assert(f);
++        assert(key);
++
++        if (mask != 0) {
++                r = cg_mask_to_string(mask, &s);
++                if (r >= 0) {
++                        fputs(key, f);
++                        fputc('=', f);
++                        fputs(s, f);
++                        fputc('\n', f);
++                }
++        }
++        return r;
++}
++
+ int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
+         int r;
+ 
+@@ -2693,6 +2712,8 @@ int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
+         if (u->cgroup_path)
+                 unit_serialize_item(u, f, "cgroup", u->cgroup_path);
+         unit_serialize_item(u, f, "cgroup-realized", yes_no(u->cgroup_realized));
++        (void) unit_serialize_cgroup_mask(f, "cgroup-realized-mask", u->cgroup_realized_mask);
++        (void) unit_serialize_cgroup_mask(f, "cgroup-enabled-mask", u->cgroup_enabled_mask);
+ 
+         if (uid_is_valid(u->ref_uid))
+                 unit_serialize_item_format(u, f, "ref-uid", UID_FMT, u->ref_uid);
+@@ -2950,6 +2971,20 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
+ 
+                         continue;
+ 
++                } else if (streq(l, "cgroup-realized-mask")) {
++
++                        r = cg_mask_from_string(v, &u->cgroup_realized_mask);
++                        if (r < 0)
++                                log_unit_debug(u, "Failed to parse cgroup-realized-mask %s, ignoring.", v);
++                        continue;
++
++                } else if (streq(l, "cgroup-enabled-mask")) {
++
++                        r = cg_mask_from_string(v, &u->cgroup_enabled_mask);
++                        if (r < 0)
++                                log_unit_debug(u, "Failed to parse cgroup-enabled-mask %s, ignoring.", v);
++                        continue;
++
+                 } else if (streq(l, "ref-uid")) {
+                         uid_t uid;
+ 
