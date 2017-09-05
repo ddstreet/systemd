@@ -1,0 +1,133 @@
+From: Dimitri John Ledkov <xnox@ubuntu.com>
+Date: Tue, 5 Sep 2017 12:33:23 +0100
+Subject: networkd: add options to bridge (#4051)
+
+This patch allows to configure AgeingTimeSec, Priority and DefaultPVID for
+bridge interfaces.
+(cherry picked from commit c7440e7401461a4bc668f5dae5b1861ed26b85dd)
+---
+ man/systemd.netdev.xml                  | 20 ++++++++++++++++++++
+ src/network/networkd-netdev-bridge.c    | 18 ++++++++++++++++++
+ src/network/networkd-netdev-bridge.h    |  3 +++
+ src/network/networkd-netdev-gperf.gperf |  3 +++
+ src/shared/conf-parser.c                |  1 +
+ src/shared/conf-parser.h                |  1 +
+ 6 files changed, 46 insertions(+)
+
+diff --git a/man/systemd.netdev.xml b/man/systemd.netdev.xml
+index b854eb2..6f4b7a3 100644
+--- a/man/systemd.netdev.xml
++++ b/man/systemd.netdev.xml
+@@ -310,6 +310,26 @@
+             of the Listening and Learning states before the Forwarding state is entered.</para>
+           </listitem>
+         </varlistentry>
++        <varlistentry>
++          <term><varname>AgeingTimeSec=</varname></term>
++          <listitem>
++            <para>This specifies the number of seconds a MAC Address will be kept in
++            the forwaring database after having a packet received from this MAC Address.</para>
++          </listitem>
++        </varlistentry>
++        <varlistentry>
++          <term><varname>Priority=</varname></term>
++          <listitem>
++            <para>The priority of the bridge. An integer between 0 and 65535. A lower value
++            means higher priority. The bridge having the lowest priority will be elected as root bridge.</para>
++          </listitem>
++        </varlistentry>
++        <varlistentry>
++          <term><varname>DefaultPVID=</varname></term>
++          <listitem>
++            <para>This specifies the default port VLAN ID of a newly attached bridge port.</para>
++          </listitem>
++        </varlistentry>
+           <varlistentry>
+           <term><varname>STP=</varname></term>
+           <listitem>
+diff --git a/src/network/networkd-netdev-bridge.c b/src/network/networkd-netdev-bridge.c
+index 12b0fe9..bdbea7d 100644
+--- a/src/network/networkd-netdev-bridge.c
++++ b/src/network/networkd-netdev-bridge.c
+@@ -90,6 +90,24 @@ static int netdev_bridge_post_create(NetDev *netdev, Link *link, sd_netlink_mess
+                         return log_netdev_error_errno(netdev, r, "Could not append IFLA_BR_MAX_AGE attribute: %m");
+         }
+ 
++        if (b->ageing_time > 0) {
++                r = sd_netlink_message_append_u32(req, IFLA_BR_AGEING_TIME, usec_to_jiffies(b->ageing_time));
++                if (r < 0)
++                        return log_netdev_error_errno(netdev, r, "Could not append IFLA_BR_AGEING_TIME attribute: %m");
++        }
++
++        if (b->priority > 0) {
++                r = sd_netlink_message_append_u16(req, IFLA_BR_PRIORITY, b->priority);
++                if (r < 0)
++                        return log_netdev_error_errno(netdev, r, "Could not append IFLA_BR_PRIORITY attribute: %m");
++        }
++
++        if (b->default_pvid > 0) {
++                r = sd_netlink_message_append_u16(req, IFLA_BR_VLAN_DEFAULT_PVID, b->default_pvid);
++                if (r < 0)
++                        return log_netdev_error_errno(netdev, r, "Could not append IFLA_BR_VLAN_DEFAULT_PVID attribute: %m");
++        }
++
+         if (b->mcast_querier >= 0) {
+                 r = sd_netlink_message_append_u8(req, IFLA_BR_MCAST_QUERIER, b->mcast_querier);
+                 if (r < 0)
+diff --git a/src/network/networkd-netdev-bridge.h b/src/network/networkd-netdev-bridge.h
+index 4ce0fbb..53f72f1 100644
+--- a/src/network/networkd-netdev-bridge.h
++++ b/src/network/networkd-netdev-bridge.h
+@@ -28,10 +28,13 @@ typedef struct Bridge {
+         int mcast_snooping;
+         int vlan_filtering;
+         int stp;
++        uint16_t priority;
++        uint16_t default_pvid;
+ 
+         usec_t forward_delay;
+         usec_t hello_time;
+         usec_t max_age;
++        usec_t ageing_time;
+ } Bridge;
+ 
+ DEFINE_NETDEV_CAST(BRIDGE, Bridge);
+diff --git a/src/network/networkd-netdev-gperf.gperf b/src/network/networkd-netdev-gperf.gperf
+index a1ca1a3..6dbb627 100644
+--- a/src/network/networkd-netdev-gperf.gperf
++++ b/src/network/networkd-netdev-gperf.gperf
+@@ -102,7 +102,10 @@ Bond.ARPIntervalSec,         config_parse_sec,                   0,
+ Bond.LearnPacketIntervalSec, config_parse_sec,                   0,                             offsetof(Bond, lp_interval)
+ Bridge.HelloTimeSec,         config_parse_sec,                   0,                             offsetof(Bridge, hello_time)
+ Bridge.MaxAgeSec,            config_parse_sec,                   0,                             offsetof(Bridge, max_age)
++Bridge.AgeingTimeSec,        config_parse_sec,                   0,                             offsetof(Bridge, ageing_time)
+ Bridge.ForwardDelaySec,      config_parse_sec,                   0,                             offsetof(Bridge, forward_delay)
++Bridge.Priority,             config_parse_uint16,                0,                             offsetof(Bridge, priority)
++Bridge.DefaultPVID,          config_parse_vlanid,                0,                             offsetof(Bridge, default_pvid)
+ Bridge.MulticastQuerier,     config_parse_tristate,              0,                             offsetof(Bridge, mcast_querier)
+ Bridge.MulticastSnooping,    config_parse_tristate,              0,                             offsetof(Bridge, mcast_snooping)
+ Bridge.VLANFiltering,        config_parse_tristate,              0,                             offsetof(Bridge, vlan_filtering)
+diff --git a/src/shared/conf-parser.c b/src/shared/conf-parser.c
+index 1ef62b0..267b874 100644
+--- a/src/shared/conf-parser.c
++++ b/src/shared/conf-parser.c
+@@ -456,6 +456,7 @@ int config_parse_many(const char *conf_file,
+ 
+ DEFINE_PARSER(int, int, safe_atoi);
+ DEFINE_PARSER(long, long, safe_atoli);
++DEFINE_PARSER(uint16, uint16_t, safe_atou16);
+ DEFINE_PARSER(uint32, uint32_t, safe_atou32);
+ DEFINE_PARSER(uint64, uint64_t, safe_atou64);
+ DEFINE_PARSER(unsigned, unsigned, safe_atou);
+diff --git a/src/shared/conf-parser.h b/src/shared/conf-parser.h
+index bfc4ced..dd4f6ea 100644
+--- a/src/shared/conf-parser.h
++++ b/src/shared/conf-parser.h
+@@ -107,6 +107,7 @@ int config_parse_many(const char *conf_file,      /* possibly NULL */
+ int config_parse_int(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_unsigned(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_long(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
++int config_parse_uint16(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_uint32(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_uint64(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_double(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line,  const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);

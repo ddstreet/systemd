@@ -57,6 +57,8 @@ resolved-simplify-alloc-size-calculation.patch
 shared-recognize-DNS-names-with-more-than-one-trailing-do.patch
 network-accept-colons-in-network-interface-names-normally.patch
 networkd-add-support-to-set-STP-3903.patch
+networkd-add-options-to-bridge-4051.patch
+networkd-apply-bridge-vlan-configuration-correct.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
