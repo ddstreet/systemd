@@ -1,0 +1,83 @@
+From: Dimitri John Ledkov <xnox@ubuntu.com>
+Date: Tue, 5 Sep 2017 12:24:37 +0100
+Subject: networkd: add support to set STP (#3903)
+
+fixes #3881
+(cherry picked from commit b760a9af902c73ae76a05e17374e12e8e6c4e629)
+
+LP: #1665088
+---
+ man/systemd.netdev.xml                  | 9 ++++++++-
+ src/network/networkd-netdev-bridge.c    | 7 +++++++
+ src/network/networkd-netdev-bridge.h    | 1 +
+ src/network/networkd-netdev-gperf.gperf | 1 +
+ 4 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/man/systemd.netdev.xml b/man/systemd.netdev.xml
+index b697d0c..b854eb2 100644
+--- a/man/systemd.netdev.xml
++++ b/man/systemd.netdev.xml
+@@ -310,8 +310,15 @@
+             of the Listening and Learning states before the Forwarding state is entered.</para>
+           </listitem>
+         </varlistentry>
++          <varlistentry>
++          <term><varname>STP=</varname></term>
++          <listitem>
++            <para>A boolean. This enables the bridge's Spanning Tree Protocol (STP). When unset,
++            the kernel's default setting applies.
++            </para>
++          </listitem>
++        </varlistentry>
+       </variablelist>
+-
+   </refsect1>
+ 
+   <refsect1>
+diff --git a/src/network/networkd-netdev-bridge.c b/src/network/networkd-netdev-bridge.c
+index a5085d2..12b0fe9 100644
+--- a/src/network/networkd-netdev-bridge.c
++++ b/src/network/networkd-netdev-bridge.c
+@@ -108,6 +108,12 @@ static int netdev_bridge_post_create(NetDev *netdev, Link *link, sd_netlink_mess
+                         return log_netdev_error_errno(netdev, r, "Could not append IFLA_BR_VLAN_FILTERING attribute: %m");
+         }
+ 
++        if (b->stp >= 0) {
++                r = sd_netlink_message_append_u32(req, IFLA_BR_STP_STATE, b->stp);
++                if (r < 0)
++                        return log_netdev_error_errno(netdev, r, "Could not append IFLA_BR_STP_STATE attribute: %m");
++        }
++
+         r = sd_netlink_message_close_container(req);
+         if (r < 0)
+                 return log_netdev_error_errno(netdev, r, "Could not append IFLA_LINKINFO attribute: %m");
+@@ -135,6 +141,7 @@ static void bridge_init(NetDev *n) {
+         b->mcast_querier = -1;
+         b->mcast_snooping = -1;
+         b->vlan_filtering = -1;
++        b->stp = -1;
+ }
+ 
+ const NetDevVTable bridge_vtable = {
+diff --git a/src/network/networkd-netdev-bridge.h b/src/network/networkd-netdev-bridge.h
+index a637aea..4ce0fbb 100644
+--- a/src/network/networkd-netdev-bridge.h
++++ b/src/network/networkd-netdev-bridge.h
+@@ -27,6 +27,7 @@ typedef struct Bridge {
+         int mcast_querier;
+         int mcast_snooping;
+         int vlan_filtering;
++        int stp;
+ 
+         usec_t forward_delay;
+         usec_t hello_time;
+diff --git a/src/network/networkd-netdev-gperf.gperf b/src/network/networkd-netdev-gperf.gperf
+index 9d69f61..a1ca1a3 100644
+--- a/src/network/networkd-netdev-gperf.gperf
++++ b/src/network/networkd-netdev-gperf.gperf
+@@ -106,4 +106,5 @@ Bridge.ForwardDelaySec,      config_parse_sec,                   0,
+ Bridge.MulticastQuerier,     config_parse_tristate,              0,                             offsetof(Bridge, mcast_querier)
+ Bridge.MulticastSnooping,    config_parse_tristate,              0,                             offsetof(Bridge, mcast_snooping)
+ Bridge.VLANFiltering,        config_parse_tristate,              0,                             offsetof(Bridge, vlan_filtering)
++Bridge.STP,                  config_parse_tristate,              0,                             offsetof(Bridge, stp)
+ VRF.TableId,                 config_parse_uint32,                0,                             offsetof(Vrf, table_id)

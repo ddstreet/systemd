@@ -310,8 +310,35 @@
             of the Listening and Learning states before the Forwarding state is entered.</para>
           </listitem>
         </varlistentry>
+        <varlistentry>
+          <term><varname>AgeingTimeSec=</varname></term>
+          <listitem>
+            <para>This specifies the number of seconds a MAC Address will be kept in
+            the forwaring database after having a packet received from this MAC Address.</para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><varname>Priority=</varname></term>
+          <listitem>
+            <para>The priority of the bridge. An integer between 0 and 65535. A lower value
+            means higher priority. The bridge having the lowest priority will be elected as root bridge.</para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><varname>DefaultPVID=</varname></term>
+          <listitem>
+            <para>This specifies the default port VLAN ID of a newly attached bridge port.</para>
+          </listitem>
+        </varlistentry>
+          <varlistentry>
+          <term><varname>STP=</varname></term>
+          <listitem>
+            <para>A boolean. This enables the bridge's Spanning Tree Protocol (STP). When unset,
+            the kernel's default setting applies.
+            </para>
+          </listitem>
+        </varlistentry>
       </variablelist>
-
   </refsect1>
 
   <refsect1>
@@ -960,6 +987,33 @@
         </listitem>
       </varlistentry>
 
+      <varlistentry>
+        <term><varname>ActiveSlave=</varname></term>
+        <listitem>
+          <para>A boolean. Specifies the new active slave. The <literal>ActiveSlave=</literal>
+          option is only valid for following modes:
+          <literal>active-backup</literal>,
+          <literal>balance-alb</literal> and
+          <literal>balance-tlb</literal>. Defaults to false.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><varname>PrimarySlave=</varname></term>
+        <listitem>
+          <para>A boolean. Specifies which slave is the primary device. The specified
+          device will always be the active slave while it is available. Only when the
+          primary is off-line will alternate devices be used.  This is useful when
+          one slave is preferred over another, e.g. when one slave has higher throughput
+          than another. The <literal>PrimarySlave=</literal> option is only valid for
+          following modes:
+          <literal>active-backup</literal>,
+          <literal>balance-alb</literal> and
+          <literal>balance-tlb</literal>. Defaults to false.
+          </para>
+        </listitem>
+      </varlistentry>
     </variablelist>
 
     <para>For more detail information see

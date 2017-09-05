@@ -1,3 +1,21 @@
+systemd (229-4ubuntu20) xenial; urgency=medium
+
+  * resolved: recognize DNS names with more than one trailing dot as invalid
+    (LP: #1600000)
+  * Ignore failures to set Nice priority on services in containers.
+    (LP: #1709536)
+  * networkd: accept `:' in ifnames in systemd/networkd. (LP: #1714933)
+  * initramfs-tools: trigger udevadm add actions with subsystems first.
+    (LP: #1713536)
+  * networkd: Add support to set STP value on a bridge. (LP: #1665088)
+  * networkd: add support for AgeingTImeSec, Priority and DefaultPVID settings.
+    (LP: #1715131)
+    - Drop cherrypick of uint16 config parser, superseeded by above commit.
+  * networkd: add support to set ActiveSlave and PrimarySlave. (LP: #1709135)
+    - networkd: add support to configure ARP, depedency of Primary/ActiveSlave.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 05 Sep 2017 14:01:51 +0100
+
 systemd (229-4ubuntu19) xenial; urgency=medium
 
   * debian/extra/units/systemd-resolved.service.d/resolvconf.conf: partially
