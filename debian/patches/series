@@ -59,6 +59,7 @@ network-accept-colons-in-network-interface-names-normally.patch
 networkd-add-support-to-set-STP-3903.patch
 networkd-add-options-to-bridge-4051.patch
 networkd-apply-bridge-vlan-configuration-correct.patch
+networkd-bond-support-primary-slave-and-active-slave-4873.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
