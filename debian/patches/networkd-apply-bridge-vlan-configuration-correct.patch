@@ -1,0 +1,111 @@
+From: Tobias Jungel <tobias.jungel@bisdn.de>
+Date: Thu, 4 Aug 2016 17:11:13 +0200
+Subject: networkd: apply bridge vlan configuration correct
+
+bridge vlan configuration was applied even if it wasn't configured.
+
+fixes #3876
+
+(cherry picked from commit ffff9abe1d4dc61d6f9a47ce0f3f85a3854373cf)
+---
+ src/network/networkd-brvlan.c            | 20 ++++++++++++++++++++
+ src/network/networkd-brvlan.h            |  1 +
+ src/network/networkd-link.c              |  3 ++-
+ src/network/networkd-network-gperf.gperf |  2 +-
+ src/network/networkd-network.h           |  1 +
+ 5 files changed, 25 insertions(+), 2 deletions(-)
+
+diff --git a/src/network/networkd-brvlan.c b/src/network/networkd-brvlan.c
+index 8bc330e..18ecd86 100644
+--- a/src/network/networkd-brvlan.c
++++ b/src/network/networkd-brvlan.c
+@@ -257,6 +257,24 @@ static int parse_vid_range(const char *rvalue, uint16_t *vid, uint16_t *vid_end)
+         return r;
+ }
+ 
++int config_parse_brvlan_pvid(const char *unit, const char *filename,
++                             unsigned line, const char *section,
++                             unsigned section_line, const char *lvalue,
++                             int ltype, const char *rvalue, void *data,
++                             void *userdata) {
++        Network *network = userdata;
++        int r;
++        uint16_t pvid;
++        r = parse_vlanid(rvalue, &pvid);
++        if (r < 0)
++                return r;
++
++        network->pvid = pvid;
++        network->use_br_vlan = true;
++
++        return 0;
++}
++
+ int config_parse_brvlan_vlan(const char *unit, const char *filename,
+                              unsigned line, const char *section,
+                              unsigned section_line, const char *lvalue,
+@@ -288,6 +306,7 @@ int config_parse_brvlan_vlan(const char *unit, const char *filename,
+                 for (; vid <= vid_end; vid++)
+                         set_bit(vid, network->br_vid_bitmap);
+         }
++        network->use_br_vlan = true;
+         return 0;
+ }
+ 
+@@ -325,5 +344,6 @@ int config_parse_brvlan_untagged(const char *unit, const char *filename,
+                         set_bit(vid, network->br_untagged_bitmap);
+                 }
+         }
++        network->use_br_vlan = true;
+         return 0;
+ }
+diff --git a/src/network/networkd-brvlan.h b/src/network/networkd-brvlan.h
+index 6aa6883..b37633f 100644
+--- a/src/network/networkd-brvlan.h
++++ b/src/network/networkd-brvlan.h
+@@ -25,5 +25,6 @@ typedef struct Link Link;
+ 
+ int br_vlan_configure(Link *link, uint16_t pvid, uint32_t *br_vid_bitmap, uint32_t *br_untagged_bitmap);
+ 
++int config_parse_brvlan_pvid(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_brvlan_vlan(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_brvlan_untagged(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index 6990c78..1e33441 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -2010,7 +2010,8 @@ static int link_joined(Link *link) {
+                         log_link_error_errno(link, r, "Could not set bridge message: %m");
+         }
+ 
+-        if (link->network->bridge || streq_ptr("bridge", link->kind)) {
++        if (link->network->use_br_vlan &&
++            (link->network->bridge || streq_ptr("bridge", link->kind))) {
+                 r = link_set_bridge_vlan(link);
+                 if (r < 0)
+                         log_link_error_errno(link, r, "Could not set bridge vlan: %m");
+diff --git a/src/network/networkd-network-gperf.gperf b/src/network/networkd-network-gperf.gperf
+index ae1493c..50bfc7b 100644
+--- a/src/network/networkd-network-gperf.gperf
++++ b/src/network/networkd-network-gperf.gperf
+@@ -115,7 +115,7 @@ Bridge.UnicastFlood,                    config_parse_bool,
+ Bridge.Priority,                        config_parse_uint16,                            0,                             offsetof(Network, priority)
+ BridgeFDB.MACAddress,                   config_parse_fdb_hwaddr,                        0,                             0
+ BridgeFDB.VLANId,                       config_parse_fdb_vlan_id,                       0,                             0
+-BridgeVLAN.PVID,                        config_parse_vlanid,                            0,                             offsetof(Network, pvid)
++BridgeVLAN.PVID,                        config_parse_brvlan_pvid,                       0,                             0
+ BridgeVLAN.VLAN,                        config_parse_brvlan_vlan,                       0,                             0
+ BridgeVLAN.EgressUntagged,              config_parse_brvlan_untagged,                   0,                             0
+ /* backwards compatibility: do not add new entries to this section */
+diff --git a/src/network/networkd-network.h b/src/network/networkd-network.h
+index dcdf6f1..dc8fa78 100644
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -152,6 +152,7 @@ struct Network {
+         uint32_t cost;
+         uint16_t priority;
+ 
++        bool use_br_vlan;
+         uint16_t pvid;
+         uint32_t br_vid_bitmap[BRIDGE_VLAN_BITMAP_LEN];
+         uint32_t br_untagged_bitmap[BRIDGE_VLAN_BITMAP_LEN];

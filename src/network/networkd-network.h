@@ -152,6 +152,7 @@ struct Network {
         uint32_t cost;
         uint16_t priority;
 
+        bool use_br_vlan;
         uint16_t pvid;
         uint32_t br_vid_bitmap[BRIDGE_VLAN_BITMAP_LEN];
         uint32_t br_untagged_bitmap[BRIDGE_VLAN_BITMAP_LEN];
@@ -165,6 +166,8 @@ struct Network {
         int proxy_arp;
 
         bool ipv6_accept_ra_use_dns;
+        bool active_slave;
+        bool primary_slave;
         DHCPUseDomains ipv6_accept_ra_use_domains;
 
         union in_addr_union ipv6_token;
@@ -172,6 +175,7 @@ struct Network {
 
         struct ether_addr *mac;
         unsigned mtu;
+        int arp;
         uint32_t iaid;
         DUID duid;
 
