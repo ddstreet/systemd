@@ -1,0 +1,167 @@
+From: Susant Sahani <ssahani@users.noreply.github.com>
+Date: Wed, 21 Dec 2016 23:40:36 +0530
+Subject: networkd: bond support primary slave and active slave (#4873)
+
+active_slave:
+
+Specifies the new active slave for modes that support it
+(active-backup, balance-alb and balance-tlb).
+
+primary slave:
+systemd-networks currently lacks the capability to set the primary slave
+in an
+active-backup bonding. This is necessary if you prefer one interface
+over the
+other. A common example is a eth0-wlan0 bonding on a laptop where you'd
+want to
+switch to the wired connection whenever it's available.
+
+Fixes: #2837
+(cherry picked from commit eb64b435ebb2a7cb1274d5f8d8c323905caf29bc)
+---
+ man/systemd.netdev.xml                   | 27 +++++++++++++++
+ src/network/networkd-link.c              | 58 ++++++++++++++++++++++++++++++++
+ src/network/networkd-network-gperf.gperf |  2 ++
+ src/network/networkd-network.h           |  2 ++
+ 4 files changed, 89 insertions(+)
+
+diff --git a/man/systemd.netdev.xml b/man/systemd.netdev.xml
+index 6f4b7a3..2236912 100644
+--- a/man/systemd.netdev.xml
++++ b/man/systemd.netdev.xml
+@@ -987,6 +987,33 @@
+         </listitem>
+       </varlistentry>
+ 
++      <varlistentry>
++        <term><varname>ActiveSlave=</varname></term>
++        <listitem>
++          <para>A boolean. Specifies the new active slave. The <literal>ActiveSlave=</literal>
++          option is only valid for following modes:
++          <literal>active-backup</literal>,
++          <literal>balance-alb</literal> and
++          <literal>balance-tlb</literal>. Defaults to false.
++          </para>
++        </listitem>
++      </varlistentry>
++
++      <varlistentry>
++        <term><varname>PrimarySlave=</varname></term>
++        <listitem>
++          <para>A boolean. Specifies which slave is the primary device. The specified
++          device will always be the active slave while it is available. Only when the
++          primary is off-line will alternate devices be used.  This is useful when
++          one slave is preferred over another, e.g. when one slave has higher throughput
++          than another. The <literal>PrimarySlave=</literal> option is only valid for
++          following modes:
++          <literal>active-backup</literal>,
++          <literal>balance-alb</literal> and
++          <literal>balance-tlb</literal>. Defaults to false.
++          </para>
++        </listitem>
++      </varlistentry>
+     </variablelist>
+ 
+     <para>For more detail information see
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index 1e33441..e7853df 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1381,6 +1381,58 @@ static int link_set_bridge(Link *link) {
+         return r;
+ }
+ 
++static int link_bond_set(Link *link) {
++        _cleanup_(sd_netlink_message_unrefp) sd_netlink_message *req = NULL;
++        int r;
++
++        assert(link);
++        assert(link->network);
++
++        r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_NEWLINK, link->network->bond->ifindex);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not allocate RTM_SETLINK message: %m");
++
++        r = sd_netlink_message_set_flags(req, NLM_F_REQUEST | NLM_F_ACK);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not set netlink flags: %m");
++
++        r = sd_netlink_message_open_container(req, IFLA_LINKINFO);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not append IFLA_PROTINFO attribute: %m");
++
++        r = sd_netlink_message_open_container_union(req, IFLA_INFO_DATA, "bond");
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not append IFLA_INFO_DATA attribute: %m");
++
++        if (link->network->active_slave) {
++                r = sd_netlink_message_append_u32(req, IFLA_BOND_ACTIVE_SLAVE, link->ifindex);
++                if (r < 0)
++                        return log_link_error_errno(link, r, "Could not append IFLA_BOND_ACTIVE_SLAVE attribute: %m");
++        }
++
++        if (link->network->primary_slave) {
++                r = sd_netlink_message_append_u32(req, IFLA_BOND_PRIMARY, link->ifindex);
++                if (r < 0)
++                        return log_link_error_errno(link, r, "Could not append IFLA_BOND_PRIMARY attribute: %m");
++        }
++
++        r = sd_netlink_message_close_container(req);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not append IFLA_LINKINFO attribute: %m");
++
++        r = sd_netlink_message_close_container(req);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not append IFLA_INFO_DATA attribute: %m");
++
++        r = sd_netlink_call_async(link->manager->rtnl, req, set_flags_handler, link, 0, NULL);
++        if (r < 0)
++                return log_link_error_errno(link, r,  "Could not send rtnetlink message: %m");
++
++        link_ref(link);
++
++        return r;
++}
++
+ static int link_lldp_save(Link *link) {
+         _cleanup_free_ char *temp_path = NULL;
+         _cleanup_fclose_ FILE *f = NULL;
+@@ -2010,6 +2062,12 @@ static int link_joined(Link *link) {
+                         log_link_error_errno(link, r, "Could not set bridge message: %m");
+         }
+ 
++        if (link->network->bond) {
++                r = link_bond_set(link);
++                if (r < 0)
++                        log_link_error_errno(link, r, "Could not set bond message: %m");
++        }
++
+         if (link->network->use_br_vlan &&
+             (link->network->bridge || streq_ptr("bridge", link->kind))) {
+                 r = link_set_bridge_vlan(link);
+diff --git a/src/network/networkd-network-gperf.gperf b/src/network/networkd-network-gperf.gperf
+index 50bfc7b..a98e8b3 100644
+--- a/src/network/networkd-network-gperf.gperf
++++ b/src/network/networkd-network-gperf.gperf
+@@ -58,6 +58,8 @@ Network.IPForward,                      config_parse_address_family_boolean_with
+ Network.IPMasquerade,                   config_parse_bool,                              0,                             offsetof(Network, ip_masquerade)
+ Network.IPv6PrivacyExtensions,          config_parse_ipv6_privacy_extensions,           0,                             offsetof(Network, ipv6_privacy_extensions)
+ Network.IPv6AcceptRA,                   config_parse_tristate,                          0,                             offsetof(Network, ipv6_accept_ra)
++Network.ActiveSlave,                    config_parse_bool,                              0,                             offsetof(Network, active_slave)
++Network.PrimarySlave,                   config_parse_bool,                              0,                             offsetof(Network, primary_slave)
+ /* legacy alias for the above */
+ Network.IPv6AcceptRouterAdvertisements, config_parse_tristate,                          0,                             offsetof(Network, ipv6_accept_ra)
+ Network.IPv6DuplicateAddressDetection,  config_parse_int,                               0,                             offsetof(Network, ipv6_dad_transmits)
+diff --git a/src/network/networkd-network.h b/src/network/networkd-network.h
+index dc8fa78..efa512f 100644
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -166,6 +166,8 @@ struct Network {
+         int proxy_arp;
+ 
+         bool ipv6_accept_ra_use_dns;
++        bool active_slave;
++        bool primary_slave;
+         DHCPUseDomains ipv6_accept_ra_use_domains;
+ 
+         union in_addr_union ipv6_token;

@@ -1,0 +1,22 @@
+From: peoronoob <peoro.noob@gmail.com>
+Date: Tue, 24 Jan 2017 04:26:41 +0100
+Subject: network: accept colons in network interface names,
+ normally used for alias interfaces (#5117)
+
+(cherry picked from commit a341dfe563bf3be791107a0c98d47f74366c637d)
+---
+ src/basic/socket-util.c     | 2 +-
+ src/test/test-socket-util.c | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+--- a/src/basic/socket-util.c
++++ b/src/basic/socket-util.c
+@@ -818,7 +818,7 @@
+                 if ((unsigned char) *p <= 32U)
+                         return false;
+ 
+-                if (*p == ':' || *p == '/')
++                if (*p == '/')
+                         return false;
+ 
+                 numeric = numeric && (*p >= '0' && *p <= '9');

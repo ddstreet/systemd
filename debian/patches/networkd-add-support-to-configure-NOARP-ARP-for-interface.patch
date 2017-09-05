@@ -1,0 +1,153 @@
+From: Susant Sahani <ssahani@users.noreply.github.com>
+Date: Thu, 4 Aug 2016 19:30:58 +0530
+Subject: networkd: add support to configure NOARP/ARP for interface (#3854)
+
+https://lists.freedesktop.org/archives/systemd-devel/2016-August/037268.html
+(cherry picked from commit 99d2baa2cab0706d89beff596f997d4e3a1c833f)
+---
+ man/systemd.network.xml                  | 11 ++++++
+ src/network/networkd-link.c              | 63 ++++++++++++++++++++++++++++++++
+ src/network/networkd-network-gperf.gperf |  1 +
+ src/network/networkd-network.c           |  1 +
+ src/network/networkd-network.h           |  1 +
+ 5 files changed, 77 insertions(+)
+
+diff --git a/man/systemd.network.xml b/man/systemd.network.xml
+index db7fe5c..130b5f2 100644
+--- a/man/systemd.network.xml
++++ b/man/systemd.network.xml
+@@ -204,6 +204,17 @@
+           understood to the base of 1024.</para>
+         </listitem>
+       </varlistentry>
++      <varlistentry>
++        <term><varname>ARP=</varname></term>
++        <listitem>
++          <para> A boolean. Enables or disables the ARP (low-level Address Resolution Protocol)
++          for this interface. Defaults to unset, which means that the kernel default will be used.</para>
++          <para> For example, disabling ARP is useful when creating multiple MACVLAN or VLAN virtual
++          interfaces atop a single lower-level physical interface, which will then only serve as a
++          link/"bridge" device aggregating traffic to the same physical link and not participate in
++          the network otherwise.</para>
++        </listitem>
++      </varlistentry>
+     </variablelist>
+   </refsect1>
+ 
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index e7853df..4f61855 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1318,6 +1318,65 @@ int link_set_mtu(Link *link, uint32_t mtu) {
+         return 0;
+ }
+ 
++static int set_flags_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
++        _cleanup_link_unref_ Link *link = userdata;
++        int r;
++
++        assert(m);
++        assert(link);
++        assert(link->ifname);
++
++        if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
++                return 1;
++
++        r = sd_netlink_message_get_errno(m);
++        if (r < 0)
++                log_link_warning_errno(link, r, "Could not set link flags: %m");
++
++        return 1;
++}
++
++static int link_set_flags(Link *link) {
++        _cleanup_(sd_netlink_message_unrefp) sd_netlink_message *req = NULL;
++        unsigned ifi_change = 0;
++        unsigned ifi_flags = 0;
++        int r;
++
++        assert(link);
++        assert(link->manager);
++        assert(link->manager->rtnl);
++
++        if (link->flags & IFF_LOOPBACK)
++                return 0;
++
++        if (!link->network)
++                return 0;
++
++        if (link->network->arp < 0)
++                return 0;
++
++        r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_SETLINK, link->ifindex);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not allocate RTM_SETLINK message: %m");
++
++        if (link->network->arp >= 0) {
++                ifi_change |= IFF_NOARP;
++                ifi_flags |= IFF_NOARP;
++        }
++
++        r = sd_rtnl_message_link_set_flags(req, ifi_flags, ifi_change);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not set link flags: %m");
++
++        r = sd_netlink_call_async(link->manager->rtnl, req, set_flags_handler, link, 0, NULL);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not send rtnetlink message: %m");
++
++        link_ref(link);
++
++        return 0;
++}
++
+ static int link_set_bridge(Link *link) {
+         _cleanup_(sd_netlink_message_unrefp) sd_netlink_message *req = NULL;
+         int r;
+@@ -2450,6 +2509,10 @@ static int link_configure(Link *link) {
+         if (r < 0)
+                 return r;
+ 
++        r = link_set_flags(link);
++        if (r < 0)
++                return r;
++
+         if (link_ipv4ll_enabled(link)) {
+                 r = ipv4ll_configure(link);
+                 if (r < 0)
+diff --git a/src/network/networkd-network-gperf.gperf b/src/network/networkd-network-gperf.gperf
+index a98e8b3..e560776 100644
+--- a/src/network/networkd-network-gperf.gperf
++++ b/src/network/networkd-network-gperf.gperf
+@@ -28,6 +28,7 @@ Match.KernelCommandLine,                config_parse_net_condition,
+ Match.Architecture,                     config_parse_net_condition,                     CONDITION_ARCHITECTURE,        offsetof(Network, match_arch)
+ Link.MACAddress,                        config_parse_hwaddr,                            0,                             offsetof(Network, mac)
+ Link.MTUBytes,                          config_parse_iec_size,                          0,                             offsetof(Network, mtu)
++Link.ARP,                               config_parse_tristate,                          0,                             offsetof(Network, arp)
+ Network.Description,                    config_parse_string,                            0,                             offsetof(Network, description)
+ Network.Bridge,                         config_parse_netdev,                            0,                             offsetof(Network, bridge)
+ Network.Bond,                           config_parse_netdev,                            0,                             offsetof(Network, bond)
+diff --git a/src/network/networkd-network.c b/src/network/networkd-network.c
+index 61fdb15..b35727d 100644
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -135,6 +135,7 @@ static int network_load_one(Manager *manager, const char *filename) {
+         network->ipv6_hop_limit = -1;
+         network->duid.type = _DUID_TYPE_INVALID;
+         network->proxy_arp = -1;
++        network->arp = -1;
+         network->ipv6_accept_ra_use_dns = true;
+ 
+         r = config_parse(NULL, filename, file,
+diff --git a/src/network/networkd-network.h b/src/network/networkd-network.h
+index efa512f..81ca637 100644
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -175,6 +175,7 @@ struct Network {
+ 
+         struct ether_addr *mac;
+         unsigned mtu;
++        int arp;
+         uint32_t iaid;
+         DUID duid;
+ 
