@@ -123,6 +123,8 @@ int fd_inc_rcvbuf(int fd, size_t n);
 int ip_tos_to_string_alloc(int i, char **s);
 int ip_tos_from_string(const char *s);
 
+bool ifname_valid(const char *p);
+
 int getpeercred(int fd, struct ucred *ucred);
 int getpeersec(int fd, char **ret);
 
@@ -132,6 +134,8 @@ int send_one_fd_sa(int transport_fd,
                    int flags);
 #define send_one_fd(transport_fd, fd, flags) send_one_fd_sa(transport_fd, fd, NULL, 0, flags)
 int receive_one_fd(int transport_fd, int flags);
+
+ssize_t next_datagram_size_fd(int fd);
 
 #define CMSG_FOREACH(cmsg, mh)                                          \
         for ((cmsg) = CMSG_FIRSTHDR(mh); (cmsg); (cmsg) = CMSG_NXTHDR((mh), (cmsg)))
