@@ -65,6 +65,12 @@ int manager_read_resolv_conf(Manager *m) {
             st.st_ino == own.st_ino)
                 return 0;
 
+        /* Is it symlinked to our own stub file? */
+        if (stat(PRIVATE_STUB_RESOLV_CONF, &own) >= 0 &&
+            st.st_dev == own.st_dev &&
+            st.st_ino == own.st_ino)
+                return 0;
+
         f = fopen("/etc/resolv.conf", "re");
         if (!f) {
                 if (errno == ENOENT)

@@ -1,3 +1,7 @@
+[Unit]
+ConditionPathExists=/run/resolvconf/enable-updates
+ConditionFileIsExecutable=/sbin/resolvconf
+
 [Service]
 Type=oneshot
-ExecStart=+/bin/sh -c '[ ! -e /run/resolvconf/enable-updates ] || cat /run/systemd/resolve/stub-resolv.conf | /sbin/resolvconf -a systemd-resolved'
+ExecStart=+-/bin/sh -c 'cat /run/systemd/resolve/stub-resolv.conf | /sbin/resolvconf -a systemd-resolved'

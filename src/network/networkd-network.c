@@ -167,6 +167,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->dhcp_route_metric = DHCP_ROUTE_METRIC;
         network->dhcp_client_identifier = DHCP_CLIENT_ID_DUID;
         network->dhcp_route_table = RT_TABLE_MAIN;
+        network->dhcp_use_mtu = true;
 
         network->dhcp_server_emit_dns = true;
         network->dhcp_server_emit_ntp = true;
