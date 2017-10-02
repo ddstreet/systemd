@@ -108,6 +108,26 @@ static void free_data(void) {
         }
 }
 
+/* Hack for Ubuntu phone: check if path is an existing symlink to
+ * /etc/writable; if it is, update that instead */
+static const char* writable_filename(const char *path) {
+        ssize_t r;
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
+        const char *result = path;
+        int orig_errno = errno;
+
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
+        }
+
+        errno = orig_errno;
+        return result;
+}
+
+
 static int read_data(void) {
         int r;
 
@@ -117,11 +137,11 @@ static int read_data(void) {
         if (!data[PROP_HOSTNAME])
                 return -ENOMEM;
 
-        r = read_one_line_file("/etc/hostname", &data[PROP_STATIC_HOSTNAME]);
+        r = read_one_line_file(writable_filename("/etc/hostname"), &data[PROP_STATIC_HOSTNAME]);
         if (r < 0 && r != -ENOENT)
                 return r;
 
-        r = parse_env_file("/etc/machine-info", NEWLINE,
+        r = parse_env_file(writable_filename("/etc/machine-info"), NEWLINE,
                            "PRETTY_HOSTNAME", &data[PROP_PRETTY_HOSTNAME],
                            "ICON_NAME", &data[PROP_ICON_NAME],
                            "CHASSIS", &data[PROP_CHASSIS],
@@ -284,12 +304,12 @@ static int write_data_static_hostname(void) {
 
         if (isempty(data[PROP_STATIC_HOSTNAME])) {
 
-                if (unlink("/etc/hostname") < 0)
+                if (unlink(writable_filename("/etc/hostname")) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
-        return write_string_file_atomic_label("/etc/hostname", data[PROP_STATIC_HOSTNAME]);
+        return write_string_file_atomic_label(writable_filename("/etc/hostname"), data[PROP_STATIC_HOSTNAME]);
 }
 
 static int write_data_other(void) {
@@ -303,7 +323,7 @@ static int write_data_other(void) {
         char **l = NULL;
         int r, p;
 
-        r = load_env_file("/etc/machine-info", NULL, &l);
+        r = load_env_file(writable_filename("/etc/machine-info"), NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -333,13 +353,13 @@ static int write_data_other(void) {
 
         if (strv_isempty(l)) {
 
-                if (unlink("/etc/machine-info") < 0)
+                if (unlink(writable_filename("/etc/machine-info")) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
 
-        r = write_env_file_label("/etc/machine-info", l);
+        r = write_env_file_label(writable_filename("/etc/machine-info"), l);
         strv_free(l);
 
         return r;
