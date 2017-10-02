@@ -796,6 +796,18 @@ AM_COND_IF([ENABLE_CGMANAGER],
 	PKG_CHECK_MODULES([DBUS], [dbus-1 >= 1.2.16])
 	])
 
+
+# ------------------------------------------------------------------------------
+
+AC_ARG_ENABLE([deputy],
+        AS_HELP_STRING([--enable-deputy], [Enable deputy mode]),
+        [],
+        enable_deputy=no)
+
+AS_IF([test "x${enable_deputy}" = "xyes"], [
+        AC_DEFINE(HAVE_DEPUTY, 1, [Enable deputy mode])
+])
+
 # ------------------------------------------------------------------------------
 
 # Location of the init scripts as mandated by LSB
@@ -965,6 +977,7 @@ AC_MSG_RESULT([
         Split /usr:              ${enable_split_usr}
         SysV compatibility:      ${SYSTEM_SYSV_COMPAT}
         CGManager                ${enable_cgmanager}
+        Deputy                   ${enable_deputy}
 
         prefix:                  ${prefix}
         rootprefix:              ${with_rootprefix}
