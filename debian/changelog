@@ -1,3 +1,9 @@
+systemd (204-5ubuntu20.25) trusty; urgency=medium
+
+  * rules: introduce fsck@.service for snappy (LP: #1718966)
+
+ -- Rafael David Tinoco <rafael.tinoco@canonical.com>  Mon, 02 Oct 2017 21:39:38 +0000
+
 systemd (204-5ubuntu20.24) trusty; urgency=medium
 
   [ Thomas Voß ]
