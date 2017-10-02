@@ -454,7 +454,7 @@ int util_replace_whitespace(const char *str, char *to, size_t len)
                 to[j++] = str[i++];
         }
         to[j] = '\0';
-        return 0;
+        return j;
 }
 
 static int is_whitelisted(char c, const char *white)
