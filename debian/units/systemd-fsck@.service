@@ -1,0 +1,17 @@
+# LP: #1718966: systemd mount units need fsck units for snappy
+# Slightly changed fsck@.service unit file, adapted for Trusty
+
+[Unit]
+Description=File System Check on %f
+Documentation=man:systemd-fsck@.service(8)
+DefaultDependencies=no
+BindsTo=%i.device
+After=%i.device
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart=/lib/systemd/systemd-fsck %f
+StandardOutput=journal+console
+TimeoutSec=0
