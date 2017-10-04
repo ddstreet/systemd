@@ -1,3 +1,16 @@
+systemd (232-21ubuntu7) zesty; urgency=medium
+
+  * networkd: accept `:' in ifnames in systemd/networkd. (LP: #1714933)
+  * networkd: add support for ActiveSlave and PrimarySlave netdev options.
+    (LP: #1709135)
+  * Cherrypick upstream fix for a race between .mount and .automount units,
+    which currently may result in automounts hanging. (LP: #1709649)
+  * systemd.postinst: Fix-up version number check in the previous sru.
+    The version check in the postinst was too tight, thus the SRU fix failed
+    validation. (LP: #1710410)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 04 Oct 2017 14:22:02 +0100
+
 systemd (232-21ubuntu6) zesty; urgency=medium
 
   * link: Fix offload features initialization.
