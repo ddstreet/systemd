@@ -42,7 +42,7 @@ if dpkg --compare-versions "$2" lt "218-11~"; then
 fi
 
 # Enable resolved by default on new installs installs and upgrades
-if dpkg --compare-versions "$2" lt "232-21ubuntu4~"; then
+if dpkg --compare-versions "$2" lt "232-21ubuntu7~"; then
     systemctl enable systemd-resolved.service || true
 fi
 
