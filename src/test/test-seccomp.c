@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <sys/eventfd.h>
 #include <sys/mman.h>
+#include <sys/personality.h>
 #include <sys/poll.h>
 #include <sys/shm.h>
 #include <sys/types.h>
@@ -46,7 +47,6 @@
 #else
 #  define SECCOMP_RESTRICT_ADDRESS_FAMILIES_BROKEN 0
 #endif
-
 
 static void test_seccomp_arch_to_string(void) {
         uint32_t a, b;
@@ -565,6 +565,83 @@ static void test_load_syscall_filter_set_raw(void) {
         assert_se(wait_for_terminate_and_warn("syscallrawseccomp", pid, true) == EXIT_SUCCESS);
 }
 
+static void test_lock_personality(void) {
+        unsigned long current;
+        pid_t pid;
+
+        if (!is_seccomp_available())
+                return;
+        if (geteuid() != 0)
+                return;
+
+        assert_se(opinionated_personality(&current) >= 0);
+
+        log_info("current personality=%lu", current);
+
+        pid = fork();
+        assert_se(pid >= 0);
+
+        if (pid == 0) {
+                assert_se(seccomp_lock_personality(current) >= 0);
+
+                assert_se((unsigned long) safe_personality(current) == current);
+
+                /* Note, we also test that safe_personality() works correctly, by checkig whether errno is properly
+                 * set, in addition to the return value */
+                errno = 0;
+                assert_se(safe_personality(PER_LINUX | ADDR_NO_RANDOMIZE) == -EPERM);
+                assert_se(errno == EPERM);
+
+                assert_se(safe_personality(PER_LINUX | MMAP_PAGE_ZERO) == -EPERM);
+                assert_se(safe_personality(PER_LINUX | ADDR_COMPAT_LAYOUT) == -EPERM);
+                assert_se(safe_personality(PER_LINUX | READ_IMPLIES_EXEC) == -EPERM);
+                assert_se(safe_personality(PER_LINUX_32BIT) == -EPERM);
+                assert_se(safe_personality(PER_SVR4) == -EPERM);
+                assert_se(safe_personality(PER_BSD) == -EPERM);
+                assert_se(safe_personality(current == PER_LINUX ? PER_LINUX32 : PER_LINUX) == -EPERM);
+                assert_se(safe_personality(PER_LINUX32_3GB) == -EPERM);
+                assert_se(safe_personality(PER_UW7) == -EPERM);
+                assert_se(safe_personality(0x42) == -EPERM);
+
+                assert_se(safe_personality(PERSONALITY_INVALID) == -EPERM); /* maybe remove this later */
+
+                assert_se((unsigned long) personality(current) == current);
+                _exit(EXIT_SUCCESS);
+        }
+
+        assert_se(wait_for_terminate_and_warn("lockpersonalityseccomp", pid, true) == EXIT_SUCCESS);
+}
+
+static void test_filter_sets_ordered(void) {
+        size_t i;
+
+        /* Ensure "@default" always remains at the beginning of the list */
+        assert_se(SYSCALL_FILTER_SET_DEFAULT == 0);
+        assert_se(streq(syscall_filter_sets[0].name, "@default"));
+
+        for (i = 0; i < _SYSCALL_FILTER_SET_MAX; i++) {
+                const char *k, *p = NULL;
+
+                /* Make sure each group has a description */
+                assert_se(!isempty(syscall_filter_sets[0].help));
+
+                /* Make sure the groups are ordered alphabetically, except for the first entry */
+                assert_se(i < 2 || strcmp(syscall_filter_sets[i-1].name, syscall_filter_sets[i].name) < 0);
+
+                NULSTR_FOREACH(k, syscall_filter_sets[i].value) {
+
+                        /* Ensure each syscall list is in itself ordered, but groups before names */
+                        assert_se(!p ||
+                                  (*p == '@' && *k != '@') ||
+                                  (((*p == '@' && *k == '@') ||
+                                    (*p != '@' && *k != '@')) &&
+                                   strcmp(p, k) < 0));
+
+                        p = k;
+                }
+        }
+}
+
 int main(int argc, char *argv[]) {
 
         log_set_max_level(LOG_DEBUG);
@@ -581,6 +658,8 @@ int main(int argc, char *argv[]) {
         test_memory_deny_write_execute_shmat();
         test_restrict_archs();
         test_load_syscall_filter_set_raw();
+        test_lock_personality();
+        test_filter_sets_ordered();
 
         return 0;
 }
