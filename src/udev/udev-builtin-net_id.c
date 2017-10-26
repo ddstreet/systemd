@@ -45,6 +45,7 @@
  *                                         — PCI geographical location
  *   [P<domain>]p<bus>s<slot>[f<function>][u<port>][..][c<config>][i<interface>]
  *                                         — USB port number chain
+ *   a<vendor><model>i<instance>           — Platform bus ACPI instance id
  *
  * All multi-function PCI devices will carry the [f<function>] number in the
  * device name, including the function 0 device.
@@ -121,6 +122,7 @@ enum netname_type{
         NET_BCMA,
         NET_VIRTIO,
         NET_CCW,
+        NET_PLATFORM,
 };
 
 struct netnames {
@@ -138,6 +140,7 @@ struct netnames {
         char usb_ports[IFNAMSIZ];
         char bcma_core[IFNAMSIZ];
         char ccw_busid[IFNAMSIZ];
+        char platform_path[IFNAMSIZ];
 };
 
 /* skip intermediate virtio devices */
@@ -316,6 +319,56 @@ static int dev_pci_slot(struct udev_device *dev, struct netnames *names) {
 out:
         udev_device_unref(pci);
         return err;
+}
+
+#define _PLATFORM_TEST "/sys/devices/platform/vvvvPPPP"
+#define _PLATFORM_PATTERN4 "/sys/devices/platform/%4s%4x:%2x/net/eth%u"
+#define _PLATFORM_PATTERN3 "/sys/devices/platform/%3s%4x:%2x/net/eth%u"
+
+static int names_platform(struct udev_device *dev, struct netnames *names, bool test) {
+        struct udev_device *parent;
+        char vendor[5];
+        unsigned model, instance, ethid;
+        const char *syspath, *pattern, *validchars;
+
+        /* check if our direct parent is a platform device with no other bus in-between */
+        parent = udev_device_get_parent(dev);
+        if (!parent)
+                return -ENOENT;
+
+        if (!streq_ptr("platform", udev_device_get_subsystem(parent)))
+                 return -ENOENT;
+
+        syspath = udev_device_get_syspath(dev);
+
+        /* syspath is too short, to have a valid ACPI instance */
+        if (strlen(syspath) < sizeof _PLATFORM_TEST)
+                return -EINVAL;
+
+        /* Vendor ID can be either PNP ID (3 chars A-Z) or ACPI ID (4 chars A-Z and numerals) */
+        if (syspath[sizeof _PLATFORM_TEST - 1] == ':') {
+                pattern = _PLATFORM_PATTERN4;
+                validchars = UPPERCASE_LETTERS DIGITS;
+        } else {
+                pattern = _PLATFORM_PATTERN3;
+                validchars = UPPERCASE_LETTERS;
+        }
+
+        /* Platform devices are named after ACPI table match, and instance id
+         * eg. "/sys/devices/platform/HISI00C2:00");
+         * The Vendor (3 or 4 char), followed by hexdecimal model number : instance id.
+         */
+        if (sscanf(syspath, pattern, vendor, &model, &instance, &ethid) != 4)
+                return -EINVAL;
+
+        if (!in_charset(vendor, validchars))
+                return -ENOENT;
+
+        ascii_strlower(vendor);
+
+        xsprintf(names->platform_path, "a%s%xi%u", vendor, model, instance);
+        names->type = NET_PLATFORM;
+        return 0;
 }
 
 static int names_pci(struct udev_device *dev, struct netnames *names) {
@@ -587,6 +640,16 @@ static int builtin_net_id(struct udev_device *dev, int argc, char *argv[], bool 
                 char str[IFNAMSIZ];
 
                 if (snprintf(str, sizeof(str), "%s%s", prefix, names.ccw_busid) < (int)sizeof(str))
+                        udev_builtin_add_property(dev, test, "ID_NET_NAME_PATH", str);
+                goto out;
+        }
+
+        /* get ACPI path names for ARM64 platform devices */
+        err = names_platform(dev, &names, test);
+        if (err >= 0 && names.type == NET_PLATFORM) {
+                char str[IFNAMSIZ];
+
+                if (snprintf(str, sizeof(str), "%s%s", prefix, names.platform_path) < (int)sizeof(str))
                         udev_builtin_add_property(dev, test, "ID_NET_NAME_PATH", str);
                 goto out;
         }
