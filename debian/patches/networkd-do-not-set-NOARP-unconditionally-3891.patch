@@ -1,0 +1,23 @@
+From: =?utf-8?q?Zbigniew_J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Fri, 5 Aug 2016 04:37:10 -0400
+Subject: networkd: do not set NOARP unconditionally (#3891)
+
+Fixes #3890.
+(cherry picked from commit 1ed1f50f8277df07918e13cba3331a114eaa6fe3)
+---
+ src/network/networkd-link.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index 4f61855..42c6a33 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1361,7 +1361,7 @@ static int link_set_flags(Link *link) {
+ 
+         if (link->network->arp >= 0) {
+                 ifi_change |= IFF_NOARP;
+-                ifi_flags |= IFF_NOARP;
++                ifi_flags |= link->network->arp ? 0 : IFF_NOARP;
+         }
+ 
+         r = sd_rtnl_message_link_set_flags(req, ifi_flags, ifi_change);

@@ -61,6 +61,7 @@ networkd-add-options-to-bridge-4051.patch
 networkd-apply-bridge-vlan-configuration-correct.patch
 networkd-add-support-to-configure-NOARP-ARP-for-interface.patch
 networkd-bond-support-primary-slave-and-active-slave-4873.patch
+networkd-do-not-set-NOARP-unconditionally-3891.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
