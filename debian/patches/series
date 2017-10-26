@@ -99,3 +99,4 @@ debian/Add-env-variable-for-machine-ID-path.patch
 cryptsetup-generator-run-cryptsetup-service-before-swap-u.patch
 test-resolved-packet-add-a-simple-test-for-our-alloc.patch
 resolved-simplify-alloc-size-calculation.patch
+CVE-2017-15908.patch
