@@ -1,3 +1,12 @@
+systemd (232-21ubuntu7.1) zesty-security; urgency=medium
+
+  * SECURITY UPDATE: remote DoS in resolve (LP: #1725351)
+    - debian/patches/CVE-2017-15908.patch: fix loop on packets with pseudo
+      dns types in src/resolve/resolved-dns-packet.c.
+    - CVE-2017-15908
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Thu, 26 Oct 2017 07:59:03 -0400
+
 systemd (232-21ubuntu7) zesty; urgency=medium
 
   * networkd: accept `:' in ifnames in systemd/networkd. (LP: #1714933)
