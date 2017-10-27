@@ -1,3 +1,11 @@
+systemd (229-4ubuntu21) xenial; urgency=medium
+
+  * networkd: do not uncoditionally apply NOARP.
+  * networkd: fix size of MTUBytes so that it does not overwrites ARP.
+  * Fixes regression-updates LP: #1727301
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Fri, 27 Oct 2017 09:21:18 +0100
+
 systemd (229-4ubuntu20) xenial; urgency=medium
 
   * resolved: recognize DNS names with more than one trailing dot as invalid
