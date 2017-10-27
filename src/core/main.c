@@ -1354,14 +1354,15 @@ int main(int argc, char *argv[]) {
         log_set_upgrade_syslog_to_journal(true);
 
         /* Disable the umask logic */
-        if (getpid() == 1)
+        if (getpid() == 1) {
                 umask(0);
+                make_null_stdio();
+        }
 
         if (getpid() == 1 && detect_container() <= 0) {
 
                 /* Running outside of a container as PID 1 */
                 arg_running_as = MANAGER_SYSTEM;
-                make_null_stdio();
                 log_set_target(LOG_TARGET_KMSG);
                 log_open();
 
