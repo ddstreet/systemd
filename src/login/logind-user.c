@@ -890,3 +890,44 @@ int config_parse_tmpfs_size(
 
         return 0;
 }
+
+int config_parse_user_tasks_max(
+                const char* unit,
+                const char *filename,
+                unsigned line,
+                const char *section,
+                unsigned section_line,
+                const char *lvalue,
+                int ltype,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        uint64_t *m = data;
+        uint64_t k;
+        int r;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(data);
+
+        if (streq(rvalue, "infinity")) {
+                *m = (uint64_t) -1;
+                return 0;
+        }
+
+        r = safe_atou64(rvalue, &k);
+        if (r < 0) {
+                log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse tasks maximum, ignoring: %s", rvalue);
+                return 0;
+        }
+
+        if (k <= 0 || k >= UINT64_MAX) {
+                log_syntax(unit, LOG_ERR, filename, line, 0, "Tasks maximum out of range, ignoring: %s", rvalue);
+                return 0;
+        }
+
+        *m = k;
+        return 0;
+}
