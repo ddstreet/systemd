@@ -1,3 +1,4 @@
+modprobe.d-fix-directory-of-modprobe-configuration-file-7.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
@@ -24,3 +25,11 @@ debian/Add-env-variable-for-machine-ID-path.patch
 debian/Mark-test-timesync-as-manual.patch
 debian/Avoid-requiring-a-kvm-system-group.patch
 debian/Revert-tests-when-running-a-manager-object-in-a-test-migr.patch
+debian/Skip-starting-systemd-remount-fs.service-in-containers.patch
+debian/Ubuntu-UseDomains-by-default.patch
+debian/Ubuntu-resolved-resolvconf-integration.patch
+debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
+debian/Ubuntu-units-set-ConditionVirtualization-private-users-on-j.patch
+debian/UBUNTU-CVE-2017-15908.patch
+debian/UBUNTU-core-unlink-the-invocation-id-key-if-cannot-change-keyrin.patch
+debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
