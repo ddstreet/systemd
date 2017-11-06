@@ -6,6 +6,7 @@ test-seccomp-arm64-does-not-have-access-and-poll.patch
 networkd-change-UseMTU-default-to-true.-6837.patch
 core-unlink-the-invocation-id-key-if-cannot-change-keyrin.patch
 test-test-functions-drop-all-prefixes.patch
+test-switch-to-using-ext4-instead-of-ext3-as-default-fall.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
