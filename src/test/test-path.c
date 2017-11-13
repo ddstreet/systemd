@@ -45,7 +45,6 @@ static int setup_test(Manager **m) {
 
         assert_se(m);
 
-        enter_cgroup_subroot();
 
         r = manager_new(UNIT_FILE_USER, MANAGER_TEST_RUN_MINIMAL, &tmp);
         if (MANAGER_SKIP_TEST(r)) {
