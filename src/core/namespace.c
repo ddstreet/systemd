@@ -133,6 +133,10 @@ static const MountEntry protect_home_yes_table[] = {
 /* ProtectSystem=yes table */
 static const MountEntry protect_system_yes_table[] = {
         { "/usr",                READONLY,     false },
+        { "/lib",                READONLY,     true  },
+        { "/lib64",              READONLY,     true  },
+        { "/bin",                READONLY,     true  },
+        { "/sbin",               READONLY,     true  },
         { "/boot",               READONLY,     true  },
         { "/efi",                READONLY,     true  },
 };
@@ -140,6 +144,10 @@ static const MountEntry protect_system_yes_table[] = {
 /* ProtectSystem=full includes ProtectSystem=yes */
 static const MountEntry protect_system_full_table[] = {
         { "/usr",                READONLY,     false },
+        { "/lib",                READONLY,     true  },
+        { "/lib64",              READONLY,     true  },
+        { "/bin",                READONLY,     true  },
+        { "/sbin",               READONLY,     true  },
         { "/boot",               READONLY,     true  },
         { "/efi",                READONLY,     true  },
         { "/etc",                READONLY,     false },
