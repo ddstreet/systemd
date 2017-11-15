@@ -42,8 +42,7 @@ tests += [
          [],
          []],
 
-        [['src/test/test-engine.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-engine.c'],
          [libcore,
           libudev,
           libsystemd_internal],
@@ -106,8 +105,7 @@ tests += [
          [],
          'ENABLE_EFI'],
 
-        [['src/test/test-unit-name.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-unit-name.c'],
          [libcore,
           libshared],
          [threads,
@@ -117,8 +115,7 @@ tests += [
           libmount,
           libblkid]],
 
-        [['src/test/test-unit-file.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-unit-file.c'],
          [libcore,
           libshared],
          [threads,
@@ -339,8 +336,7 @@ tests += [
          [libbasic],
          []],
 
-        [['src/test/test-bpf.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-bpf.c'],
          [libcore,
           libshared],
          [libmount,
@@ -474,8 +470,7 @@ tests += [
          '', 'manual'],
 
 
-        [['src/test/test-cgroup-mask.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-cgroup-mask.c'],
          [libcore,
           libshared],
          [threads,
@@ -505,8 +500,7 @@ tests += [
          [],
          []],
 
-        [['src/test/test-path.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-path.c'],
          [libcore,
           libshared],
          [threads,
@@ -516,8 +510,7 @@ tests += [
           libmount,
           libblkid]],
 
-        [['src/test/test-execute.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-execute.c'],
          [libcore,
           libshared],
          [threads,
@@ -545,8 +538,7 @@ tests += [
          [],
          []],
 
-        [['src/test/test-sched-prio.c',
-          'src/test/test-helper.c'],
+        [['src/test/test-sched-prio.c'],
          [libcore,
           libshared],
          [threads,
