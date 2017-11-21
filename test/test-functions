@@ -12,7 +12,7 @@ KERNEL_MODS="/lib/modules/$KERNEL_VER/"
 QEMU_TIMEOUT="${QEMU_TIMEOUT:-infinity}"
 NSPAWN_TIMEOUT="${NSPAWN_TIMEOUT:-infinity}"
 TIMED_OUT=  # will be 1 after run_* if *_TIMEOUT is set and test timed out
-[[ "$LOOKS_LIKE_SUSE" ]] && FSTYPE="${FSTYPE:-btrfs}" || FSTYPE="${FSTYPE:-ext3}"
+[[ "$LOOKS_LIKE_SUSE" ]] && FSTYPE="${FSTYPE:-btrfs}" || FSTYPE="${FSTYPE:-ext4}"
 UNIFIED_CGROUP_HIERARCHY="${UNIFIED_CGROUP_HIERARCHY:-default}"
 
 if ! ROOTLIBDIR=$(pkg-config --variable=systemdutildir systemd); then
@@ -134,10 +134,6 @@ $KERNEL_APPEND \
 
     if [[ "$INITRD" && "$SKIP_INITRD" != "yes" ]]; then
         QEMU_OPTIONS="$QEMU_OPTIONS -initrd $INITRD"
-    fi
-
-    if [ -c /dev/kvm ]; then
-        QEMU_OPTIONS="$QEMU_OPTIONS -machine accel=kvm -enable-kvm -cpu host"
     fi
 
     if [[ "$QEMU_TIMEOUT" != "infinity" ]]; then
@@ -424,9 +420,8 @@ install_execs() {
     export PKG_CONFIG_PATH=$BUILD_DIR/src/core/
     systemdsystemunitdir=$(pkg-config --variable=systemdsystemunitdir systemd)
     systemduserunitdir=$(pkg-config --variable=systemduserunitdir systemd)
-    egrep -ho '^Exec[^ ]*=[^ ]+' $initdir/{$systemdsystemunitdir,$systemduserunitdir}/*.service \
-         | while read i; do
-         i=${i##Exec*=}; i=${i##[@+\!-]}; i=${i##\!}
+    sed -n 's|^Exec[a-zA-Z]*=[^/]*\(/[^ ]*\).*|\1|gp' $initdir/{$systemdsystemunitdir,$systemduserunitdir}/*.service \
+         | sort -u | while read i; do
          # some {rc,halt}.local scripts and programs are okay to not exist, the rest should
          inst $i || [ "${i%.local}" != "$i" ] || [ "${i%systemd-update-done}" != "$i" ]
      done
