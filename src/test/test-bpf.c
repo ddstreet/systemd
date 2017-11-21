@@ -27,7 +27,6 @@
 #include "manager.h"
 #include "rm-rf.h"
 #include "service.h"
-#include "test-helper.h"
 #include "tests.h"
 #include "unit.h"
 
@@ -49,7 +48,6 @@ int main(int argc, char *argv[]) {
         log_parse_environment();
         log_open();
 
-        enter_cgroup_subroot();
         assert_se(set_unit_path(get_testdata_dir("")) >= 0);
         assert_se(runtime_dir = setup_fake_runtime_dir());
 
