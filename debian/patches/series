@@ -9,6 +9,10 @@ shared-seccomp-disallow-pkey_mprotect-the-same-as-mprotec.patch
 basic-missing-add-numbers-for-pkey_mprotect.patch
 shared-seccomp-skip-pkey_mprotect-protections-if-the-sysc.patch
 unit-enable-DynamicUser-for-journal-upload.patch
+test-test-functions-drop-all-prefixes.patch
+test-switch-to-using-ext4-instead-of-ext3-as-default-fall.patch
+test-bpf-use-bin-ping-path-7276.patch
+test-process-util-fails-to-verify-cmdline-changes-in-unpr.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
@@ -36,3 +40,11 @@ debian/Mark-test-timesync-as-manual.patch
 debian/Avoid-requiring-a-kvm-system-group.patch
 debian/Revert-tests-when-running-a-manager-object-in-a-test-migr.patch
 modprobe.d-fix-directory-of-modprobe-configuration-file-7.patch
+debian/Skip-starting-systemd-remount-fs.service-in-containers.patch
+debian/Ubuntu-UseDomains-by-default.patch
+debian/Ubuntu-resolved-resolvconf-integration.patch
+debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
+debian/Ubuntu-units-set-ConditionVirtualization-private-users-on-j.patch
+debian/UBUNTU-core-unlink-the-invocation-id-key-if-cannot-change-keyrin.patch
+debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
+debian/UBUNTU-drop-using-kvm-for-qemu-tests-as-this-current.patch
