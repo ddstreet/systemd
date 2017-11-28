@@ -1,0 +1,24 @@
+From c7f6ca9379279affa8f22d15fa13063491f86a49 Mon Sep 17 00:00:00 2001
+From: Xiang Fan <sfanxiang@gmail.com>
+Date: Wed, 9 Aug 2017 05:51:53 -0500
+Subject: [PATCH] rfkill: fix typo (#6574)
+
+Origin: upstream, https://github.com/systemd/systemd/commit/c7f6ca9379279affa8f22d15fa13063491f86a49
+Bug-Ubuntu: https://launchpad.net/bugs/1734908
+---
+ src/rfkill/rfkill.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Index: systemd-234/src/rfkill/rfkill.c
+===================================================================
+--- systemd-234.orig/src/rfkill/rfkill.c
++++ systemd-234/src/rfkill/rfkill.c
+@@ -144,7 +144,7 @@ static int wait_for_initialized(
+                 if (r < 0)
+                         return log_error_errno(r, "Failed to watch udev monitor: %m");
+                 if (r == 0) {
+-                        log_error("Timed out wating for udev monitor.");
++                        log_error("Timed out waiting for udev monitor.");
+                         return -ETIMEDOUT;
+                 }
+ 
