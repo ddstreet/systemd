@@ -11,6 +11,7 @@ rfkill-fix-erroneous-behavior-when-polling-the-udev-monit.patch
 rfkill-fix-typo-6574.patch
 Revert-core-don-t-load-dropin-data-multiple-times-for-the.patch
 Add-a-RequiredForOnline-Link-attribute-for-.network-files.patch
+resolved.service-set-DefaultDependencies-no.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
