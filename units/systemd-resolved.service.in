@@ -15,6 +15,7 @@ DefaultDependencies=no
 After=systemd-networkd.service network.target
 Before=network-online.target nss-lookup.target
 Wants=nss-lookup.target
+Wants=systemd-resolved-update-resolvconf.path
 
 [Service]
 Type=notify
