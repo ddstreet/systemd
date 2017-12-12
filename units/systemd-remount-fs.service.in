@@ -15,6 +15,7 @@ After=systemd-fsck-root.service
 Before=local-fs-pre.target local-fs.target shutdown.target
 Wants=local-fs-pre.target
 ConditionPathExists=/etc/fstab
+ConditionVirtualization=!container
 
 [Service]
 Type=oneshot
