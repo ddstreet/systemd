@@ -1,0 +1,22 @@
+From: Xiang Fan <sfanxiang@gmail.com>
+Date: Wed, 9 Aug 2017 05:51:53 -0500
+Subject: rfkill: fix typo (#6574)
+
+(cherry picked from commit c7f6ca9379279affa8f22d15fa13063491f86a49)
+---
+ src/rfkill/rfkill.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/rfkill/rfkill.c b/src/rfkill/rfkill.c
+index 470853d..e48f3e4 100644
+--- a/src/rfkill/rfkill.c
++++ b/src/rfkill/rfkill.c
+@@ -144,7 +144,7 @@ static int wait_for_initialized(
+                 if (r < 0)
+                         return log_error_errno(r, "Failed to watch udev monitor: %m");
+                 if (r == 0) {
+-                        log_error("Timed out wating for udev monitor.");
++                        log_error("Timed out waiting for udev monitor.");
+                         return -ETIMEDOUT;
+                 }
+ 
