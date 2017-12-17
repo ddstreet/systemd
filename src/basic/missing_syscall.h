@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-2.1+ */
 #pragma once
 
 /***
@@ -373,7 +374,7 @@ static inline int bpf(int cmd, union bpf_attr *attr, size_t size) {
 #      if _MIPS_SIM == _MIPS_SIM_ABI64
 #        define __NR_pkey_mprotect 5323
 #      endif
-#    elif ! defined(__IGNORE_pkey_mprotect)
+#    else
 #      warning "__NR_pkey_mprotect not defined for your architecture"
 #    endif
 #  endif

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-2.1+ */
 /***
   This file is part of systemd.
 
@@ -199,7 +200,7 @@ static void mount_entry_done(MountEntry *p) {
         p->source_malloc = mfree(p->source_malloc);
 }
 
-static int append_access_mounts(MountEntry **p, char **strv, MountMode mode) {
+static int append_access_mounts(MountEntry **p, char **strv, MountMode mode, bool forcibly_require_prefix) {
         char **i;
 
         assert(p);
@@ -227,7 +228,7 @@ static int append_access_mounts(MountEntry **p, char **strv, MountMode mode) {
                         .path_const = e,
                         .mode = mode,
                         .ignore = ignore,
-                        .has_prefix = !needs_prefix,
+                        .has_prefix = !needs_prefix && !forcibly_require_prefix,
                 };
         }
 
@@ -803,8 +804,8 @@ static int apply_mount(
 
         case BIND_MOUNT:
                 rbind = false;
-                /* fallthrough */
 
+                _fallthrough_;
         case BIND_MOUNT_RECURSIVE:
                 /* Also chase the source mount */
 
@@ -906,7 +907,7 @@ static int make_read_only(MountEntry *m, char **blacklist, FILE *proc_self_mount
         return r;
 }
 
-static bool namespace_info_mount_apivfs(const char *root_directory, const NameSpaceInfo *ns_info) {
+static bool namespace_info_mount_apivfs(const char *root_directory, const NamespaceInfo *ns_info) {
         assert(ns_info);
 
         /*
@@ -924,7 +925,7 @@ static bool namespace_info_mount_apivfs(const char *root_directory, const NameSp
 
 static unsigned namespace_calculate_mounts(
                 const char* root_directory,
-                const NameSpaceInfo *ns_info,
+                const NamespaceInfo *ns_info,
                 char** read_write_paths,
                 char** read_only_paths,
                 char** inaccessible_paths,
@@ -968,7 +969,7 @@ static unsigned namespace_calculate_mounts(
 int setup_namespace(
                 const char* root_directory,
                 const char* root_image,
-                const NameSpaceInfo *ns_info,
+                const NamespaceInfo *ns_info,
                 char** read_write_paths,
                 char** read_only_paths,
                 char** inaccessible_paths,
@@ -991,6 +992,7 @@ int setup_namespace(
         bool make_slave = false;
         const char *root;
         unsigned n_mounts;
+        bool require_prefix = false;
         int r = 0;
 
         assert(ns_info);
@@ -1035,6 +1037,7 @@ int setup_namespace(
 
                 root = "/run/systemd/unit-root";
                 (void) mkdir_label(root, 0700);
+                require_prefix = true;
         } else
                 root = NULL;
 
@@ -1055,15 +1058,15 @@ int setup_namespace(
 
         if (n_mounts > 0) {
                 m = mounts = (MountEntry *) alloca0(n_mounts * sizeof(MountEntry));
-                r = append_access_mounts(&m, read_write_paths, READWRITE);
+                r = append_access_mounts(&m, read_write_paths, READWRITE, require_prefix);
                 if (r < 0)
                         goto finish;
 
-                r = append_access_mounts(&m, read_only_paths, READONLY);
+                r = append_access_mounts(&m, read_only_paths, READONLY, require_prefix);
                 if (r < 0)
                         goto finish;
 
-                r = append_access_mounts(&m, inaccessible_paths, INACCESSIBLE);
+                r = append_access_mounts(&m, inaccessible_paths, INACCESSIBLE, require_prefix);
                 if (r < 0)
                         goto finish;
 
@@ -1158,13 +1161,9 @@ int setup_namespace(
                 }
         }
 
-        /* Try to set up the new root directory before mounting anything there */
-        if (root)
-                (void) base_filesystem_create(root, UID_INVALID, GID_INVALID);
-
         if (root_image) {
                 /* A root image is specified, mount it to the right place */
-                r = dissected_image_mount(dissected_image, root, dissect_image_flags);
+                r = dissected_image_mount(dissected_image, root, UID_INVALID, dissect_image_flags);
                 if (r < 0)
                         goto finish;
 
@@ -1197,6 +1196,10 @@ int setup_namespace(
                         goto finish;
                 }
         }
+
+        /* Try to set up the new root directory before mounting anything else there. */
+        if (root_image || root_directory)
+                (void) base_filesystem_create(root, UID_INVALID, GID_INVALID);
 
         if (n_mounts > 0) {
                 _cleanup_fclose_ FILE *proc_self_mountinfo = NULL;
@@ -1436,6 +1439,17 @@ fail:
         return r;
 }
 
+bool ns_type_supported(NamespaceType type) {
+        const char *t, *ns_proc;
+
+        t = namespace_type_to_string(type);
+        if (!t) /* Don't know how to translate this? Then it's not supported */
+                return false;
+
+        ns_proc = strjoina("/proc/self/ns/", t);
+        return access(ns_proc, F_OK) == 0;
+}
+
 static const char *const protect_home_table[_PROTECT_HOME_MAX] = {
         [PROTECT_HOME_NO] = "no",
         [PROTECT_HOME_YES] = "yes",
@@ -1452,3 +1466,15 @@ static const char *const protect_system_table[_PROTECT_SYSTEM_MAX] = {
 };
 
 DEFINE_STRING_TABLE_LOOKUP(protect_system, ProtectSystem);
+
+static const char* const namespace_type_table[] = {
+        [NAMESPACE_MOUNT] = "mnt",
+        [NAMESPACE_CGROUP] = "cgroup",
+        [NAMESPACE_UTS] = "uts",
+        [NAMESPACE_IPC] = "ipc",
+        [NAMESPACE_USER] = "user",
+        [NAMESPACE_PID] = "pid",
+        [NAMESPACE_NET] = "net",
+};
+
+DEFINE_STRING_TABLE_LOOKUP(namespace_type, NamespaceType);
