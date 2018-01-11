@@ -2185,8 +2185,6 @@ int main(int argc, char *argv[]) {
                 kernel_timestamp = DUAL_TIMESTAMP_NULL;
         }
 
-        initialize_coredump(skip_setup);
-
         if (arg_system) {
                 if (fixup_environment() < 0) {
                         error_message = "Failed to fix up PID1 environment";
