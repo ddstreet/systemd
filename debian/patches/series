@@ -23,3 +23,12 @@ debian/Let-graphical-session-pre.target-be-manually-started.patch
 debian/Add-env-variable-for-machine-ID-path.patch
 debian/Avoid-requiring-a-kvm-system-group.patch
 debian/Revert-udev-rules-Permission-changes-for-dev-dri-renderD.patch
+debian/Skip-starting-systemd-remount-fs.service-in-containers.patch
+debian/Ubuntu-UseDomains-by-default.patch
+debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
+debian/Ubuntu-units-set-ConditionVirtualization-private-users-on-j.patch
+debian/UBUNTU-core-unlink-the-invocation-id-key-if-cannot-change-keyrin.patch
+debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
+debian/UBUNTU-drop-using-kvm-for-qemu-tests-as-this-current.patch
+debian/UBUNTU-test-test-functions-drop-all-prefixes.patch
+debian/UBUNTU-test-process-util-fails-to-verify-cmdline-changes-in-unpr.patch
