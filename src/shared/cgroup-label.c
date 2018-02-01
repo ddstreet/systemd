@@ -30,6 +30,7 @@
 #include <ftw.h>
 
 #include "cgroup-util.h"
+#include "cgmanager.h"
 #include "log.h"
 #include "set.h"
 #include "macro.h"
@@ -39,6 +40,27 @@
 int cg_create(const char *controller, const char *path, const char *suffix) {
         _cleanup_free_ char *fs = NULL;
         int r;
+
+        #ifdef HAVE_CGMANAGER
+        /* CGManager support */
+        int existed;
+        if (cgm_dbus_connect()) {
+                if (!controller) {
+                    cgm_dbus_disconnect();
+                    return -1;
+                }
+
+                r = cgm_create(normalize_controller(controller),
+                                         path, &existed);
+
+                cgm_dbus_disconnect();
+
+                if (!r)
+                        return -1;
+
+                return 1;
+        }
+        #endif
 
         r = cg_get_path_and_check(controller, path, suffix, &fs);
         if (r < 0)
