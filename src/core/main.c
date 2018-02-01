@@ -1399,7 +1399,11 @@ int main(int argc, char *argv[]) {
 
         /* Mount /proc, /sys and friends, so that /proc/cmdline and
          * /proc/$PID/fd is available. */
+#ifdef HAVE_DEPUTY
+        if (true) {
+#else
         if (getpid() == 1) {
+#endif
                 r = mount_setup(loaded_policy);
                 if (r < 0)
                         goto finish;
