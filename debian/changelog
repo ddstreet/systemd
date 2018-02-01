@@ -1,3 +1,13 @@
+systemd (204-5ubuntu20.26) trusty-security; urgency=medium
+
+  * SECURITY UPDATE: access to automounted volumes can lock up
+    (LP: #1709649)
+    - debian/patches/CVE-2018-1049.patch: ack automount requests even when
+      already mounted in src/core/automount.c.
+    - CVE-2018-1049
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Thu, 01 Feb 2018 07:52:32 -0500
+
 systemd (204-5ubuntu20.25) trusty; urgency=medium
 
   * rules: introduce fsck@.service for snappy (LP: #1718966)
