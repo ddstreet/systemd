@@ -1,3 +1,4 @@
+service-relax-PID-file-symlink-chain-checks-a-bit.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
@@ -32,3 +33,4 @@ debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
 debian/UBUNTU-drop-using-kvm-for-qemu-tests-as-this-current.patch
 debian/UBUNTU-test-test-functions-drop-all-prefixes.patch
 debian/UBUNTU-test-process-util-fails-to-verify-cmdline-changes-in-unpr.patch
+debian/UBUNTU-resolved-disable-global-LLMNR-and-MulticastDNS.patch
