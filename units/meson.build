@@ -91,6 +91,8 @@ units = [
          'sockets.target.wants/'],
         ['systemd-networkd.socket',             '',
          join_paths(pkgsysconfdir, 'system/sockets.target.wants/')],
+        ['systemd-resolved-update-resolvconf.path', '',],
+        ['systemd-resolved-update-resolvconf.service', '',],
         ['systemd-rfkill.socket',               'ENABLE_RFKILL'],
         ['systemd-tmpfiles-clean.timer',        '',
          'timers.target.wants/'],
