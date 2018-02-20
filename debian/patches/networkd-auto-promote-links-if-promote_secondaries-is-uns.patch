@@ -1,0 +1,127 @@
+From: Dimitri John Ledkov <xnox@ubuntu.com>
+Date: Tue, 20 Feb 2018 16:10:22 +0000
+Subject: networkd: auto promote links if "promote_secondaries" is unset
+ (#7167)
+
+The DHCP code in systemd-networkd relies on the
+`net.ipv4.conf.{default,all,<if>}.promote_secondaries` sysctl to be set
+(the kernels default is that it is unset). If this sysctl is not set
+DHCP will work most of the time, however when the IP address changes
+between leases then the system will loose its IP.
+
+Because some distributions decided to not ship these defaults (Debian
+is an example and via downstream Ubuntu) networkd by default will now
+enable this sysctl opton automatically.
+
+(cherry picked from commit 64b21ece8c65c93741935749ba01f5877ba50cd6)
+---
+ src/network/networkd-dhcp4.c | 56 ++++++++++++++++++++++++++++++++++++++++++++
+ src/network/networkd-link.c  |  4 ++++
+ src/network/networkd-link.h  |  1 +
+ 3 files changed, 61 insertions(+)
+
+diff --git a/src/network/networkd-dhcp4.c b/src/network/networkd-dhcp4.c
+index 9229b57..6082640 100644
+--- a/src/network/networkd-dhcp4.c
++++ b/src/network/networkd-dhcp4.c
+@@ -23,10 +23,14 @@
+ #include "alloc-util.h"
+ #include "dhcp-lease-internal.h"
+ #include "hostname-util.h"
++#include "parse-util.h"
++#include "netdev/vrf.h"
+ #include "network-internal.h"
+ #include "networkd-link.h"
+ #include "networkd-manager.h"
+ #include "networkd-network.h"
++#include "string-util.h"
++#include "sysctl-util.h"
+ 
+ static int dhcp4_route_handler(sd_netlink *rtnl, sd_netlink_message *m,
+                                void *userdata) {
+@@ -571,6 +575,58 @@ static int dhcp4_set_hostname(Link *link) {
+         return sd_dhcp_client_set_hostname(link->dhcp_client, hn);
+ }
+ 
++static bool promote_secondaries_enabled(const char *ifname) {
++        char *promote_secondaries_sysctl, *promote_secondaries_path;
++        int r;
++
++        promote_secondaries_path = strjoina("net/ipv4/conf/", ifname, "/promote_secondaries");
++        r = sysctl_read(promote_secondaries_path, &promote_secondaries_sysctl);
++        if (r < 0) {
++                log_debug_errno(r, "Cannot read sysctl %s", promote_secondaries_path);
++                return false;
++        }
++
++        truncate_nl(promote_secondaries_sysctl);
++        r = parse_boolean(promote_secondaries_sysctl);
++        if (r < 0)
++                log_warning_errno(r, "Cannot parse sysctl %s with content %s as boolean", promote_secondaries_path, promote_secondaries_sysctl);
++        return r > 0;
++}
++
++/* dhcp4_set_promote_secondaries will ensure this interface has
++ * the "promote_secondaries" option in the kernel set. If this sysctl
++ * is not set DHCP will work only as long as the IP address does not
++ * changes between leases. The kernel will remove all secondary IP
++ * addresses of an interface otherwise. The way systemd-network works
++ * is that the new IP of a lease is added as a secondary IP and when
++ * the primary one expires it relies on the kernel to promote the
++ * secondary IP. See also https://github.com/systemd/systemd/issues/7163
++ */
++int dhcp4_set_promote_secondaries(Link *link) {
++        int r;
++
++        assert(link);
++        assert(link->network);
++        assert(link->network->dhcp & ADDRESS_FAMILY_IPV4);
++
++        /* check if the kernel has promote_secondaries enabled for our
++         * interface. If it is not globally enabled or enabled for the
++         * specific interface we must either enable it.
++         */
++        if (!(promote_secondaries_enabled("all") || promote_secondaries_enabled("default") || promote_secondaries_enabled(link->ifname))) {
++                char *promote_secondaries_path = NULL;
++
++                log_link_debug(link, "promote_secondaries is unset, setting it");
++                promote_secondaries_path = strjoina("net/ipv4/conf/", link->ifname, "/promote_secondaries");
++                r = sysctl_write(promote_secondaries_path, "1");
++                if (r < 0)
++                        log_link_warning_errno(link, r, "cannot set sysctl %s to 1", promote_secondaries_path);
++                return r > 0;
++        }
++
++        return 0;
++}
++
+ int dhcp4_configure(Link *link) {
+         int r;
+ 
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index 7471561..f05c249 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -2580,6 +2580,10 @@ static int link_configure(Link *link) {
+         }
+ 
+         if (link_dhcp4_enabled(link)) {
++                r = dhcp4_set_promote_secondaries(link);
++                if (r < 0)
++                        return r;
++
+                 r = dhcp4_configure(link);
+                 if (r < 0)
+                         return r;
+diff --git a/src/network/networkd-link.h b/src/network/networkd-link.h
+index 6479f4a..462a07a 100644
+--- a/src/network/networkd-link.h
++++ b/src/network/networkd-link.h
+@@ -168,6 +168,7 @@ int link_set_mtu(Link *link, uint32_t mtu);
+ 
+ int ipv4ll_configure(Link *link);
+ int dhcp4_configure(Link *link);
++int dhcp4_set_promote_secondaries(Link *link);
+ int dhcp6_configure(Link *link);
+ int dhcp6_request_address(Link *link, int ir);
+ 
