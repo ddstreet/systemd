@@ -1,3 +1,31 @@
+systemd (234-2ubuntu12.3) artful; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * Fix test-functions failing with Ubuntu units. LP: #1750608
+  * tests: switch to using ext4 by default, instead of ext3. LP: #1750608
+  * Fix kdump service not starting, due to systemd not loading dropins.
+    Cherrypick a fix from upstream. (LP: #1708409)
+  * systemd-fsckd: Fix ADT tests to work on s390x too. (LP: #1736955)
+  * netwokrd: add support for RequiredForOnline stanza. (LP: #1737570)
+  * resolved.service: set DefaultDependencies=no (LP: #1734167)
+  * systemd.postinst: enable persistent journal. (LP: #1618188)
+  * core: add support for non-writable unified cgroup hierarchy for container support.
+    Rebase and de-fuzz. (LP: #1734410)
+  * Prevent MemoryDenyWriteExecution policy bypass, by disallowing pkey_mprotect when mprotect is disallowed.
+    CVE-2017-15908 (LP: #1725348)
+  * networkd: enable promote_secondaries on networkd managed dhcp links.
+    This fixes failing to renew DHCP lease, on networkd managed devices.
+    (LP: #1721223)
+
+  [ Kleber Sacilotto de Souza ]
+  * systemd-rfkill service times out when a new rfkill device is added
+    - rfkill-fix-erroneous-behavior-when-polling-the-udev-.patch: Comparing
+    udev_device_get_sysname(device) and sysname will always return true. We need to
+    check the device received from udev monitor instead.
+    - rfkill-fix-typo.patch: Fix typo in rfkill log message. (LP: #1734908)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Tue, 20 Feb 2018 16:11:58 +0000
+
 systemd (234-2ubuntu12.1) artful-security; urgency=medium
 
   * SECURITY UPDATE: remote DoS in resolve (LP: #1725351)
