@@ -1,0 +1,47 @@
+From: Dimitri John Ledkov <xnox@ubuntu.com>
+Date: Tue, 20 Feb 2018 15:59:55 +0000
+Subject: basic/missing: add numbers for pkey_mprotect
+
+Follow-up for b835eeb4ec1dd122b6feff2b70881265c529fcdd.
+
+(cherry picked from commit 213f2883c006d785e033597d2f46a110d85eb54b)
+---
+ src/basic/missing_syscall.h | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/src/basic/missing_syscall.h b/src/basic/missing_syscall.h
+index 898116c..fae9f8a 100644
+--- a/src/basic/missing_syscall.h
++++ b/src/basic/missing_syscall.h
+@@ -316,3 +316,31 @@ static inline ssize_t copy_file_range(int fd_in, loff_t *off_in,
+ #  endif
+ }
+ #endif
++
++/* ======================================================================= */
++
++#ifndef __IGNORE_pkey_mprotect
++#  ifndef __NR_pkey_mprotect
++#    if defined __i386__
++#      define __NR_pkey_mprotect 380
++#    elif defined __x86_64__
++#      define __NR_pkey_mprotect 329
++#    elif defined __arm__
++#      define __NR_pkey_mprotect 394
++#    elif defined __aarch64__
++#      define __NR_pkey_mprotect 394
++#    elif defined _MIPS_SIM
++#      if _MIPS_SIM == _MIPS_SIM_ABI32
++#        define __NR_pkey_mprotect 4363
++#      endif
++#      if _MIPS_SIM == _MIPS_SIM_NABI32
++#        define __NR_pkey_mprotect 6327
++#      endif
++#      if _MIPS_SIM == _MIPS_SIM_ABI64
++#        define __NR_pkey_mprotect 5323
++#      endif
++#    elif ! defined(__IGNORE_pkey_mprotect)
++#      warning "__NR_pkey_mprotect not defined for your architecture"
++#    endif
++#  endif
++#endif
