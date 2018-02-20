@@ -1,4 +1,4 @@
-systemd (234-2ubuntu13) artful; urgency=medium
+systemd (234-2ubuntu12.3) artful; urgency=medium
 
   [ Dimitri John Ledkov ]
   * Fix test-functions failing with Ubuntu units. LP: #1750608
