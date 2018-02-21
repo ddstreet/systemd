@@ -1,0 +1,41 @@
+From 411e869f497c7c7bd0688f1e3500f9043bc56e48 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 20 Oct 2016 19:36:28 +0200
+Subject: [PATCH] sysctl: run sysctl service if /proc/sys/net is writable
+ (#4425)
+
+This simply changes this line:
+
+    ConditionPathIsReadWrite=/proc/sys/
+
+to this:
+
+     ConditionPathIsReadWrite=/proc/sys/net/
+
+The background for this is that the latter is namespaced through network
+namespacing usually and hence frequently set as writable in containers, even
+though the former is kept read-only. If /proc/sys is read-only but
+/proc/sys/net is writable we should run the sysctl service, as useful settings
+may be made in this case.
+
+Fixes: #4370
+---
+ units/systemd-sysctl.service.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/units/systemd-sysctl.service.in b/units/systemd-sysctl.service.in
+index d784c6426..980f611df 100644
+--- a/units/systemd-sysctl.service.in
++++ b/units/systemd-sysctl.service.in
+@@ -12,7 +12,7 @@ DefaultDependencies=no
+ Conflicts=shutdown.target
+ After=systemd-modules-load.service
+ Before=sysinit.target shutdown.target
+-ConditionPathIsReadWrite=/proc/sys/
++ConditionPathIsReadWrite=/proc/sys/net/
+ 
+ [Service]
+ Type=oneshot
+-- 
+2.15.1
+

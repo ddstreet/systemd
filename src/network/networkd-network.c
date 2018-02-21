@@ -102,6 +102,7 @@ static int network_load_one(Manager *manager, const char *filename) {
 
         *d = '\0';
 
+        network->required_for_online = true;
         network->dhcp = ADDRESS_FAMILY_NO;
         network->dhcp_use_ntp = true;
         network->dhcp_use_dns = true;
@@ -110,6 +111,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->dhcp_send_hostname = true;
         network->dhcp_route_metric = DHCP_ROUTE_METRIC;
         network->dhcp_client_identifier = DHCP_CLIENT_ID_DUID;
+        network->dhcp_use_mtu = true;
 
         network->dhcp_server_emit_dns = true;
         network->dhcp_server_emit_ntp = true;

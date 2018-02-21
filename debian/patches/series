@@ -63,6 +63,15 @@ networkd-add-support-to-configure-NOARP-ARP-for-interface.patch
 networkd-bond-support-primary-slave-and-active-slave-4873.patch
 networkd-do-not-set-NOARP-unconditionally-3891.patch
 networkd-fix-size-of-MTUBytes-so-that-it-does-not-overwri.patch
+0001-Mark-nbd-as-inactive-until-connected-2422.patch
+0001-networkd-change-UseMTU-default-to-true.-6837.patch
+0001-sysctl-configure-kernel-parameters-in-the-order-they.patch
+0001-networkd-auto-promote-links-if-promote_secondaries-i.patch
+0001-shutdown-already-sync-IO-before-we-enter-the-final-k.patch
+Fix-journald-rate-limit-with-low-disk-space.patch
+0001-sysctl-run-sysctl-service-if-proc-sys-net-is-writabl.patch
+0001-sysctl-do-not-fail-systemd-sysctl.service-if-proc-sy.patch
+0001-Add-a-RequiredForOnline-Link-attribute-for-.network-.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch

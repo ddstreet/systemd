@@ -1,0 +1,40 @@
+From eeb084806be1cc7f579d61634fe7b9b3dd5b3df9 Mon Sep 17 00:00:00 2001
+From: HATAYAMA Daisuke <d.hatayama@jp.fujitsu.com>
+Date: Tue, 27 Sep 2016 00:36:20 +0900
+Subject: [PATCH] journald,ratelimit: fix wrong calculation of burst_modulate()
+ (#4218)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This patch fixes wrong calculation of burst_modulate(), which now calculates
+the values smaller than really expected ones if available disk space is
+strictly more than 1MB.
+
+In particular, if available disk space is strictly more than 1MB and strictly
+less than 16MB, the resulted value becomes smaller than its original one.
+
+>>> (math.log2(1*1024**2)-16) / 4
+1.0
+>>> (math.log2(16*1024**2)-16) / 4
+2.0
+>>> (math.log2(256*1024**2)-16) / 4
+3.0
+-> This matches the comment in the function.
+---
+ src/journal/journald-rate-limit.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/journal/journald-rate-limit.c b/src/journal/journald-rate-limit.c
+index fce799a6ce..d30bf92cec 100644
+--- a/src/journal/journald-rate-limit.c
++++ b/src/journal/journald-rate-limit.c
+@@ -190,7 +190,7 @@ static unsigned burst_modulate(unsigned burst, uint64_t available) {
+         if (k <= 20)
+                 return burst;
+ 
+-        burst = (burst * (k-20)) / 4;
++        burst = (burst * (k-16)) / 4;
+ 
+         /*
+          * Example:

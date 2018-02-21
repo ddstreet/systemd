@@ -1,0 +1,48 @@
+From 39540de8abe24886693ca29a9caeea85c88089aa Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 25 Oct 2016 09:22:22 +0200
+Subject: [PATCH] sysctl: do not fail systemd-sysctl.service if /proc/sys is
+ mounted read-only
+
+Let's make missing write access to /proc/sys non-fatal to the sysctl service.
+
+This is a follow-up to 411e869f497c7c7bd0688f1e3500f9043bc56e48 which altered
+the condition for running the sysctl service to check for /proc/sys/net being
+writable, accepting that /proc/sys might be read-only. In order to ensure the
+boot-up stays clean in containers lower the log level for the EROFS errors
+generated due to this.
+---
+ src/sysctl/sysctl.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/src/sysctl/sysctl.c b/src/sysctl/sysctl.c
+index fbc1e0eb1..1363a9383 100644
+--- a/src/sysctl/sysctl.c
++++ b/src/sysctl/sysctl.c
+@@ -51,11 +51,18 @@ static int apply_all(OrderedHashmap *sysctl_options) {
+ 
+                 k = sysctl_write(property, value);
+                 if (k < 0) {
+-                        log_full_errno(k == -ENOENT ? LOG_INFO : LOG_WARNING, k,
+-                                       "Couldn't write '%s' to '%s', ignoring: %m", value, property);
+-
+-                        if (r == 0 && k != -ENOENT)
+-                                r = k;
++                        /* If the sysctl is not available in the kernel or we are running with reduced privileges and
++                         * cannot write it, then log about the issue at LOG_NOTICE level, and proceed without
++                         * failing. (EROFS is treated as a permission problem here, since that's how container managers
++                         * usually protected their sysctls.) In all other cases log an error and make the tool fail. */
++
++                        if (IN_SET(k, -EPERM, -EACCES, -EROFS, -ENOENT))
++                                log_notice_errno(k, "Couldn't write '%s' to '%s', ignoring: %m", value, property);
++                        else {
++                                log_error_errno(k, "Couldn't write '%s' to '%s': %m", value, property);
++                                if (r == 0)
++                                        r = k;
++                        }
+                 }
+         }
+ 
+-- 
+2.15.1
+
