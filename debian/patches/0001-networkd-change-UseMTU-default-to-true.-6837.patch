@@ -1,0 +1,39 @@
+From 22043e4317ecd2bc7834b48a6d364de76bb26d91 Mon Sep 17 00:00:00 2001
+From: Dimitri John Ledkov <xnox@ubuntu.com>
+Date: Tue, 19 Sep 2017 09:26:17 +0100
+Subject: [PATCH] networkd: change UseMTU default to true. (#6837)
+
+Typically when DHCP server sets MTU it is a lower one. And a lower than usual
+MTU is then thus required on said network to have operational networking. This
+makes networkd's dhcp client to work in more similar way to other dhcp-clients
+(e.g. isc-dhcp). In particular, in a cloud setting, without this default
+instances have resulted in timing out talking to cloud metadata source and
+failing to provision.
+
+This does not change this default for the Annonymize code path.
+---
+ man/systemd.network.xml        | 2 +-
+ src/network/networkd-network.c | 1 +
+ 2 files changed, 2 insertions(+), 1 deletions(-)
+
+--- a/man/systemd.network.xml
++++ b/man/systemd.network.xml
+@@ -700,7 +700,7 @@
+           <listitem>
+             <para>When true, the interface maximum transmission unit
+             from the DHCP server will be used on the current link.
+-            Defaults to false.</para>
++            Defaults to true.</para>
+           </listitem>
+         </varlistentry>
+         <varlistentry>
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -110,6 +110,7 @@
+         network->dhcp_send_hostname = true;
+         network->dhcp_route_metric = DHCP_ROUTE_METRIC;
+         network->dhcp_client_identifier = DHCP_CLIENT_ID_DUID;
++        network->dhcp_use_mtu = true;
+ 
+         network->dhcp_server_emit_dns = true;
+         network->dhcp_server_emit_ntp = true;
