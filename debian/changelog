@@ -1,3 +1,17 @@
+systemd (229-4ubuntu21.1) xenial-security; urgency=medium
+
+  * SECURITY UPDATE: remote DoS in resolved (LP: #1725351)
+    - debian/patches/CVE-2017-15908.patch: fix loop on packets with pseudo
+      dns types in src/resolve/resolved-dns-packet.c.
+    - CVE-2017-15908
+  * SECURITY UPDATE: access to automounted volumes can lock up
+    (LP: #1709649)
+    - debian/patches/CVE-2018-1049.patch: ack automount requests even when
+      already mounted in src/core/automount.c.
+    - CVE-2018-1049
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Thu, 01 Feb 2018 07:42:30 -0500
+
 systemd (229-4ubuntu21) xenial; urgency=medium
 
   * networkd: do not uncoditionally apply NOARP.
