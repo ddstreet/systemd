@@ -1,0 +1,67 @@
+From 2e79d1828a8da9b3af1b052297e3617905ec94f3 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 12 Jul 2016 17:26:52 +0200
+Subject: [PATCH] shutdown: already sync IO before we enter the final killing
+ spree
+
+This way, slow IO journald has to wait for can't cause it to reach the killing
+spree timeout and is hit by SIGKILL in addition to SIGTERM.
+---
+ src/core/shutdown.c | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+--- a/src/core/shutdown.c
++++ b/src/core/shutdown.c
+@@ -157,7 +157,6 @@
+         return switch_root("/run/initramfs", "/oldroot", false, MS_BIND);
+ }
+ 
+-
+ int main(int argc, char *argv[]) {
+         bool need_umount, need_swapoff, need_loop_detach, need_dm_detach;
+         bool in_container, use_watchdog = false;
+@@ -203,20 +202,26 @@
+         }
+ 
+         cg_get_root_path(&cgroup);
++        in_container = detect_container() > 0;
+ 
+         use_watchdog = !!getenv("WATCHDOG_USEC");
+ 
+-        /* lock us into memory */
++        /* Lock us into memory */
+         mlockall(MCL_CURRENT|MCL_FUTURE);
+ 
++        /* Synchronize everything that is not written to disk yet at this point already. This is a good idea so that
++         * slow IO is processed here already and the final process killing spree is not impacted by processes
++         * desperately trying to sync IO to disk within their timeout. */
++        if (!in_container)
++                sync();
++
++
+         log_info("Sending SIGTERM to remaining processes...");
+         broadcast_signal(SIGTERM, true, true);
+ 
+         log_info("Sending SIGKILL to remaining processes...");
+         broadcast_signal(SIGKILL, true, false);
+ 
+-        in_container = detect_container() > 0;
+-
+         need_umount = !in_container;
+         need_swapoff = !in_container;
+         need_loop_detach = !in_container;
+@@ -345,10 +350,10 @@
+                           need_loop_detach ? " loop devices," : "",
+                           need_dm_detach ? " DM devices," : "");
+ 
+-        /* The kernel will automaticall flush ATA disks and suchlike
+-         * on reboot(), but the file systems need to be synce'd
+-         * explicitly in advance. So let's do this here, but not
+-         * needlessly slow down containers. */
++        /* The kernel will automatically flush ATA disks and suchlike on reboot(), but the file systems need to be
++         * sync'ed explicitly in advance. So let's do this here, but not needlessly slow down containers. Note that we
++         * sync'ed things already once above, but we did some more work since then which might have caused IO, hence
++         * let's doit once more. */
+         if (!in_container)
+                 sync();
+ 

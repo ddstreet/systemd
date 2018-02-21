@@ -2520,6 +2520,10 @@ static int link_configure(Link *link) {
         }
 
         if (link_dhcp4_enabled(link)) {
+                r = dhcp4_set_promote_secondaries(link);
+                if (r < 0)
+                        return r;
+
                 r = dhcp4_configure(link);
                 if (r < 0)
                         return r;
@@ -3238,6 +3242,9 @@ int link_save(Link *link) {
                 sd_dhcp6_lease *dhcp6_lease = NULL;
                 const char *dhcp_domainname = NULL;
                 char **dhcp6_domains = NULL;
+
+                fprintf(f, "REQUIRED_FOR_ONLINE=%s\n",
+                        yes_no(link->network->required_for_online));
 
                 if (link->dhcp6_client) {
                         r = sd_dhcp6_client_get_lease(link->dhcp6_client, &dhcp6_lease);
