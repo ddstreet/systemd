@@ -71,6 +71,7 @@ networkd-fix-size-of-MTUBytes-so-that-it-does-not-overwri.patch
 Fix-journald-rate-limit-with-low-disk-space.patch
 0001-sysctl-run-sysctl-service-if-proc-sys-net-is-writabl.patch
 0001-sysctl-do-not-fail-systemd-sysctl.service-if-proc-sy.patch
+0001-Add-a-RequiredForOnline-Link-attribute-for-.network-.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
