@@ -64,6 +64,7 @@ networkd-bond-support-primary-slave-and-active-slave-4873.patch
 networkd-do-not-set-NOARP-unconditionally-3891.patch
 networkd-fix-size-of-MTUBytes-so-that-it-does-not-overwri.patch
 0001-Mark-nbd-as-inactive-until-connected-2422.patch
+0001-networkd-change-UseMTU-default-to-true.-6837.patch
 
 ## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
