@@ -1,3 +1,24 @@
+systemd (229-4ubuntu21.2) xenial; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * udev: Mark ndb devices as inactive until connected. (LP: #696435)
+  * networkd: in dhcp, change UseMTU default to true, to accept DHCP provided MTU by default.
+    (LP: #1717471)
+  * sysctl: apply parameters in-order, instead of randomly. (LP: #1718444)
+  * networkd: apply promote_secondaries, to make DHCP lease changes work.
+    (LP: #1721223)
+  * shutdown: sync filesystems, before going into a killing spree.
+    (LP: #1722481)
+  * sysctl: do not fail, when cannot apply sysctl changes due to read-only sysfs in containers.
+    (LP: #1734409)
+  * networkd,wait-online: add RequiredForOnline to mark mandatory/optional links for boot.
+    (LP: #1737570)
+
+  [ David Glasser ]
+  * journald: don't reduce BurstRateLimit on low disk space (LP: #1732803)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 21 Feb 2018 13:46:37 +0000
+
 systemd (229-4ubuntu21.1) xenial-security; urgency=medium
 
   * SECURITY UPDATE: remote DoS in resolved (LP: #1725351)
