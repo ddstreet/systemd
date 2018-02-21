@@ -3243,6 +3243,9 @@ int link_save(Link *link) {
                 const char *dhcp_domainname = NULL;
                 char **dhcp6_domains = NULL;
 
+                fprintf(f, "REQUIRED_FOR_ONLINE=%s\n",
+                        yes_no(link->network->required_for_online));
+
                 if (link->dhcp6_client) {
                         r = sd_dhcp6_client_get_lease(link->dhcp6_client, &dhcp6_lease);
                         if (r < 0 && r != -ENOMSG)
