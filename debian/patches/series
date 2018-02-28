@@ -40,3 +40,4 @@ deputy_shutdown.patch
 deputy_cgroup.patch
 do-not-create-run-nologin.patch
 CVE-2018-1049.patch
+logind-fix-memleaks.patch

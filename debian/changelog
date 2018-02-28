@@ -1,3 +1,10 @@
+systemd (204-5ubuntu20.27) trusty; urgency=medium
+
+  * logind: fix session not added to gc and other memleaks (LP: #1750013)
+    - Added cgmanager as dependency, needed to clean up old cgroups
+
+ -- Guilherme G. Piccoli <gpiccoli@canonical.com>  Wed, 28 Feb 2018 13:22:00 +0000
+
 systemd (204-5ubuntu20.26) trusty-security; urgency=medium
 
   * SECURITY UPDATE: access to automounted volumes can lock up
