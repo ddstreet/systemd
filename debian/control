@@ -101,11 +101,11 @@ Depends: ${shlibs:Depends},
          udev (>= 175-0ubuntu23),
          dbus,
          systemd-shim (>= 3),
+         cgmanager
 Replaces: systemd (<< 198-1), logind, ubuntu-system-service
 Breaks: systemd (<< 198-1)
 Conflicts: logind
 Provides: logind
-Suggests: cgmanager
 Multi-Arch: foreign
 Description: systemd runtime services
  This package contains the logind and D-BUS services (localed, hostname,

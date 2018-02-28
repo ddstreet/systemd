@@ -1781,6 +1781,7 @@ static DBusHandlerResult manager_message_handler(
                 this call explicitly turn off the FIFO logic, so that
                 the PAM code can finish clean up on its own */
                 session_remove_fifo(session);
+                session_add_to_gc_queue(session);
 
                 reply = dbus_message_new_method_return(message);
                 if (!reply)
