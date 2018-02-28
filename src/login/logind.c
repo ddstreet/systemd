@@ -1503,6 +1503,8 @@ void manager_gc(Manager *m, bool drop_not_started) {
                 if (session_check_gc(session, drop_not_started) == 0) {
                         session_stop(session);
                         session_free(session);
+                } else if (session_get_state(session) == SESSION_CLOSING) {
+                        session_add_to_gc_queue(session);
                 }
         }
 
