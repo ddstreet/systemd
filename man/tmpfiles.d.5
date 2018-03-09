@@ -1,0 +1,138 @@
+'\" t
+.\"     Title: tmpfiles.d
+.\"    Author: Brandon Philips <brandon@ifup.org>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2011
+.\"    Manual: tmpfiles.d
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "TMPFILES\&.D" "5" "01/08/2011" "systemd" "tmpfiles.d"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+tmpfiles.d \- Configuration for creation, deletion and cleaning of temporary and volatile files
+.SH "SYNOPSIS"
+.PP
+/etc/tmpfiles\&.d/*\&.conf
+.SH "DESCRIPTION"
+.PP
+\fBsystemd\fR
+uses
+/etc/tmpfiles\&.d/
+to describe the creation, cleaning and removal of temporary files and directories which usually reside in
+/var/run
+or
+/tmp)\&. Each configuration file is named in the style of
+/etc/tmpfiles\&.d/<program>\&.conf\&.
+.SH "CONFIGURATION FORMAT"
+.PP
+The configuration format is one line per path containing action, mode, ownership and age fields:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+Type Path          Mode UID  GID  Age
+d    /var/run/user 0755 root root 10d
+.fi
+.if n \{\
+.RE
+.\}
+.SS "Type"
+.PP
+\fIf\fR
+.RS 4
+Create a file if it doesn\*(Aqt exist yet
+.RE
+.PP
+\fIF\fR
+.RS 4
+Create or truncate a file
+.RE
+.PP
+\fId\fR
+.RS 4
+Create a directory if it doesn\*(Aqt exist yet
+.RE
+.PP
+\fID\fR
+.RS 4
+Create or empty a directory
+.RE
+.PP
+\fIx\fR
+.RS 4
+Ignore a path
+.RE
+.PP
+\fIr\fR
+.RS 4
+Remove a path
+.RE
+.PP
+\fIR\fR
+.RS 4
+Recursively remove a path
+.RE
+.SS "Mode"
+.PP
+The file access mode to use for this file or directory\&. If omitted or when set to \- the default is used: 0755 for directories, 0644 for files\&.
+.SS "UID, GID"
+.PP
+The user and group to use for this file or directory\&. This may either be a numeric user/group ID or a user or group name\&. If omitted or when set to \- the default 0 is used\&.
+.SS "Age"
+.PP
+The date field, when set, is used to decide what files to delete when cleaning\&. If a file or directory is older than the current time minus the age field it is deleted\&. The field format is a series of integers each followed by one of the following postfixes for the respective time units:
+.PP
+\fIs\fR, \fImin\fR, \fIh\fR, \fId\fR, \fIw\fR, \fIms\fR, \fIm\fR, \fIus\fR
+.RS 4
+.RE
+.PP
+If multiple integers and units are specified the time values are summed up\&.
+.PP
+The age field only applies to lines starting with d, D and x\&. If omitted or set to \- no automatic clean\-up is done\&.
+.SH "EXAMPLE"
+.PP
+\fBExample\ \&1.\ \&/etc/tmpfiles.d/screen.conf example\fR
+.PP
+\fBscreen\fR
+needs two directories created at boot with specific modes and ownership\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+d /var/run/screens 1777 root root 10d
+d /var/run/uscreens 0755 root root 10d12h
+.fi
+.if n \{\
+.RE
+.\}
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1)
+.SH "AUTHOR"
+.PP
+\fBBrandon Philips\fR <\&brandon@ifup\&.org\&>
+.RS 4
+Documentation
+.RE

@@ -1,13 +1,22 @@
 '\" t
 .\"     Title: daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 10/07/2010
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2011
 .\"    Manual: daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "DAEMON" "7" "10/07/2010" "systemd" "daemon"
+.TH "DAEMON" "7" "01/08/2011" "systemd" "daemon"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -111,7 +120,7 @@ to detach from any terminal and create an independent session\&.
 .\}
 In the child, call
 \fBfork()\fR
-again, to ensure the daemon can never re\-aquire a terminal again\&.
+again, to ensure the daemon can never re\-acquire a terminal again\&.
 .RE
 .sp
 .RS 4
@@ -277,7 +286,7 @@ Provide a correct exit code from the main daemon process, as this is used by the
 .sp -1
 .IP "  4." 4.2
 .\}
-If possible and applicable expose the daemon\'s control interface via the D\-Bus IPC system and grab a bus name as last step of initialization\&.
+If possible and applicable expose the daemon\*(Aqs control interface via the D\-Bus IPC system and grab a bus name as last step of initialization\&.
 .RE
 .sp
 .RS 4
@@ -303,7 +312,7 @@ for details\&.
 .sp -1
 .IP "  6." 4.2
 .\}
-As much as possible, rely on the init systemd\'s functionality to limit the access of the daemon to files, services and other resources\&. i\&.e\&. in the case of systemd, rely on systemd\'s resource limit control instead of implementing your own, rely on systemd\'s privilege dropping code instead of implementing it in the daemon, and similar\&. See
+As much as possible, rely on the init systemd\*(Aqs functionality to limit the access of the daemon to files, services and other resources\&. i\&.e\&. in the case of systemd, rely on systemd\*(Aqs resource limit control instead of implementing your own, rely on systemd\*(Aqs privilege dropping code instead of implementing it in the daemon, and similar\&. See
 \fBsystemd.exec\fR(5)
 for the available controls\&.
 .RE
@@ -354,7 +363,7 @@ interface\&.
 Instead of using the
 \fBsyslog()\fR
 call to log directly to the system logger, a new\-style daemon may choose to simply log to STDERR via
-\fBfprintf()\fR, which is then forwarded to syslog by the init system\&. If log priorities are necessary these can be encoded by prefixing individual log lines with strings like "<4>" (for log priority 4 "WARNING" in the syslog priority scheme), following a similar style as the Linux kernel\'s
+\fBfprintf()\fR, which is then forwarded to syslog by the init system\&. If log priorities are necessary these can be encoded by prefixing individual log lines with strings like "<4>" (for log priority 4 "WARNING" in the syslog priority scheme), following a similar style as the Linux kernel\*(Aqs
 \fBprintk()\fR
 priority system\&. In fact, using this style of logging also enables the init system to optionally direct all application logging to the kernel log buffer (kmsg), as accessible via
 \fBdmesg\fR(1)\&. This kind of logging may be enabled by setting
@@ -463,7 +472,7 @@ units when a specific IP address is configured on a network interface, because n
 \fIFreeBind=yes\fR
 in systemd socket files (see
 \fBsystemd.socket\fR(5)
-for details)\&. This option, when enabled, allows sockets to be bound to a non\-local, not configured IP address, and hence allows bindings to a particular IP address before it actually becomes available, making such an explicit dependency to the configured address redundant\&. Another often suggested trigger for service activation is low system load\&. However, here too, a more convincing approach might be to make proper use of features of the operating system: in particular, the CPU or IO scheduler of Linux\&. Instead of scheduling jobs from userspace based on monitoring the OS scheduler, it is advisable to leave the scheduling of processes to the OS scheduler itself\&. systemd provides fine\-grained access to the CPU and IO schedulers\&. If a process executed by the init system shall not negatively impact the amount of CPU or IO bandwith available to other processes, it should be configured with
+for details)\&. This option, when enabled, allows sockets to be bound to a non\-local, not configured IP address, and hence allows bindings to a particular IP address before it actually becomes available, making such an explicit dependency to the configured address redundant\&. Another often suggested trigger for service activation is low system load\&. However, here too, a more convincing approach might be to make proper use of features of the operating system: in particular, the CPU or IO scheduler of Linux\&. Instead of scheduling jobs from userspace based on monitoring the OS scheduler, it is advisable to leave the scheduling of processes to the OS scheduler itself\&. systemd provides fine\-grained access to the CPU and IO schedulers\&. If a process executed by the init system shall not negatively impact the amount of CPU or IO bandwidth available to other processes, it should be configured with
 \fICPUSchedulingPolicy=idle\fR
 and/or
 \fIIOSchedulingClass=idle\fR\&. Optionally, this may be combined with timer\-based activation to schedule background jobs during runtime and with minimal impact on the system, and remove it from the boot phase itself\&.
@@ -587,8 +596,8 @@ At the build installation time (e\&.g\&.
 during package build) packages are recommended to install their systemd unit files in the directory returned by
 \fBpkg\-config systemd \-\-variable=systemdsystemunitdir\fR
 (for system services), resp\&.
-\fBpkg\-config systemd \-\-variable=systemdsessionunitdir\fR
-(for session services)\&. This will make the services available in the system on explicit request but not activate them automatically during boot\&. Optionally, during package installation (e\&.g\&.
+\fBpkg\-config systemd \-\-variable=systemduserunitdir\fR
+(for user services)\&. This will make the services available in the system on explicit request but not activate them automatically during boot\&. Optionally, during package installation (e\&.g\&.
 \fBrpm \-i\fR
 by the administrator) symlinks should be created in the systemd configuration directories via the
 \fBenable\fR
@@ -617,7 +626,7 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test \-n "$with_systemdsystemunitdir" \-a "x$with_
 .RE
 .\}
 .PP
-This snippet allows automatic installation of the unit files on systemd machines, and optionally allows their installation even on machines lacking systemd\&. (Modification of this snippet for the session unit directory is left as excercise to the reader\&.)
+This snippet allows automatic installation of the unit files on systemd machines, and optionally allows their installation even on machines lacking systemd\&. (Modification of this snippet for the user unit directory is left as excercise to the reader\&.)
 .PP
 Additionally, to ensure that
 \fBmake distcheck\fR
@@ -664,26 +673,29 @@ file use a snippet like the following to enable/disable the service during insta
 .nf
 %post
 if [ $1 \-eq 1 ]; then
-        # On install, enable (but don\'t start) the units by default
+        # On install (not upgrade), enable (but don\*(Aqt start) the
+        # units by default
         /bin/systemctl enable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 
-        # Alternatively, just call /bin/systemctl daemon\-reload here,
-        # if the daemon should not be enabled by default on package
+        # Alternatively, just call
+        # /bin/systemctl daemon\-reload >/dev/null 2>&1 || :
+        # here, if the daemon should not be enabled by default on
         # installation
 fi
 
 %preun
 if [ $1 \-eq 0 ]; then
-        # On uninstall, disable and stop the units
+        # On uninstall (not upgrade), disable and stop the units
         /bin/systemctl disable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
         /bin/systemctl stop foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 fi
 
 %postun
-# On upgrade and uninstall, reload init system configuration, to make systemd honour changed unit files
+# Reload init system configuration, to make systemd honour changed
+# or deleted unit files
 /bin/systemctl daemon\-reload >/dev/null 2>&1 || :
 if [ $1 \-ge 1 ] ; then
-        # Optionally, on upgrade, restart the daemon
+        # On upgrade (not uninstall), optionally, restart the daemon
         /bin/systemctl try\-restart foobar\&.service >/dev/null 2>&1 || :
 fi
 .fi

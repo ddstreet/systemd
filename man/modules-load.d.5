@@ -1,0 +1,69 @@
+'\" t
+.\"     Title: modules-load.d
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2011
+.\"    Manual: modules-load.d
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "MODULES\-LOAD\&.D" "5" "01/08/2011" "systemd" "modules-load.d"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+modules-load.d \- Configure kernel modules to load at boot
+.SH "SYNOPSIS"
+.PP
+/etc/modules\-load\&.d/*\&.conf
+.SH "DESCRIPTION"
+.PP
+\fBsystemd\fR
+uses
+/etc/modules\-load\&.d/
+to configure kernel modules to load during boot in a static list\&. Each configuration file is named in the style of
+/etc/modules\-load\&.d/<program>\&.conf\&. Note that it is usually a better idea to use the automatic module loading by PCI ID, by DMI ID or similar triggers configured in the kernel modules themselves instead of relying on static configuration like this\&.
+.SH "CONFIGURATION FORMAT"
+.PP
+The configuration files should simply contain a list of kernel module names to load, separated by newlines\&. Empty lines and lines whose first non\-whitespace character is # or ; are ignored\&.
+.SH "EXAMPLE"
+.PP
+\fBExample\ \&1.\ \&/etc/modules-load.d/uinput.conf example:\fR
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# Load uinput\&.ko at boot
+uinput
+.fi
+.if n \{\
+.RE
+.\}
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBmodprobe\fR(8)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

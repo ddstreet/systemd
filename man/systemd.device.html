@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.device</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.device"><a id="systemd.device"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.device — systemd device configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.device</code></p></div><div class="refsect1" title="Description"><a id="id414941"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.device</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.device"><a id="systemd.device"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.device — systemd device configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.device</code></p></div><div class="refsect1" title="Description"><a id="id371316"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.device</code> encodes information about
                 a device unit as exposed in the
                 sysfs/<span class="citerefentry"><span class="refentrytitle">udev</span>(7)</span>
@@ -24,7 +24,7 @@
                 in systemd as <code class="filename">dev-sda5.device</code>. For
                 details about the escaping logic used to convert a
                 file system path to a unit name see
-                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p></div><div class="refsect1" title="The udev Database"><a id="id415034"/><h2>The udev Database</h2><p>The settings of device units may either be
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p></div><div class="refsect1" title="The udev Database"><a id="id371410"/><h2>The udev Database</h2><p>The settings of device units may either be
                 configured via unit files, or directly from the udev
                 database (which is recommended). The following udev
                 properties are understood by systemd:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">SYSTEMD_WANTS=</code></span></dt><dd><p>Adds dependencies of
@@ -44,7 +44,7 @@
                                 automatically transformed into a unit
                                 name. (See above.)</p></dd><dt><span class="term"><code class="varname">ID_MODEL_FROM_DATABASE=</code>, </span><span class="term"><code class="varname">ID_MODEL=</code></span></dt><dd><p>If set, this property is
                                 used as description string for the
-                                device unit.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id382464"/><h2>See Also</h2><p>
+                                device unit.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id338839"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

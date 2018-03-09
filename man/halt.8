@@ -1,13 +1,22 @@
 '\" t
 .\"     Title: halt
 .\"    Author: Lennart Poettering <lennart@poettering.net>
-.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
-.\"      Date: 10/07/2010
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 01/08/2011
 .\"    Manual: halt
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "HALT" "8" "10/07/2010" "systemd" "halt"
+.TH "HALT" "8" "01/08/2011" "systemd" "halt"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
 .\" -----------------------------------------------------------------
 .\" * set default formatting
 .\" -----------------------------------------------------------------
@@ -59,27 +68,27 @@ Reboot the machine, regardless which one of the three commands is invoked\&.
 .PP
 \fB\-f\fR, \fB\-\-force\fR
 .RS 4
-Force immediate halt, power\-off, reboot\&. Don\'t contact the init system\&.
+Force immediate halt, power\-off, reboot\&. Don\*(Aqt contact the init system\&.
 .RE
 .PP
 \fB\-w\fR, \fB\-\-wtmp\-only\fR
 .RS 4
-Only write wtmp shutdown entry, don\'t actually halt, power\-off, reboot\&.
+Only write wtmp shutdown entry, don\*(Aqt actually halt, power\-off, reboot\&.
 .RE
 .PP
 \fB\-d\fR, \fB\-\-no\-wtmp\fR
 .RS 4
-Don\'t write wtmp shutdown entry\&.
+Don\*(Aqt write wtmp shutdown entry\&.
 .RE
 .PP
 \fB\-n\fR, \fB\-\-no\-sync\fR
 .RS 4
-Don\'t sync hard disks/storage media before halt, power\-off, reboot\&.
+Don\*(Aqt sync hard disks/storage media before halt, power\-off, reboot\&.
 .RE
 .PP
 \fB\-\-no\-wall\fR
 .RS 4
-Don\'t send wall message before halt, power\-off, reboot\&.
+Don\*(Aqt send wall message before halt, power\-off, reboot\&.
 .RE
 .SH "EXIT STATUS"
 .PP

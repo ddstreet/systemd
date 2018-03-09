@@ -45,6 +45,10 @@
 #define _public_ __attribute__ ((visibility("default")))
 #define _hidden_ __attribute__ ((visibility("hidden")))
 #define _weakref_(x) __attribute__((weakref(#x)))
+#define _introspect_(x) __attribute__((section("introspect." x)))
+
+#define XSTRINGIFY(x) #x
+#define STRINGIFY(x) XSTRINGIFY(x)
 
 /* Rounds up */
 static inline size_t ALIGN(size_t l) {
@@ -57,19 +61,29 @@ static inline size_t PAGE_ALIGN(size_t l) {
 
 #define ELEMENTSOF(x) (sizeof(x)/sizeof((x)[0]))
 
+#ifndef MAX
 #define MAX(a,b)                                \
         __extension__ ({                        \
                         typeof(a) _a = (a);     \
                         typeof(b) _b = (b);     \
                         _a > _b ? _a : _b;      \
                 })
+#endif
 
+#define MAX3(a,b,c)                             \
+        MAX(MAX(a,b),c)
+
+#ifndef MIN
 #define MIN(a,b)                                \
         __extension__ ({                        \
                         typeof(a) _a = (a);     \
                         typeof(b) _b = (b);     \
                         _a < _b ? _a : _b;      \
                 })
+#endif
+
+#define MIN3(a,b,c)                             \
+        MIN(MIN(a,b),c)
 
 #define CLAMP(x, low, high)                                             \
         __extension__ ({                                                \

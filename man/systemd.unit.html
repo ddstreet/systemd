@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.unit</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemd.unit"><a id="systemd.unit"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.unit — systemd unit configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.unit</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.unit"><a id="systemd.unit"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.unit — systemd unit configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
                 <code class="filename">systemd.socket</code>,
                 <code class="filename">systemd.device</code>,
                 <code class="filename">systemd.mount</code>,
@@ -9,7 +9,7 @@
                 <code class="filename">systemd.target</code>,
                 <code class="filename">systemd.path</code>,
                 <code class="filename">systemd.timer</code>,
-                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id515689"/><h2>Description</h2><p>A unit configuration file encodes information
+                <code class="filename">systemd.snapshot</code></p></div><div class="refsect1" title="Description"><a id="id349728"/><h2>Description</h2><p>A unit configuration file encodes information
                 about a service, a socket, a device, a mount point, an
                 automount point, a swap file or partition, a start-up
                 target, a file system path or a timer controlled and
@@ -105,15 +105,25 @@
                 <code class="literal">%i</code> specifier in many of the
                 configuration options. Other specifiers that may be
                 used are <code class="literal">%n</code>, <code class="literal">%N</code>,
-                <code class="literal">%p</code>, <code class="literal">%P</code> and
-                <code class="literal">%I</code>, for the full unit name, the
-                unescaped unit name, the prefix name, the unescaped
-                prefix name and the unescaped instance name,
-                respectively. The prefix name here refers to the
-                string before the @, i.e. "getty" in the example
-                above, where "tty3" is the instance name.</p><p>The unit file format is covered by the
+                <code class="literal">%p</code>, <code class="literal">%P</code>,
+                <code class="literal">%I</code> and <code class="literal">%f</code>, for
+                the full unit name, the unescaped unit name, the
+                prefix name, the unescaped prefix name, the unescaped
+                instance name and the unescaped filename,
+                respectively. The unescaped filename is either the
+                unescaped instance name (if set) with / prepended (if
+                necessary), or the prefix name similarly prepended
+                with /. The prefix name here refers to the string
+                before the @, i.e. "getty" in the example above, where
+                "tty3" is the instance name.</p><p>If a unit file is empty (i.e. has the file size
+                0) or is symlinked to <code class="filename">/dev/null</code>
+                its configuration will not be loaded and it appears
+                with a load state of <code class="literal">masked</code>, and
+                cannot be activated. Use this as an effective way to
+                fully disable a unit, making it impossible to start it
+                even manually.</p><p>The unit file format is covered by the
                 <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/InterfaceStabilityPromise">Interface
-                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id483385"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
+                Stability Promise</a>.</p></div><div class="refsect1" title="Options"><a id="id317449"/><h2>Options</h2><p>Unit file may include a [Unit] section, which
                 carries generic information about the unit that is not
                 dependent on the type of unit:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">Names=</code></span></dt><dd><p>Additional names for
                                 this unit. The names listed here must
@@ -201,7 +211,18 @@
                                 adding a symlink to a
                                 <code class="filename">.wants/</code> directory
                                 accompanying the unit file. For
-                                details see above.</p></dd><dt><span class="term"><code class="varname">Conflicts=</code></span></dt><dd><p>Configures negative
+                                details see above.</p></dd><dt><span class="term"><code class="varname">BindTo=</code></span></dt><dd><p>Configures requirement
+                                dependencies, very similar in style to
+                                <code class="varname">Requires=</code>, however
+                                in addition to this behaviour it also
+                                declares that this unit is stopped
+                                when any of the units listed suddenly
+                                disappears. Units can suddenly,
+                                unexpectedly disappear if a service
+                                terminates on its own choice, a device
+                                is unplugged or a mount point
+                                unmounted without involvement of
+                                systemd.</p></dd><dt><span class="term"><code class="varname">Conflicts=</code></span></dt><dd><p>Configures negative
                                 requirement dependencies. If a unit
                                 has a
                                 <code class="varname">Conflicts=</code> setting
@@ -280,21 +301,7 @@
                                 units that are activated when this
                                 unit enters the
                                 '<code class="literal">failed</code>'
-                                state.</p></dd><dt><span class="term"><code class="varname">RecursiveStop=</code></span></dt><dd><p>Takes a boolean
-                                argument. If <code class="option">true</code> and
-                                the unit stops without being requested
-                                by the user, all units
-                                depending on it will be stopped as
-                                well. (e.g. if a service exits or
-                                crashes on its own behalf, units using
-                                it will be stopped) Note that normally
-                                if a unit stops without a user request,
-                                units depending on it will not be
-                                terminated. Only if the user requested
-                                shutdown of a unit, all units depending
-                                on that unit will be shut down as well
-                                and at the same time. Defaults to
-                                <code class="option">false</code>.</p></dd><dt><span class="term"><code class="varname">StopWhenUnneeded=</code></span></dt><dd><p>Takes a boolean
+                                state.</p></dd><dt><span class="term"><code class="varname">StopWhenUnneeded=</code></span></dt><dd><p>Takes a boolean
                                 argument. If <code class="option">true</code>
                                 this unit will be stopped when it is
                                 no longer used. Note that in order to
@@ -356,15 +363,7 @@
                                 <code class="option">false</code> this option
                                 does not disable all implicit
                                 dependencies, just non-essential
-                                ones.</p></dd><dt><span class="term"><code class="varname">IgnoreDependencyFailure=</code></span></dt><dd><p>Takes a boolean
-                                argument. If <code class="option">true</code> and
-                                a requirement dependency of this unit
-                                fails to start up this unit will be
-                                started nonetheless, ignoring that
-                                failure. If <code class="option">false</code>
-                                (the default) and a dependency unit
-                                fails the unit will immediately fail
-                                too and the job is removed.</p></dd><dt><span class="term"><code class="varname">JobTimeoutSec=</code></span></dt><dd><p>When clients are
+                                ones.</p></dd><dt><span class="term"><code class="varname">JobTimeoutSec=</code></span></dt><dd><p>When clients are
                                 waiting for a job of this unit to
                                 complete, time out after the specified
                                 time. If this time limit is reached
@@ -386,7 +385,56 @@
                                 timeout set with this option however
                                 is useful to abort only the job
                                 waiting for the unit state to
-                                change.</p></dd></dl></div><p>Unit file may include a [Install] section, which
+                                change.</p></dd><dt><span class="term"><code class="varname">ConditionPathExists=</code>, </span><span class="term"><code class="varname">ConditionDirectoryNotEmpty=</code>, </span><span class="term"><code class="varname">ConditionKernelCommandLine=</code>, </span><span class="term"><code class="varname">ConditionNull=</code></span></dt><dd><p>Before starting a unit
+                                verify that the specified condition is
+                                true. With
+                                <code class="varname">ConditionPathExists=</code>
+                                a file existance condition can be
+                                checked before a unit is started. If
+                                the specified absolute path name does
+                                not exist startup of a unit will not
+                                actually happen, however the unit is
+                                still useful for ordering purposes in
+                                this case. The condition is checked at
+                                the time the queued start job is to be
+                                executed. If the absolute path name
+                                passed to
+                                <code class="varname">ConditionPathExists=</code>
+                                is prefixed with an exclamation mark
+                                (!), the test is negated, and the unit
+                                only started if the path does not
+                                exist. <code class="varname">ConditionDirectoryNotEmpty=</code>
+                                is similar to
+                                <code class="varname">ConditionPathExists=</code>
+                                but verifies whether a certain path is
+                                exists and is a non-empty
+                                directory. Similarly
+                                <code class="varname">ConditionKernelCommandLine=</code>
+                                may be used to check whether a
+                                specific kernel command line option is
+                                set (or if prefixed with the
+                                exclamation mark unset). The argument
+                                must either be a single word, or an
+                                assignment (i.e. two words, separated
+                                by the equality sign). In the former
+                                case the kernel command line is
+                                searched for the word appearing as is,
+                                or as left hand side of an
+                                assignment. In the latter case the
+                                exact assignment is looked for with
+                                right and left hand side
+                                matching. Finally,
+                                <code class="varname">ConditionNull=</code> may
+                                be used to add a constant condition
+                                check value to the unit. It takes a
+                                boolean argument. If set to
+                                <code class="varname">false</code> the condition
+                                will always fail, otherwise
+                                succeed. If multiple conditions are
+                                specified the unit will be executed
+                                if at least one of them applies
+                                (i.e. a logical OR is
+                                applied).</p></dd></dl></div><p>Unit file may include a [Install] section, which
                 carries installation information for the unit. This
                 section is not interpreted by
                 <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
@@ -446,7 +494,7 @@
                                 <span class="command"><strong>systemctl enable</strong></span>
                                 will automatically install units
                                 listed in this option as
-                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id525146"/><h2>See Also</h2><p>
+                                well.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id359327"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>,

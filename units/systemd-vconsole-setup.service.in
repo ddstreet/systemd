@@ -10,9 +10,10 @@ Description=Setup Virtual Console
 DefaultDependencies=no
 Conflicts=shutdown.target
 After=systemd-readahead-collect.service systemd-readahead-replay.service
-Before=basic.target shutdown.target
+Before=sysinit.target shutdown.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=@rootlibexecdir@/systemd-vconsole-setup
+StandardOutput=syslog
