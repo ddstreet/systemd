@@ -1,0 +1,42 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>kernel-install</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+  <a href="systemd.directives.html">Directives </a>·
+  <a href="../python-systemd/index.html">Python </a>·
+  <a href="../libudev/index.html">libudev </a>·
+  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="kernel-install"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>kernel-install — Add and remove kernel and initramfs images to and from /boot</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">kernel-install</code>  {COMMAND} {KERNEL VERSION} {KERNEL IMAGE}</p></div></div><div class="refsect1"><a name="idp3909984"></a><h2>Description</h2><p>
+      <span class="command"><strong>kernel-install</strong></span> is used to install and remove kernel and
+      initramfs images to and from <code class="filename">/boot</code>.
+    </p><p>kernel-install will execute the files located in the directory <code class="filename">/usr/lib/kernel/install.d/</code>
+    and the local administration directory <code class="filename">/etc/kernel/install.d/</code>.
+    All files are collectively sorted and executed in lexical order, regardless of the directories in
+    which they live. However, files with identical file names replace each other.
+    Files in <code class="filename">/etc/kernel/install.d/</code> take precedence over files with the same name
+    in <code class="filename">/usr/lib/kernel/install.d/</code>. This can be used to override a system-supplied
+    executables with a local file if needed; a symbolic link in <code class="filename">/etc/kernel/install.d/</code>
+    with the same name as an executable in <code class="filename">/usr/lib/kernel/install.d/</code>,
+    pointing to /dev/null, disables the executable entirely. Executables must have the
+    extension .install; other extensions are ignored.</p></div><div class="refsect1"><a name="idp3917632"></a><h2>Commands</h2><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">add &lt;KERNEL VERSION&gt; &lt;KERNEL IMAGE&gt;</span></dt><dd><p>calls every executable <code class="filename">/usr/lib/kernel/install.d/*.install</code>
+          and <code class="filename">/etc/kernel/install.d/*.install</code> with the arguments
+          "add &lt;KERNEL VERSION&gt; <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/</code>"</p><p>kernel-install copies &lt;KERNEL IMAGE&gt; to
+          <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/linux</code>.</p><p>kernel-install also creates a boot loader entry according to the boot loader specification
+          in <code class="filename">/boot/loader/entries/&lt;MACHINE-ID&gt;-&lt;KERNEL VERSION&gt;.conf</code>.
+          If the file <code class="filename">initrd</code> is found next to the <code class="filename">linux</code> file,
+          the initrd will be added to the configuration.</p></dd><dt><span class="term">remove &lt;KERNEL VERSION&gt; &lt;KERNEL IMAGE&gt;</span></dt><dd><p>calls every executable <code class="filename">/usr/lib/kernel/install.d/*.install</code>
+        and <code class="filename">/etc/kernel/install.d/*.install</code> with the arguments:
+        "remove &lt;KERNEL VERSION&gt; <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/</code>"
+        </p><p>kernel-install removes the entire directory <code class="filename">/boot/&lt;MACHINE-ID&gt;/&lt;KERNEL VERSION&gt;/</code>
+        and the file <code class="filename">/boot/loader/entries/&lt;MACHINE-ID&gt;-&lt;KERNEL VERSION&gt;.conf</code></p></dd></dl></div></div><div class="refsect1"><a name="idp33632"></a><h2>Exit status</h2><p>If every executable returns with 0, 0 is returned, a non-zero failure code otherwise.</p></div><div class="refsect1"><a name="idp34816"></a><h2>Files</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+          <code class="filename">/usr/lib/kernel/install.d/*.install</code>
+          <code class="filename">/etc/kernel/install.d/*.install</code>
+        </span></dt><dd><p>Drop-in files, which are executed by kernel-install.</p></dd><dt><span class="term">
+          <code class="filename">/etc/kernel/cmdline</code>
+          <code class="filename">/proc/cmdline</code>
+        </span></dt><dd><p>The contents of the file <code class="filename">/etc/kernel/cmdline</code> specifies the kernel command line to use.
+            If that file does not exist, <code class="filename">/proc/cmdline</code> is used.</p></dd><dt><span class="term">
+          <code class="filename">/etc/machine-id</code>
+        </span></dt><dd><p>The contents of the file specifies the machine identifaction &lt;MACHINE-ID&gt;.</p></dd><dt><span class="term">
+          <code class="filename">/etc/os-release</code>
+        </span></dt><dd><p>The contents of the file specifies the the operating system id &lt;OS-ID&gt;.</p></dd></dl></div></div><div class="refsect1"><a name="idp55104"></a><h2>See Also</h2><p>
+      <a href="machine-id.html"><span class="citerefentry"><span class="refentrytitle">machine-id</span>(5)</span></a>,
+      <a href="os-release.html"><span class="citerefentry"><span class="refentrytitle">os-release</span>(5)</span></a>,
+      <a class="ulink" href="http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec" target="_top">Boot loader specification</a>
+    </p></div></div></body></html>

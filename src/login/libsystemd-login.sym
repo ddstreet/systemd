@@ -2,8 +2,8 @@
   This file is part of systemd.
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 ***/
 
@@ -46,3 +46,15 @@ global:
         sd_session_get_class;
         sd_session_get_display;
 } LIBSYSTEMD_LOGIN_38;
+
+LIBSYSTEMD_LOGIN_186 {
+global:
+        sd_session_get_state;
+        sd_seat_can_tty;
+        sd_seat_can_graphical;
+} LIBSYSTEMD_LOGIN_43;
+
+LIBSYSTEMD_LOGIN_198 {
+global:
+        sd_session_get_tty;
+} LIBSYSTEMD_LOGIN_186;

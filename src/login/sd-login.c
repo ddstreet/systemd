@@ -6,16 +6,16 @@
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -29,68 +29,19 @@
 #include "macro.h"
 #include "sd-login.h"
 #include "strv.h"
-
-static int pid_get_cgroup(pid_t pid, char **root, char **cgroup) {
-        char *cg_process, *cg_init, *p;
-        int r;
-
-        if (pid == 0)
-                pid = getpid();
-
-        if (pid <= 0)
-                return -EINVAL;
-
-        r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, pid, &cg_process);
-        if (r < 0)
-                return r;
-
-        r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 1, &cg_init);
-        if (r < 0) {
-                free(cg_process);
-                return r;
-        }
-
-        if (endswith(cg_init, "/system"))
-                cg_init[strlen(cg_init)-7] = 0;
-        else if (streq(cg_init, "/"))
-                cg_init[0] = 0;
-
-        if (startswith(cg_process, cg_init))
-                p = cg_process + strlen(cg_init);
-        else
-                p = cg_process;
-
-        free(cg_init);
-
-        if (cgroup) {
-                char* c;
-
-                c = strdup(p);
-                if (!c) {
-                        free(cg_process);
-                        return -ENOMEM;
-                }
-
-                *cgroup = c;
-        }
-
-        if (root) {
-                cg_process[p-cg_process] = 0;
-                *root = cg_process;
-        } else
-                free(cg_process);
-
-        return 0;
-}
+#include "fileio.h"
 
 _public_ int sd_pid_get_session(pid_t pid, char **session) {
         int r;
         char *cgroup, *p;
 
+        if (pid < 0)
+                return -EINVAL;
+
         if (!session)
                 return -EINVAL;
 
-        r = pid_get_cgroup(pid, NULL, &cgroup);
+        r = cg_pid_get_cgroup(pid, NULL, &cgroup);
         if (r < 0)
                 return r;
 
@@ -122,55 +73,14 @@ _public_ int sd_pid_get_session(pid_t pid, char **session) {
 }
 
 _public_ int sd_pid_get_unit(pid_t pid, char **unit) {
-        int r;
-        char *cgroup, *p, *at, *b;
-        size_t k;
+
+        if (pid < 0)
+                return -EINVAL;
 
         if (!unit)
                 return -EINVAL;
 
-        r = pid_get_cgroup(pid, NULL, &cgroup);
-        if (r < 0)
-                return r;
-
-        if (!startswith(cgroup, "/system/")) {
-                free(cgroup);
-                return -ENOENT;
-        }
-
-        p = cgroup + 8;
-        k = strcspn(p, "/");
-
-        at = memchr(p, '@', k);
-        if (at && at[1] == '.') {
-                size_t j;
-
-                /* This is a templated service */
-                if (p[k] != '/') {
-                        free(cgroup);
-                        return -EIO;
-                }
-
-                j = strcspn(p+k+1, "/");
-
-                b = malloc(k + j + 1);
-
-                if (b) {
-                        memcpy(b, p, at - p + 1);
-                        memcpy(b + (at - p) + 1, p + k + 1, j);
-                        memcpy(b + (at - p) + 1 + j, at + 1, k - (at - p) - 1);
-                        b[k+j] = 0;
-                }
-        } else
-                  b = strndup(p, k);
-
-        free(cgroup);
-
-        if (!b)
-                return -ENOMEM;
-
-        *unit = b;
-        return 0;
+        return cg_pid_get_unit(pid, unit);
 }
 
 _public_ int sd_pid_get_owner_uid(pid_t pid, uid_t *uid) {
@@ -178,10 +88,13 @@ _public_ int sd_pid_get_owner_uid(pid_t pid, uid_t *uid) {
         char *root, *cgroup, *p, *cc;
         struct stat st;
 
+        if (pid < 0)
+                return -EINVAL;
+
         if (!uid)
                 return -EINVAL;
 
-        r = pid_get_cgroup(pid, &root, &cgroup);
+        r = cg_pid_get_cgroup(pid, &root, &cgroup);
         if (r < 0)
                 return r;
 
@@ -284,7 +197,7 @@ _public_ int sd_uid_is_on_seat(uid_t uid, int require_active, const char *seat) 
         }
 
         FOREACH_WORD(w, l, s, state) {
-                if (strncmp(t, w, l) == 0) {
+                if (strneq(t, w, l)) {
                         free(s);
                         free(t);
 
@@ -347,11 +260,21 @@ static int uid_get_array(uid_t uid, const char *variable, char ***array) {
 }
 
 _public_ int sd_uid_get_sessions(uid_t uid, int require_active, char ***sessions) {
-        return uid_get_array(uid, require_active ? "ACTIVE_SESSIONS" : "SESSIONS", sessions);
+        return uid_get_array(
+                        uid,
+                        require_active == 0 ? "ONLINE_SESSIONS" :
+                        require_active > 0  ? "ACTIVE_SESSIONS" :
+                                              "SESSIONS",
+                        sessions);
 }
 
 _public_ int sd_uid_get_seats(uid_t uid, int require_active, char ***seats) {
-        return uid_get_array(uid, require_active ? "ACTIVE_SEATS" : "SEATS", seats);
+        return uid_get_array(
+                        uid,
+                        require_active == 0 ? "ONLINE_SEATS" :
+                        require_active > 0  ? "ACTIVE_SEATS" :
+                                              "SEATS",
+                        seats);
 }
 
 static int file_of_session(const char *session, char **_p) {
@@ -403,6 +326,30 @@ _public_ int sd_session_is_active(const char *session) {
         free(s);
 
         return r;
+}
+
+_public_ int sd_session_get_state(const char *session, char **state) {
+        char *p, *s = NULL;
+        int r;
+
+        if (!state)
+                return -EINVAL;
+
+        r = file_of_session(session, &p);
+        if (r < 0)
+                return r;
+
+        r = parse_env_file(p, NEWLINE, "STATE", &s, NULL);
+        free(p);
+
+        if (r < 0) {
+                free(s);
+                return r;
+        } else if (!s)
+                return -EIO;
+
+        *state = s;
+        return 0;
 }
 
 _public_ int sd_session_get_uid(const char *session, uid_t *uid) {
@@ -461,6 +408,10 @@ static int session_get_string(const char *session, const char *field, char **val
 
 _public_ int sd_session_get_seat(const char *session, char **seat) {
         return session_get_string(session, "SEAT", seat);
+}
+
+_public_ int sd_session_get_tty(const char *session, char **tty) {
+        return session_get_string(session, "TTY", tty);
 }
 
 _public_ int sd_session_get_service(const char *session, char **service) {
@@ -647,7 +598,7 @@ _public_ int sd_seat_get_sessions(const char *seat, char ***sessions, uid_t **ui
         return r;
 }
 
-_public_ int sd_seat_can_multi_session(const char *seat) {
+static int seat_get_can(const char *seat, const char *variable) {
         char *p, *s = NULL;
         int r;
 
@@ -656,7 +607,7 @@ _public_ int sd_seat_can_multi_session(const char *seat) {
                 return r;
 
         r = parse_env_file(p, NEWLINE,
-                           "CAN_MULTI_SESSION", &s,
+                           variable, &s,
                            NULL);
         free(p);
 
@@ -672,6 +623,18 @@ _public_ int sd_seat_can_multi_session(const char *seat) {
                 r = 0;
 
         return r;
+}
+
+_public_ int sd_seat_can_multi_session(const char *seat) {
+        return seat_get_can(seat, "CAN_MULTI_SESSION");
+}
+
+_public_ int sd_seat_can_tty(const char *seat) {
+        return seat_get_can(seat, "CAN_TTY");
+}
+
+_public_ int sd_seat_can_graphical(const char *seat) {
+        return seat_get_can(seat, "CAN_GRAPHICAL");
 }
 
 _public_ int sd_get_seats(char ***seats) {
@@ -693,11 +656,12 @@ _public_ int sd_get_uids(uid_t **users) {
                 return -errno;
 
         for (;;) {
-                struct dirent buffer, *de;
+                struct dirent *de;
+                union dirent_storage buf;
                 int k;
                 uid_t uid;
 
-                k = readdir_r(d, &buffer, &de);
+                k = readdir_r(d, &buf.de, &de);
                 if (k != 0) {
                         r = -k;
                         goto finish;

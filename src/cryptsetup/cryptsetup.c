@@ -6,16 +6,16 @@
   Copyright 2010 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
+  under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 2.1 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  General Public License for more details.
+  Lesser General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
+  You should have received a copy of the GNU Lesser General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
@@ -29,6 +29,7 @@
 
 #include "log.h"
 #include "util.h"
+#include "path-util.h"
 #include "strv.h"
 #include "ask-password-api.h"
 #include "def.h"
@@ -36,10 +37,13 @@
 static const char *opt_type = NULL; /* LUKS1 or PLAIN */
 static char *opt_cipher = NULL;
 static unsigned opt_key_size = 0;
+static unsigned opt_keyfile_size = 0;
+static unsigned opt_keyfile_offset = 0;
 static char *opt_hash = NULL;
 static unsigned opt_tries = 0;
 static bool opt_readonly = false;
 static bool opt_verify = false;
+static bool opt_discards = false;
 static usec_t opt_timeout = DEFAULT_TIMEOUT_USEC;
 
 /* Options Debian's crypttab knows we don't:
@@ -58,7 +62,7 @@ static int parse_one_option(const char *option) {
         assert(option);
 
         /* Handled outside of this tool */
-        if (streq(option, "noauto"))
+        if (streq(option, "noauto") || streq(option, "nofail"))
                 return 0;
 
         if (startswith(option, "cipher=")) {
@@ -74,6 +78,20 @@ static int parse_one_option(const char *option) {
 
                 if (safe_atou(option+5, &opt_key_size) < 0) {
                         log_error("size= parse failure, ignoring.");
+                        return 0;
+                }
+
+        } else if (startswith(option, "keyfile-size=")) {
+
+                if (safe_atou(option+13, &opt_keyfile_size) < 0) {
+                        log_error("keyfile-size= parse failure, ignoring.");
+                        return 0;
+                }
+
+        } else if (startswith(option, "keyfile-offset=")) {
+
+                if (safe_atou(option+15, &opt_keyfile_offset) < 0) {
+                        log_error("keyfile-offset= parse failure, ignoring.");
                         return 0;
                 }
 
@@ -93,10 +111,12 @@ static int parse_one_option(const char *option) {
                         return 0;
                 }
 
-        } else if (streq(option, "readonly"))
+        } else if (streq(option, "readonly") || streq(option, "read-only"))
                 opt_readonly = true;
         else if (streq(option, "verify"))
                 opt_verify = true;
+        else if (streq(option, "allow-discards"))
+                opt_discards = true;
         else if (streq(option, "luks"))
                 opt_type = CRYPT_LUKS1;
         else if (streq(option, "plain") ||
@@ -190,7 +210,8 @@ static char *disk_mount_point(const char *label) {
         if (asprintf(&device, "/dev/mapper/%s", label) < 0)
                 goto finish;
 
-        if (!(f = setmntent("/etc/fstab", "r")))
+        f = setmntent("/etc/fstab", "r");
+        if (!f)
                 goto finish;
 
         while ((m = getmntent(f)))
@@ -225,7 +246,6 @@ int main(int argc, char *argv[]) {
         char **passwords = NULL, *truncated_cipher = NULL;
         const char *cipher = NULL, *cipher_mode = NULL, *hash = NULL, *name = NULL;
         char *description = NULL, *name_buffer = NULL, *mount_point = NULL;
-        unsigned keyfile_size = 0;
 
         if (argc <= 1) {
                 help();
@@ -312,6 +332,9 @@ int main(int argc, char *argv[]) {
                 if (opt_readonly)
                         flags |= CRYPT_ACTIVATE_READONLY;
 
+                if (opt_discards)
+                        flags |= CRYPT_ACTIVATE_ALLOW_DISCARDS;
+
                 if (opt_timeout > 0)
                         until = now(CLOCK_MONOTONIC) + opt_timeout;
                 else
@@ -319,7 +342,12 @@ int main(int argc, char *argv[]) {
 
                 opt_tries = opt_tries > 0 ? opt_tries : 3;
                 opt_key_size = (opt_key_size > 0 ? opt_key_size : 256);
-                hash = opt_hash ? opt_hash : "ripemd160";
+                if (opt_hash) {
+                        /* plain isn't a real hash type. it just means "use no hash" */
+                        if (!streq(opt_hash, "plain"))
+                                hash = opt_hash;
+                } else
+                        hash = "ripemd160";
 
                 if (opt_cipher) {
                         size_t l;
@@ -327,7 +355,7 @@ int main(int argc, char *argv[]) {
                         l = strcspn(opt_cipher, "-");
 
                         if (!(truncated_cipher = strndup(opt_cipher, l))) {
-                                log_error("Out of memory");
+                                log_oom();
                                 goto finish;
                         }
 
@@ -349,7 +377,7 @@ int main(int argc, char *argv[]) {
                                 char **p;
 
                                 if (asprintf(&text, "Please enter passphrase for disk %s!", name) < 0) {
-                                        log_error("Out of memory");
+                                        log_oom();
                                         goto finish;
                                 }
 
@@ -367,7 +395,7 @@ int main(int argc, char *argv[]) {
                                         assert(strv_length(passwords) == 1);
 
                                         if (asprintf(&text, "Please enter passphrase for disk %s! (verification)", name) < 0) {
-                                                log_error("Out of memory");
+                                                log_oom();
                                                 goto finish;
                                         }
 
@@ -400,7 +428,7 @@ int main(int argc, char *argv[]) {
 
                                         /* Pad password if necessary */
                                         if (!(c = new(char, opt_key_size))) {
-                                                log_error("Out of memory.");
+                                                log_oom();
                                                 goto finish;
                                         }
 
@@ -421,6 +449,11 @@ int main(int argc, char *argv[]) {
                                 zero(params);
                                 params.hash = hash;
 
+                                /* for CRYPT_PLAIN limit reads
+                                * from keyfile to key length, and
+                                * ignore keyfile-size */
+                                opt_keyfile_size = opt_key_size / 8;
+
                                 /* In contrast to what the name
                                  * crypt_setup() might suggest this
                                  * doesn't actually format anything,
@@ -432,14 +465,11 @@ int main(int argc, char *argv[]) {
                                                  cipher_mode,
                                                  NULL,
                                                  NULL,
-                                                 opt_key_size / 8,
+                                                 opt_keyfile_size,
                                                  &params);
 
-                                pass_volume_key = streq(hash, "plain");
-
-                               /* for CRYPT_PLAIN limit reads
-                                * from keyfile to key length */
-                                keyfile_size = opt_key_size / 8;
+                                /* hash == NULL implies the user passed "plain" */
+                                pass_volume_key = (hash == NULL);
                         }
 
                         if (k < 0) {
@@ -454,7 +484,8 @@ int main(int argc, char *argv[]) {
                                  argv[3]);
 
                         if (key_file)
-                                k = crypt_activate_by_keyfile(cd, argv[2], CRYPT_ANY_SLOT, key_file, keyfile_size, flags);
+                                k = crypt_activate_by_keyfile_offset(cd, argv[2], CRYPT_ANY_SLOT, key_file, opt_keyfile_size,
+                                            opt_keyfile_offset, flags);
                         else {
                                 char **p;
 
