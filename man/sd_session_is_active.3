@@ -2,12 +2,12 @@
 .\"     Title: sd_session_is_active
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/15/2012
+.\"      Date: 03/16/2012
 .\"    Manual: sd_session_is_active
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_SESSION_IS_ACTIVE" "3" "02/15/2012" "systemd" "sd_session_is_active"
+.TH "SD_SESSION_IS_ACTIVE" "3" "03/16/2012" "systemd" "sd_session_is_active"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-sd_session_is_active, sd_session_get_uid, sd_session_get_seat, sd_session_get_service \- Determine state of a specific session
+sd_session_is_active, sd_session_get_uid, sd_session_get_seat, sd_session_get_service, sd_session_get_type, sd_session_get_class, sd_session_get_display \- Determine state of a specific session
 .SH "SYNOPSIS"
 .sp
 .ft B
@@ -44,6 +44,12 @@ sd_session_is_active, sd_session_get_uid, sd_session_get_seat, sd_session_get_se
 .BI "int sd_session_get_seat(const\ char*\ " "session" ", char**\ " "seat" ");"
 .HP \w'int\ sd_session_get_service('u
 .BI "int sd_session_get_service(const\ char*\ " "session" ", char**\ " "service" ");"
+.HP \w'int\ sd_session_get_type('u
+.BI "int sd_session_get_type(const\ char*\ " "session" ", char**\ " "type" ");"
+.HP \w'int\ sd_session_get_class('u
+.BI "int sd_session_get_class(const\ char*\ " "session" ", char**\ " "class" ");"
+.HP \w'int\ sd_session_get_display('u
+.BI "int sd_session_get_display(const\ char*\ " "session" ", char**\ " "display" ");"
 .SH "DESCRIPTION"
 .PP
 \fBsd_session_is_active()\fR
@@ -59,6 +65,31 @@ call after use\&.
 .PP
 \fBsd_session_get_service()\fR
 may be used to determine the name of the service (as passed during PAM session setup) that registered the session identified by the specified session identifier\&. The returned string needs to be freed with the libc
+\fBfree\fR(3)
+call after use\&.
+.PP
+\fBsd_session_get_type()\fR
+may be used to determine the type of the session identified by the specified session identifier\&. The returned string is one of
+x11,
+tty
+or
+unspecified
+and needs to be freed with the libc
+\fBfree\fR(3)
+call after use\&.
+.PP
+\fBsd_session_get_class()\fR
+may be used to determine the class of the session identified by the specified session identifier\&. The returned string is one of
+user,
+greeter
+or
+lock\-screen
+and needs to be freed with the libc
+\fBfree\fR(3)
+call after use\&.
+.PP
+\fBsd_session_get_display()\fR
+may be used to determine the X11 display of the session identified by the specified session identifier\&. The returned string is one of needs to be freed with the libc
 \fBfree\fR(3)
 call after use\&.
 .PP

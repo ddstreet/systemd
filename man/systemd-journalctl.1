@@ -1,0 +1,151 @@
+'\" t
+.\"     Title: systemd-journalctl
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 03/16/2012
+.\"    Manual: systemd-journalctl
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\-JOURNALCTL" "1" "03/16/2012" "systemd" "systemd-journalctl"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd-journalctl \- Query the systemd journal
+.SH "SYNOPSIS"
+.HP \w'\fBsystemd\-journalctl\ \fR\fB[OPTIONS...]\fR\fB\ \fR\fB[MATCH]\fR\ 'u
+\fBsystemd\-journalctl \fR\fB[OPTIONS...]\fR\fB \fR\fB[MATCH]\fR
+.SH "DESCRIPTION"
+.PP
+\fBsystemd\-journalctl\fR
+may be used to query the contents of the
+\fBsystemd\fR(1)
+journal\&.
+.PP
+If called without parameter will show the full contents of the journal, starting with the oldest entry collected\&.
+.PP
+If a match argument is passed the output is filtered accordingly\&. A match is in the format
+FIELD=VALUE, e\&.g\&.
+_SYSTEMD_UNIT=httpd\&.service\&.
+.PP
+Output is interleaved from all accessible journal files, whether they are rotated or currently being written, and regardless whether they belong to the system itself or are accessible user journals\&.
+.PP
+All users are granted access to their private per\-user journals\&. However, by default only root and users who are members of the
+adm
+group get access to the system journal and the journals of other users\&.
+.SH "OPTIONS"
+.PP
+The following options are understood:
+.PP
+\fB\-\-help\fR, \fB\-h\fR
+.RS 4
+Prints a short help text and exits\&.
+.RE
+.PP
+\fB\-\-version\fR
+.RS 4
+Prints a short version string and exits\&.
+.RE
+.PP
+\fB\-\-no\-pager\fR
+.RS 4
+Do not pipe output into a pager\&.
+.RE
+.PP
+\fB\-\-all\fR, \fB\-a\fR
+.RS 4
+Show all fields in full, even if they include unprintable characters or are very long\&.
+.RE
+.PP
+\fB\-\-follow\fR, \fB\-f\fR
+.RS 4
+Show only most recent journal entries, and continously print new entries as they are appended to the journal\&.
+.RE
+.PP
+\fB\-\-lines=\fR, \fB\-n\fR
+.RS 4
+Controls the number of journal lines to show, counting from the most recent ones\&. Takes a positive integer argument\&. In follow mode defaults to 10, otherwise is unset thus not limiting how many lines are shown\&.
+.RE
+.PP
+\fB\-\-no\-tail\fR
+.RS 4
+Show all stored output lines, even in follow mode\&. Undoes the effect of
+\fB\-\-lines=\fR\&.
+.RE
+.PP
+\fB\-\-output=\fR, \fB\-o\fR
+.RS 4
+Controls the formatting of the journal entries that are shown\&. Takes one of
+short,
+short\-monotonic,
+verbose,
+export,
+json,
+cat\&.
+short
+is the default and generates an output that is mostly identical to the formatting of classic syslog log files, showing one line per journal entry\&.
+short\-monotonic
+is very similar but shows monotonic timestamps instead of wallclock timestamps\&.
+verbose
+shows the full structered entry items with all fiels\&.
+export
+serializes the journal into a binary (but mostly text\-based) stream suitable for backups and network transfer\&.
+json
+formats entries as JSON data structures\&.
+cat
+generates a very terse output only showing the actual message of each journal entry with no meta data, not even a timestamp\&.
+.RE
+.PP
+\fB\-\-quiet\fR, \fB\-q\fR
+.RS 4
+Suppresses any warning message regarding inaccessable system journals when run as normal user\&.
+.RE
+.PP
+\fB\-\-new\-id128\fR
+.RS 4
+Instead of showing journal contents generate a new 128 bit ID suitable for identifying messages\&. This is intended for usage by developers who need a new identifier for a new message they introduce and want to make recognizable\&. Will print the new ID in three different formats which can be copied into source code or similar\&.
+.RE
+.SH "EXIT STATUS"
+.PP
+On success 0 is returned, a non\-zero failure code otherwise\&.
+.SH "ENVIRONMENT"
+.PP
+\fI$SYSTEMD_PAGER\fR
+.RS 4
+Pager to use when
+\fB\-\-no\-pager\fR
+is not given; overrides
+\fI$PAGER\fR\&. Setting this to an empty string or the value
+cat
+is equivalent to passing
+\fB\-\-no\-pager\fR\&.
+.RE
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBsystemctl\fR(1),
+\fBsystemd-journald.conf\fR(5)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

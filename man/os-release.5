@@ -2,12 +2,12 @@
 .\"     Title: os-release
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/15/2012
+.\"      Date: 03/16/2012
 .\"    Manual: os-release
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "OS\-RELEASE" "5" "02/15/2012" "systemd" "os-release"
+.TH "OS\-RELEASE" "5" "03/16/2012" "systemd" "os-release"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -47,6 +47,10 @@ contains data that is defined by the operating system vendor and should not be c
 .PP
 As this file only encodes names and identifiers it should not be localized\&.
 .PP
+The file
+/etc/os\-release
+might be a symlink to another file, but it is important that the file is available from earliest boot on, and hence must be located on the root file system\&.
+.PP
 For a longer rationale for
 /etc/os\-release
 please refer to the
@@ -82,6 +86,23 @@ or
 ID=debian\&.
 .RE
 .PP
+\fIID_LIKE=\fR
+.RS 4
+A space\-separated list of operating system identifiers in the same syntax as the
+\fIID=\fR
+setting\&. Should list identifiers of operating systems that are closely related to the local operating system in regards to packaging and programming interfaces, for example listing one or more OS identifiers the local OS is a derivative from\&. An OS should generally only list other OS identifiers it itself is a derivative from, and not any OSes that are derived from it, but symmetric relationships are possible\&. Build scripts and similar should check this variable if they need to identify the local operating system and the value of
+\fIID=\fR
+is not recognized\&. Operating systems should be listed in order of how closely the local operating system relates to the listed ones, starting with the closest\&. This field is optional\&. Example: for an operating system with
+ID=centos
+an assignment of
+ID_LIKE="rhel fedora"
+would be appropriate\&. For an operating system with
+ID=ubuntu
+an assignment of
+ID_LIKE=debian
+is appropriate\&.
+.RE
+.PP
 \fIVERSION_ID=\fR
 .RS 4
 A lower\-case string (mostly numeric, no spaces or other characters outside of 0\-9, a\-z, "\&.", "_" and "\-") identifying the operating system version, excluding any OS name information or release code name, and suitable for processing by scripts or usage in generated file names\&. This field is optional\&. Example:
@@ -99,7 +120,7 @@ PRETTY_NAME="Fedora 17 (Beefy Miracle)"\&.
 .PP
 \fIANSI_COLOR=\fR
 .RS 4
-A suggested presentation color when showing the distribution name on the console\&. This should be specified as string suitable for inclusion in the ESC [ m ANSI/ECMA\-48 escape code for setting graphical rendition\&. This field is optional\&. Example:
+A suggested presentation color when showing the OS name on the console\&. This should be specified as string suitable for inclusion in the ESC [ m ANSI/ECMA\-48 escape code for setting graphical rendition\&. This field is optional\&. Example:
 ANSI_COLOR="0;31"
 for red, or
 ANSI_COLOR="1;34"
@@ -114,9 +135,34 @@ as proposed by the MITRE Corporation\&. This field is optional\&. Example:
 CPE_NAME="cpe:/o:fedoraproject:fedora:17"
 .RE
 .PP
-If you are reading this file from C code or a shell script to determine the OS or a specific version of it, use the ID and VERSION_ID fields\&. When looking for an OS identification string for presentation to the user use the PRETTY_NAME field\&.
+\fIHOME_URL=\fR, \fISUPPORT_URL=\fR, \fIBUG_REPORT_URL=\fR
+.RS 4
+Links to resources on the Internet related the operating system\&.
+\fIHOME_URL=\fR
+should refer to the homepage of the of operating system, or alternatively some homepage of the specific version of the operating system\&.
+\fISUPPORT_URL=\fR
+should refer to the main support page for the operating system, if there is any\&. This is primarily intended for operating systems which vendors provide support for\&.
+\fIBUG_REPORT_URL=\fR
+should refer to the main bug reporting page for the operating system, if there is any\&. This is primarily intended for operating systems that rely on community QA\&. These settings are optional, and providing only some of these settings is common\&. These URLs are intended to be exposed in "About this system" UIs behind links with captions such as "About this Operating System", "Obtain Support" resp\&. "Report a Bug"\&. The values should be in
+\m[blue]\fBRFC3986 format\fR\m[]\&\s-2\u[3]\d\s+2, and should be
+http:
+or
+https:
+URLs, and possibly
+mailto:
+or
+tel:\&. Only one URL shall be listed in each setting\&. If multiple resources need to be referenced it is recommended to provide an online landing page linking all available resources\&. Examples:
+HOME_URL="https://fedoraproject\&.org/"
+and
+BUG_REPORT_URL="https://bugzilla\&.redhat\&.com/"
+.RE
+.PP
+If you are reading this file from C code or a shell script to determine the OS or a specific version of it, use the ID and VERSION_ID fields, possibly with ID_LIKE as fallback for ID\&. When looking for an OS identification string for presentation to the user use the PRETTY_NAME field\&.
 .PP
 Note that operating system vendors may choose not to provide version information, for example to accommodate for rolling releases\&. In this case VERSION and VERSION_ID may be unset\&. Applications should not rely on these fields to be set\&.
+.PP
+Operating system vendors may extend the file format and introduce new fields\&. It is highly recommended to prefix new fields with an OS specific name in order to avoid name clashes\&. Applications reading this file must ignore unknown fields\&. Example:
+DEBIAN_BTS="debbugs://bugs\&.debian\&.org/"
 .SH "EXAMPLE"
 .sp
 .if n \{\
@@ -130,6 +176,8 @@ VERSION_ID=17
 PRETTY_NAME="Fedora 17 (Beefy Miracle)"
 ANSI_COLOR="0;34"
 CPE_NAME="cpe:/o:fedoraproject:fedora:17"
+HOME_URL="https://fedoraproject\&.org/"
+BUG_REPORT_URL="https://bugzilla\&.redhat\&.com/"
 .fi
 .if n \{\
 .RE
@@ -158,4 +206,9 @@ Announcement of /etc/os-release
 Common Platform Enumeration Specification
 .RS 4
 \%http://cpe.mitre.org/specification/
+.RE
+.IP " 3." 4
+RFC3986 format
+.RS 4
+\%https://tools.ietf.org/html/rfc3986
 .RE

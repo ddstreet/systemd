@@ -1,0 +1,139 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-journald.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-journald.conf"><a name="systemd-journald.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-journald.conf — Journal service configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd-journald.conf</code></p></div><div class="refsect1" title="Description"><a name="id321804"></a><h2>Description</h2><p>This files configures various parameters of the systemd journal service.</p></div><div class="refsect1" title="Options"><a name="id321814"></a><h2>Options</h2><p>All options are configured in the
+                <code class="literal">[Journal]</code> section:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">Compress=</code></span></dt><dd><p>Takes a boolean
+                                value. If enabled (the default) data
+                                objects that shall be stored in the
+                                journal and are larger than a certain
+                                threshold are compressed with the XZ
+                                compression algorithm before they are
+                                written to the file
+                                system.</p></dd><dt><span class="term"><code class="varname">RateLimitInterval=</code>, </span><span class="term"><code class="varname">RateLimitBurst=</code></span></dt><dd><p>Configures the rate
+                                limiting that is applied to all
+                                messages generated on the system. If
+                                in the time interval defined by
+                                <code class="varname">RateLimitInterval=</code>
+                                more messages than specified in
+                                <code class="varname">RateLimitBurst=</code> are
+                                logged by a service all further
+                                messages within the interval are
+                                dropped, until the interval is over. A
+                                message about the number of dropped
+                                messages is generated. This rate
+                                limiting is applied per-service, so
+                                that two services which log do not
+                                interfere with each other's
+                                limit. Defaults to 100 messages in
+                                10s. The time specification for
+                                <code class="varname">RateLimitInterval=</code>
+                                may be specified in the following
+                                units: <code class="literal">s</code>,
+                                <code class="literal">min</code>,
+                                <code class="literal">h</code>,
+                                <code class="literal">ms</code>,
+                                <code class="literal">us</code>. To turn off any
+                                kind of rate limiting, set either
+                                value to 0.</p></dd><dt><span class="term"><code class="varname">SystemMaxUse=</code>, </span><span class="term"><code class="varname">SystemKeepFree=</code>, </span><span class="term"><code class="varname">SystemMaxFileSize=</code>, </span><span class="term"><code class="varname">SystemMinFileSize=</code>, </span><span class="term"><code class="varname">RuntimeMaxUse=</code>, </span><span class="term"><code class="varname">RuntimeKeepFree=</code>, </span><span class="term"><code class="varname">RuntimeMaxFileSize=</code>, </span><span class="term"><code class="varname">RuntimeMinFileSize=</code></span></dt><dd><p>Enforce size limits on
+                                the journal files stored. The options
+                                prefixed with
+                                <code class="literal">System</code> apply to the
+                                journal files when stored on a
+                                persistant file system, more
+                                specifically
+                                <code class="filename">/var/log/journal</code>. The
+                                options prefixed with
+                                <code class="literal">Runtime</code> apply to
+                                the journal files when stored on a
+                                volatile in-memory file system, more
+                                specifically
+                                <code class="filename">/run/log/journal</code>. The
+                                former is used only when
+                                <code class="filename">/var</code> is mounted,
+                                writable and the directory
+                                <code class="filename">/var/log/journal</code>
+                                exists. Otherwise only the latter
+                                applies. Note that this means that
+                                during early boot and if the
+                                administrator disabled persistant
+                                logging only the latter options apply,
+                                while the former apply if persistant
+                                logging is enabled and the system is
+                                fully booted
+                                up. <code class="varname">SystemMaxUse=</code>
+                                and <code class="varname">RuntimeMaxUse=</code>
+                                control how much disk space the
+                                journal may use up at
+                                maximum. Defaults to 10% of the size
+                                of the respective file
+                                system. <code class="varname">SystemKeepFree=</code>
+                                and
+                                <code class="varname">RuntimeKeepFree=</code>
+                                control how much disk space the
+                                journal shall always leave free for
+                                other uses if less than the disk space
+                                configured in
+                                <code class="varname">SystemMaxUse=</code> and
+                                <code class="varname">RuntimeMaxUse=</code> is
+                                available. Defaults to 5% of the size
+                                of the respective file
+                                system. <code class="varname">SystemMaxFileSize=</code>
+                                and
+                                <code class="varname">RuntimeMaxFileSize=</code>
+                                control how large individual journal
+                                files may grow at maximum. This
+                                influences the granularity in which
+                                disk space is made available through
+                                rotation, i.e. deletion of historic
+                                data. Defaults to one eigth of the
+                                values configured with
+                                <code class="varname">SystemMaxUse=</code> and
+                                <code class="varname">RuntimeMaxUse=</code>, so
+                                that usually seven rotated journal
+                                files are kept as
+                                history. <code class="varname">SystemMinFileSize=</code>
+                                and
+                                <code class="varname">RuntimeMinFileSize=</code>
+                                control how large individual journal
+                                files grow at minimum. Defaults to
+                                64K. Specify values in bytes or use
+                                K, M, G, T, P, E as units for the
+                                specified sizes. Note that size limits
+                                are enforced synchronously to journal
+                                files as they are extended, and need
+                                no explicit rotation step triggered by
+                                time.</p></dd><dt><span class="term"><code class="varname">ForwardToSyslog=</code>, </span><span class="term"><code class="varname">ForwardToKMsg=</code>, </span><span class="term"><code class="varname">ForwardToConsole=</code></span></dt><dd><p>Control whether log
+                                messages received by the journal
+                                daemon shall be forwarded to a
+                                traditional syslog daemon, to the
+                                kernel log buffer (kmsg), or to the
+                                system console. These options take
+                                boolean arguments. If forwarding to
+                                syslog is enabled but no syslog daemon
+                                is running the respective option has
+                                no effect. By default only forwarding
+                                to syslog is enabled. These settings
+                                may be overriden at boot time with the
+                                kernel command line options
+                                <code class="literal">systemd_journald.forward_to_syslog=</code>,
+                                <code class="literal">systemd_journald.forward_to_kmsg=</code>
+                                and
+                                <code class="literal">systemd_journald.forward_to_console=</code>. If
+                                forwarding to the kernel log buffer and
+                                <code class="varname">ImportKernel=</code> is
+                                enabled at the same time care is taken
+                                to avoid logging loops. It is safe to
+                                use these options in combination.
+                                </p></dd><dt><span class="term"><code class="varname">ImportKernel=</code></span></dt><dd><p>Controls whether
+                                kernel log messages shall be stored in
+                                the journal. Takes a boolean argument
+                                and defaults to enabled. Note that
+                                currently only one userspace service
+                                can read kernel messages at a time,
+                                which means that kernel log message
+                                reading might get corrupted if it
+                                is enabled in more than one service,
+                                for example in both the journal and a
+                                traditional syslog service.
+                                </p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id289601"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd-journalctl</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.conf</span>(5)</span>
+                  </p></div></div></body></html>

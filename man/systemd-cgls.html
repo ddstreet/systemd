@@ -1,0 +1,22 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-cgls</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-cgls"><a name="systemd-cgls"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-cgls — Recursively show control group contents</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-cgls [OPTIONS...]  [CGROUP...]</code> </p></div></div><div class="refsect1" title="Description"><a name="id533304"></a><h2>Description</h2><p><span class="command"><strong>systemd-cgls</strong></span> recursively
+                shows the contents of the selected Linux control group
+                hierarchy in a tree. If arguments are specified shows
+                all member processes of the specified control groups
+                plus all their subgroups and their members. The
+                control groups may either be specified by their full
+                file paths or are assumed in the systemd control group
+                hierarchy. If no argument is specified and the current
+                working directory is beneath the control group mount
+                point <code class="filename">/sys/fs/cgroup</code> shows the contents
+                of the control group the working directory refers
+                to. Otherwise the full systemd control group hierarchy
+                is shown.</p></div><div class="refsect1" title="Options"><a name="id533331"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output into a
+				pager.</p></dd><dt><span class="term"><code class="option">-k</code></span></dt><dd><p>Include kernel
+                                threads in output.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a name="id533387"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a name="id533397"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd-cgtop</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">ps</span>(1)</span>
+                </p></div></div></body></html>

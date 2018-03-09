@@ -36,6 +36,9 @@
 /* Have tcpwrap? */
 #undef HAVE_LIBWRAP
 
+/* Logind support available */
+#undef HAVE_LOGIND
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 

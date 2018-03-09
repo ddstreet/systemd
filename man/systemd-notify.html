@@ -1,0 +1,75 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-notify</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd-notify"><a name="systemd-notify"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-notify — Notify init system about start-up completion and other daemon status changes</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-notify [OPTIONS...]  [VARIABLE=VALUE...]</code> </p></div></div><div class="refsect1" title="Description"><a name="id518797"></a><h2>Description</h2><p><span class="command"><strong>systemd-notify</strong></span> may be
+                called by daemon scripts to notify the init system
+                about status changes. It can be used to send arbitrary
+                information, encoded in an environment-block-like list
+                of strings. Most importantly it can be used for
+                start-up completion notification.</p><p>This is mostly just a wrapper around
+                <code class="function">sd_notify()</code> and makes this
+                functionality available to shell scripts. For details
+                see
+                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>.</p><p>The command line may carry a list of
+                environment variables to send as part of the status
+                update.</p><p>Note that systemd will refuse reception of
+                status updates from this command unless
+                <code class="varname">NotifyAccess=all</code> is set for the
+                service unit this command is called from.</p></div><div class="refsect1" title="Options"><a name="id518844"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
+                                string and exits.</p></dd><dt><span class="term"><code class="option">--ready</code></span></dt><dd><p>Inform the init system
+                                about service start-up
+                                completion. This is equivalent to
+                                <span class="command"><strong>systemd-notify
+                                READY=1</strong></span>. For details about
+                                the semantics of this option see
+                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>.</p></dd><dt><span class="term"><code class="option">--pid=</code></span></dt><dd><p>Inform the init system
+                                about the main PID of the
+                                daemon. Takes a PID as argument. If
+                                the argument is omitted the PID of the
+                                process that invoked
+                                <span class="command"><strong>systemd-notify</strong></span> is
+                                used. This is equivalent to
+                                <span class="command"><strong>systemd-notify
+                                MAINPID=$PID</strong></span>. For details
+                                about the semantics of this option see
+                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>.</p></dd><dt><span class="term"><code class="option">--status=</code></span></dt><dd><p>Send a free-form
+                                status string for the daemon to the
+                                init systemd. This option takes the
+                                status string as argument. This is
+                                equivalent to <span class="command"><strong>systemd-notify
+                                STATUS=...</strong></span>. For details
+                                about the semantics of this option see
+                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>.</p></dd><dt><span class="term"><code class="option">--booted</code></span></dt><dd><p>Returns 0 if the
+                                system was booted up with systemd,
+                                non-zero otherwise. If this option is
+                                passed no message is sent. This option
+                                is hence unrelated to the other
+                                options. For details about the
+                                semantics of this option see
+                                <span class="citerefentry"><span class="refentrytitle">sd_booted</span>(3)</span>.</p></dd><dt><span class="term"><code class="option">--readahead=</code></span></dt><dd><p>Controls disk
+                                read-ahead operations. The argument
+                                must be a string, and either "cancel",
+                                "done" or "noreplay". For details
+                                about the semantics of this option see
+                                <span class="citerefentry"><span class="refentrytitle">sd_readahead</span>(3)</span>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a name="id551148"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="Example"><a name="id551158"></a><h2>Example</h2><div class="example"><a name="id551164"></a><p class="title"><b>Example 1. Start-up Notification and Status Updates</b></p><div class="example-contents"><p>A simple shell daemon that sends
+                        start-up notifications after having set up its
+                        communication channel. During runtime it sends
+                        further status updates to the init
+                        system:</p><pre class="programlisting">#!/bin/bash
+
+mkfifo /tmp/waldo
+systemd-notify --ready --status="Waiting for data..."
+
+while : ; do
+        read a &lt; /tmp/waldo
+        systemd-notify --status="Processing $a"
+
+        # Do something with $a ...
+
+        systemd-notify --status="Waiting for data..."
+done</pre></div></div><br class="example-break"></div><div class="refsect1" title="See Also"><a name="id518585"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_booted</span>(3)</span>
+                </p></div></div></body></html>

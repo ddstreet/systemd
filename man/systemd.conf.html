@@ -1,0 +1,46 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd.conf"><a name="systemd.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.conf — systemd manager configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">system.conf</code></p><p><code class="filename">user.conf</code></p></div><div class="refsect1" title="Description"><a name="id365184"></a><h2>Description</h2><p>When run as system instance systemd reads the
+                configuration file <code class="filename">system.conf</code>,
+                otherwise <code class="filename">user.conf</code>. These
+                configuration files contain a few settings controlling
+                basic manager operations.</p></div><div class="refsect1" title="Options"><a name="id365207"></a><h2>Options</h2><p>All options are configured in the
+                <code class="literal">[Manager]</code> section:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">LogLevel=</code>, </span><span class="term"><code class="varname">LogTarget=</code>, </span><span class="term"><code class="varname">LogColor=</code>, </span><span class="term"><code class="varname">LogLocation=</code>, </span><span class="term"><code class="varname">DumpCore=yes</code>, </span><span class="term"><code class="varname">CrashShell=no</code>, </span><span class="term"><code class="varname">ShowStatus=yes</code>, </span><span class="term"><code class="varname">SysVConsole=yes</code>, </span><span class="term"><code class="varname">CrashChVT=1</code>, </span><span class="term"><code class="varname">DefaultStandardOutput=journal</code>, </span><span class="term"><code class="varname">DefaultStandardError=inherit</code></span></dt><dd><p>Configures various
+                                parameters of basic manager
+                                operation. These options may be
+                                overridden by the respective command
+                                line arguments. See
+                                <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
+                                for details about these command line
+                                arguments.</p></dd><dt><span class="term"><code class="varname">CPUAffinity=</code></span></dt><dd><p>Configures the initial
+                                CPU affinity for the init
+                                process. Takes a space-separated list
+                                of CPU indexes.</p></dd><dt><span class="term"><code class="varname">MountAuto=yes</code>, </span><span class="term"><code class="varname">SwapAuto=yes</code></span></dt><dd><p>Configures whether
+                                systemd should automatically activate
+                                all swap or mounts listed in
+                                <code class="filename">/etc/fstab</code>, or
+                                whether this job is left to some other
+                                system script.</p></dd><dt><span class="term"><code class="varname">DefaultControllers=cpu</code></span></dt><dd><p>Configures in which
+                                cgroup controller hierarchies to
+                                create per-service cgroups
+                                automatically, in addition to the
+                                name=systemd named hierarchy. Defaults
+                                to 'cpu'. Takes a space separated list
+                                of controller names. Pass an empty
+                                string to ensure that systemd does not
+                                touch any hierarchies but its
+                                own.</p></dd><dt><span class="term"><code class="varname">JoinControllers=cpu,cpuacct</code></span></dt><dd><p>Configures controllers
+                                that shall be mounted in a single
+                                hierarchy. By default systemd will
+                                mount all controllers which are
+                                enabled in the kernel in individual
+                                hierachies, with the exception of
+                                those listed in this setting. Takes a
+                                space separated list of comma
+                                separated controller names, in order
+                                to allow multiple joined
+                                hierarchies. Defaults to
+                                'cpu,cpuacct'. Pass an empty string to
+                                ensure that systemd mounts all
+                                controllers in separate
+                                hierarchies.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id397502"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
+                  </p></div></div></body></html>

@@ -2,12 +2,12 @@
 .\"     Title: systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/15/2012
+.\"      Date: 03/16/2012
 .\"    Manual: systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD" "1" "02/15/2012" "systemd" "systemd"
+.TH "SYSTEMD" "1" "03/16/2012" "systemd" "systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -668,7 +668,7 @@ for more information\&.
 .RE
 .SH "KERNEL COMMAND LINE"
 .PP
-When run as system instance systemd parses a few kernel command line arguments:
+When run as system instance systemd parses a number of kernel command line arguments\&\s-2\u[5]\d\s+2:
 .PP
 \fIsystemd\&.unit=\fR
 .RS 4
@@ -819,3 +819,8 @@ XDG Base Directory specification
 .RS 4
 \%http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
 .RE
+.IP " 5." 4
+If run inside a Linux container these arguments may be passed as command line arguments to systemd itself, next to any of the command line options listed in the Options section above. If run outside of Linux containers, these arguments are parsed from
+/proc/cmdline
+instead.
+

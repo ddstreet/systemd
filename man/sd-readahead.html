@@ -1,0 +1,37 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd-readahead</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="sd-readahead"><a name="sd-daemon"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd-readahead — Reference implementation of APIs for
+                controlling boot-time read-ahead</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-readahead.h"</pre></div></div><div class="refsect1" title="Description"><a name="id305516"></a><h2>Description</h2><p><code class="filename">sd-readahead.c</code> and
+                <code class="filename">sd-readahead.h</code> provide a
+                reference implementation for APIs for controlling boot-time
+                read-ahead, as implemented by the read-ahead subsystem
+                of the
+                <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
+                init system.</p><p>See
+                <span class="citerefentry"><span class="refentrytitle">sd_readahead</span>(3)</span>
+                for more information about the function
+                implemented.</p></div><div class="refsect1" title="Notes"><a name="id305554"></a><h2>Notes</h2><p>This interface is provided by the reference
+                implementation of APIs for controlling boot-time
+                read-ahead and distributed with the systemd
+                package. The algorithms it implements are simple, and
+                can easily be reimplemented in daemons if it is
+                important to support this interface without using the
+                reference implementation. See the respective function
+                man pages for details.</p><p>In addition, for details about the algorithms
+                check the liberally licensed reference implementation
+                sources:
+                <a class="ulink" href="http://cgit.freedesktop.org/systemd/systemd/plain/src/readahead/sd-readahead.c" target="_top">http://cgit.freedesktop.org/systemd/systemd/plain/src/readahead/sd-readahead.c</a>
+                resp. <a class="ulink" href="http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h" target="_top">http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h</a></p><p>These APIs are implemented in the reference
+                implementation's drop-in
+                <code class="filename">sd-readahead.c</code> and
+                <code class="filename">sd-readahead.h</code> files. It is
+                recommended that applications consuming these APIs copy
+                the implementation into their source tree, either
+                verbatim or in excerpts. These interfaces are
+                currently not available in a dynamic library.</p><p>The functions provided by this interface become
+                NOPs when -DDISABLE_SYSTEMD is set during
+                compilation. In addition, if
+                <code class="filename">sd-readhead.c</code> is compiled on
+                non-Linux systems it becomes NOPs.</p></div><div class="refsect1" title="See Also"><a name="id305611"></a><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_readahead</span>(3)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(7)</span>
+                </p></div></div></body></html>

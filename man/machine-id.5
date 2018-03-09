@@ -2,12 +2,12 @@
 .\"     Title: machine-id
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/15/2012
+.\"      Date: 03/16/2012
 .\"    Manual: /etc/machine-id
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "MACHINE\-ID" "5" "02/15/2012" "systemd" "/etc/machine-id"
+.TH "MACHINE\-ID" "5" "03/16/2012" "systemd" "/etc/machine-id"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -47,6 +47,10 @@ This machine ID adheres to the same format and logic as the D\-Bus machine ID\&.
 Programs may use this ID to identify the host with a globally unique ID in the network, that does not change even if the local network configuration changes\&. Due to this and its greater length it is a more useful replacement for the
 \fBgethostid\fR(3)
 call POSIX specifies\&.
+.PP
+The
+\fBsystemd-machine-id-setup\fR(1)
+tool may be used by installer tools to initialize the machine ID at install time\&.
 .SH "RELATION TO OSF UUIDS"
 .PP
 Note that the machine ID historically is not an OSF UUID as defined by
@@ -86,6 +90,7 @@ file introduced by D\-Bus\&. In fact this latter file might be a symlink to
 .PP
 
 \fBsystemd\fR(1),
+\fBsystemd-machine-id-setup\fR(1),
 \fBgethostid\fR(3),
 \fBhostname\fR(5),
 \fBmachine-info\fR(5),

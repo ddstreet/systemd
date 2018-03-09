@@ -1,0 +1,592 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="refentry" title="systemd.service"><a name="systemd.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a name="id525303"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+                <code class="filename">.service</code> encodes information
+                about a process controlled and supervised by
+                systemd.</p><p>This man page lists the configuration options
+                specific to this unit type. See
+                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
+                for the common options of all unit configuration
+                files. The common configuration items are configured
+                in the generic <code class="literal">[Unit]</code> and
+                <code class="literal">[Install]</code> sections. The service
+                specific configuration options are configured in the
+                <code class="literal">[Service]</code> section.</p><p>Additional options are listed in
+                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>,
+                which define the execution environment the commands
+                are executed in.</p><p>Unless <code class="varname">DefaultDependencies=</code>
+                is set to <code class="option">false</code>, service units will
+                implicitly have dependencies of type
+                <code class="varname">Requires=</code> and
+                <code class="varname">After=</code> on
+                <code class="filename">basic.target</code> as well as
+                dependencies of type <code class="varname">Conflicts=</code> and
+                <code class="varname">Before=</code> on
+                <code class="filename">shutdown.target</code>. These ensure
+                that normal service units pull in basic system
+                initialization, and are terminated cleanly prior to
+                system shutdown. Only services involved with early
+                boot or late system shutdown should disable this
+                option.</p><p>If a service is requested under a certain name
+                but no unit configuration file is found, systemd looks
+                for a SysV init script by the same name (with the
+                <code class="filename">.service</code> suffix removed) and
+                dynamically creates a service unit from that
+                script. This is useful for compatibility with
+                SysV.</p></div><div class="refsect1" title="Options"><a name="id525414"></a><h2>Options</h2><p>Service files must include a
+                <code class="literal">[Service]</code> section, which carries
+                information about the service and the process it
+                supervises. A number of options that may be used in
+                this section are shared with other unit types. These
+                options are documented in
+                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>. The
+                options specific to the <code class="literal">[Service]</code>
+                section of service units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">Type=</code></span></dt><dd><p>Configures the process
+                                start-up type for this service
+                                unit. One of <code class="option">simple</code>,
+                                <code class="option">forking</code>,
+                                <code class="option">oneshot</code>,
+                                <code class="option">dbus</code>,
+                                <code class="option">notify</code>.</p><p>If set to
+                                <code class="option">simple</code> (the default
+                                value) it is expected that the process
+                                configured with
+                                <code class="varname">ExecStart=</code> is the
+                                main process of the service. In this
+                                mode, if the process offers
+                                functionality to other processes on
+                                the system its communication channels
+                                should be installed before the daemon
+                                is started up (e.g. sockets set up by
+                                systemd, via socket activation), as
+                                systemd will immediately proceed
+                                starting follow-up units.</p><p>If set to
+                                <code class="option">forking</code> it is
+                                expected that the process configured
+                                with <code class="varname">ExecStart=</code>
+                                will call <code class="function">fork()</code>
+                                as part of its start-up. The parent process is
+                                expected to exit when start-up is
+                                complete and all communication
+                                channels set up. The child continues
+                                to run as the main daemon
+                                process. This is the behaviour of
+                                traditional UNIX daemons. If this
+                                setting is used, it is recommended to
+                                also use the
+                                <code class="varname">PIDFile=</code> option, so
+                                that systemd can identify the main
+                                process of the daemon. systemd will
+                                proceed starting follow-up units as
+                                soon as the parent process
+                                exits.</p><p>Behaviour of
+                                <code class="option">oneshot</code> is similar
+                                to <code class="option">simple</code>, however
+                                it is expected that the process has to
+                                exit before systemd starts follow-up
+                                units. <code class="varname">RemainAfterExit=</code>
+                                is particularly useful for this type
+                                of service.</p><p>Behaviour of
+                                <code class="option">dbus</code> is similar to
+                                <code class="option">simple</code>, however it is
+                                expected that the daemon acquires a
+                                name on the D-Bus bus, as configured
+                                by
+                                <code class="varname">BusName=</code>. systemd
+                                will proceed starting follow-up units
+                                after the D-Bus bus name has been
+                                acquired. Service units with this
+                                option configured implicitly gain
+                                dependencies on the
+                                <code class="filename">dbus.socket</code>
+                                unit.</p><p>Behaviour of
+                                <code class="option">notify</code> is similar to
+                                <code class="option">simple</code>, however it is
+                                expected that the daemon sends a
+                                notification message via
+                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>
+                                or an equivalent call when it finished
+                                starting up. systemd will proceed
+                                starting follow-up units after this
+                                notification message has been sent. If
+                                this option is used
+                                <code class="varname">NotifyAccess=</code> (see
+                                below) should be set to open access to
+                                the notification socket provided by
+                                systemd. If
+                                <code class="varname">NotifyAccess=</code> is
+                                not set, it will be implicitly set to
+                                <code class="option">main</code>.</p></dd><dt><span class="term"><code class="varname">RemainAfterExit=</code></span></dt><dd><p>Takes a boolean value
+                                that specifies whether the service
+                                shall be considered active even when
+                                all its processes exited. Defaults to
+                                <code class="option">no</code>.</p></dd><dt><span class="term"><code class="varname">GuessMainPID=</code></span></dt><dd><p>Takes a boolean value
+                                that specifies whether systemd should
+                                try to guess the main PID of a service
+                                should if it cannot be determined
+                                reliably. This option is ignored
+                                unless <code class="option">Type=forking</code>
+                                is set and <code class="option">PIDFile=</code>
+                                is unset because for the other types
+                                or with an explicitly configured PID
+                                file the main PID is always known. The
+                                guessing algorithm might come to
+                                incorrect conclusions if a daemon
+                                consists of more than one process. If
+                                the main PID cannot be determined
+                                failure detection and automatic
+                                restarting of a service will not work
+                                reliably. Defaults to
+                                <code class="option">yes</code>.</p></dd><dt><span class="term"><code class="varname">PIDFile=</code></span></dt><dd><p>Takes an absolute file
+                                name pointing to the PID file of this
+                                daemon. Use of this option is
+                                recommended for services where
+                                <code class="varname">Type=</code> is set to
+                                <code class="option">forking</code>. systemd will
+                                read the PID of the main process of
+                                the daemon after start-up of the
+                                service. systemd will not write to the
+                                file configured here.</p></dd><dt><span class="term"><code class="varname">BusName=</code></span></dt><dd><p>Takes a D-Bus bus
+                                name, where this service is reachable
+                                as. This option is mandatory for
+                                services where
+                                <code class="varname">Type=</code> is set to
+                                <code class="option">dbus</code>, but its use
+                                is otherwise recommended as well if
+                                the process takes a name on the D-Bus
+                                bus.</p></dd><dt><span class="term"><code class="varname">ExecStart=</code></span></dt><dd><p>Takes a command line
+                                that is executed when this service
+                                shall be started up. The first token
+                                of the command line must be an
+                                absolute file name, then followed by
+                                arguments for the process. It is
+                                mandatory to set this option for all
+                                services. This option may not be
+                                specified more than once, except when
+                                <code class="varname">Type=oneshot</code> is
+                                used in which case more than one
+                                <code class="varname">ExecStart=</code> line is
+                                accepted which are then invoked one by
+                                one, sequentially in the order they
+                                appear in the unit file.</p><p>Optionally, if the absolute file
+                                name is prefixed with
+                                <code class="literal">@</code>, the second token
+                                will be passed as
+                                <code class="literal">argv[0]</code> to the
+                                executed process, followed by the
+                                further arguments specified. If the
+                                first token is prefixed with
+                                <code class="literal">-</code> an exit code of
+                                the command normally considered a
+                                failure (i.e. non-zero exit status or
+                                abnormal exit due to signal) is ignored
+                                and considered success. If both
+                                <code class="literal">-</code> and
+                                <code class="literal">@</code> are used for the
+                                same command the former must precede
+                                the latter. Unless
+                                <code class="varname">Type=forking</code> is
+                                set, the process started via this
+                                command line will be considered the
+                                main process of the daemon. The
+                                command line accepts % specifiers as
+                                described in
+                                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p><p>On top of that basic environment
+                                variable substitution is
+                                supported. Use
+                                <code class="literal">${FOO}</code> as part of a
+                                word, or as word of its own on the
+                                command line, in which case it will be
+                                replaced by the value of the
+                                environment variable including all
+                                whitespace it contains, resulting in a
+                                single argument.  Use
+                                <code class="literal">$FOO</code> as a separate
+                                word on the command line, in which
+                                case it will be replaced by the value
+                                of the environment variable split up
+                                at whitespace, resulting in no or more
+                                arguments. Note that the first
+                                argument (i.e. the program to execute)
+                                may not be a variable, and must be a
+                                literal and absolute path
+                                name.</p></dd><dt><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span></dt><dd><p>Additional commands
+                                that are executed before (resp. after)
+                                the command in
+                                <code class="varname">ExecStart=</code>. Multiple
+                                command lines may be concatenated in a
+                                single directive, by separating them
+                                by semicolons (these semicolons must
+                                be passed as separate words). In that
+                                case, the commands are executed one
+                                after the other,
+                                serially. Alternatively, these
+                                directives may be specified more than
+                                once with the same effect. However,
+                                the latter syntax is not recommended
+                                for compatibility with parsers
+                                suitable for XDG
+                                <code class="filename">.desktop</code> files.
+                                Use of these settings is
+                                optional. Specifier and environment
+                                variable substitution is
+                                supported.</p></dd><dt><span class="term"><code class="varname">ExecReload=</code></span></dt><dd><p>Commands to execute to
+                                trigger a configuration reload in the
+                                service. This argument takes multiple
+                                command lines, following the same
+                                scheme as pointed out for
+                                <code class="varname">ExecStartPre=</code>
+                                above. Use of this setting is
+                                optional. Specifier and environment
+                                variable substitution is supported
+                                here following the same scheme as for
+                                <code class="varname">ExecStart=</code>. One
+                                special environment variable is set:
+                                if known <code class="literal">$MAINPID</code> is
+                                set to the main process of the
+                                daemon, and may be used for command
+                                lines like the following:
+                                <span class="command"><strong>/bin/kill -HUP
+                                $MAINPID</strong></span>.</p></dd><dt><span class="term"><code class="varname">ExecStop=</code></span></dt><dd><p>Commands to execute to
+                                stop the service started via
+                                <code class="varname">ExecStart=</code>. This
+                                argument takes multiple command lines,
+                                following the same scheme as pointed
+                                out for
+                                <code class="varname">ExecStartPre=</code>
+                                above. Use of this setting is
+                                optional. All processes remaining for
+                                a service after the commands
+                                configured in this option are run are
+                                terminated according to the
+                                <code class="varname">KillMode=</code> setting
+                                (see below). If this option is not
+                                specified the process is terminated
+                                right-away when service stop is
+                                requested. Specifier and environment
+                                variable substitution is supported
+                                (including
+                                <code class="literal">$MAINPID</code>, see
+                                above).</p></dd><dt><span class="term"><code class="varname">ExecStopPost=</code></span></dt><dd><p>Additional commands
+                                that are executed after the service
+                                was stopped using the commands
+                                configured in
+                                <code class="varname">ExecStop=</code>. This
+                                argument takes multiple command lines,
+                                following the same scheme as pointed
+                                out for
+                                <code class="varname">ExecStartPre</code>. Use
+                                of these settings is
+                                optional. Specifier and environment
+                                variable substitution is
+                                supported.</p></dd><dt><span class="term"><code class="varname">RestartSec=</code></span></dt><dd><p>Configures the time to
+                                sleep before restarting a service (as
+                                configured with
+                                <code class="varname">Restart=</code>). Takes a
+                                unit-less value in seconds, or a time
+                                span value such as "5min
+                                20s". Defaults to
+                                100ms.</p></dd><dt><span class="term"><code class="varname">TimeoutSec=</code></span></dt><dd><p>Configures the time to
+                                wait for start-up and stop. If a
+                                daemon service does not signal
+                                start-up completion within the
+                                configured time the service will be
+                                considered failed and be shut down
+                                again. If a service is asked to stop
+                                but does not terminate in the
+                                specified time it will be terminated
+                                forcibly via SIGTERM, and after
+                                another delay of this time with
+                                SIGKILL. (See
+                                <code class="varname">KillMode=</code>
+                                below.) Takes a unit-less value in seconds, or a
+                                time span value such as "5min
+                                20s". Pass 0 to disable the timeout
+                                logic. Defaults to
+                                90s.</p></dd><dt><span class="term"><code class="varname">WatchdogSec=</code></span></dt><dd><p>Configures the
+                                watchdog timeout for a service. This
+                                is activated when the start-up is
+                                completed. The service must call
+                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>
+                                regularly with "WATCHDOG=1". If the
+                                time between two such calls is larger
+                                than the configured time then the
+                                service is placed in a failure
+                                state. By setting
+                                <code class="varname">Restart=</code>
+                                to <code class="option">on-failure</code> or
+                                <code class="option">always</code> the service
+                                will be automatically restarted. The
+                                time configured here will be passed to
+                                the executed service process in the
+                                <code class="varname">WATCHDOG_USEC=</code>
+                                environment variable. If
+                                this option is used
+                                <code class="varname">NotifyAccess=</code> (see
+                                below) should be set to open access to
+                                the notification socket provided by
+                                systemd. If
+                                <code class="varname">NotifyAccess=</code> is not
+                                set, it will be implicitly set to
+                                <code class="option">main</code>. Defaults to 0,
+                                which disables this
+                                feature.</p></dd><dt><span class="term"><code class="varname">Restart=</code></span></dt><dd><p>Configures whether the
+                                main service process shall be
+                                restarted when it exits. Takes one of
+                                <code class="option">no</code>,
+                                <code class="option">on-success</code>,
+                                <code class="option">on-failure</code>,
+                                <code class="option">on-abort</code> or
+                                <code class="option">always</code>. If set to
+                                <code class="option">no</code> (the default) the
+                                service will not be restarted when it
+                                exits. If set to
+                                <code class="option">on-success</code> it will be
+                                restarted only when it exited cleanly,
+                                i.e. terminated with an exit code of
+                                0. If set to
+                                <code class="option">on-failure</code> it will be
+                                restarted only when it exited with an
+                                exit code not equalling 0, when
+                                terminated by a signal, when an
+                                operation times out or when the
+                                configured watchdog timeout is
+                                triggered. If set to
+                                <code class="option">on-abort</code> it will be
+                                restarted only if it exits due to
+                                reception of an uncaught signal. If
+                                set to <code class="option">always</code> the
+                                service will be restarted regardless
+                                whether it exited cleanly or not,
+                                got terminated abnormally by a
+                                signal or hit a timeout.</p></dd><dt><span class="term"><code class="varname">PermissionsStartOnly=</code></span></dt><dd><p>Takes a boolean
+                                argument. If true, the permission
+                                related execution options as
+                                configured with
+                                <code class="varname">User=</code> and similar
+                                options (see
+                                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>
+                                for more information) are only applied
+                                to the process started with
+                                <code class="varname">ExecStart=</code>, and not
+                                to the various other
+                                <code class="varname">ExecStartPre=</code>,
+                                <code class="varname">ExecStartPost=</code>,
+                                <code class="varname">ExecReload=</code>,
+                                <code class="varname">ExecStop=</code>,
+                                <code class="varname">ExecStopPost=</code>
+                                commands. If false, the setting is
+                                applied to all configured commands the
+                                same way. Defaults to
+                                false.</p></dd><dt><span class="term"><code class="varname">RootDirectoryStartOnly=</code></span></dt><dd><p>Takes a boolean
+                                argument. If true, the root directory
+                                as configured with the
+                                <code class="varname">RootDirectory=</code>
+                                option (see
+                                <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>
+                                for more information) is only applied
+                                to the process started with
+                                <code class="varname">ExecStart=</code>, and not
+                                to the various other
+                                <code class="varname">ExecStartPre=</code>,
+                                <code class="varname">ExecStartPost=</code>,
+                                <code class="varname">ExecReload=</code>,
+                                <code class="varname">ExecStop=</code>,
+                                <code class="varname">ExecStopPost=</code>
+                                commands. If false, the setting is
+                                applied to all configured commands the
+                                same way. Defaults to
+                                false.</p></dd><dt><span class="term"><code class="varname">SysVStartPriority=</code></span></dt><dd><p>Set the SysV start
+                                priority to use to order this service
+                                in relation to SysV services lacking
+                                LSB headers. This option is only
+                                necessary to fix ordering in relation
+                                to legacy SysV services, that have no
+                                ordering information encoded in the
+                                script headers. As such it should only
+                                be used as temporary compatibility
+                                option, and not be used in new unit
+                                files. Almost always it is a better
+                                choice to add explicit ordering
+                                directives via
+                                <code class="varname">After=</code> or
+                                <code class="varname">Before=</code>,
+                                instead. For more details see
+                                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>. If
+                                used, pass an integer value in the
+                                range 0-99.</p></dd><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
+                                processes of this service shall be
+                                killed. One of
+                                <code class="option">control-group</code>,
+                                <code class="option">process</code>,
+                                <code class="option">none</code>.</p><p>If set to
+                                <code class="option">control-group</code> all
+                                remaining processes in the control
+                                group of this service will be
+                                terminated on service stop, after the
+                                stop command (as configured with
+                                <code class="varname">ExecStop=</code>) is
+                                executed. If set to
+                                <code class="option">process</code> only the main
+                                process itself is killed. If set to
+                                <code class="option">none</code> no process is
+                                killed. In this case only the stop
+                                command will be executed on service
+                                stop, but no process be killed
+                                otherwise. Processes remaining alive
+                                after stop are left in their control
+                                group and the control group continues
+                                to exist after stop unless it is
+                                empty. Defaults to
+                                <code class="option">control-group</code>.</p><p>Processes will first be
+                                terminated via SIGTERM (unless the
+                                signal to send is changed via
+                                <code class="varname">KillSignal=</code>). If
+                                then after a delay (configured via the
+                                <code class="varname">TimeoutSec=</code> option)
+                                processes still remain, the
+                                termination request is repeated with
+                                the SIGKILL signal (unless this is
+                                disabled via the
+                                <code class="varname">SendSIGKILL=</code>
+                                option). See
+                                <span class="citerefentry"><span class="refentrytitle">kill</span>(2)</span>
+                                for more
+                                information.</p></dd><dt><span class="term"><code class="varname">KillSignal=</code></span></dt><dd><p>Specifies which signal
+                                to use when killing a
+                                service. Defaults to SIGTERM.
+                                </p></dd><dt><span class="term"><code class="varname">SendSIGKILL=</code></span></dt><dd><p>Specifies whether to
+                                send SIGKILL to remaining processes
+                                after a timeout, if the normal
+                                shutdown procedure left processes of
+                                the service around. Takes a boolean
+                                value. Defaults to "yes".
+                                </p></dd><dt><span class="term"><code class="varname">NonBlocking=</code></span></dt><dd><p>Set O_NONBLOCK flag
+                                for all file descriptors passed via
+                                socket-based activation. If true, all
+                                file descriptors &gt;= 3 (i.e. all except
+                                STDIN/STDOUT/STDERR) will have
+                                the O_NONBLOCK flag set and hence are in
+                                non-blocking mode. This option is only
+                                useful in conjunction with a socket
+                                unit, as described in
+                                <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>. Defaults
+                                to false.</p></dd><dt><span class="term"><code class="varname">NotifyAccess=</code></span></dt><dd><p>Controls access to the
+                                service status notification socket, as
+                                accessible via the
+                                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>
+                                call. Takes one of
+                                <code class="option">none</code> (the default),
+                                <code class="option">main</code> or
+                                <code class="option">all</code>. If
+                                <code class="option">none</code> no daemon status
+                                updates are accepted from the service
+                                processes, all status update messages
+                                are ignored. If <code class="option">main</code>
+                                only service updates sent from the
+                                main process of the service are
+                                accepted. If <code class="option">all</code> all
+                                services updates from all members of
+                                the service's control group are
+                                accepted. This option should be set to
+                                open access to the notification socket
+                                when using
+                                <code class="varname">Type=notify</code> or
+                                <code class="varname">WatchdogUsec=</code> (see
+                                above). If those options are used but
+                                <code class="varname">NotifyAccess=</code> not
+                                configured it will be implicitly set
+                                to
+                                <code class="option">main</code>.</p></dd><dt><span class="term"><code class="varname">Sockets=</code></span></dt><dd><p>Specifies the name of
+                                the socket units this service shall
+                                inherit the sockets from when the
+                                service is started. Normally it
+                                should not be necessary to use this
+                                setting as all sockets whose unit
+                                shares the same name as the service
+                                (ignoring the different suffix of course)
+                                are passed to the spawned
+                                process.</p><p>Note that the same socket may be
+                                passed to multiple processes at the
+                                same time. Also note that a different
+                                service may be activated on incoming
+                                traffic than inherits the sockets. Or
+                                in other words: The
+                                <code class="varname">Service=</code> setting of
+                                <code class="filename">.socket</code> units
+                                doesn't have to match the inverse of the
+                                <code class="varname">Sockets=</code> setting of
+                                the <code class="filename">.service</code> it
+                                refers to.</p></dd><dt><span class="term"><code class="varname">FsckPassNo=</code></span></dt><dd><p>Set the fsck passno
+                                priority to use to order this service
+                                in relation to other file system
+                                checking services. This option is only
+                                necessary to fix ordering in relation
+                                to fsck jobs automatically created for
+                                all <code class="filename">/etc/fstab</code>
+                                entries with a value in the fs_passno
+                                column &gt; 0. As such it should only be
+                                used as option for fsck
+                                services. Almost always it is a better
+                                choice to add explicit ordering
+                                directives via
+                                <code class="varname">After=</code> or
+                                <code class="varname">Before=</code>,
+                                instead. For more details see
+                                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>. If
+                                used, pass an integer value in the
+                                same range as
+                                <code class="filename">/etc/fstab</code>'s
+                                fs_passno column. See
+                                <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
+                                for details.</p></dd><dt><span class="term"><code class="varname">StartLimitInterval=</code>, </span><span class="term"><code class="varname">StartLimitBurst=</code></span></dt><dd><p>Configure service
+                                start rate limiting. By default
+                                services which are started more often
+                                than 5 times within 10s are not
+                                permitted to start any more times
+                                until the 10s interval ends. With
+                                these two options this rate limiting
+                                may be modified. Use
+                                <code class="varname">StartLimitInterval=</code>
+                                to configure the checking interval
+                                (defaults to 10s, set to 0 to disable
+                                any kind of rate limiting). Use
+                                <code class="varname">StartLimitBurst=</code> to
+                                configure how many starts per interval
+                                are allowed (defaults to 5). These
+                                configuration options are particularly
+                                useful in conjunction with
+                                <code class="varname">Restart=</code>.</p></dd><dt><span class="term"><code class="varname">StartLimitAction=</code></span></dt><dd><p>Configure the action
+                                to take if the rate limit configured
+                                with
+                                <code class="varname">StartLimitInterval=</code>
+                                and
+                                <code class="varname">StartLimitBurst=</code> is
+                                hit. Takes one of
+                                <code class="option">none</code>,
+                                <code class="option">reboot</code>,
+                                <code class="option">reboot-force</code> or
+                                <code class="option">reboot-immediate</code>. If
+                                <code class="option">none</code> is set,
+                                hitting the rate limit will trigger no
+                                action besides that the start will not
+                                be
+                                permitted. <code class="option">reboot</code>
+                                causes a reboot following the normal
+                                shutdown procedure (i.e. equivalent to
+                                <span class="command"><strong>systemctl reboot</strong></span>),
+                                <code class="option">reboot-force</code> causes
+                                an forced reboot which will terminate
+                                all processes forcibly but should
+                                cause no dirty file systems on reboot
+                                (i.e. equivalent to <span class="command"><strong>systemctl
+                                reboot -f</strong></span>) and
+                                <code class="option">reboot-immediate</code>
+                                causes immediate execution of the
+                                <span class="citerefentry"><span class="refentrytitle">reboot</span>(2)</span>
+                                system call, which might result in
+                                data loss.  Defaults to
+                                <code class="option">none</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a name="id535170"></a><h2>See Also</h2><p>
+                          <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                          <span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span>
+                  </p></div></div></body></html>

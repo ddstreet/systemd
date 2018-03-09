@@ -2,12 +2,12 @@
 .\"     Title: tmpfiles.d
 .\"    Author: Brandon Philips <brandon@ifup.org>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/15/2012
+.\"      Date: 03/16/2012
 .\"    Manual: tmpfiles.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "TMPFILES\&.D" "5" "02/15/2012" "systemd" "tmpfiles.d"
+.TH "TMPFILES\&.D" "5" "03/16/2012" "systemd" "tmpfiles.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -31,11 +31,11 @@
 tmpfiles.d \- Configuration for creation, deletion and cleaning of volatile and temporary files
 .SH "SYNOPSIS"
 .PP
-/usr/lib/tmpfiles\&.d/*\&.conf
-.PP
 /etc/tmpfiles\&.d/*\&.conf
 .PP
 /run/tmpfiles\&.d/*\&.conf
+.PP
+/usr/lib/tmpfiles\&.d/*\&.conf
 .SH "DESCRIPTION"
 .PP
 \fBsystemd\-tmpfiles\fR
@@ -136,12 +136,12 @@ Recursively remove a path and all its subdirectories (if it is a directory)\&. L
 .PP
 \fIz\fR
 .RS 4
-Set ownership, access mode and relabel security context of a file or directory if it exists\&. Lines of this type accept shell\-style globs in place of normal path names\&.
+Restore SELinux security context label and set ownership and access mode of a file or directory if it exists\&. Lines of this type accept shell\-style globs in place of normal path names\&.
 .RE
 .PP
 \fIZ\fR
 .RS 4
-Recursively set ownership, access mode and relabel security context of a path and all its subdirectories (if it is a directory)\&. Lines of this type accept shell\-style globs in place of normal path names\&.
+Recursively restore SELinux security context label and set ownership and access mode of a path and all its subdirectories (if it is a directory)\&. Lines of this type accept shell\-style globs in place of normal path names\&.
 .RE
 .SS "Mode"
 .PP
