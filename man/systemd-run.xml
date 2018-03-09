@@ -113,6 +113,13 @@
 
     <variablelist>
       <varlistentry>
+        <term><option>--no-ask-password</option></term>
+
+        <listitem><para>Do not query the user for authentication for
+        privileged operations.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--scope</option></term>
 
         <listitem>
@@ -374,7 +381,7 @@ Dec 08 20:44:48 container systemd[1]: Started /bin/touch /tmp/foo.</programlisti
     as a service passing its standard input, output and error to
     the calling TTY.</para>
 
-    <programlisting># systemd-run -t /bin/bash</programlisting>
+    <programlisting># systemd-run -t --send-sighup /bin/bash</programlisting>
 
   </refsect1>
 

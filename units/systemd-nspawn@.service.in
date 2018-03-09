@@ -13,7 +13,7 @@ Before=machines.target
 After=network.target
 
 [Service]
-ExecStart=@bindir@/systemd-nspawn --quiet --keep-unit --boot --link-journal=try-guest --network-veth --machine=%I
+ExecStart=@bindir@/systemd-nspawn --quiet --keep-unit --boot --link-journal=try-guest --network-veth --settings=override --machine=%I
 KillMode=mixed
 Type=notify
 RestartForceExitStatus=133
@@ -34,6 +34,11 @@ DeviceAllow=/dev/tty rwm
 DeviceAllow=/dev/net/tun rwm
 DeviceAllow=/dev/pts/ptmx rw
 DeviceAllow=char-pts rw
+
+# nspawn itself needs access to /dev/loop-control and /dev/loop, to
+# implement the --image= option. Add these here, too.
+DeviceAllow=/dev/loop-control rw
+DeviceAllow=block-loop rw
 
 [Install]
 WantedBy=machines.target

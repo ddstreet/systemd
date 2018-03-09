@@ -19,29 +19,28 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include <stdbool.h>
 #include <getopt.h>
 #include <net/if.h>
+#include <stdbool.h>
 
-#include "sd-network.h"
-#include "sd-netlink.h"
-#include "sd-hwdb.h"
 #include "sd-device.h"
+#include "sd-hwdb.h"
+#include "sd-netlink.h"
+#include "sd-network.h"
 
-#include "strv.h"
-#include "build.h"
-#include "util.h"
-#include "pager.h"
-#include "lldp.h"
-#include "netlink-util.h"
-#include "device-util.h"
-#include "hwdb-util.h"
 #include "arphrd-list.h"
-#include "local-addresses.h"
-#include "socket-util.h"
+#include "device-util.h"
 #include "ether-addr-util.h"
-#include "verbs.h"
+#include "hwdb-util.h"
+#include "lldp.h"
+#include "local-addresses.h"
+#include "netlink-util.h"
+#include "pager.h"
+#include "socket-util.h"
+#include "strv.h"
 #include "terminal-util.h"
+#include "util.h"
+#include "verbs.h"
 
 static bool arg_no_pager = false;
 static bool arg_legend = true;
@@ -166,10 +165,10 @@ static void operational_state_to_color(const char *state, const char **on, const
 
         if (streq_ptr(state, "routable")) {
                 *on = ansi_highlight_green();
-                *off = ansi_highlight_off();
+                *off = ansi_normal();
         } else if (streq_ptr(state, "degraded")) {
                 *on = ansi_highlight_yellow();
-                *off = ansi_highlight_off();
+                *off = ansi_normal();
         } else
                 *on = *off = "";
 }
@@ -180,13 +179,13 @@ static void setup_state_to_color(const char *state, const char **on, const char 
 
         if (streq_ptr(state, "configured")) {
                 *on = ansi_highlight_green();
-                *off = ansi_highlight_off();
+                *off = ansi_normal();
         } else if (streq_ptr(state, "configuring")) {
                 *on = ansi_highlight_yellow();
-                *off = ansi_highlight_off();
+                *off = ansi_normal();
         } else if (streq_ptr(state, "failed") || streq_ptr(state, "linger")) {
                 *on = ansi_highlight_red();
-                *off = ansi_highlight_off();
+                *off = ansi_normal();
         } else
                 *on = *off = "";
 }
@@ -497,7 +496,7 @@ static int link_status_one(
                 sd_hwdb *hwdb,
                 const char *name) {
         _cleanup_strv_free_ char **dns = NULL, **ntp = NULL, **domains = NULL;
-        _cleanup_free_ char *setup_state = NULL, *operational_state = NULL;
+        _cleanup_free_ char *setup_state = NULL, *operational_state = NULL, *tz = NULL;
         _cleanup_netlink_message_unref_ sd_netlink_message *req = NULL, *reply = NULL;
         _cleanup_device_unref_ sd_device *d = NULL;
         char devid[2 + DECIMAL_STR_MAX(int)];
@@ -570,7 +569,6 @@ static int link_status_one(
         setup_state_to_color(setup_state, &on_color_setup, &off_color_setup);
 
         sd_network_link_get_dns(ifindex, &dns);
-        sd_network_link_get_ntp(ifindex, &ntp);
         sd_network_link_get_domains(ifindex, &domains);
         r = sd_network_link_get_wildcard_domain(ifindex);
         if (r > 0) {
@@ -652,6 +650,8 @@ static int link_status_one(
                 dump_list("             DNS: ", dns);
         if (!strv_isempty(domains))
                 dump_list("          Domain: ", domains);
+
+        (void) sd_network_link_get_ntp(ifindex, &ntp);
         if (!strv_isempty(ntp))
                 dump_list("             NTP: ", ntp);
 
@@ -660,6 +660,10 @@ static int link_status_one(
 
         if (!strv_isempty(carrier_bound_by))
                 dump_list("Carrier Bound By: ", carrier_bound_by);
+
+        (void) sd_network_link_get_timezone(ifindex, &tz);
+        if (tz)
+                printf("       Time Zone: %s", tz);
 
         return 0;
 }
@@ -1058,9 +1062,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return 0;
 
                 case ARG_VERSION:
-                        puts(PACKAGE_STRING);
-                        puts(SYSTEMD_FEATURES);
-                        return 0;
+                        return version();
 
                 case ARG_NO_PAGER:
                         arg_no_pager = true;

@@ -26,11 +26,11 @@
 #include "conf-parser.h"
 #include "util.h"
 #include "hostname-util.h"
-#include "networkd.h"
-#include "networkd-netdev.h"
-#include "networkd-link.h"
-#include "network-internal.h"
 #include "dns-domain.h"
+#include "network-internal.h"
+
+#include "networkd.h"
+#include "networkd-network.h"
 
 static int network_load_one(Manager *manager, const char *filename) {
         _cleanup_network_free_ Network *network = NULL;
@@ -107,6 +107,10 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->dhcp_route_metric = DHCP_ROUTE_METRIC;
         network->dhcp_client_identifier = DHCP_CLIENT_ID_DUID;
 
+        network->dhcp_server_emit_dns = true;
+        network->dhcp_server_emit_ntp = true;
+        network->dhcp_server_emit_timezone = true;
+
         network->use_bpdu = true;
         network->allow_port_to_be_root = true;
         network->unicast_flood = true;
@@ -116,6 +120,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->link_local = ADDRESS_FAMILY_IPV6;
 
         network->ipv6_privacy_extensions = IPV6_PRIVACY_EXTENSIONS_NO;
+        network->ipv6_accept_ra = -1;
 
         r = config_parse(NULL, filename, file,
                          "Match\0"
@@ -124,7 +129,8 @@ static int network_load_one(Manager *manager, const char *filename) {
                          "Address\0"
                          "Route\0"
                          "DHCP\0"
-                         "DHCPv4\0"
+                         "DHCPv4\0" /* compat */
+                         "DHCPServer\0"
                          "Bridge\0"
                          "BridgeFDB\0",
                          config_item_perf_lookup, network_network_gperf_lookup,
@@ -257,6 +263,10 @@ void network_free(Network *network) {
         condition_free_list(network->match_virt);
         condition_free_list(network->match_kernel);
         condition_free_list(network->match_arch);
+
+        free(network->dhcp_server_timezone);
+        free(network->dhcp_server_dns);
+        free(network->dhcp_server_ntp);
 
         free(network);
 }
@@ -399,21 +409,18 @@ int config_parse_netdev(const char *unit,
 
         kind = netdev_kind_from_string(kind_string);
         if (kind == _NETDEV_KIND_INVALID) {
-                log_syntax(unit, LOG_ERR, filename, line, EINVAL,
-                           "Invalid NetDev kind: %s", lvalue);
+                log_syntax(unit, LOG_ERR, filename, line, 0, "Invalid NetDev kind: %s", lvalue);
                 return 0;
         }
 
         r = netdev_get(network->manager, rvalue, &netdev);
         if (r < 0) {
-                log_syntax(unit, LOG_ERR, filename, line, EINVAL,
-                           "%s could not be found, ignoring assignment: %s", lvalue, rvalue);
+                log_syntax(unit, LOG_ERR, filename, line, r, "%s could not be found, ignoring assignment: %s", lvalue, rvalue);
                 return 0;
         }
 
         if (netdev->kind != kind) {
-                log_syntax(unit, LOG_ERR, filename, line, EINVAL,
-                           "NetDev is not a %s, ignoring assignment: %s", lvalue, rvalue);
+                log_syntax(unit, LOG_ERR, filename, line, 0, "NetDev is not a %s, ignoring assignment: %s", lvalue, rvalue);
                 return 0;
         }
 
@@ -433,9 +440,7 @@ int config_parse_netdev(const char *unit,
         case NETDEV_KIND_VXLAN:
                 r = hashmap_put(network->stacked_netdevs, netdev->ifname, netdev);
                 if (r < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, EINVAL,
-                                   "Can not add VLAN '%s' to network: %m",
-                                   rvalue);
+                        log_syntax(unit, LOG_ERR, filename, line, r, "Can not add VLAN '%s' to network: %m", rvalue);
                         return 0;
                 }
 
@@ -474,7 +479,7 @@ int config_parse_domains(const char *unit,
 
         STRV_FOREACH(domain, *domains) {
                 if (is_localhost(*domain))
-                        log_syntax(unit, LOG_ERR, filename, line, EINVAL, "'localhost' domain names may not be configured, ignoring assignment: %s", *domain);
+                        log_syntax(unit, LOG_ERR, filename, line, 0, "'localhost' domain names may not be configured, ignoring assignment: %s", *domain);
                 else {
                         r = dns_name_is_valid(*domain);
                         if (r <= 0 && !streq(*domain, "*")) {
@@ -530,7 +535,7 @@ int config_parse_tunnel(const char *unit,
             netdev->kind != NETDEV_KIND_VTI6 &&
             netdev->kind != NETDEV_KIND_IP6TNL
             ) {
-                log_syntax(unit, LOG_ERR, filename, line, EINVAL,
+                log_syntax(unit, LOG_ERR, filename, line, 0,
                            "NetDev is not a tunnel, ignoring assignment: %s", rvalue);
                 return 0;
         }
@@ -615,7 +620,7 @@ int config_parse_dhcp(
                 else if (streq(rvalue, "both"))
                         s = ADDRESS_FAMILY_YES;
                 else {
-                        log_syntax(unit, LOG_ERR, filename, line, s, "Failed to parse DHCP option, ignoring: %s", rvalue);
+                        log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse DHCP option, ignoring: %s", rvalue);
                         return 0;
                 }
         }
@@ -631,57 +636,6 @@ static const char* const dhcp_client_identifier_table[_DHCP_CLIENT_ID_MAX] = {
 
 DEFINE_PRIVATE_STRING_TABLE_LOOKUP_FROM_STRING(dhcp_client_identifier, DCHPClientIdentifier);
 DEFINE_CONFIG_PARSE_ENUM(config_parse_dhcp_client_identifier, dhcp_client_identifier, DCHPClientIdentifier, "Failed to parse client identifier type");
-
-static const char* const resolve_support_table[_RESOLVE_SUPPORT_MAX] = {
-        [RESOLVE_SUPPORT_NO] = "no",
-        [RESOLVE_SUPPORT_YES] = "yes",
-        [RESOLVE_SUPPORT_RESOLVE] = "resolve",
-};
-
-DEFINE_STRING_TABLE_LOOKUP(resolve_support, ResolveSupport);
-
-int config_parse_resolve(
-                const char* unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        ResolveSupport *resolve = data;
-        int k;
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-        assert(resolve);
-
-        /* Our enum shall be a superset of booleans, hence first try
-         * to parse as boolean, and then as enum */
-
-        k = parse_boolean(rvalue);
-        if (k > 0)
-                *resolve = RESOLVE_SUPPORT_YES;
-        else if (k == 0)
-                *resolve = RESOLVE_SUPPORT_NO;
-        else {
-                ResolveSupport s;
-
-                s = resolve_support_from_string(rvalue);
-                if (s < 0){
-                        log_syntax(unit, LOG_ERR, filename, line, -s, "Failed to parse %s option, ignoring: %s", lvalue, rvalue);
-                        return 0;
-                }
-
-                *resolve = s;
-        }
-
-        return 0;
-}
 
 int config_parse_ipv6token(
                 const char* unit,
@@ -711,51 +665,17 @@ int config_parse_ipv6token(
         }
 
         r = in_addr_is_null(AF_INET6, &buffer);
-        if (r < 0) {
+        if (r != 0) {
                 log_syntax(unit, LOG_ERR, filename, line, r, "IPv6 token can not be the ANY address, ignoring: %s", rvalue);
                 return 0;
         }
 
         if ((buffer.in6.s6_addr32[0] | buffer.in6.s6_addr32[1]) != 0) {
-                log_syntax(unit, LOG_ERR, filename, line, EINVAL, "IPv6 token can not be longer than 64 bits, ignoring: %s", rvalue);
+                log_syntax(unit, LOG_ERR, filename, line, 0, "IPv6 token can not be longer than 64 bits, ignoring: %s", rvalue);
                 return 0;
         }
 
         *token = buffer.in6;
-
-        return 0;
-}
-
-int config_parse_address_family_boolean_with_kernel(
-                const char* unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        AddressFamilyBoolean *fwd = data, s;
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-        assert(data);
-
-        s = address_family_boolean_from_string(rvalue);
-        if (s < 0) {
-                if (streq(rvalue, "kernel"))
-                        s = _ADDRESS_FAMILY_BOOLEAN_INVALID;
-                else {
-                        log_syntax(unit, LOG_ERR, filename, line, s, "Failed to parse IPForwarding option, ignoring: %s", rvalue);
-                        return 0;
-                }
-        }
-
-        *fwd = s;
 
         return 0;
 }
@@ -805,7 +725,7 @@ int config_parse_ipv6_privacy_extensions(
                         if (streq(rvalue, "kernel"))
                                 s = _IPV6_PRIVACY_EXTENSIONS_INVALID;
                         else {
-                                log_syntax(unit, LOG_ERR, filename, line, s, "Failed to parse IPv6 privacy extensions option, ignoring: %s", rvalue);
+                                log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse IPv6 privacy extensions option, ignoring: %s", rvalue);
                                 return 0;
                         }
                 }
@@ -816,37 +736,165 @@ int config_parse_ipv6_privacy_extensions(
         return 0;
 }
 
-int config_parse_hostname(const char *unit,
-                          const char *filename,
-                          unsigned line,
-                          const char *section,
-                          unsigned section_line,
-                          const char *lvalue,
-                          int ltype,
-                          const char *rvalue,
-                          void *data,
-                          void *userdata) {
-        char **hostname = data;
-        char *hn = NULL;
+int config_parse_hostname(
+                const char *unit,
+                const char *filename,
+                unsigned line,
+                const char *section,
+                unsigned section_line,
+                const char *lvalue,
+                int ltype,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        char **hostname = data, *hn = NULL;
         int r;
 
         assert(filename);
         assert(lvalue);
         assert(rvalue);
 
-        r = config_parse_string(unit, filename, line, section, section_line,
-                                lvalue, ltype, rvalue, &hn, userdata);
+        r = config_parse_string(unit, filename, line, section, section_line, lvalue, ltype, rvalue, &hn, userdata);
         if (r < 0)
                 return r;
 
-        if (!hostname_is_valid(hn, true)) {
-                log_syntax(unit, LOG_ERR, filename, line, EINVAL, "hostname is not valid, ignoring assignment: %s", rvalue);
-
+        if (!hostname_is_valid(hn, false)) {
+                log_syntax(unit, LOG_ERR, filename, line, 0, "Hostname is not valid, ignoring assignment: %s", rvalue);
                 free(hn);
                 return 0;
         }
 
+        free(*hostname);
         *hostname = hostname_cleanup(hn);
+        return 0;
+}
+
+int config_parse_timezone(
+                const char *unit,
+                const char *filename,
+                unsigned line,
+                const char *section,
+                unsigned section_line,
+                const char *lvalue,
+                int ltype,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        char **datap = data, *tz = NULL;
+        int r;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        r = config_parse_string(unit, filename, line, section, section_line, lvalue, ltype, rvalue, &tz, userdata);
+        if (r < 0)
+                return r;
+
+        if (!timezone_is_valid(tz)) {
+                log_syntax(unit, LOG_ERR, filename, line, 0, "Timezone is not valid, ignoring assignment: %s", rvalue);
+                free(tz);
+                return 0;
+        }
+
+        free(*datap);
+        *datap = tz;
 
         return 0;
+}
+
+int config_parse_dhcp_server_dns(
+                const char *unit,
+                const char *filename,
+                unsigned line,
+                const char *section,
+                unsigned section_line,
+                const char *lvalue,
+                int ltype,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        Network *n = data;
+        const char *p = rvalue;
+        int r;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        for (;;) {
+                _cleanup_free_ char *w = NULL;
+                struct in_addr a, *m;
+
+                r = extract_first_word(&p, &w, NULL, 0);
+                if (r < 0) {
+                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to extract word, ignoring: %s", rvalue);
+                        return 0;
+                }
+
+                if (r == 0)
+                        return 0;
+
+                if (inet_pton(AF_INET, w, &a) <= 0) {
+                        log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse DNS server address, ignoring: %s", w);
+                        continue;
+                }
+
+                m = realloc(n->dhcp_server_dns, (n->n_dhcp_server_dns + 1) * sizeof(struct in_addr));
+                if (!m)
+                        return log_oom();
+
+                m[n->n_dhcp_server_dns++] = a;
+                n->dhcp_server_dns = m;
+        }
+}
+
+int config_parse_dhcp_server_ntp(
+                const char *unit,
+                const char *filename,
+                unsigned line,
+                const char *section,
+                unsigned section_line,
+                const char *lvalue,
+                int ltype,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        Network *n = data;
+        const char *p = rvalue;
+        int r;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+
+        for (;;) {
+                _cleanup_free_ char *w = NULL;
+                struct in_addr a, *m;
+
+                r = extract_first_word(&p, &w, NULL, 0);
+                if (r < 0) {
+                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to extract word, ignoring: %s", rvalue);
+                        return 0;
+                }
+
+                if (r == 0)
+                        return 0;
+
+                if (inet_pton(AF_INET, w, &a) <= 0) {
+                        log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse NTP server address, ignoring: %s", w);
+                        continue;
+                }
+
+                m = realloc(n->dhcp_server_ntp, (n->n_dhcp_server_ntp + 1) * sizeof(struct in_addr));
+                if (!m)
+                        return log_oom();
+
+                m[n->n_dhcp_server_ntp++] = a;
+                n->dhcp_server_ntp = m;
+        }
 }

@@ -113,8 +113,7 @@ static void message_reset_containers(sd_bus_message *m) {
                 free(m->containers[i].offsets);
         }
 
-        free(m->containers);
-        m->containers = NULL;
+        m->containers = mfree(m->containers);
 
         m->n_containers = m->containers_allocated = 0;
         m->root_container.index = 0;
@@ -1024,7 +1023,9 @@ _public_ const char *sd_bus_message_get_sender(sd_bus_message *m) {
 
 _public_ const sd_bus_error *sd_bus_message_get_error(sd_bus_message *m) {
         assert_return(m, NULL);
-        assert_return(sd_bus_error_is_set(&m->error), NULL);
+
+        if (!sd_bus_error_is_set(&m->error))
+                return NULL;
 
         return &m->error;
 }

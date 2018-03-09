@@ -547,8 +547,18 @@ int machine_openpt(Machine *m, int flags) {
 
         switch (m->class) {
 
-        case MACHINE_HOST:
-                return posix_openpt(flags);
+        case MACHINE_HOST: {
+                int fd;
+
+                fd = posix_openpt(flags);
+                if (fd < 0)
+                        return -errno;
+
+                if (unlockpt(fd) < 0)
+                        return -errno;
+
+                return fd;
+        }
 
         case MACHINE_CONTAINER:
                 if (m->leader <= 0)
@@ -590,8 +600,7 @@ void machine_release_unit(Machine *m) {
                 return;
 
         (void) hashmap_remove(m->manager->machine_units, m->unit);
-        free(m->unit);
-        m->unit = NULL;
+        m->unit = mfree(m->unit);
 }
 
 static const char* const machine_class_table[_MACHINE_CLASS_MAX] = {

@@ -713,16 +713,6 @@ static void timer_time_change(Unit *u) {
         timer_enter_waiting(t, false);
 }
 
-static const char* const timer_state_table[_TIMER_STATE_MAX] = {
-        [TIMER_DEAD] = "dead",
-        [TIMER_WAITING] = "waiting",
-        [TIMER_RUNNING] = "running",
-        [TIMER_ELAPSED] = "elapsed",
-        [TIMER_FAILED] = "failed"
-};
-
-DEFINE_STRING_TABLE_LOOKUP(timer_state, TimerState);
-
 static const char* const timer_base_table[_TIMER_BASE_MAX] = {
         [TIMER_ACTIVE] = "OnActiveSec",
         [TIMER_BOOT] = "OnBootSec",
@@ -772,7 +762,6 @@ const UnitVTable timer_vtable = {
         .reset_failed = timer_reset_failed,
         .time_change = timer_time_change,
 
-        .bus_interface = "org.freedesktop.systemd1.Timer",
         .bus_vtable = bus_timer_vtable,
         .bus_set_property = bus_timer_set_property,
 

@@ -36,7 +36,6 @@
 #include "random-util.h"
 #include "socket-util.h"
 #include "async.h"
-#include "refcnt.h"
 #include "utf8.h"
 
 #define PPPOE_MAX_PACKET_SIZE 1484
@@ -68,7 +67,7 @@ typedef struct PPPoETags {
 } PPPoETags;
 
 struct sd_pppoe {
-        RefCount n_ref;
+        unsigned n_ref;
 
         PPPoEState state;
         uint64_t host_uniq;
@@ -202,23 +201,34 @@ int sd_pppoe_detach_event(sd_pppoe *ppp) {
 }
 
 sd_pppoe *sd_pppoe_ref(sd_pppoe *ppp) {
-        if (ppp)
-                assert_se(REFCNT_INC(ppp->n_ref) >= 2);
+
+        if (!ppp)
+                return NULL;
+
+        assert(ppp->n_ref > 0);
+        ppp->n_ref++;
 
         return ppp;
 }
 
 sd_pppoe *sd_pppoe_unref(sd_pppoe *ppp) {
-        if (ppp && REFCNT_DEC(ppp->n_ref) <= 0) {
-                pppoe_tags_clear(&ppp->tags);
-                free(ppp->ifname);
-                free(ppp->service_name);
-                sd_pppoe_stop(ppp);
-                sd_pppoe_detach_event(ppp);
 
-                free(ppp);
-        }
+        if (!ppp)
+                return NULL;
 
+        assert(ppp->n_ref > 0);
+        ppp->n_ref--;
+
+        if (ppp->n_ref > 0)
+                return NULL;
+
+        pppoe_tags_clear(&ppp->tags);
+        free(ppp->ifname);
+        free(ppp->service_name);
+        sd_pppoe_stop(ppp);
+        sd_pppoe_detach_event(ppp);
+
+        free(ppp);
         return NULL;
 }
 
@@ -231,7 +241,7 @@ int sd_pppoe_new (sd_pppoe **ret) {
         if (!ppp)
                 return -ENOMEM;
 
-        ppp->n_ref = REFCNT_INIT;
+        ppp->n_ref = 1;
         ppp->state = _PPPOE_STATE_INVALID;
         ppp->ifindex = -1;
         ppp->fd = -1;
@@ -375,7 +385,7 @@ static int pppoe_send_initiation(sd_pppoe *ppp) {
                 return r;
 
         log_debug("PPPoE: sent DISCOVER (Service-Name: %s)",
-                  ppp->service_name ? : "");
+                  strna(ppp->service_name));
 
         pppoe_arm_timeout(ppp);
 
@@ -615,8 +625,8 @@ static int pppoe_handle_message(sd_pppoe *ppp, struct pppoe_hdr *packet, struct 
                   mac->ether_addr_octet[3],
                   mac->ether_addr_octet[4],
                   mac->ether_addr_octet[5],
-                  ppp->tags.service_name ? : "",
-                  ppp->tags.ac_name ? : "");
+                  strempty(ppp->tags.service_name),
+                  strempty(ppp->tags.ac_name));
 
                 memcpy(&ppp->peer_mac, mac, ETH_ALEN);
 
@@ -660,7 +670,7 @@ static int pppoe_handle_message(sd_pppoe *ppp, struct pppoe_hdr *packet, struct 
 
                 ppp->timeout = sd_event_source_unref(ppp->timeout);
                 assert(ppp->cb);
-                ppp->cb(ppp, PPPOE_EVENT_RUNNING, ppp->userdata);
+                ppp->cb(ppp, SD_PPPOE_EVENT_RUNNING, ppp->userdata);
 
                 break;
         case PPPOE_STATE_RUNNING:
@@ -678,7 +688,7 @@ static int pppoe_handle_message(sd_pppoe *ppp, struct pppoe_hdr *packet, struct 
                 ppp->state = PPPOE_STATE_STOPPED;
 
                 assert(ppp->cb);
-                ppp->cb(ppp, PPPOE_EVENT_STOPPED, ppp->userdata);
+                ppp->cb(ppp, SD_PPPOE_EVENT_STOPPED, ppp->userdata);
 
                 break;
         case PPPOE_STATE_STOPPED:

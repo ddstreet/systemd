@@ -21,15 +21,18 @@
 
 #include <net/if.h>
 
-#include "networkd-netdev.h"
-#include "networkd-link.h"
-#include "network-internal.h"
 #include "conf-files.h"
 #include "conf-parser.h"
 #include "list.h"
 #include "siphash24.h"
+#include "netlink-util.h"
+#include "network-internal.h"
+
+#include "networkd.h"
+#include "networkd-netdev.h"
 
 const NetDevVTable * const netdev_vtable[_NETDEV_KIND_MAX] = {
+
         [NETDEV_KIND_BRIDGE] = &bridge_vtable,
         [NETDEV_KIND_BOND] = &bond_vtable,
         [NETDEV_KIND_VLAN] = &vlan_vtable,
@@ -241,6 +244,9 @@ static int netdev_enter_ready(NetDev *netdev) {
                 link_unref(callback->link);
                 free(callback);
         }
+
+        if (NETDEV_VTABLE(netdev)->post_create)
+                NETDEV_VTABLE(netdev)->post_create(netdev, NULL, NULL);
 
         return 0;
 }

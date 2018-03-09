@@ -192,13 +192,6 @@ _pure_ static const char *target_sub_state_to_string(Unit *u) {
         return target_state_to_string(TARGET(u)->state);
 }
 
-static const char* const target_state_table[_TARGET_STATE_MAX] = {
-        [TARGET_DEAD] = "dead",
-        [TARGET_ACTIVE] = "active"
-};
-
-DEFINE_STRING_TABLE_LOOKUP(target_state, TargetState);
-
 const UnitVTable target_vtable = {
         .object_size = sizeof(Target),
 
@@ -221,7 +214,6 @@ const UnitVTable target_vtable = {
         .active_state = target_active_state,
         .sub_state_to_string = target_sub_state_to_string,
 
-        .bus_interface = "org.freedesktop.systemd1.Target",
         .bus_vtable = bus_target_vtable,
 
         .status_message_formats = {

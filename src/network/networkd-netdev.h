@@ -21,10 +21,13 @@
 
 #pragma once
 
-#include "networkd.h"
 #include "list.h"
 
+typedef struct NetDev NetDev;
 typedef struct NetDevVTable NetDevVTable;
+
+#include "networkd.h"
+#include "networkd-link.h"
 
 typedef struct netdev_join_callback netdev_join_callback;
 
@@ -137,6 +140,9 @@ struct NetDevVTable {
 
         /* create netdev, if not done via rtnl */
         int (*create)(NetDev *netdev);
+
+        /* perform additional configuration after netdev has been createad */
+        int (*post_create)(NetDev *netdev, Link *link, sd_netlink_message *message);
 
         /* verify that compulsory configuration options were specified */
         int (*config_verify)(NetDev *netdev, const char *filename);

@@ -28,15 +28,56 @@
 #include "set.h"
 #include "def.h"
 
+/* An enum of well known cgroup controllers */
+typedef enum CGroupController {
+        CGROUP_CONTROLLER_CPU,
+        CGROUP_CONTROLLER_CPUACCT,
+        CGROUP_CONTROLLER_BLKIO,
+        CGROUP_CONTROLLER_MEMORY,
+        CGROUP_CONTROLLER_DEVICES,
+        CGROUP_CONTROLLER_PIDS,
+        CGROUP_CONTROLLER_NET_CLS,
+        _CGROUP_CONTROLLER_MAX,
+        _CGROUP_CONTROLLER_INVALID = -1,
+} CGroupController;
+
+#define CGROUP_CONTROLLER_TO_MASK(c) (1 << (c))
+
 /* A bit mask of well known cgroup controllers */
-typedef enum CGroupControllerMask {
-        CGROUP_CPU = 1,
-        CGROUP_CPUACCT = 2,
-        CGROUP_BLKIO = 4,
-        CGROUP_MEMORY = 8,
-        CGROUP_DEVICE = 16,
-        _CGROUP_CONTROLLER_MASK_ALL = 31
-} CGroupControllerMask;
+typedef enum CGroupMask {
+        CGROUP_MASK_CPU = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_CPU),
+        CGROUP_MASK_CPUACCT = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_CPUACCT),
+        CGROUP_MASK_BLKIO = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_BLKIO),
+        CGROUP_MASK_MEMORY = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_MEMORY),
+        CGROUP_MASK_DEVICES = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_DEVICES),
+        CGROUP_MASK_PIDS = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_PIDS),
+        CGROUP_MASK_NET_CLS = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_NET_CLS),
+        _CGROUP_MASK_ALL = CGROUP_CONTROLLER_TO_MASK(_CGROUP_CONTROLLER_MAX) - 1
+} CGroupMask;
+
+/* Special values for the cpu.shares attribute */
+#define CGROUP_CPU_SHARES_INVALID ((uint64_t) -1)
+#define CGROUP_CPU_SHARES_MIN UINT64_C(2)
+#define CGROUP_CPU_SHARES_MAX UINT64_C(262144)
+#define CGROUP_CPU_SHARES_DEFAULT UINT64_C(1024)
+
+static inline bool CGROUP_CPU_SHARES_IS_OK(uint64_t x) {
+        return
+            x == CGROUP_CPU_SHARES_INVALID ||
+            (x >= CGROUP_CPU_SHARES_MIN && x <= CGROUP_CPU_SHARES_MAX);
+}
+
+/* Special values for the blkio.weight attribute */
+#define CGROUP_BLKIO_WEIGHT_INVALID ((uint64_t) -1)
+#define CGROUP_BLKIO_WEIGHT_MIN UINT64_C(10)
+#define CGROUP_BLKIO_WEIGHT_MAX UINT64_C(1000)
+#define CGROUP_BLKIO_WEIGHT_DEFAULT UINT64_C(500)
+
+static inline bool CGROUP_BLKIO_WEIGHT_IS_OK(uint64_t x) {
+        return
+            x == CGROUP_BLKIO_WEIGHT_INVALID ||
+            (x >= CGROUP_BLKIO_WEIGHT_MIN && x <= CGROUP_BLKIO_WEIGHT_MAX);
+}
 
 /*
  * General rules:
@@ -77,7 +118,6 @@ int cg_pid_get_path(const char *controller, pid_t pid, char **path);
 int cg_trim(const char *controller, const char *path, bool delete_root);
 
 int cg_rmdir(const char *controller, const char *path);
-int cg_delete(const char *controller, const char *path);
 
 int cg_create(const char *controller, const char *path);
 int cg_attach(const char *controller, const char *path, pid_t pid);
@@ -93,8 +133,8 @@ int cg_set_task_access(const char *controller, const char *path, mode_t mode, ui
 int cg_install_release_agent(const char *controller, const char *agent);
 int cg_uninstall_release_agent(const char *controller);
 
-int cg_is_empty(const char *controller, const char *path, bool ignore_self);
-int cg_is_empty_recursive(const char *controller, const char *path, bool ignore_self);
+int cg_is_empty(const char *controller, const char *path);
+int cg_is_empty_recursive(const char *controller, const char *path);
 
 int cg_get_root_path(char **path);
 
@@ -126,14 +166,27 @@ bool cg_controller_is_valid(const char *p);
 
 int cg_slice_to_path(const char *unit, char **ret);
 
-typedef const char* (*cg_migrate_callback_t)(CGroupControllerMask mask, void *userdata);
+typedef const char* (*cg_migrate_callback_t)(CGroupMask mask, void *userdata);
 
-int cg_create_everywhere(CGroupControllerMask supported, CGroupControllerMask mask, const char *path);
-int cg_attach_everywhere(CGroupControllerMask supported, const char *path, pid_t pid, cg_migrate_callback_t callback, void *userdata);
-int cg_attach_many_everywhere(CGroupControllerMask supported, const char *path, Set* pids, cg_migrate_callback_t callback, void *userdata);
-int cg_migrate_everywhere(CGroupControllerMask supported, const char *from, const char *to, cg_migrate_callback_t callback, void *userdata);
-int cg_trim_everywhere(CGroupControllerMask supported, const char *path, bool delete_root);
+int cg_create_everywhere(CGroupMask supported, CGroupMask mask, const char *path);
+int cg_attach_everywhere(CGroupMask supported, const char *path, pid_t pid, cg_migrate_callback_t callback, void *userdata);
+int cg_attach_many_everywhere(CGroupMask supported, const char *path, Set* pids, cg_migrate_callback_t callback, void *userdata);
+int cg_migrate_everywhere(CGroupMask supported, const char *from, const char *to, cg_migrate_callback_t callback, void *userdata);
+int cg_trim_everywhere(CGroupMask supported, const char *path, bool delete_root);
+int cg_enable_everywhere(CGroupMask supported, CGroupMask mask, const char *p);
 
-CGroupControllerMask cg_mask_supported(void);
+int cg_mask_supported(CGroupMask *ret);
 
 int cg_kernel_controllers(Set *controllers);
+
+int cg_unified(void);
+void cg_unified_flush(void);
+
+bool cg_is_unified_wanted(void);
+bool cg_is_legacy_wanted(void);
+
+const char* cgroup_controller_to_string(CGroupController c) _const_;
+CGroupController cgroup_controller_from_string(const char *s) _pure_;
+
+int cg_cpu_shares_parse(const char *s, uint64_t *ret);
+int cg_blkio_weight_parse(const char *s, uint64_t *ret);

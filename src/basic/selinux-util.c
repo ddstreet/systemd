@@ -199,11 +199,11 @@ int mac_selinux_get_create_label_from_exe(const char *exe, char **label) {
         if (!mac_selinux_use())
                 return -EOPNOTSUPP;
 
-        r = getcon(&mycon);
+        r = getcon_raw(&mycon);
         if (r < 0)
                 return -errno;
 
-        r = getfilecon(exe, &fcon);
+        r = getfilecon_raw(exe, &fcon);
         if (r < 0)
                 return -errno;
 
@@ -225,7 +225,7 @@ int mac_selinux_get_our_label(char **label) {
         if (!mac_selinux_use())
                 return -EOPNOTSUPP;
 
-        r = getcon(label);
+        r = getcon_raw(label);
         if (r < 0)
                 return -errno;
 #endif
@@ -249,7 +249,7 @@ int mac_selinux_get_child_mls_label(int socket_fd, const char *exe, const char *
         if (!mac_selinux_use())
                 return -EOPNOTSUPP;
 
-        r = getcon(&mycon);
+        r = getcon_raw(&mycon);
         if (r < 0)
                 return -errno;
 
@@ -260,7 +260,7 @@ int mac_selinux_get_child_mls_label(int socket_fd, const char *exe, const char *
         if (!exec_label) {
                 /* If there is no context set for next exec let's use context
                    of target executable */
-                r = getfilecon(exe, &fcon);
+                r = getfilecon_raw(exe, &fcon);
                 if (r < 0)
                         return -errno;
         }
@@ -295,14 +295,20 @@ int mac_selinux_get_child_mls_label(int socket_fd, const char *exe, const char *
         return r;
 }
 
-void mac_selinux_free(char *label) {
+char* mac_selinux_free(char *label) {
 
 #ifdef HAVE_SELINUX
+        if (!label)
+                return NULL;
+
         if (!mac_selinux_use())
-                return;
+                return NULL;
+
 
         freecon((security_context_t) label);
 #endif
+
+        return NULL;
 }
 
 int mac_selinux_create_file_prepare(const char *path, mode_t mode) {

@@ -45,6 +45,7 @@
 #include "formats-util.h"
 #include "process-util.h"
 #include "env-util.h"
+#include "terminal-util.h"
 
 static int property_get_id(
                 sd_bus *bus,
@@ -123,6 +124,7 @@ int bus_machine_method_terminate(sd_bus_message *message, void *userdata, sd_bus
                         message,
                         CAP_KILL,
                         "org.freedesktop.machine1.manage-machines",
+                        NULL,
                         false,
                         UID_INVALID,
                         &m->manager->polkit_registry,
@@ -168,6 +170,7 @@ int bus_machine_method_kill(sd_bus_message *message, void *userdata, sd_bus_erro
                         message,
                         CAP_KILL,
                         "org.freedesktop.machine1.manage-machines",
+                        NULL,
                         false,
                         UID_INVALID,
                         &m->manager->polkit_registry,
@@ -350,9 +353,9 @@ int bus_machine_method_get_addresses(sd_bus_message *message, void *userdata, sd
 
                 r = wait_for_terminate(child, &si);
                 if (r < 0)
-                        return sd_bus_error_set_errnof(error, r, "Failed to wait for client: %m");
+                        return sd_bus_error_set_errnof(error, r, "Failed to wait for child: %m");
                 if (si.si_code != CLD_EXITED || si.si_status != EXIT_SUCCESS)
-                        return sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Client died abnormally.");
+                        return sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Child died abnormally.");
                 break;
         }
 
@@ -420,7 +423,7 @@ int bus_machine_method_get_os_release(sd_bus_message *message, void *userdata, s
                                         _exit(EXIT_FAILURE);
                         }
 
-                        r = copy_bytes(fd, pair[1], (off_t) -1, false);
+                        r = copy_bytes(fd, pair[1], (uint64_t) -1, false);
                         if (r < 0)
                                 _exit(EXIT_FAILURE);
 
@@ -441,9 +444,9 @@ int bus_machine_method_get_os_release(sd_bus_message *message, void *userdata, s
 
                 r = wait_for_terminate(child, &si);
                 if (r < 0)
-                        return sd_bus_error_set_errnof(error, r, "Failed to wait for client: %m");
+                        return sd_bus_error_set_errnof(error, r, "Failed to wait for child: %m");
                 if (si.si_code != CLD_EXITED || si.si_status != EXIT_SUCCESS)
-                        return sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Client died abnormally.");
+                        return sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Child died abnormally.");
 
                 break;
         }
@@ -487,6 +490,7 @@ int bus_machine_method_open_pty(sd_bus_message *message, void *userdata, sd_bus_
                         message,
                         CAP_SYS_ADMIN,
                         m->class == MACHINE_HOST ? "org.freedesktop.machine1.host-open-pty" : "org.freedesktop.machine1.open-pty",
+                        NULL,
                         false,
                         UID_INVALID,
                         &m->manager->polkit_registry,
@@ -500,7 +504,7 @@ int bus_machine_method_open_pty(sd_bus_message *message, void *userdata, sd_bus_
         if (master < 0)
                 return master;
 
-        r = ptsname_malloc(master, &pty_name);
+        r = ptsname_namespace(master, &pty_name);
         if (r < 0)
                 return r;
 
@@ -515,7 +519,7 @@ int bus_machine_method_open_pty(sd_bus_message *message, void *userdata, sd_bus_
         return sd_bus_send(NULL, reply, NULL);
 }
 
-static int container_bus_new(Machine *m, sd_bus **ret) {
+static int container_bus_new(Machine *m, sd_bus_error *error, sd_bus **ret) {
         int r;
 
         assert(m);
@@ -544,6 +548,8 @@ static int container_bus_new(Machine *m, sd_bus **ret) {
                 bus->is_system = true;
 
                 r = sd_bus_start(bus);
+                if (r == -ENOENT)
+                        return sd_bus_error_set_errnof(error, r, "There is no system bus in container %s.", m->name);
                 if (r < 0)
                         return r;
 
@@ -576,6 +582,7 @@ int bus_machine_method_open_login(sd_bus_message *message, void *userdata, sd_bu
                         message,
                         CAP_SYS_ADMIN,
                         m->class == MACHINE_HOST ? "org.freedesktop.machine1.host-login" : "org.freedesktop.machine1.login",
+                        NULL,
                         false,
                         UID_INVALID,
                         &m->manager->polkit_registry,
@@ -589,7 +596,7 @@ int bus_machine_method_open_login(sd_bus_message *message, void *userdata, sd_bu
         if (master < 0)
                 return master;
 
-        r = ptsname_malloc(master, &pty_name);
+        r = ptsname_namespace(master, &pty_name);
         if (r < 0)
                 return r;
 
@@ -597,10 +604,7 @@ int bus_machine_method_open_login(sd_bus_message *message, void *userdata, sd_bu
         if (!p)
                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "PTS name %s is invalid", pty_name);
 
-        if (unlockpt(master) < 0)
-                return -errno;
-
-        r = container_bus_new(m, &allocated_bus);
+        r = container_bus_new(m, error, &allocated_bus);
         if (r < 0)
                 return r;
 
@@ -677,6 +681,7 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
                         message,
                         CAP_SYS_ADMIN,
                         m->class == MACHINE_HOST ? "org.freedesktop.machine1.host-shell" : "org.freedesktop.machine1.shell",
+                        NULL,
                         false,
                         UID_INVALID,
                         &m->manager->polkit_registry,
@@ -690,7 +695,7 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
         if (master < 0)
                 return master;
 
-        r = ptsname_malloc(master, &pty_name);
+        r = ptsname_namespace(master, &pty_name);
         if (r < 0)
                 return r;
 
@@ -701,10 +706,7 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
         utmp_id = path_startswith(pty_name, "/dev/");
         assert(utmp_id);
 
-        if (unlockpt(master) < 0)
-                return -errno;
-
-        r = container_bus_new(m, &allocated_bus);
+        r = container_bus_new(m, error, &allocated_bus);
         if (r < 0)
                 return r;
 
@@ -733,7 +735,7 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
 
         description = strjoina("Shell for User ", isempty(user) ? "root" : user);
         r = sd_bus_message_append(tm,
-                                  "(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)",
+                                  "(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)",
                                   "Description", "s", description,
                                   "StandardInput", "s", "tty",
                                   "StandardOutput", "s", "tty",
@@ -746,7 +748,8 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
                                   "TTYReset", "b", true,
                                   "UtmpIdentifier", "s", utmp_id,
                                   "UtmpMode", "s", "user",
-                                  "PAMName", "s", "login");
+                                  "PAMName", "s", "login",
+                                  "WorkingDirectory", "s", "-~");
         if (r < 0)
                 return r;
 
@@ -888,6 +891,7 @@ int bus_machine_method_bind_mount(sd_bus_message *message, void *userdata, sd_bu
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-machines",
+                        NULL,
                         false,
                         UID_INVALID,
                         &m->manager->polkit_registry,
@@ -1037,11 +1041,11 @@ int bus_machine_method_bind_mount(sd_bus_message *message, void *userdata, sd_bu
 
         r = wait_for_terminate(child, &si);
         if (r < 0) {
-                r = sd_bus_error_set_errnof(error, r, "Failed to wait for client: %m");
+                r = sd_bus_error_set_errnof(error, r, "Failed to wait for child: %m");
                 goto finish;
         }
         if (si.si_code != CLD_EXITED) {
-                r = sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Client died abnormally.");
+                r = sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Child died abnormally.");
                 goto finish;
         }
         if (si.si_status != EXIT_SUCCESS) {
@@ -1049,7 +1053,7 @@ int bus_machine_method_bind_mount(sd_bus_message *message, void *userdata, sd_bu
                 if (read(errno_pipe_fd[0], &r, sizeof(r)) == sizeof(r))
                         r = sd_bus_error_set_errnof(error, r, "Failed to mount: %m");
                 else
-                        r = sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Client failed.");
+                        r = sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Child failed.");
                 goto finish;
         }
 
@@ -1085,7 +1089,7 @@ static int machine_operation_done(sd_event_source *s, const siginfo_t *si, void 
         o->pid = 0;
 
         if (si->si_code != CLD_EXITED) {
-                r = sd_bus_error_setf(&error, SD_BUS_ERROR_FAILED, "Client died abnormally.");
+                r = sd_bus_error_setf(&error, SD_BUS_ERROR_FAILED, "Child died abnormally.");
                 goto fail;
         }
 
@@ -1093,7 +1097,7 @@ static int machine_operation_done(sd_event_source *s, const siginfo_t *si, void 
                 if (read(o->errno_fd, &r, sizeof(r)) == sizeof(r))
                         r = sd_bus_error_set_errnof(&error, r, "%m");
                 else
-                        r = sd_bus_error_setf(&error, SD_BUS_ERROR_FAILED, "Client failed.");
+                        r = sd_bus_error_setf(&error, SD_BUS_ERROR_FAILED, "Child failed.");
 
                 goto fail;
         }
@@ -1150,6 +1154,7 @@ int bus_machine_method_copy(sd_bus_message *message, void *userdata, sd_bus_erro
                         message,
                         CAP_SYS_ADMIN,
                         "org.freedesktop.machine1.manage-machines",
+                        NULL,
                         false,
                         UID_INVALID,
                         &m->manager->polkit_registry,
