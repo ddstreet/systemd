@@ -2,12 +2,12 @@
 .\"     Title: tmpfiles.d
 .\"    Author: Brandon Philips <brandon@ifup.org>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: tmpfiles.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "TMPFILES\&.D" "5" "10/11/2011" "systemd" "tmpfiles.d"
+.TH "TMPFILES\&.D" "5" "02/15/2012" "systemd" "tmpfiles.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -48,25 +48,26 @@ or
 Each configuration file is named in the style of
 <program>\&.conf\&. Files in
 /etc/
-overwrite files with the same name in
+override files with the same name in
 /usr/lib/\&. Files in
 /run
-overwrite files with the same name in
+override files with the same name in
 /etc/
 and
 /usr/lib/\&. Packages should install their configuration files in
 /usr/lib/, files in
 /etc/
-are reserved for the local administration, which possibly decides to overwrite the configurations installed from packages\&. All files are sorted by filename in alphabetical order, regardless in which of the directories they reside, to ensure that a specific configuration file takes precedence over another file with an alphabetically later name\&.
+are reserved for the local administrator, who may choose to override the configurations installed from packages\&. The list of configuration files are sorted by their filename in alphabetical order, regardless in which of the directories they reside, to guarantee that a configuration file takes precedence over another configuration file with an alphabetically later name\&.
 .PP
-The configuration format is one line per path containing action, mode, ownership and age fields:
+The configuration format is one line per path containing action, path, mode, ownership, age and argument fields:
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-Type Path          Mode UID  GID  Age
-d    /run/user 0755 root root 10d
+Type Path        Mode UID  GID  Age Argument
+d    /run/user   0755 root root 10d \-
+L    /tmp/foobar \-    \-    \-    \-   /dev/null
 .fi
 .if n \{\
 .RE
@@ -75,12 +76,17 @@ d    /run/user 0755 root root 10d
 .PP
 \fIf\fR
 .RS 4
-Create a file if it doesn\*(Aqt exist yet
+Create a file if it doesn\*(Aqt exist yet (optionally writing a short string into it, if the argument parameter is passed)
 .RE
 .PP
 \fIF\fR
 .RS 4
-Create or truncate a file
+Create or truncate a file (optionally writing a short string into it, if the argument parameter is passed)
+.RE
+.PP
+\fIw\fR
+.RS 4
+Write the argument parameter to a file, if it exists\&.
 .RE
 .PP
 \fId\fR
@@ -98,6 +104,21 @@ Create or empty a directory
 Create a named pipe (FIFO) if it doesn\*(Aqt exist yet
 .RE
 .PP
+\fIL\fR
+.RS 4
+Create a symlink if it doesn\*(Aqt exist yet
+.RE
+.PP
+\fIc\fR
+.RS 4
+Create a character device node if it doesn\*(Aqt exist yet
+.RE
+.PP
+\fIb\fR
+.RS 4
+Create a block device node if it doesn\*(Aqt exist yet
+.RE
+.PP
 \fIx\fR
 .RS 4
 Ignore a path during cleaning\&. Use this type to exclude paths from clean\-up as controlled with the Age parameter\&. Note that lines of this type do not influence the effect of r or R lines\&. Lines of this type accept shell\-style globs in place of of normal path names\&.
@@ -112,12 +133,22 @@ Remove a file or directory if it exists\&. This may not be used to remove non\-e
 .RS 4
 Recursively remove a path and all its subdirectories (if it is a directory)\&. Lines of this type accept shell\-style globs in place of normal path names\&.
 .RE
+.PP
+\fIz\fR
+.RS 4
+Set ownership, access mode and relabel security context of a file or directory if it exists\&. Lines of this type accept shell\-style globs in place of normal path names\&.
+.RE
+.PP
+\fIZ\fR
+.RS 4
+Recursively set ownership, access mode and relabel security context of a path and all its subdirectories (if it is a directory)\&. Lines of this type accept shell\-style globs in place of normal path names\&.
+.RE
 .SS "Mode"
 .PP
-The file access mode to use when creating this file or directory\&. If omitted or when set to \- the default is used: 0755 for directories, 0644 for files\&. This parameter is ignored for x, r, R lines\&.
+The file access mode to use when creating this file or directory\&. If omitted or when set to \- the default is used: 0755 for directories, 0644 for all other file objects\&. For z, Z lines if omitted or when set to \- the file access mode will not be modified\&. This parameter is ignored for x, r, R, L lines\&.
 .SS "UID, GID"
 .PP
-The user and group to use for this file or directory\&. This may either be a numeric user/group ID or a user or group name\&. If omitted or when set to \- the default 0 (root) is used\&. \&. These parameters are ignored for x, r, R lines\&.
+The user and group to use for this file or directory\&. This may either be a numeric user/group ID or a user or group name\&. If omitted or when set to \- the default 0 (root) is used\&. For z, Z lines when omitted or when set to \- the file ownership will not be modified\&. These parameters are ignored for x, r, R, L lines\&.
 .SS "Age"
 .PP
 The date field, when set, is used to decide what files to delete when cleaning\&. If a file or directory is older than the current time minus the age field it is deleted\&. The field format is a series of integers each followed by one of the following postfixes for the respective time units:
@@ -129,6 +160,9 @@ The date field, when set, is used to decide what files to delete when cleaning\&
 If multiple integers and units are specified the time values are summed up\&.
 .PP
 The age field only applies to lines starting with d, D and x\&. If omitted or set to \- no automatic clean\-up is done\&.
+.SS "Argument"
+.PP
+For L lines determines the destination path of the symlink\&. For c, b determines the major/minor of the device node, with major and minor formatted as integers, separated by :, e\&.g\&. "1:3"\&. For f, F, w may be used to specify a short string that is written to the file, suffixed by a newline\&. Ignored for all other lines\&.
 .SH "EXAMPLE"
 .PP
 \fBExample\ \&1.\ \&/etc/tmpfiles.d/screen.conf example\fR
@@ -140,7 +174,7 @@ needs two directories created at boot with specific modes and ownership\&.
 .RS 4
 .\}
 .nf
-d /var/run/screens 1777 root root 10d
+d /var/run/screens  1777 root root 10d
 d /var/run/uscreens 0755 root root 10d12h
 .fi
 .if n \{\

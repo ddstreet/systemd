@@ -2,12 +2,12 @@
 .\"     Title: sd-daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: sd-daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD\-DAEMON" "7" "10/11/2011" "systemd" "sd-daemon"
+.TH "SD\-DAEMON" "7" "02/15/2012" "systemd" "sd-daemon"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -33,7 +33,7 @@ sd-daemon \- Reference implementation of APIs for new\-style daemons
 .sp
 .ft B
 .nf
-#include "sd\-daemon\&.h"
+#include <systemd/sd\-daemon\&.h>
 .fi
 .ft
 .HP \w'\fBpkg\-config\ \-\-cflags\ \-\-libs\ libsystemd\-daemon\fR\ 'u
@@ -101,9 +101,9 @@ fprintf(stderr, SD_NOTICE "Hello World!\en");
 These interfaces are provided by the reference implementation of APIs for new\-style daemons and distributed with the systemd package\&. The algorithms they implement are simple, and can easily be reimplemented in daemons if it is important to support this interface without using the reference implementation\&. See the respective function man pages for details\&.
 .PP
 In addition, for details about the algorithms check the liberally licensed reference implementation sources:
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.c\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/sd-daemon.c\fR\m[]
 resp\&.
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.h\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h\fR\m[]
 .PP
 These APIs are implemented in the reference implementation\*(Aqs
 sd\-daemon\&.c

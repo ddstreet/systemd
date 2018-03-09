@@ -2,12 +2,12 @@
 .\"     Title: sd_notify
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: sd_notify
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_NOTIFY" "3" "10/11/2011" "systemd" "sd_notify"
+.TH "SD_NOTIFY" "3" "02/15/2012" "systemd" "sd_notify"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -33,7 +33,7 @@ sd_notify, sd_notifyf \- Notify init system about start\-up completion and other
 .sp
 .ft B
 .nf
-#include "sd\-daemon\&.h"
+#include <systemd/sd\-daemon\&.h>
 .fi
 .ft
 .HP \w'int\ sd_notify('u
@@ -84,6 +84,11 @@ MAINPID=\&.\&.\&.
 The main pid of the daemon, in case the init system did not fork off the process itself\&. Example: "MAINPID=4711"
 .RE
 .PP
+WATCHDOG=1
+.RS 4
+Tells systemd to update the watchdog timestamp\&. Services using this feature should do this in regular intervals\&. A watchdog framework can use the timestamps to detect failed services\&.
+.RE
+.PP
 It is recommended to prefix variable names that are not shown in the list above with
 \fIX_\fR
 to avoid namespace clashes\&.
@@ -96,7 +101,7 @@ for details\&.
 .PP
 \fBsd_notifyf()\fR
 is similar to
-\fBsd_notifyf()\fR
+\fBsd_notify()\fR
 but takes a
 \fBprintf()\fR\-like format string plus arguments\&.
 .SH "RETURN VALUE"
@@ -115,9 +120,9 @@ environment variable\&. If the first character of
 is @ the string is understood as Linux abstract namespace socket\&. The datagram is accompanied by the process credentials of the sending daemon, using SCM_CREDENTIALS\&.
 .PP
 For details about the algorithms check the liberally licensed reference implementation sources:
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.c\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/sd-daemon.c\fR\m[]
 resp\&.
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.h\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h\fR\m[]
 .PP
 \fBsd_notify()\fR
 and

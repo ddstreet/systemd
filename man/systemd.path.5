@@ -2,12 +2,12 @@
 .\"     Title: systemd.path
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd.path
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.PATH" "5" "10/11/2011" "systemd" "systemd.path"
+.TH "SYSTEMD\&.PATH" "5" "02/15/2012" "systemd" "systemd.path"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -68,7 +68,7 @@ shutdown\&.target\&. These ensure that path units are terminated cleanly prior t
 .PP
 Path files must include a [Path] section, which carries information about the path(s) it monitors\&. The options specific to the [Path] section of path units are the following:
 .PP
-\fIPathExists=\fR, \fIPathExistsGlob=\fR, \fIPathChanged=\fR, \fIDirectoryNotEmpty=\fR
+\fIPathExists=\fR, \fIPathExistsGlob=\fR, \fIPathChanged=\fR, \fIPathModified=\fR, \fIDirectoryNotEmpty=\fR
 .RS 4
 Defines paths to monitor for certain changes:
 \fIPathExists=\fR
@@ -76,7 +76,9 @@ may be used to watch the mere existence of a file or directory\&. If the file sp
 \fIPathExistsGlob=\fR
 works similar, but checks for the existance of at least one file matching the globbing pattern specified\&.
 \fIPathChanged=\fR
-may be used to watch a file or directory and activate the configured unit whenever it changes or is modified\&.
+may be used to watch a file or directory and activate the configured unit whenever it changes\&. It is not activated on every write to the watched file but it is activated if the file which was open for writing gets closed\&.
+\fIPathModified=\fR
+is similar, but additionally it is activated also on simple writes to the watched file\&.
 \fIDirectoryNotEmpty=\fR
 may be used to watch a directory and activate the configured unit whenever it contains at least one file\&.
 .sp
@@ -89,7 +91,7 @@ If a path is already existing (in case of
 and
 \fIPathExistsGlob=\fR) or a directory already is not empty (in case of
 \fIDirectoryNotEmpty=\fR) at the time the path unit is activated, then the configured unit is immediately activated as well\&. Something similar does not apply to
-\fIPathChanged=\fR\&. The latter is not activated on simple writes but only if files with were opened for writing are closed\&.
+\fIPathChanged=\fR\&.
 .RE
 .PP
 \fIUnit=\fR

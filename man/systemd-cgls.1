@@ -2,12 +2,12 @@
 .\"     Title: systemd-cgls
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd-cgls
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\-CGLS" "1" "10/11/2011" "systemd" "systemd-cgls"
+.TH "SYSTEMD\-CGLS" "1" "02/15/2012" "systemd" "systemd-cgls"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -42,9 +42,19 @@ shows the contents of the control group the working directory refers to\&. Other
 .PP
 The following options are understood:
 .PP
-\fB\-\-help\fR
+\fB\-h\fR, \fB\-\-help\fR
 .RS 4
 Prints a short help text and exits\&.
+.RE
+.PP
+\fB\-\-no\-pager\fR
+.RS 4
+Do not pipe output into a pager\&.
+.RE
+.PP
+\fB\-k\fR
+.RS 4
+Include kernel threads in output\&.
 .RE
 .SH "EXIT STATUS"
 .PP
@@ -53,7 +63,9 @@ On success 0 is returned, a non\-zero failure code otherwise\&.
 .PP
 
 \fBsystemd\fR(1),
-\fBsystemctl\fR(1)
+\fBsystemctl\fR(1),
+\fBsystemd-cgtop\fR(1),
+\fBps\fR(1)
 .SH "AUTHOR"
 .PP
 \fBLennart Poettering\fR <\&lennart@poettering\&.net\&>

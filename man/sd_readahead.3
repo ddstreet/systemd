@@ -2,12 +2,12 @@
 .\"     Title: sd_readahead
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: sd_readahead
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_READAHEAD" "3" "10/11/2011" "systemd" "sd_readahead"
+.TH "SD_READAHEAD" "3" "02/15/2012" "systemd" "sd_readahead"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -33,7 +33,7 @@ sd_readahead \- Control ongoing disk boot\-time read\-ahead operations
 .sp
 .ft B
 .nf
-#include "sd\-daemon\&.h"
+#include "sd\-readahead\&.h"
 .fi
 .ft
 .HP \w'int\ sd_readahead('u
@@ -73,22 +73,19 @@ Internally, this function creates a file in
 which is then used as flag file to notify the read\-ahead subsystem\&.
 .PP
 For details about the algorithm check the liberally licensed reference implementation sources:
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-readahead.c\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/readahead/sd-readahead.c\fR\m[]
 resp\&.
-\m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-readahead.h\fR\m[]
+\m[blue]\fB\%http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-readahead.h\fR\m[]
 .PP
 \fBsd_readahead()\fR
-is implemented in the reference implementation\*(Aqs
+is implemented in the reference implementation\*(Aqs drop\-in
 sd\-readahead\&.c
 and
 sd\-readahead\&.h
-files\&. These interfaces are available as shared library, which can be compiled and linked to with the
-libsystemd\-daemon
-\fBpkg-config\fR(1)
-file\&. Alternatively, applications consuming this API may copy the implementation into their source tree\&. For more details about the reference implementation see
-\fBsd-readahead\fR(7)\&.
+files\&. It is recommended that applications consuming this API copy the implementation into their source tree\&. For more details about the reference implementation see
+\fBsd-readahead\fR(7)
 .PP
-If the reference implementation is used as drop\-in files and \-DDISABLE_SYSTEMD is set during compilation this function will always return 0 and otherwise become a NOP\&.
+If \-DDISABLE_SYSTEMD is set during compilation this function will always return 0 and otherwise become a NOP\&.
 .SH "EXAMPLES"
 .PP
 \fBExample\ \&1.\ \&Cancelling all read-ahead operations\fR

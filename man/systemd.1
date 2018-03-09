@@ -2,12 +2,12 @@
 .\"     Title: systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD" "1" "10/11/2011" "systemd" "systemd"
+.TH "SYSTEMD" "1" "02/15/2012" "systemd" "systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -126,8 +126,10 @@ Controls whether output of SysV init scripts will be directed to the console\&. 
 .RS 4
 Set log target\&. Argument must be one of
 \fBconsole\fR,
+\fBjournal\fR,
 \fBsyslog\fR,
 \fBkmsg\fR,
+\fBjournal\-or\-kmsg\fR,
 \fBsyslog\-or\-kmsg\fR,
 \fBnull\fR\&.
 .RE
@@ -171,13 +173,15 @@ for details)\&. Takes one of
 \fBinherit\fR,
 \fBnull\fR,
 \fBtty\fR,
+\fBjournal\fR,
+\fBjournal+console\fR,
 \fBsyslog\fR,
 \fBsyslog+console\fR,
 \fBkmsg\fR,
 \fBkmsg+console\fR\&. If the argument is omitted
 \fB\-\-default\-standard\-output=\fR
 defaults to
-\fBsyslog\fR
+\fBjournal\fR
 and
 \fB\-\-default\-standard\-error=\fR
 to
@@ -567,7 +571,7 @@ debug
 (resp\&.
 info
 on
-SIGRTMIN+32), as controlled via
+SIGRTMIN+23), as controlled via
 \fIsystemd\&.log_level=debug\fR
 (resp\&.
 \fIsystemd\&.log_level=info\fR
@@ -575,19 +579,25 @@ on
 SIGRTMIN+23) on the kernel command line\&.
 .RE
 .PP
-SIGRTMIN+27, SIGRTMIN+28, SIGRTMIN+29
+SIGRTMIN+26, SIGRTMIN+27, SIGRTMIN+28, SIGRTMIN+29
 .RS 4
 Sets the log level to
-console
+journal\-or\-kmsg
 (resp\&.
+console
+on
+SIGRTMIN+27; resp\&.
 kmsg
 on
 SIGRTMIN+28; resp\&.
 syslog\-or\-kmsg
 on
 SIGRTMIN+29), as controlled via
-\fIsystemd\&.log_target=console\fR
+\fIsystemd\&.log_target=journal\-or\-kmsg\fR
 (resp\&.
+\fIsystemd\&.log_target=console\fR
+on
+SIGRTMIN+27; resp\&.
 \fIsystemd\&.log_target=kmsg\fR
 on
 SIGRTMIN+28; resp
@@ -738,21 +748,17 @@ resp\&.
 \fB\-\-default\-standard\-error=\fR
 command line arguments described above\&.
 .RE
+.PP
+\fIsystemd\&.setenv=\fR
+.RS 4
+Takes a string argument in the form VARIABLE=VALUE\&. May be used to set environment variables for the init process and all its children at boot time\&. May be used more than once to set multiple variables\&. If the equal sign and variable are missing unsets an environment variable which might be passed in from the initial ram disk\&.
+.RE
 .SH "SOCKETS AND FIFOS"
 .PP
 /run/systemd/notify
 .RS 4
 Daemon status notification socket\&. This is an AF_UNIX datagram socket and is used to implement the daemon notification logic as implemented by
 \fBsd_notify\fR(3)\&.
-.RE
-.PP
-/run/systemd/stdout\-syslog\-bridge
-.RS 4
-Used internally by the
-systemd\-stdout\-syslog\-bridge\&.service
-unit to connect STDOUT and/or STDERR of spawned processes to
-\fBsyslog\fR(3)
-or the kernel log buffer\&. This is an AF_UNIX stream socket\&.
 .RE
 .PP
 /run/systemd/shutdownd

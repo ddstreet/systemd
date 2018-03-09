@@ -54,6 +54,9 @@
 /* Define if SELinux is available */
 #undef HAVE_SELINUX
 
+/* Define if /bin, /sbin aren't symlinks into /usr */
+#undef HAVE_SPLIT_USR
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -83,6 +86,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define if XZ is available */
+#undef HAVE_XZ
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
@@ -135,6 +141,9 @@
 
 /* Target is Gentoo */
 #undef TARGET_GENTOO
+
+/* Target is Mageia */
+#undef TARGET_MAGEIA
 
 /* Target is Mandriva */
 #undef TARGET_MANDRIVA

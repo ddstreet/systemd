@@ -2,12 +2,12 @@
 .\"     Title: systemd.service
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/11/2011
+.\"      Date: 02/15/2012
 .\"    Manual: systemd.service
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SERVICE" "5" "10/11/2011" "systemd" "systemd.service"
+.TH "SYSTEMD\&.SERVICE" "5" "02/15/2012" "systemd" "systemd.service"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -128,7 +128,7 @@ or an equivalent call when it finished starting up\&. systemd will proceed start
 \fINotifyAccess=\fR
 (see below) should be set to open access to the notification socket provided by systemd\&. If
 \fINotifyAccess=\fR
-is not set, it will implicitly be set to
+is not set, it will be implicitly set to
 \fBmain\fR\&.
 .RE
 .PP
@@ -243,6 +243,26 @@ Configures the time to wait for start\-up and stop\&. If a daemon service does n
 below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
 .RE
 .PP
+\fIWatchdogSec=\fR
+.RS 4
+Configures the watchdog timeout for a service\&. This is activated when the start\-up is completed\&. The service must call
+\fBsd_notify\fR(3)
+regularly with "WATCHDOG=1"\&. If the time between two such calls is larger than the configured time then the service is placed in a failure state\&. By setting
+\fIRestart=\fR
+to
+\fBon\-failure\fR
+or
+\fBalways\fR
+the service will be automatically restarted\&. The time configured here will be passed to the executed service process in the
+\fIWATCHDOG_USEC=\fR
+environment variable\&. If this option is used
+\fINotifyAccess=\fR
+(see below) should be set to open access to the notification socket provided by systemd\&. If
+\fINotifyAccess=\fR
+is not set, it will be implicitly set to
+\fBmain\fR\&. Defaults to 0, which disables this feature\&.
+.RE
+.PP
 \fIRestart=\fR
 .RS 4
 Configures whether the main service process shall be restarted when it exits\&. Takes one of
@@ -257,11 +277,11 @@ or
 \fBon\-success\fR
 it will be restarted only when it exited cleanly, i\&.e\&. terminated with an exit code of 0\&. If set to
 \fBon\-failure\fR
-it will be restarted only when it exited with an exit code not equalling 0, or when terminated by a signal\&. If set to
+it will be restarted only when it exited with an exit code not equalling 0, when terminated by a signal, when an operation times out or when the configured watchdog timeout is triggered\&. If set to
 \fBon\-abort\fR
 it will be restarted only if it exits due to reception of an uncaught signal\&. If set to
 \fBalways\fR
-the service will be restarted regardless whether it exited cleanly or not, or got terminated abnormally by a signal\&.
+the service will be restarted regardless whether it exited cleanly or not, got terminated abnormally by a signal or hit a timeout\&.
 .RE
 .PP
 \fIPermissionsStartOnly=\fR
@@ -363,14 +383,19 @@ no daemon status updates are accepted from the service processes, all status upd
 \fBmain\fR
 only service updates sent from the main process of the service are accepted\&. If
 \fBall\fR
-all services updates from all members of the service\*(Aqs control group are accepted\&. This option must be set to open access to the notification socket when using
+all services updates from all members of the service\*(Aqs control group are accepted\&. This option should be set to open access to the notification socket when using
 \fIType=notify\fR
-(see above)\&.
+or
+\fIWatchdogUsec=\fR
+(see above)\&. If those options are used but
+\fINotifyAccess=\fR
+not configured it will be implicitly set to
+\fBmain\fR\&.
 .RE
 .PP
 \fISockets=\fR
 .RS 4
-Specifies the name of the socket units this service shall inherit the sockets from when the service (ignoring the different suffix of course) is started\&. Normally it should not be necessary to use this setting as all sockets whose unit shares the same name as the service are passed to the spawned process\&.
+Specifies the name of the socket units this service shall inherit the sockets from when the service is started\&. Normally it should not be necessary to use this setting as all sockets whose unit shares the same name as the service (ignoring the different suffix of course) are passed to the spawned process\&.
 .sp
 Note that the same socket may be passed to multiple processes at the same time\&. Also note that a different service may be activated on incoming traffic than inherits the sockets\&. Or in other words: The
 \fIService=\fR
@@ -395,6 +420,43 @@ or
 /etc/fstab\*(Aqs fs_passno column\&. See
 \fBfstab\fR(5)
 for details\&.
+.RE
+.PP
+\fIStartLimitInterval=\fR, \fIStartLimitBurst=\fR
+.RS 4
+Configure service start rate limiting\&. By default services which are started more often than 5 times within 10s are not permitted to start any more times until the 10s interval ends\&. With these two options this rate limiting may be modified\&. Use
+\fIStartLimitInterval=\fR
+to configure the checking interval (defaults to 10s, set to 0 to disable any kind of rate limiting)\&. Use
+\fIStartLimitBurst=\fR
+to configure how many starts per interval are allowed (defaults to 5)\&. These configuration options are particularly useful in conjunction with
+\fIRestart=\fR\&.
+.RE
+.PP
+\fIStartLimitAction=\fR
+.RS 4
+Configure the action to take if the rate limit configured with
+\fIStartLimitInterval=\fR
+and
+\fIStartLimitBurst=\fR
+is hit\&. Takes one of
+\fBnone\fR,
+\fBreboot\fR,
+\fBreboot\-force\fR
+or
+\fBreboot\-immediate\fR\&. If
+\fBnone\fR
+is set, hitting the rate limit will trigger no action besides that the start will not be permitted\&.
+\fBreboot\fR
+causes a reboot following the normal shutdown procedure (i\&.e\&. equivalent to
+\fBsystemctl reboot\fR),
+\fBreboot\-force\fR
+causes an forced reboot which will terminate all processes forcibly but should cause no dirty file systems on reboot (i\&.e\&. equivalent to
+\fBsystemctl reboot \-f\fR) and
+\fBreboot\-immediate\fR
+causes immediate execution of the
+\fBreboot\fR(2)
+system call, which might result in data loss\&. Defaults to
+\fBnone\fR\&.
 .RE
 .SH "SEE ALSO"
 .PP
