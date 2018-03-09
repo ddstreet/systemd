@@ -2,12 +2,12 @@
 .\"     Title: daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "DAEMON" "7" "01/22/2011" "systemd" "daemon"
+.TH "DAEMON" "7" "03/01/2011" "systemd" "daemon"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -686,7 +686,7 @@ fi
 %preun
 if [ $1 \-eq 0 ]; then
         # On uninstall (not upgrade), disable and stop the units
-        /bin/systemctl disable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
+        /bin/systemctl \-\-no\-reload disable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
         /bin/systemctl stop foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 fi
 
@@ -715,7 +715,7 @@ To facilitate upgrades from a package version that shipped only SysV init script
 .nf
 %triggerun \-\- foobar < 0\&.47\&.11\-1
 if /sbin/chkconfig foobar ; then
-        /bin/systemctl enable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
+        /bin/systemctl \-\-no\-reload enable foobar\&.service foobar\&.socket >/dev/null 2>&1 || :
 fi
 .fi
 .if n \{\

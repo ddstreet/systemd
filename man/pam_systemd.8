@@ -2,12 +2,12 @@
 .\"     Title: pam_systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: pam_systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "PAM_SYSTEMD" "8" "01/22/2011" "systemd" "pam_systemd"
+.TH "PAM_SYSTEMD" "8" "03/01/2011" "systemd" "pam_systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -211,18 +211,36 @@ Takes a boolean argument\&. If true, all processes created by the user during hi
 and is more friendly for users logged in more than once, as their processes are terminated only on their complete logout\&.
 .RE
 .PP
-\fBkeep\-root=\fR
+\fBkill\-only\-users=\fR
 .RS 4
-Takes a boolean argument\&. If true, all processes created by the root user (UID 0) during his session and from his session will be kept around after he logged out\&. This option allows cancelling the effect of
-\fBkill\-session=1\fR
+Takes a comma separated list of user names or numeric user ids as argument\&. If this option is used the effect of the
+\fBkill\-session=\fR
 and
-\fBkill\-user=1\fR
-for the root user\&.
+\fBkill\-user=\fR
+options will apply only to the listed users\&. If this option is not used the option applies to all local users\&. Note that
+\fBkill\-exclude\-users=\fR
+takes precedence over this list and is hence subtracted from the list specified here\&.
+.RE
+.PP
+\fBkill\-exclude\-users=\fR
+.RS 4
+Takes a comma separated list of user names or numeric user ids as argument\&. Users listed in this argument will not be subject to the effect of
+\fBkill\-session=\fR
+or
+\fBkill\-user=\fR\&. Note that that this option takes precedence over
+\fBkill\-only\-users=\fR, and hence whatever is listed for
+\fBkill\-exclude\-users=\fR
+is guaranteed to never be killed by this PAM module, independent of any other configuration setting\&.
 .RE
 .PP
 \fBcontrollers=\fR
 .RS 4
-Takes a comma separated list of cgroup controllers in which hierarchies a user/session cgroup will be created by default for each user logging in\&. If ommited, defaults to \*(Aqcpu\*(Aq, meaning that in addition to creating per\-user and per\-session cgroups in systemd\*(Aqs own hierarchy, groups are created in the \*(Aqcpu\*(Aq hierarchy, on order to ensure that every use and every sessions gets an equal amount of CPU time, regardless how many processes a user or session might own\&.
+Takes a comma separated list of cgroup controllers in which hierarchies a user/session cgroup will be created by default for each user logging in, in addition to the cgroup in the named \*(Aqname=systemd\*(Aq hierarchy\&. If ommited, defaults to an empty list\&. This may be used to move user sessions into their own groups in the \*(Aqcpu\*(Aq hierarchy which ensures that every logged in user gets an equal amount of CPU time regardless how many processes he has started\&.
+.RE
+.PP
+\fBreset\-controllers=\fR
+.RS 4
+Takes a comma separated list of cgroup controllers in which hierarchies the logged in processes will be reset to the root cgroup\&. If ommited, defaults to \*(Aqcpu\*(Aq, meaning that a \*(Aqcpu\*(Aq cgroup grouping inherited from the login manager will be reset for the processes of the logged in user\&.
 .RE
 .PP
 Note that setting
@@ -236,7 +254,10 @@ If the options are omitted they default to
 \fBcreate\-session=1\fR,
 \fBkill\-session=0\fR,
 \fBkill\-user=0\fR,
-\fBkeep\-root=1\fR\&.
+\fBkeep\-root=1\fR,
+\fBreset\-controllers=cpu\fR,
+\fBkill\-only\-users=\fR,
+\fBkill\-exclude\-users=root\fR\&.
 .SH "MODULE TYPES PROVIDED"
 .PP
 Only

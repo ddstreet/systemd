@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.exec"><a id="systemd.exec"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.exec — systemd execution environment configuration</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
                 <code class="filename">systemd.socket</code>,
                 <code class="filename">systemd.mount</code>,
-                <code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id564358"/><h2>Description</h2><p>Unit configuration files for services, sockets
+                <code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id327824"/><h2>Description</h2><p>Unit configuration files for services, sockets
                 mount points and swap devices share a subset of
                 configuration options which define the execution
                 environment of spawned processes.</p><p>This man page lists the configuration options
@@ -20,7 +20,7 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket], [Mount] resp. [Swap] section, depending on the unit
-                type.</p></div><div class="refsect1" title="Options"><a id="id564412"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                type.</p></div><div class="refsect1" title="Options"><a id="id327878"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed
                                 processes.</p></dd><dt><span class="term"><code class="varname">RootDirectory=</code></span></dt><dd><p>Takes an absolute
@@ -190,7 +190,9 @@
                                 <code class="option">null</code>,
                                 <code class="option">tty</code>,
                                 <code class="option">syslog</code>,
-                                <code class="option">kmsg</code> or
+                                <code class="option">kmsg</code>,
+                                <code class="option">kmsg+console</code>,
+                                <code class="option">syslog+console</code> or
                                 <code class="option">socket</code>. If set to
                                 <code class="option">inherit</code> the file
                                 descriptor of standard input is
@@ -214,9 +216,13 @@
                                 system logger. <code class="option">kmsg</code>
                                 connects it with the kernel log buffer
                                 which is accessible via
-                                <span class="citerefentry"><span class="refentrytitle">dmesg</span>(1)</span>. <code class="option">socket</code>
-                                connects standard output to a socket
-                                from socket activation, semantics are
+                                <span class="citerefentry"><span class="refentrytitle">dmesg</span>(1)</span>. <code class="option">syslog+console</code>
+                                and <code class="option">kmsg+console</code> work
+                                similarly but copy the output to the
+                                system console as
+                                well. <code class="option">socket</code> connects
+                                standard output to a socket from
+                                socket activation, semantics are
                                 similar to the respective option of
                                 <code class="varname">StandardInput=</code>.
                                 This setting defaults to
@@ -235,7 +241,7 @@
                                 device node to use if standard input,
                                 output or stderr are connected to a
                                 TTY (see above). Defaults to
-                                <code class="filename">/dev/console</code>.</p></dd><dt><span class="term"><code class="varname">SyslogIdentifer=</code></span></dt><dd><p>Sets the process name
+                                <code class="filename">/dev/console</code>.</p></dd><dt><span class="term"><code class="varname">SyslogIdentifier=</code></span></dt><dd><p>Sets the process name
                                 to prefix log lines sent to syslog or
                                 the kernel log buffer with. If not set
                                 defaults to the process name of the
@@ -486,7 +492,7 @@
                                 string replacements. This setting is
                                 unset by default, i.e. no utmp/wtmp
                                 entries are created or cleaned up for
-                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id574256"/><h2>See Also</h2><p>
+                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id370033"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

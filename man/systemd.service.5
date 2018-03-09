@@ -2,12 +2,12 @@
 .\"     Title: systemd.service
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: systemd.service
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SERVICE" "5" "01/22/2011" "systemd" "systemd.service"
+.TH "SYSTEMD\&.SERVICE" "5" "03/01/2011" "systemd" "systemd.service"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -138,12 +138,22 @@ Takes a boolean value that specifies whether the service shall be considered act
 \fBno\fR\&.
 .RE
 .PP
+\fIGuessMainPID=\fR
+.RS 4
+Takes a boolean value that specifies whether systemd should try to guess the main PID of a service should if it cannot be determined reliably\&. This option is ignored unless
+\fBType=forking\fR
+is set and
+\fBPIDFile=\fR
+is unset because for the other types or with an explicitly configured PID file the main PID is always known\&. The guessing algorithm might come to incorrect conclusions if a daemon consists of more than one process\&. If the main PID cannot be determined failure detection and automatic restarting of a service will not work reliably\&. Defaults to
+\fByes\fR\&.
+.RE
+.PP
 \fIPIDFile=\fR
 .RS 4
 Takes an absolute file name pointing to the PID file of this daemon\&. Use of this option is recommended for services where
 \fIType=\fR
 is set to
-\fBforking\fR\&.
+\fBforking\fR\&. systemd will read the PID of the main process of the daemon after start\-up of the service\&. systemd will not write to the file configured here\&.
 .RE
 .PP
 \fIBusName=\fR

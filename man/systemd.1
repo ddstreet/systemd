@@ -2,12 +2,12 @@
 .\"     Title: systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD" "1" "01/22/2011" "systemd" "systemd"
+.TH "SYSTEMD" "1" "03/01/2011" "systemd" "systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -157,6 +157,25 @@ Highlight important log messages\&. Argument is a boolean value\&. If the argume
 .RS 4
 Include code location in log messages\&. This is mostly relevant for debugging purposes\&. Argument is a boolean value\&. If the argument is omitted it defaults to
 \fBtrue\fR\&.
+.RE
+.PP
+\fB\-\-default\-standard\-output=\fR, \fB\-\-default\-standard\-error=\fR
+.RS 4
+Sets the default output resp\&. error output for all services and sockets, i\&.e\&. controls the default for
+\fBStandardOutput=\fR
+resp\&.
+\fBStandardExecute=\fR
+(see
+\fBsystemd.exec\fR(5)
+for details)\&. Takes one of
+\fBinherit\fR,
+\fBnull\fR,
+\fBtty\fR,
+\fBsyslog\fR,
+\fBsyslog+console\fR,
+\fBkmsg\fR,
+\fBkmsg\-console\fR\&. If the argument is omitted it defaults to
+\fBinherit\fR\&.
 .RE
 .SH "CONCEPTS"
 .PP
@@ -492,6 +511,48 @@ reboot\&.target
 unit\&. This is mostly equivalent to
 \fBsystemctl start reboot\&.target\fR\&.
 .RE
+.PP
+SIGRTMIN+6
+.RS 4
+Reboots the machine via kexec, starts the
+kexec\&.target
+unit\&. This is mostly equivalent to
+\fBsystemctl start kexec\&.target\fR\&.
+.RE
+.PP
+SIGRTMIN+13
+.RS 4
+Immediately halts the machine\&.
+.RE
+.PP
+SIGRTMIN+14
+.RS 4
+Immediately powers off the machine\&.
+.RE
+.PP
+SIGRTMIN+15
+.RS 4
+Immediately reboots the machine\&.
+.RE
+.PP
+SIGRTMIN+16
+.RS 4
+Immediately reboots the machine with kexec\&.
+.RE
+.PP
+SIGRTMIN+20
+.RS 4
+Enables display of status messages on the console, as controlled via
+\fIsystemd\&.show_status=1\fR
+on the kernel command line\&.
+.RE
+.PP
+SIGRTMIN+21
+.RS 4
+Disables display of status messages on the console, as controlled via
+\fIsystemd\&.show_status=0\fR
+on the kernel command line\&.
+.RE
 .SH "ENVIRONMENT"
 .PP
 \fI$SYSTEMD_LOG_LEVEL\fR
@@ -625,6 +686,15 @@ Controls log output, with the same effect as the
 \fI$SYSTEMD_LOG_COLOR\fR,
 \fI$SYSTEMD_LOG_LOCATION\fR
 environment variables described above\&.
+.RE
+.PP
+\fIsystemd\&.default_standard_output=\fR, \fIsystemd\&.default_standard_error=\fR
+.RS 4
+Controls default standard output/error output for services, with the same effect as the
+\fB\-\-default\-standard\-output=\fR
+resp\&.
+\fB\-\-default\-standard\-error=\fR
+command line arguments described above\&.
 .RE
 .SH "SOCKETS AND FIFOS"
 .PP

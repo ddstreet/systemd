@@ -59,6 +59,7 @@
 #include "strv.h"
 #include "label.h"
 #include "exit-status.h"
+#include "hashmap.h"
 
 bool streq_ptr(const char *a, const char *b) {
 
@@ -2133,8 +2134,32 @@ finish:
 
 int open_terminal(const char *name, int mode) {
         int fd, r;
+        unsigned c = 0;
 
-        if ((fd = open(name, mode)) < 0)
+        /*
+         * If a TTY is in the process of being closed opening it might
+         * cause EIO. This is horribly awful, but unlikely to be
+         * changed in the kernel. Hence we work around this problem by
+         * retrying a couple of times.
+         *
+         * https://bugs.launchpad.net/ubuntu/+source/linux/+bug/554172/comments/245
+         */
+
+        for (;;) {
+                if ((fd = open(name, mode)) >= 0)
+                        break;
+
+                if (errno != EIO)
+                        return -errno;
+
+                if (c >= 20)
+                        return -errno;
+
+                usleep(50 * USEC_PER_MSEC);
+                c++;
+        }
+
+        if (fd < 0)
                 return -errno;
 
         if ((r = isatty(fd)) < 0) {
@@ -2748,25 +2773,118 @@ char* getlogname_malloc(void) {
         return name;
 }
 
-int getttyname_malloc(char **r) {
-        char path[PATH_MAX], *p, *c;
+int getttyname_malloc(int fd, char **r) {
+        char path[PATH_MAX], *c;
         int k;
 
         assert(r);
 
-        if ((k = ttyname_r(STDIN_FILENO, path, sizeof(path))) != 0)
+        if ((k = ttyname_r(fd, path, sizeof(path))) != 0)
                 return -k;
 
         char_array_0(path);
 
-        p = path;
-        if (startswith(path, "/dev/"))
-                p += 5;
-
-        if (!(c = strdup(p)))
+        if (!(c = strdup(startswith(path, "/dev/") ? path + 5 : path)))
                 return -ENOMEM;
 
         *r = c;
+        return 0;
+}
+
+int getttyname_harder(int fd, char **r) {
+        int k;
+        char *s;
+
+        if ((k = getttyname_malloc(fd, &s)) < 0)
+                return k;
+
+        if (streq(s, "tty")) {
+                free(s);
+                return get_ctty(r);
+        }
+
+        *r = s;
+        return 0;
+}
+
+int get_ctty_devnr(dev_t *d) {
+        int k;
+        char line[256], *p;
+        unsigned long ttynr;
+        FILE *f;
+
+        if (!(f = fopen("/proc/self/stat", "r")))
+                return -errno;
+
+        if (!(fgets(line, sizeof(line), f))) {
+                k = -errno;
+                fclose(f);
+                return k;
+        }
+
+        fclose(f);
+
+        if (!(p = strrchr(line, ')')))
+                return -EIO;
+
+        p++;
+
+        if (sscanf(p, " "
+                   "%*c "  /* state */
+                   "%*d "  /* ppid */
+                   "%*d "  /* pgrp */
+                   "%*d "  /* session */
+                   "%lu ", /* ttynr */
+                   &ttynr) != 1)
+                return -EIO;
+
+        *d = (dev_t) ttynr;
+        return 0;
+}
+
+int get_ctty(char **r) {
+        int k;
+        char fn[128], *s, *b, *p;
+        dev_t devnr;
+
+        assert(r);
+
+        if ((k = get_ctty_devnr(&devnr)) < 0)
+                return k;
+
+        snprintf(fn, sizeof(fn), "/dev/char/%u:%u", major(devnr), minor(devnr));
+        char_array_0(fn);
+
+        if ((k = readlink_malloc(fn, &s)) < 0) {
+
+                if (k != -ENOENT)
+                        return k;
+
+                /* Probably something like the ptys which have no
+                 * symlink in /dev/char. Let's return something
+                 * vaguely useful. */
+
+                if (!(b = strdup(fn + 5)))
+                        return -ENOMEM;
+
+                *r = b;
+                return 0;
+        }
+
+        if (startswith(s, "/dev/"))
+                p = s + 5;
+        else if (startswith(s, "../"))
+                p = s + 3;
+        else
+                p = s;
+
+        b = strdup(p);
+        free(s);
+
+        if (!b)
+                return -ENOMEM;
+
+        *r = b;
         return 0;
 }
 
@@ -3017,6 +3135,21 @@ void status_welcome(void) {
         if (!ansi_color)
                 const_color = "1;34"; /* Light Blue for Gentoo */
 
+#elif defined(TARGET_ALTLINUX)
+
+        if (!pretty_name) {
+                if ((r = read_one_line_file("/etc/altlinux-release", &pretty_name)) < 0) {
+
+                        if (r != -ENOENT)
+                                log_warning("Failed to read /etc/altlinux-release: %s", strerror(-r));
+                } else
+                        truncate_nl(pretty_name);
+        }
+
+        if (!ansi_color)
+                const_color = "0;36"; /* Cyan for ALTLinux */
+
+
 #elif defined(TARGET_DEBIAN)
 
         if (!pretty_name) {
@@ -3060,7 +3193,7 @@ void status_welcome(void) {
         if (!ansi_color && !const_color)
                 const_color = "1";
 
-        status_printf("Welcome to \x1B[%sm%s\x1B[0m!\n",
+        status_printf("\nWelcome to \x1B[%sm%s\x1B[0m!\n\n",
                       const_color ? const_color : ansi_color,
                       const_pretty ? const_pretty : pretty_name);
 
@@ -3534,19 +3667,314 @@ void filter_environ(const char *prefix) {
         environ[j] = NULL;
 }
 
-const char *default_term_for_tty(const char *tty) {
+bool tty_is_vc(const char *tty) {
         assert(tty);
 
         if (startswith(tty, "/dev/"))
                 tty += 5;
 
-        if (startswith(tty, "tty") &&
-            tty[3] >= '0' && tty[3] <= '9')
-                return "TERM=linux";
+        return startswith(tty, "tty") &&
+                tty[3] >= '0' && tty[3] <= '9';
+}
 
-        /* FIXME: Proper handling of /dev/console would be cool */
+const char *default_term_for_tty(const char *tty) {
+        char *active = NULL;
+        const char *term;
 
-        return "TERM=vt100";
+        assert(tty);
+
+        if (startswith(tty, "/dev/"))
+                tty += 5;
+
+        /* Resolve where /dev/console is pointing when determining
+         * TERM */
+        if (streq(tty, "console"))
+                if (read_one_line_file("/sys/class/tty/console/active", &active) >= 0) {
+                        truncate_nl(active);
+
+                        /* If multiple log outputs are configured the
+                         * last one is what /dev/console points to */
+                        if ((tty = strrchr(active, ' ')))
+                                tty++;
+                        else
+                                tty = active;
+                }
+
+        term = tty_is_vc(tty) ? "TERM=linux" : "TERM=vt100";
+        free(active);
+
+        return term;
+}
+
+/* Returns a short identifier for the various VM implementations */
+int detect_vm(const char **id) {
+
+#if defined(__i386__) || defined(__x86_64__)
+
+        /* Both CPUID and DMI are x86 specific interfaces... */
+
+        static const char *const dmi_vendors[] = {
+                "/sys/class/dmi/id/sys_vendor",
+                "/sys/class/dmi/id/board_vendor",
+                "/sys/class/dmi/id/bios_vendor"
+        };
+
+        static const char dmi_vendor_table[] =
+                "QEMU\0"                  "qemu\0"
+                /* http://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1009458 */
+                "VMware\0"                "vmware\0"
+                "VMW\0"                   "vmware\0"
+                "Microsoft Corporation\0" "microsoft\0"
+                "innotek GmbH\0"          "oracle\0"
+                "Xen\0"                   "xen\0"
+                "Bochs\0"                 "bochs\0"
+                "\0";
+
+        static const char cpuid_vendor_table[] =
+                "XenVMMXenVMM\0"          "xen\0"
+                "KVMKVMKVM\0"             "kvm\0"
+                /* http://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1009458 */
+                "VMwareVMware\0"          "vmware\0"
+                /* http://msdn.microsoft.com/en-us/library/ff542428.aspx */
+                "Microsoft Hv\0"          "microsoft\0"
+                "\0";
+
+        uint32_t eax, ecx;
+        union {
+                uint32_t sig32[3];
+                char text[13];
+        } sig;
+        unsigned i;
+        const char *j, *k;
+        bool hypervisor;
+
+        /* http://lwn.net/Articles/301888/ */
+        zero(sig);
+
+#if defined (__i386__)
+#define REG_a "eax"
+#define REG_b "ebx"
+#elif defined (__amd64__)
+#define REG_a "rax"
+#define REG_b "rbx"
+#endif
+
+        /* First detect whether there is a hypervisor */
+        eax = 1;
+        __asm__ __volatile__ (
+                /* ebx/rbx is being used for PIC! */
+                "  push %%"REG_b"         \n\t"
+                "  cpuid                  \n\t"
+                "  pop %%"REG_b"          \n\t"
+
+                : "=a" (eax), "=c" (ecx)
+                : "0" (eax)
+        );
+
+        hypervisor = !!(ecx & ecx & 0x80000000U);
+
+        if (hypervisor) {
+
+                /* There is a hypervisor, see what it is */
+                eax = 0x40000000U;
+                __asm__ __volatile__ (
+                        /* ebx/rbx is being used for PIC! */
+                        "  push %%"REG_b"         \n\t"
+                        "  cpuid                  \n\t"
+                        "  mov %%ebx, %1          \n\t"
+                        "  pop %%"REG_b"          \n\t"
+
+                        : "=a" (eax), "=r" (sig.sig32[0]), "=c" (sig.sig32[1]), "=d" (sig.sig32[2])
+                        : "0" (eax)
+                );
+
+                NULSTR_FOREACH_PAIR(j, k, cpuid_vendor_table)
+                        if (streq(sig.text, j)) {
+
+                                if (id)
+                                        *id = k;
+
+                                return 1;
+                        }
+        }
+
+        for (i = 0; i < ELEMENTSOF(dmi_vendors); i++) {
+                char *s;
+                int r;
+                const char *found = NULL;
+
+                if ((r = read_one_line_file(dmi_vendors[i], &s)) < 0) {
+                        if (r != -ENOENT)
+                                return r;
+
+                        continue;
+                }
+
+                NULSTR_FOREACH_PAIR(j, k, dmi_vendor_table)
+                        if (startswith(s, j))
+                                found = k;
+                free(s);
+
+                if (found) {
+                        if (id)
+                                *id = found;
+
+                        return 1;
+                }
+        }
+
+        if (hypervisor) {
+                if (id)
+                        *id = "other";
+
+                return 1;
+        }
+
+#endif
+        return 0;
+}
+
+/* Returns a short identifier for the various VM/container implementations */
+int detect_virtualization(const char **id) {
+        int r;
+
+        /* Unfortunately most of these operations require root access
+         * in one way or another */
+        if (geteuid() != 0)
+                return -EPERM;
+
+        if ((r = running_in_chroot()) > 0) {
+                if (id)
+                        *id = "chroot";
+
+                return r;
+        }
+
+        /* /proc/vz exists in container and outside of the container,
+         * /proc/bc only outside of the container. */
+        if (access("/proc/vz", F_OK) >= 0 &&
+            access("/proc/bc", F_OK) < 0) {
+
+                if (id)
+                        *id = "openvz";
+
+                return 1;
+        }
+
+        return detect_vm(id);
+}
+
+void execute_directory(const char *directory, DIR *d, char *argv[]) {
+        DIR *_d = NULL;
+        struct dirent *de;
+        Hashmap *pids = NULL;
+
+        assert(directory);
+
+        /* Executes all binaries in a directory in parallel and waits
+         * until all they all finished. */
+
+        if (!d) {
+                if (!(_d = opendir(directory))) {
+
+                        if (errno == ENOENT)
+                                return;
+
+                        log_error("Failed to enumerate directory %s: %m", directory);
+                        return;
+                }
+
+                d = _d;
+        }
+
+        if (!(pids = hashmap_new(trivial_hash_func, trivial_compare_func))) {
+                log_error("Failed to allocate set.");
+                goto finish;
+        }
+
+        while ((de = readdir(d))) {
+                char *path;
+                pid_t pid;
+                int k;
+
+                if (ignore_file(de->d_name))
+                        continue;
+
+                if (de->d_type != DT_REG &&
+                    de->d_type != DT_LNK &&
+                    de->d_type != DT_UNKNOWN)
+                        continue;
+
+                if (asprintf(&path, "%s/%s", directory, de->d_name) < 0) {
+                        log_error("Out of memory");
+                        continue;
+                }
+
+                if ((pid = fork()) < 0) {
+                        log_error("Failed to fork: %m");
+                        free(path);
+                        continue;
+                }
+
+                if (pid == 0) {
+                        char *_argv[2];
+                        /* Child */
+
+                        if (!argv) {
+                                _argv[0] = path;
+                                _argv[1] = NULL;
+                                argv = _argv;
+                        } else
+                                if (!argv[0])
+                                        argv[0] = path;
+
+                        execv(path, argv);
+
+                        log_error("Failed to execute %s: %m", path);
+                        _exit(EXIT_FAILURE);
+                }
+
+                log_debug("Spawned %s as %lu", path, (unsigned long) pid);
+
+                if ((k = hashmap_put(pids, UINT_TO_PTR(pid), path)) < 0) {
+                        log_error("Failed to add PID to set: %s", strerror(-k));
+                        free(path);
+                }
+        }
+
+        while (!hashmap_isempty(pids)) {
+                siginfo_t si;
+                char *path;
+
+                zero(si);
+                if (waitid(P_ALL, 0, &si, WEXITED) < 0) {
+
+                        if (errno == EINTR)
+                                continue;
+
+                        log_error("waitid() failed: %m");
+                        goto finish;
+                }
+
+                if ((path = hashmap_remove(pids, UINT_TO_PTR(si.si_pid)))) {
+                        if (!is_clean_exit(si.si_code, si.si_status)) {
+                                if (si.si_code == CLD_EXITED)
+                                        log_error("%s exited with exit status %i.", path, si.si_status);
+                                else
+                                        log_error("%s terminated by signal %s.", path, signal_to_string(si.si_status));
+                        } else
+                                log_debug("%s exited successfully.", path);
+
+                        free(path);
+                }
+        }
+
+finish:
+        if (_d)
+                closedir(_d);
+
+        if (pids)
+                hashmap_free_free(pids);
 }
 
 static const char *const ioprio_class_table[] = {

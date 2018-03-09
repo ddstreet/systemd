@@ -64,6 +64,7 @@ static void mount_init(Unit *u) {
         m->directory_mode = 0755;
 
         exec_context_init(&m->exec_context);
+        m->exec_context.std_output = EXEC_OUTPUT_KMSG;
 
         /* We need to make sure that /bin/mount is always called in
          * the same process group as us, so that the autofs kernel
@@ -305,7 +306,7 @@ static int mount_add_target_links(Mount *m) {
                 return r;
 
         if (after)
-                if ((r = unit_add_dependency_by_name(tu, UNIT_AFTER, after, NULL, true)) < 0)
+                if ((r = unit_add_dependency_by_name(UNIT(m), UNIT_AFTER, after, NULL, true)) < 0)
                         return r;
 
         if (automount && m->meta.manager->running_as == MANAGER_SYSTEM) {
@@ -465,6 +466,9 @@ static int mount_load(Unit *u) {
 
         /* This is a new unit? Then let's add in some extras */
         if (u->meta.load_state == UNIT_LOADED) {
+                if ((r = unit_add_exec_dependencies(u, &m->exec_context)) < 0)
+                        return r;
+
                 if (m->meta.fragment_path)
                         m->from_fragment = true;
 

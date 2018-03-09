@@ -2,12 +2,12 @@
 .\"     Title: systemd.socket
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/22/2011
+.\"      Date: 03/01/2011
 .\"    Manual: systemd.socket
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SOCKET" "5" "01/22/2011" "systemd" "systemd.socket"
+.TH "SYSTEMD\&.SOCKET" "5" "03/01/2011" "systemd" "systemd.socket"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -84,6 +84,13 @@ on
 shutdown\&.target\&. These ensure that socket units pull in basic system initialization, and are terminated cleanly prior to system shutdown\&. Only sockets involved with early boot or late system shutdown should disable this option\&.
 .PP
 Socket units may be used to implement on\-demand starting of services, as well as parallelized starting of services\&.
+.PP
+Note that the daemon software configured for socket activation with socket units needs to be able to accept sockets from systemd, either via systemd\*(Aqs native socket passing interface (see
+\fBsd_listen_fds\fR(3)
+for details) or via the traditional
+\fBinetd\fR(8)\-style socket passing (i\&.e\&. sockets passed in via STDIN and STDOUT, using
+\fIStandardInput=socket\fR
+in the service file)\&.
 .SH "OPTIONS"
 .PP
 Socket files must include a [Socket] section, which carries information about the socket or FIFO it supervises\&. A number of options that may be used in this section are shared with other unit types\&. These options are documented in
