@@ -2,12 +2,12 @@
 .\"     Title: sd_readahead
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: sd_readahead
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD_READAHEAD" "3" "06/16/2011" "systemd" "sd_readahead"
+.TH "SD_READAHEAD" "3" "09/23/2011" "systemd" "sd_readahead"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -78,14 +78,17 @@ resp\&.
 \m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-readahead.h\fR\m[]
 .PP
 \fBsd_readahead()\fR
-is implemented in the reference implementation\*(Aqs drop\-in
+is implemented in the reference implementation\*(Aqs
 sd\-readahead\&.c
 and
 sd\-readahead\&.h
-files\&. It is recommended that applications consuming this API copy the implementation into their source tree\&. For more details about the reference implementation see
-\fBsd-readahead\fR(7)
+files\&. These interfaces are available as shared library, which can be compiled and linked to with the
+libsystemd\-daemon
+\fBpkg-config\fR(1)
+file\&. Alternatively, applications consuming this API may copy the implementation into their source tree\&. For more details about the reference implementation see
+\fBsd-readahead\fR(7)\&.
 .PP
-If \-DDISABLE_SYSTEMD is set during compilation this function will always return 0 and otherwise become a NOP\&.
+If the reference implementation is used as drop\-in files and \-DDISABLE_SYSTEMD is set during compilation this function will always return 0 and otherwise become a NOP\&.
 .SH "EXAMPLES"
 .PP
 \fBExample\ \&1.\ \&Cancelling all read-ahead operations\fR

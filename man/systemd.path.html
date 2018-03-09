@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.path</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.path"><a id="systemd.path"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.path — systemd path configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.path</code></p></div><div class="refsect1" title="Description"><a id="id468505"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.path</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.path"><a id="systemd.path"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.path — systemd path configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.path</code></p></div><div class="refsect1" title="Description"><a id="id356980"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.path</code> encodes information about
                 a path monitored by systemd, for
                 path-based activation.</p><p>This man page lists the configuration options
@@ -33,17 +33,21 @@
                 that path units are terminated cleanly prior to system
                 shutdown. Only path units involved with early boot or
                 late system shutdown should disable this
-                option.</p></div><div class="refsect1" title="Options"><a id="id468598"/><h2>Options</h2><p>Path files must include a [Path] section,
+                option.</p></div><div class="refsect1" title="Options"><a id="id357074"/><h2>Options</h2><p>Path files must include a [Path] section,
                 which carries information about the path(s) it
                 monitors. The options specific to the [Path] section
-                of path units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PathExists=</code>, </span><span class="term"><code class="varname">PathChanged=</code>, </span><span class="term"><code class="varname">DirectoryNotEmpty=</code></span></dt><dd><p>Defines paths to
+                of path units are the following:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">PathExists=</code>, </span><span class="term"><code class="varname">PathExistsGlob=</code>, </span><span class="term"><code class="varname">PathChanged=</code>, </span><span class="term"><code class="varname">DirectoryNotEmpty=</code></span></dt><dd><p>Defines paths to
                                 monitor for certain changes:
                                 <code class="varname">PathExists=</code> may be
                                 used to watch the mere existence of a
                                 file or directory. If the file
                                 specified exists the configured unit
                                 is
-                                activated. <code class="varname">PathChanged=</code>
+                                activated. <code class="varname">PathExistsGlob=</code>
+                                works similar, but checks for the
+                                existance of at least one file
+                                matching the globbing pattern
+                                specified. <code class="varname">PathChanged=</code>
                                 may be used to watch a file or
                                 directory and activate the configured
                                 unit whenever it changes or is
@@ -56,15 +60,20 @@
                                 combined, of the same and of different
                                 types, to watch multiple paths.</p><p>If a path is already existing
                                 (in case of
-                                <code class="varname">PathExists=</code>) or a
-                                directory already is not empty (in
+                                <code class="varname">PathExists=</code> and
+                                <code class="varname">PathExistsGlob=</code>) or
+                                a directory already is not empty (in
                                 case of
                                 <code class="varname">DirectoryNotEmpty=</code>)
-                                at the time the path unit is activated,
-                                then the configured unit is
+                                at the time the path unit is
+                                activated, then the configured unit is
                                 immediately activated as
                                 well. Something similar does not apply
-                                to <code class="varname">PathChanged=</code>.
+                                to
+                                <code class="varname">PathChanged=</code>. The
+                                latter is not activated on simple
+                                writes but only if files with were
+                                opened for writing are closed.
                                 </p></dd><dt><span class="term"><code class="varname">Unit=</code></span></dt><dd><p>The unit to activate
                                 when any of the configured paths
                                 changes. The argument is a unit name,
@@ -89,7 +98,7 @@
                                 create the directories in
                                 question. Takes an access mode in
                                 octal notation. Defaults to
-                                <code class="option">0755</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id500910"/><h2>See Also</h2><p>
+                                <code class="option">0755</code>.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id324595"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

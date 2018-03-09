@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sysctl.d</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sysctl.d"><a id="sysctl.d"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sysctl.d — Configure kernel parameters at boot</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/usr/lib/sysctl.d/*.conf</code></p><p><code class="filename">/etc/sysctl.d/*.conf</code></p><p><code class="filename">/run/sysctl.d/*.conf</code></p></div><div class="refsect1" title="Description"><a id="id440537"/><h2>Description</h2><p><span class="command"><strong>systemd</strong></span> uses configuration files
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sysctl.d</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sysctl.d"><a id="sysctl.d"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sysctl.d — Configure kernel parameters at boot</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/usr/lib/sysctl.d/*.conf</code></p><p><code class="filename">/etc/sysctl.d/*.conf</code></p><p><code class="filename">/run/sysctl.d/*.conf</code></p></div><div class="refsect1" title="Description"><a id="id453078"/><h2>Description</h2><p><span class="command"><strong>systemd</strong></span> uses configuration files
 		from the above directories to configure
 		<span class="citerefentry"><span class="refentrytitle">sysctl</span>(8)</span>
-		kernel parameters to load during boot.</p></div><div class="refsect1" title="Configuration Format"><a id="id440559"/><h2>Configuration Format</h2><p>The configuration files should simply contain a
+		kernel parameters to load during boot.</p></div><div class="refsect1" title="Configuration Format"><a id="id453100"/><h2>Configuration Format</h2><p>The configuration files should simply contain a
 		list of variable assignments, separated by
 		newlines. Empty lines and lines whose first
 		non-whitespace character is # or ; are ignored.</p><p>Note that both / and . are accepted as
@@ -21,8 +21,8 @@
                 by filename in alphabetical order, regardless in which of the
                 directories they reside, to ensure that a specific
                 configuration file takes precedence over another file with
-                an alphabetically later name.</p></div><div class="refsect1" title="Example"><a id="id440629"/><h2>Example</h2><div class="example"><a id="id440635"/><p class="title"><strong>Example 1. /etc/sysctl.d/domain-name.conf example:</strong></p><div class="example-contents"><pre class="programlisting"># Set kernel YP domain name
-kernel.domainname=example.com</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id408012"/><h2>See Also</h2><p>
+                an alphabetically later name.</p></div><div class="refsect1" title="Example"><a id="id453170"/><h2>Example</h2><div class="example"><a id="id453175"/><p class="title"><strong>Example 1. /etc/sysctl.d/domain-name.conf example:</strong></p><div class="example-contents"><pre class="programlisting"># Set kernel YP domain name
+kernel.domainname=example.com</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id453189"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">sysctl</span>(8)</span>,
                         <span class="citerefentry"><span class="refentrytitle">sysctl.conf</span>(5)</span>

@@ -2,12 +2,12 @@
 .\"     Title: systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD" "1" "06/16/2011" "systemd" "systemd"
+.TH "SYSTEMD" "1" "09/23/2011" "systemd" "systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -164,7 +164,7 @@ Include code location in log messages\&. This is mostly relevant for debugging p
 Sets the default output resp\&. error output for all services and sockets, i\&.e\&. controls the default for
 \fBStandardOutput=\fR
 resp\&.
-\fBStandardExecute=\fR
+\fBStandardError=\fR
 (see
 \fBsystemd.exec\fR(5)
 for details)\&. Takes one of
@@ -174,7 +174,13 @@ for details)\&. Takes one of
 \fBsyslog\fR,
 \fBsyslog+console\fR,
 \fBkmsg\fR,
-\fBkmsg+console\fR\&. If the argument is omitted it defaults to
+\fBkmsg+console\fR\&. If the argument is omitted
+\fB\-\-default\-standard\-output=\fR
+defaults to
+\fBsyslog\fR
+and
+\fB\-\-default\-standard\-error=\fR
+to
 \fBinherit\fR\&.
 .RE
 .SH "CONCEPTS"
@@ -553,6 +559,42 @@ Disables display of status messages on the console, as controlled via
 \fIsystemd\&.show_status=0\fR
 on the kernel command line\&.
 .RE
+.PP
+SIGRTMIN+22, SIGRTMIN+23
+.RS 4
+Sets the log level to
+debug
+(resp\&.
+info
+on
+SIGRTMIN+32), as controlled via
+\fIsystemd\&.log_level=debug\fR
+(resp\&.
+\fIsystemd\&.log_level=info\fR
+on
+SIGRTMIN+23) on the kernel command line\&.
+.RE
+.PP
+SIGRTMIN+27, SIGRTMIN+28, SIGRTMIN+29
+.RS 4
+Sets the log level to
+console
+(resp\&.
+kmsg
+on
+SIGRTMIN+28; resp\&.
+syslog\-or\-kmsg
+on
+SIGRTMIN+29), as controlled via
+\fIsystemd\&.log_target=console\fR
+(resp\&.
+\fIsystemd\&.log_target=kmsg\fR
+on
+SIGRTMIN+28; resp
+\fIsystemd\&.log_target=syslog\-or\-kmsg\fR
+on
+SIGRTMIN+29) on the kernel command line\&.
+.RE
 .SH "ENVIRONMENT"
 .PP
 \fI$SYSTEMD_LOG_LEVEL\fR
@@ -704,10 +746,10 @@ Daemon status notification socket\&. This is an AF_UNIX datagram socket and is u
 \fBsd_notify\fR(3)\&.
 .RE
 .PP
-/run/systemd/logger
+/run/systemd/stdout\-syslog\-bridge
 .RS 4
 Used internally by the
-systemd\-logger\&.service
+systemd\-stdout\-syslog\-bridge\&.service
 unit to connect STDOUT and/or STDERR of spawned processes to
 \fBsyslog\fR(3)
 or the kernel log buffer\&. This is an AF_UNIX stream socket\&.

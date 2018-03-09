@@ -46,6 +46,8 @@ int main(int argc, char *argv[]) {
         log_parse_environment();
         log_open();
 
+        umask(0022);
+
         if (!(arguments = strv_new("/sbin/modprobe", "-sab", "--", NULL))) {
                 log_error("Failed to allocate string array");
                 goto finish;
@@ -75,7 +77,6 @@ int main(int argc, char *argv[]) {
                                 continue;
 
                         log_error("Failed to open %s: %m", *fn);
-                        free(fn);
                         r = EXIT_FAILURE;
                         continue;
                 }
@@ -129,6 +130,7 @@ finish:
 
         if (n_arguments > 3) {
                 arguments[n_arguments] = NULL;
+                strv_uniq(arguments);
                 execv("/sbin/modprobe", arguments);
 
                 log_error("Failed to execute /sbin/modprobe: %m");

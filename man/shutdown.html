@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>shutdown</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="shutdown"><a id="shutdown"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>shutdown — Halt, power-off or reboot the machine</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">shutdown [OPTIONS...]  [TIME]  [WALL...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id334498"/><h2>Description</h2><p><span class="command"><strong>shutdown</strong></span> may be used to halt,
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>shutdown</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="shutdown"><a id="shutdown"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>shutdown — Halt, power-off or reboot the machine</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">shutdown [OPTIONS...]  [TIME]  [WALL...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id522040"/><h2>Description</h2><p><span class="command"><strong>shutdown</strong></span> may be used to halt,
                 power-off or reboot the machine.</p><p>The first argument may be a time string (which
                 is usually <code class="literal">now</code>). Optionally, this
                 may be followed by a wall message to be sent to all
@@ -18,7 +18,7 @@
                 before the system goes down the
                 <code class="filename">/etc/nologin</code> file is created to
                 ensure that further logins shall not be
-                allowed.</p></div><div class="refsect1" title="Options"><a id="id334572"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                allowed.</p></div><div class="refsect1" title="Options"><a id="id522114"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">-H</code>, </span><span class="term"><code class="option">--halt</code></span></dt><dd><p>Halt the machine.</p></dd><dt><span class="term"><code class="option">-P</code>, </span><span class="term"><code class="option">--poweroff</code></span></dt><dd><p>Power-off the
                                 machine (the default).</p></dd><dt><span class="term"><code class="option">-r</code>, </span><span class="term"><code class="option">--reboot</code></span></dt><dd><p>Reboot the
                                 machine.</p></dd><dt><span class="term"><code class="option">-h</code></span></dt><dd><p>Equivalent to
@@ -34,9 +34,9 @@
                                 <span class="command"><strong>shutdown</strong></span> with a
                                 time argument that is not
                                 <code class="literal">+0</code> or
-                                <code class="literal">now</code>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id302088"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="Notes"><a id="id302163"/><h2>Notes</h2><p>This is a legacy command available for
-                compatibility only.</p></div><div class="refsect1" title="See Also"><a id="id302174"/><h2>See Also</h2><p>
+                                <code class="literal">now</code>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id489621"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="Notes"><a id="id489631"/><h2>Notes</h2><p>This is a legacy command available for
+                compatibility only.</p></div><div class="refsect1" title="See Also"><a id="id489716"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">halt</span>(8)</span>,

@@ -65,7 +65,7 @@ static const struct {
         { "boot.d", SPECIAL_SYSINIT_TARGET,   RUNLEVEL_SYSINIT },
 #endif
 
-#if defined(TARGET_DEBIAN) || defined(TARGET_UBUNTU) || defined(TARGET_FRUGALWARE) || defined(TARGET_ANGSTROM)
+#if defined(TARGET_DEBIAN) || defined(TARGET_UBUNTU) || defined(TARGET_ANGSTROM)
         /* Debian style rcS.d */
         { "rcS.d",  SPECIAL_SYSINIT_TARGET,   RUNLEVEL_SYSINIT },
 #endif
@@ -121,8 +121,6 @@ static void service_init(Unit *u) {
         s->guess_main_pid = true;
 
         exec_context_init(&s->exec_context);
-        s->exec_context.std_output = u->meta.manager->default_std_output;
-        s->exec_context.std_error = u->meta.manager->default_std_error;
 
         RATELIMIT_INIT(s->ratelimit, 10*USEC_PER_SEC, 5);
 
@@ -280,10 +278,10 @@ static int sysv_translate_facility(const char *name, const char *filename, char 
                 /* LSB defined facilities */
                 "local_fs",             SPECIAL_LOCAL_FS_TARGET,
 #ifndef TARGET_MANDRIVA
-		/* Due to unfortunate name selection in Mandriva,
-		 * $network is provided by network-up which is ordered
-		 * after network which actually starts interfaces.
-		 * To break the loop, just ignore it */
+                /* Due to unfortunate name selection in Mandriva,
+                 * $network is provided by network-up which is ordered
+                 * after network which actually starts interfaces.
+                 * To break the loop, just ignore it */
                 "network",              SPECIAL_NETWORK_TARGET,
 #endif
                 "named",                SPECIAL_NSS_LOOKUP_TARGET,
@@ -372,7 +370,7 @@ static int sysv_fix_order(Service *s) {
         /* For each pair of services where at least one lacks a LSB
          * header, we use the start priority value to order things. */
 
-        LIST_FOREACH(units_per_type, other, s->meta.manager->units_per_type[UNIT_SERVICE]) {
+        LIST_FOREACH(units_by_type, other, s->meta.manager->units_by_type[UNIT_SERVICE]) {
                 Service *t;
                 UnitDependency d;
                 bool special_s, special_t;
@@ -470,6 +468,7 @@ static int service_load_sysv_path(Service *s, const char *path) {
                 LSB_DESCRIPTION
         } state = NORMAL;
         char *short_description = NULL, *long_description = NULL, *chkconfig_description = NULL, *description;
+        struct stat st;
 
         assert(s);
         assert(path);
@@ -481,9 +480,23 @@ static int service_load_sysv_path(Service *s, const char *path) {
                 goto finish;
         }
 
+        zero(st);
+        if (fstat(fileno(f), &st) < 0) {
+                r = -errno;
+                goto finish;
+        }
+
         free(s->sysv_path);
         if (!(s->sysv_path = strdup(path))) {
                 r = -ENOMEM;
+                goto finish;
+        }
+
+        s->sysv_mtime = timespec_load(&st.st_mtim);
+
+        if (null_or_empty(&st)) {
+                u->meta.load_state = UNIT_MASKED;
+                r = 0;
                 goto finish;
         }
 
@@ -620,7 +633,7 @@ static int service_load_sysv_path(Service *s, const char *path) {
                                 char *d = NULL;
 
                                 if (chkconfig_description)
-                                        asprintf(&d, "%s %s", chkconfig_description, j);
+                                        d = join(chkconfig_description, " ", j, NULL);
                                 else
                                         d = strdup(j);
 
@@ -768,19 +781,6 @@ static int service_load_sysv_path(Service *s, const char *path) {
                                 free(short_description);
                                 short_description = d;
 
-                        } else if (startswith_no_case(t, "X-Interactive:")) {
-                                int b;
-
-                                if ((b = parse_boolean(strstrip(t+14))) < 0) {
-                                        log_warning("[%s:%u] Couldn't parse interactive flag. Ignoring.", path, line);
-                                        continue;
-                                }
-
-                                if (b)
-                                        s->exec_context.std_input = EXEC_INPUT_TTY;
-                                else
-                                        s->exec_context.std_input = EXEC_INPUT_NULL;
-
                         } else if (state == LSB_DESCRIPTION) {
 
                                 if (startswith(l, "#\t") || startswith(l, "#  ")) {
@@ -790,7 +790,7 @@ static int service_load_sysv_path(Service *s, const char *path) {
                                                 char *d = NULL;
 
                                                 if (long_description)
-                                                        asprintf(&d, "%s %s", long_description, t);
+                                                        d = join(long_description, " ", t, NULL);
                                                 else
                                                         d = strdup(j);
 
@@ -828,11 +828,12 @@ static int service_load_sysv_path(Service *s, const char *path) {
 
         /* Special setting for all SysV services */
         s->type = SERVICE_FORKING;
-        s->remain_after_exit = true;
+        s->remain_after_exit = !s->pid_file;
         s->restart = SERVICE_RESTART_NO;
-        s->exec_context.std_output =
-                (s->meta.manager->sysv_console || s->exec_context.std_input == EXEC_INPUT_TTY)
-                ? EXEC_OUTPUT_TTY : s->meta.manager->default_std_output;
+
+        if (s->meta.manager->sysv_console)
+                s->exec_context.std_output = EXEC_OUTPUT_TTY;
+
         s->exec_context.kill_mode = KILL_PROCESS;
 
         /* We use the long description only if
@@ -906,7 +907,8 @@ static int service_load_sysv_name(Service *s, const char *name) {
                 char *path;
                 int r;
 
-                if (asprintf(&path, "%s/%s", *p, name) < 0)
+                path = join(*p, "/", name, NULL);
+                if (!path)
                         return -ENOMEM;
 
                 assert(endswith(path, ".service"));
@@ -927,7 +929,8 @@ static int service_load_sysv_name(Service *s, const char *name) {
                 if (r >= 0 && s->meta.load_state == UNIT_STUB) {
                         /* Try SUSE style boot.* init scripts */
 
-                        if (asprintf(&path, "%s/boot.%s", *p, name) < 0)
+                        path = join(*p, "/boot.", name, NULL);
+                        if (!path)
                                 return -ENOMEM;
 
                         /* Drop .service suffix */
@@ -941,7 +944,8 @@ static int service_load_sysv_name(Service *s, const char *name) {
                 if (r >= 0 && s->meta.load_state == UNIT_STUB) {
                         /* Try Frugalware style rc.* init scripts */
 
-                        if (asprintf(&path, "%s/rc.%s", *p, name) < 0)
+                        path = join(*p, "/rc.", name, NULL);
+                        if (!path)
                                 return -ENOMEM;
 
                         /* Drop .service suffix */
@@ -1006,7 +1010,7 @@ static int fsck_fix_order(Service *s) {
         /* For each pair of services where both have an fsck priority
          * we order things based on it. */
 
-        LIST_FOREACH(units_per_type, other, s->meta.manager->units_per_type[UNIT_SERVICE]) {
+        LIST_FOREACH(units_by_type, other, s->meta.manager->units_by_type[UNIT_SERVICE]) {
                 Service *t;
                 UnitDependency d;
 
@@ -1095,6 +1099,24 @@ static int service_add_default_dependencies(Service *s) {
         return unit_add_two_dependencies_by_name(UNIT(s), UNIT_BEFORE, UNIT_CONFLICTS, SPECIAL_SHUTDOWN_TARGET, NULL, true);
 }
 
+static void service_fix_output(Service *s) {
+        assert(s);
+
+        /* If nothing has been explicitly configured, patch default
+         * output in. If input is socket/tty we avoid this however,
+         * since in that case we want output to default to the same
+         * place as we read input from. */
+
+        if (s->exec_context.std_error == EXEC_OUTPUT_INHERIT &&
+            s->exec_context.std_output == EXEC_OUTPUT_INHERIT &&
+            s->exec_context.std_input == EXEC_INPUT_NULL)
+                s->exec_context.std_error = s->meta.manager->default_std_error;
+
+        if (s->exec_context.std_output == EXEC_OUTPUT_INHERIT &&
+            s->exec_context.std_input == EXEC_INPUT_NULL)
+                s->exec_context.std_output = s->meta.manager->default_std_output;
+}
+
 static int service_load(Unit *u) {
         int r;
         Service *s = SERVICE(u);
@@ -1123,6 +1145,8 @@ static int service_load(Unit *u) {
 
         /* This is a new unit? Then let's add in some extras */
         if (u->meta.load_state == UNIT_LOADED) {
+                service_fix_output(s);
+
                 if ((r = unit_add_exec_dependencies(u, &s->exec_context)) < 0)
                         return r;
 
@@ -1257,21 +1281,22 @@ static void service_dump(Unit *u, FILE *f, const char *prefix) {
         free(p2);
 }
 
-static int service_load_pid_file(Service *s) {
+static int service_load_pid_file(Service *s, bool warn_if_missing) {
         char *k;
         int r;
         pid_t pid;
 
         assert(s);
 
-        if (s->main_pid_known)
-                return 0;
-
         if (!s->pid_file)
-                return 0;
+                return -ENOENT;
 
-        if ((r = read_one_line_file(s->pid_file, &k)) < 0)
+        if ((r = read_one_line_file(s->pid_file, &k)) < 0) {
+                if (warn_if_missing)
+                        log_warning("Failed to read PID file %s after %s. The service might be broken.",
+                                    s->pid_file, service_state_to_string(s->state));
                 return r;
+        }
 
         r = parse_pid(k, &pid);
         free(k);
@@ -1283,6 +1308,16 @@ static int service_load_pid_file(Service *s) {
                 log_warning("PID %lu read from file %s does not exist. Your service or init script might be broken.",
                             (unsigned long) pid, s->pid_file);
                 return -ESRCH;
+        }
+
+        if (s->main_pid_known) {
+                if (pid == s->main_pid)
+                        return 0;
+
+                log_debug("Main PID changing: %lu -> %lu",
+                          (unsigned long) s->main_pid, (unsigned long) pid);
+                service_unwatch_main_pid(s);
+                s->main_pid_known = false;
         }
 
         if ((r = service_set_main_pid(s, pid)) < 0)
@@ -1481,7 +1516,7 @@ static void service_set_state(Service *s, ServiceState state) {
 
         /* For the inactive states unit_notify() will trim the cgroup,
          * but for exit we have to do that ourselves... */
-        if (state == SERVICE_EXITED && s->meta.manager->n_deserializing <= 0)
+        if (state == SERVICE_EXITED && s->meta.manager->n_reloading <= 0)
                 cgroup_bonding_trim_list(s->meta.cgroup_bondings, true);
 
         if (old_state != state)
@@ -1710,6 +1745,7 @@ static int service_spawn(
                        apply_tty_stdin,
                        s->meta.manager->confirm_spawn,
                        s->meta.cgroup_bondings,
+                       s->meta.cgroup_attributes,
                        &pid);
 
         if (r < 0)
@@ -2569,6 +2605,11 @@ static void service_sigchld_event(Unit *u, pid_t pid, int code, int status) {
                 success = is_clean_exit(code, status);
 
         if (s->main_pid == pid) {
+                /* Forking services may occasionally move to a new PID.
+                 * As long as they update the PID file before exiting the old
+                 * PID, they're fine. */
+                if (service_load_pid_file(s, false) == 0)
+                        return;
 
                 s->main_pid = 0;
                 exec_status_exit(&s->main_exec_status, &s->exec_context, pid, code, status);
@@ -2699,7 +2740,7 @@ static void service_sigchld_event(Unit *u, pid_t pid, int code, int status) {
                                  * START_POST script */
 
                                 if (success) {
-                                        service_load_pid_file(s);
+                                        service_load_pid_file(s, !s->exec_command[SERVICE_EXEC_START_POST]);
                                         service_search_main_pid(s);
 
                                         service_enter_start_post(s);
@@ -2710,7 +2751,7 @@ static void service_sigchld_event(Unit *u, pid_t pid, int code, int status) {
 
                         case SERVICE_START_POST:
                                 if (success) {
-                                        service_load_pid_file(s);
+                                        service_load_pid_file(s, true);
                                         service_search_main_pid(s);
                                 }
 
@@ -2720,7 +2761,7 @@ static void service_sigchld_event(Unit *u, pid_t pid, int code, int status) {
 
                         case SERVICE_RELOAD:
                                 if (success) {
-                                        service_load_pid_file(s);
+                                        service_load_pid_file(s, true);
                                         service_search_main_pid(s);
                                 }
 
@@ -2950,6 +2991,72 @@ static void service_notify_message(Unit *u, pid_t pid, char **tags) {
 }
 
 #ifdef HAVE_SYSV_COMPAT
+
+#ifdef TARGET_SUSE
+static void sysv_facility_in_insserv_conf(Manager *mgr) {
+        FILE *f=NULL;
+        int r;
+
+        if (!(f = fopen("/etc/insserv.conf", "re"))) {
+                r = errno == ENOENT ? 0 : -errno;
+                goto finish;
+        }
+
+        while (!feof(f)) {
+                char l[LINE_MAX], *t;
+                char **parsed = NULL;
+
+                if (!fgets(l, sizeof(l), f)) {
+                        if (feof(f))
+                                break;
+
+                        r = -errno;
+                        log_error("Failed to read configuration file '/etc/insserv.conf': %s", strerror(-r));
+                        goto finish;
+                }
+
+                t = strstrip(l);
+                if (*t != '$' && *t != '<')
+                        continue;
+
+                parsed = strv_split(t,WHITESPACE);
+                /* we ignore <interactive>, not used, equivalent to X-Interactive */
+                if (parsed && !startswith_no_case (parsed[0], "<interactive>")) {
+                        char *facility;
+                        Unit *u;
+                        if (sysv_translate_facility(parsed[0], NULL, &facility) < 0)
+                                continue;
+                        if ((u = manager_get_unit(mgr, facility)) && (u->meta.type == UNIT_TARGET)) {
+                                UnitDependency e;
+                                char *dep = NULL, *name, **j;
+
+                                STRV_FOREACH (j, parsed+1) {
+                                        if (*j[0]=='+') {
+                                                e = UNIT_WANTS;
+                                                name = *j+1;
+                                        }
+                                        else {
+                                                e = UNIT_REQUIRES;
+                                                name = *j;
+                                        }
+                                        if (sysv_translate_facility(name, NULL, &dep) < 0)
+                                                continue;
+
+                                        r = unit_add_two_dependencies_by_name(u, UNIT_BEFORE, e, dep, NULL, true);
+                                        free(dep);
+                                }
+                        }
+                        free(facility);
+                }
+                strv_free(parsed);
+        }
+finish:
+        if (f)
+                fclose(f);
+
+}
+#endif
+
 static int service_enumerate(Manager *m) {
         char **p;
         unsigned i;
@@ -2962,6 +3069,9 @@ static int service_enumerate(Manager *m) {
 
         assert(m);
 
+        if (m->running_as != MANAGER_SYSTEM)
+                return 0;
+
         zero(runlevel_services);
 
         STRV_FOREACH(p, m->lookup_paths.sysvrcnd_path)
@@ -2969,8 +3079,8 @@ static int service_enumerate(Manager *m) {
                         struct dirent *de;
 
                         free(path);
-                        path = NULL;
-                        if (asprintf(&path, "%s/%s", *p, rcnd_table[i].path) < 0) {
+                        path = join(*p, "/", rcnd_table[i].path, NULL);
+                        if (!path) {
                                 r = -ENOMEM;
                                 goto finish;
                         }
@@ -3004,8 +3114,8 @@ static int service_enumerate(Manager *m) {
                                         continue;
 
                                 free(fpath);
-                                fpath = NULL;
-                                if (asprintf(&fpath, "%s/%s/%s", *p, rcnd_table[i].path, de->d_name) < 0) {
+                                fpath = join(path, "/", de->d_name, NULL);
+                                if (!fpath) {
                                         r = -ENOMEM;
                                         goto finish;
                                 }
@@ -3094,6 +3204,10 @@ static int service_enumerate(Manager *m) {
         }
 
         r = 0;
+
+#ifdef TARGET_SUSE
+	sysv_facility_in_insserv_conf (m);
+#endif
 
 finish:
         free(path);
@@ -3212,6 +3326,29 @@ static void service_reset_failed(Unit *u) {
         s->failure = false;
 }
 
+static bool service_need_daemon_reload(Unit *u) {
+        Service *s = SERVICE(u);
+
+        assert(s);
+
+#ifdef HAVE_SYSV_COMPAT
+        if (s->sysv_path) {
+                struct stat st;
+
+                zero(st);
+                if (stat(s->sysv_path, &st) < 0)
+                        /* What, cannot access this anymore? */
+                        return true;
+
+                if (s->sysv_mtime > 0 &&
+                    timespec_load(&st.st_mtim) != s->sysv_mtime)
+                        return true;
+        }
+#endif
+
+        return false;
+}
+
 static int service_kill(Unit *u, KillWho who, KillMode mode, int signo, DBusError *error) {
         Service *s = SERVICE(u);
         int r = 0;
@@ -3221,23 +3358,25 @@ static int service_kill(Unit *u, KillWho who, KillMode mode, int signo, DBusErro
 
         if (s->main_pid <= 0 && who == KILL_MAIN) {
                 dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No main process to kill");
-                return -EINVAL;
+                return -ESRCH;
         }
 
         if (s->control_pid <= 0 && who == KILL_CONTROL) {
                 dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No control process to kill");
-                return -ENOENT;
+                return -ESRCH;
         }
 
-        if (s->control_pid > 0)
-                if (kill(s->control_pid, signo) < 0)
-                        r = -errno;
+        if (who == KILL_CONTROL || who == KILL_ALL)
+                if (s->control_pid > 0)
+                        if (kill(s->control_pid, signo) < 0)
+                                r = -errno;
 
-        if (s->main_pid > 0)
-                if (kill(s->main_pid, signo) < 0)
-                        r = -errno;
+        if (who == KILL_MAIN || who == KILL_ALL)
+                if (s->main_pid > 0)
+                        if (kill(s->main_pid, signo) < 0)
+                                r = -errno;
 
-        if (mode == KILL_CONTROL_GROUP) {
+        if (who == KILL_ALL && mode == KILL_CONTROL_GROUP) {
                 int q;
 
                 if (!(pid_set = set_new(trivial_hash_func, trivial_compare_func)))
@@ -3257,7 +3396,7 @@ static int service_kill(Unit *u, KillWho who, KillMode mode, int signo, DBusErro
                         }
 
                 if ((q = cgroup_bonding_kill_list(s->meta.cgroup_bondings, signo, false, pid_set)) < 0)
-                        if (r != -EAGAIN && r != -ESRCH && r != -ENOENT)
+                        if (q != -EAGAIN && q != -ESRCH && q != -ENOENT)
                                 r = q;
         }
 
@@ -3329,6 +3468,10 @@ DEFINE_STRING_TABLE_LOOKUP(notify_access, NotifyAccess);
 
 const UnitVTable service_vtable = {
         .suffix = ".service",
+        .sections =
+                "Unit\0"
+                "Service\0"
+                "Install\0",
         .show_status = true,
 
         .init = service_init,
@@ -3360,6 +3503,8 @@ const UnitVTable service_vtable = {
         .timer_event = service_timer_event,
 
         .reset_failed = service_reset_failed,
+
+        .need_daemon_reload = service_need_daemon_reload,
 
         .cgroup_notify_empty = service_cgroup_notify_event,
         .notify_message = service_notify_message,

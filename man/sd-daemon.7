@@ -2,12 +2,12 @@
 .\"     Title: sd-daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: sd-daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SD\-DAEMON" "7" "06/16/2011" "systemd" "sd-daemon"
+.TH "SD\-DAEMON" "7" "09/23/2011" "systemd" "sd-daemon"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -36,6 +36,8 @@ sd-daemon \- Reference implementation of APIs for new\-style daemons
 #include "sd\-daemon\&.h"
 .fi
 .ft
+.HP \w'\fBpkg\-config\ \-\-cflags\ \-\-libs\ libsystemd\-daemon\fR\ 'u
+\fBpkg\-config \-\-cflags \-\-libs libsystemd\-daemon\fR
 .SH "DESCRIPTION"
 .PP
 sd\-daemon\&.c
@@ -103,13 +105,16 @@ In addition, for details about the algorithms check the liberally licensed refer
 resp\&.
 \m[blue]\fB\%http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.h\fR\m[]
 .PP
-These APIs are implemented in the reference implementation\*(Aqs drop\-in
+These APIs are implemented in the reference implementation\*(Aqs
 sd\-daemon\&.c
 and
 sd\-daemon\&.h
-files\&. It is recommended that applications consuming these APIs copy the implementation into their source tree, either verbatim or in excerpts\&. These interfaces are currently not available in a dynamic library\&.
+files\&. These interfaces are available as shared library, which can be compiled and linked to with the
+libsystemd\-daemon
+\fBpkg-config\fR(1)
+file\&. Alternatively, applications consuming these APIs may copy the implementation into their source tree, either verbatim or in excerpts\&.
 .PP
-The functions directly related to new\-style daemons become NOPs when \-DDISABLE_SYSTEMD is set during compilation\&. In addition, if
+The functions directly related to new\-style daemons become NOPs when \-DDISABLE_SYSTEMD is set during compilation and the reference implementation is used as drop\-in files\&. In addition, if
 sd\-daemon\&.c
 is compiled on non\-Linux systems they become NOPs\&.
 .SH "SEE ALSO"
@@ -124,7 +129,8 @@ is compiled on non\-Linux systems they become NOPs\&.
 \fBsystemd.service\fR(5),
 \fBsystemd.socket\fR(5),
 \fBfprintf\fR(3),
-\fBsd-readahead\fR(7)
+\fBsd-readahead\fR(7),
+\fBpkg-config\fR(1)
 .SH "AUTHOR"
 .PP
 \fBLennart Poettering\fR <\&lennart@poettering\&.net\&>

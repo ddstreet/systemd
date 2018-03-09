@@ -1,0 +1,62 @@
+'\" t
+.\"     Title: timezone
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 09/23/2011
+.\"    Manual: /etc/timezone
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "TIMEZONE" "5" "09/23/2011" "systemd" "/etc/timezone"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+timezone \- Local time zone configuration file
+.SH "SYNOPSIS"
+.PP
+/etc/timezone
+.SH "DESCRIPTION"
+.PP
+The
+/etc/timezone
+file configures the system\-wide time zone of the local system that is used by applications for presentation to the user\&. It should contain a single newline\-terminated line consisting of a time zone identifier such as
+Europe/Berlin\&. The file
+/etc/localtime
+corresponds with
+/etc/timezone
+and contains the binary time zone data for the time zone\&. These files should always be changed simultaneously and kept in sync\&.
+.PP
+The time zone may be overridden for individual programs by using the TZ environment variable\&. See
+\fBenviron\fR(7)\&.
+.SH "HISTORY"
+.PP
+The simple configuration file format of
+/etc/timezone
+originates from Debian GNU/Linux\&.
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

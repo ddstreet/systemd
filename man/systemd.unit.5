@@ -2,12 +2,12 @@
 .\"     Title: systemd.unit
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 06/16/2011
+.\"      Date: 09/23/2011
 .\"    Manual: systemd.unit
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.UNIT" "5" "06/16/2011" "systemd" "systemd.unit"
+.TH "SYSTEMD\&.UNIT" "5" "09/23/2011" "systemd" "systemd.unit"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -115,16 +115,118 @@ Optionally, units may be instantiated from a template file at runtime\&. This al
 getty@tty3\&.service
 is requested and no file by that name is found, systemd will look for
 getty@\&.service
-and instantiate a service from that configuration file if it is found\&. To refer to the instance string from within the configuration file you may use the special
+and instantiate a service from that configuration file if it is found\&.
+.PP
+To refer to the instance string from within the configuration file you may use the special
 %i
-specifier in many of the configuration options\&. Other specifiers that may be used are
-%n,
-%N,
-%p,
-%P,
+specifier in many of the configuration options\&. Other specifiers exist, the full list is:
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.B Table\ \&1.\ \&Specifiers available in unit files
+.TS
+allbox tab(:);
+lB lB lB.
+T{
+Specifier
+T}:T{
+Meaning
+T}:T{
+Details
+T}
+.T&
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l.
+T{
+%n
+T}:T{
+Full unit name
+T}:T{
+\ \&
+T}
+T{
+%N
+T}:T{
+Unescaped full unit name
+T}:T{
+\ \&
+T}
+T{
+%p
+T}:T{
+Prefix name
+T}:T{
+This refers to the string before the @, i\&.e\&. "getty" in the example above, where "tty3" is the instance name\&.
+T}
+T{
+%P
+T}:T{
+Unescaped prefix name
+T}:T{
+\ \&
+T}
+T{
+%i
+T}:T{
+Instance name
+T}:T{
+This is the string between the @ character and the suffix\&.
+T}
+T{
 %I
-and
-%f, for the full unit name, the unescaped unit name, the prefix name, the unescaped prefix name, the unescaped instance name and the unescaped filename, respectively\&. The unescaped filename is either the unescaped instance name (if set) with / prepended (if necessary), or the prefix name similarly prepended with /\&. The prefix name here refers to the string before the @, i\&.e\&. "getty" in the example above, where "tty3" is the instance name\&.
+T}:T{
+Unescaped instance name
+T}:T{
+\ \&
+T}
+T{
+%f
+T}:T{
+Unescaped file name
+T}:T{
+This is either the unescaped instance name (if set) with / prepended (if necessary), or the prefix name similarly prepended with /\&.
+T}
+T{
+%c
+T}:T{
+Control group path of the unit
+T}:T{
+\ \&
+T}
+T{
+%r
+T}:T{
+Root control group path of systemd
+T}:T{
+\ \&
+T}
+T{
+%R
+T}:T{
+Parent directory of the root control group path of systemd
+T}:T{
+\ \&
+T}
+T{
+%t
+T}:T{
+Runtime socket dir
+T}:T{
+This is either /run (for the system manager) or $XDG_RUNTIME_DIR (for user managers)\&.
+T}
+.TE
+.sp 1
 .PP
 If a unit file is empty (i\&.e\&. has the file size 0) or is symlinked to
 /dev/null
@@ -267,9 +369,9 @@ this unit will not be stopped when isolating another unit\&. Defaults to
 Takes a boolean argument\&. If
 \fBtrue\fR
 this unit will not be included in snapshots\&. Defaults to
-\fBfalse\fR
-for device and snapshot units,
 \fBtrue\fR
+for device and snapshot units,
+\fBfalse\fR
 for the others\&.
 .RE
 .PP
@@ -316,17 +418,31 @@ When clients are waiting for a job of this unit to complete, time out after the 
 in service units) as the job timeout has no effect on the unit itself, only on the job that might be pending for it\&. Or in other words: unit\-specific timeouts are useful to abort unit state changes, and revert them\&. The job timeout set with this option however is useful to abort only the job waiting for the unit state to change\&.
 .RE
 .PP
-\fIConditionPathExists=\fR, \fIConditionPathIsDirectory=\fR, \fIConditionDirectoryNotEmpty=\fR, \fIConditionKernelCommandLine=\fR, \fIConditionVirtualization=\fR, \fIConditionSecurity=\fR, \fIConditionNull=\fR
+\fIConditionPathExists=\fR, \fIConditionPathExistsGlob=\fR, \fIConditionPathIsDirectory=\fR, \fIConditionPathIsSymbolicLink=\fR, \fIConditionPathIsMountPoint=\fR, \fIConditionDirectoryNotEmpty=\fR, \fIConditionFileIsExecutable=\fR, \fIConditionKernelCommandLine=\fR, \fIConditionVirtualization=\fR, \fIConditionSecurity=\fR, \fIConditionNull=\fR
 .RS 4
 Before starting a unit verify that the specified condition is true\&. With
 \fIConditionPathExists=\fR
-a file existance condition can be checked before a unit is started\&. If the specified absolute path name does not exist startup of a unit will not actually happen, however the unit is still useful for ordering purposes in this case\&. The condition is checked at the time the queued start job is to be executed\&. If the absolute path name passed to
+a file existence condition can be checked before a unit is started\&. If the specified absolute path name does not exist, startup of a unit will not actually happen, however the unit is still useful for ordering purposes in this case\&. The condition is checked at the time the queued start job is to be executed\&. If the absolute path name passed to
 \fIConditionPathExists=\fR
-is prefixed with an exclamation mark (!), the test is negated, and the unit only started if the path does not exist\&.
+is prefixed with an exclamation mark (!), the test is negated, and the unit is only started if the path does not exist\&.
+\fIConditionPathExistsGlob=\fR
+works in a similar way, but checks for the existence of at least one file or directory matching the specified globbing pattern\&.
 \fIConditionPathIsDirectory=\fR
 is similar to
 \fIConditionPathExists=\fR
 but verifies whether a certain path exists and is a directory\&.
+\fIConditionPathIsSymbolicLink=\fR
+is similar to
+\fIConditionPathExists=\fR
+but verifies whether a certain path exists and is a symbolic link\&.
+\fIConditionPathIsMountPoint=\fR
+is similar to
+\fIConditionPathExists=\fR
+but verifies whether a certain path exists and is a mount point\&.
+\fIConditionFileIsExecutable=\fR
+is similar to
+\fIConditionPathExists=\fR
+but verifies whether a certain path exists, is a regular file and marked executable\&.
 \fIConditionDirectoryNotEmpty=\fR
 is similar to
 \fIConditionPathExists=\fR
@@ -334,23 +450,32 @@ but verifies whether a certain path exists and is a non\-empty directory\&. Simi
 \fIConditionKernelCommandLine=\fR
 may be used to check whether a specific kernel command line option is set (or if prefixed with the exclamation mark unset)\&. The argument must either be a single word, or an assignment (i\&.e\&. two words, separated by the equality sign)\&. In the former case the kernel command line is searched for the word appearing as is, or as left hand side of an assignment\&. In the latter case the exact assignment is looked for with right and left hand side matching\&.
 \fIConditionVirtualization=\fR
-may be used to check whether the system is executed in a virtualized environment and optionally test whether it is a specific implementation\&. Takes either boolean value to check if being executed in any virtual environment or one of the
+may be used to check whether the system is executed in a virtualized environment and optionally test whether it is a specific implementation\&. Takes either boolean value to check if being executed in any virtualized environment, or one of
+\fIvm\fR
+and
+\fIcontainer\fR
+to test against a specific type of virtualization solution, or one of
 \fIqemu\fR,
 \fIkvm\fR,
 \fIvmware\fR,
 \fImicrosoft\fR,
 \fIoracle\fR,
 \fIxen\fR,
-\fIpidns\fR,
-\fIopenvz\fR
-to test against a specific implementation\&. The test may be negated by prepending an exclamation mark\&.
+\fIbochs\fR,
+\fIchroot\fR,
+\fIopenvz\fR,
+\fIlxc\fR,
+\fIsystemd\-nspawn\fR,
+\fIpidns\fR
+to test against a specific implementation\&. If multiple virtualization technologies are nested only the innermost is considered\&. The test may be negated by prepending an exclamation mark\&.
 \fIConditionSecurity=\fR
 may be used to check whether the given security module is enabled on the system\&. Currently the only recognized value is
 \fIselinux\fR\&. The test may be negated by prepending an exclamation mark\&. Finally,
 \fIConditionNull=\fR
 may be used to add a constant condition check value to the unit\&. It takes a boolean argument\&. If set to
 \fIfalse\fR
-the condition will always fail, otherwise succeed\&. If multiple conditions are specified the unit will be executed if all of them apply (i\&.e\&. a logical AND is applied)\&. Condition checks can be prefixed with a pipe symbol (|) in which case a condition becomes a triggering condition\&. If at least one triggering condition is defined for a unit then the unit will be executed if at least one of the triggering conditions apply and all of the non\-triggering conditions\&. If you prefix an argument with the pipe symbol and an exclamation mark the pipe symbol must be passed first, the exclamation second\&.
+the condition will always fail, otherwise succeed\&. If multiple conditions are specified the unit will be executed if all of them apply (i\&.e\&. a logical AND is applied)\&. Condition checks can be prefixed with a pipe symbol (|) in which case a condition becomes a triggering condition\&. If at least one triggering condition is defined for a unit then the unit will be executed if at least one of the triggering conditions apply and all of the non\-triggering conditions\&. If you prefix an argument with the pipe symbol and an exclamation mark the pipe symbol must be passed first, the exclamation second\&. Except for
+\fIConditionPathIsSymbolicLink=\fR, all path checks follow symlinks\&.
 .RE
 .PP
 \fINames=\fR

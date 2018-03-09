@@ -1,0 +1,116 @@
+'\" t
+.\"     Title: systemd-logind.conf
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 09/23/2011
+.\"    Manual: systemd-logind.conf
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\-LOGIND\&.CO" "5" "09/23/2011" "systemd" "systemd-logind.conf"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd-logind.conf \- login manager configuration file
+.SH "SYNOPSIS"
+.PP
+systemd\-login\&.conf
+.SH "DESCRIPTION"
+.PP
+This files configures various parameters of the systemd login manager\&.
+.SH "OPTIONS"
+.PP
+All options are configured in the
+[Login]
+section:
+.PP
+\fINAutoVTs=\fR
+.RS 4
+Takes a positive integer\&. How many virtual terminals to allocate by default and when switched to autospawn
+autovt
+services on (if they are otherwise unused)\&. These services are instantiated from a template of
+autovt@\&.service
+with the virtual terminal TTY name, e\&.g\&.
+autovt@tty4\&.service\&. By default
+autovt@\&.service
+is linked to
+getty@\&.service, i\&.e\&. login prompts are started dynamically as the user switches to unused virtual terminals, and this parameter hence controls how many gettys are available on the virtual terminals\&. Defaults to 6\&. When set to 0, automatic spawning of
+autovt
+services is disabled\&.
+.RE
+.PP
+\fIKillUserProcesses=\fR
+.RS 4
+Takes a boolean argument\&. Configures whether the processes of a user should be killed when she or he completely logs out (i\&.e\&. after her/his last session ended)\&. Defaults to
+no\&.
+.RE
+.PP
+\fIKillOnlyUsers=\fR, \fIKillExcludeUsers=\fR
+.RS 4
+These settings take space separated lists of user names that influence the effect of
+\fIKillUserProcesses=\fR\&. If not empty only processes of users listed in
+\fIKillOnlyUsers\fR
+will be killed when they log out entirely\&. Processes of users listed in
+\fIKillExcludeUsers=\fR
+are excluded from being killed\&.
+\fIKillExcludeUsers=\fR
+defaults to
+root
+and takes precedence over
+\fIKillOnlyUsers=\fR
+which defaults to the empty list\&.
+.RE
+.PP
+\fIControllers=\fR, \fIResetControllers=\fR
+.RS 4
+These settings control the default control group hierarchies users logging are added to\&. When logging in users will get private control groups in all hierarchies listed in
+\fIControllers=\fR
+and be reset to the root control group in all hierarchies listed in
+\fIResetControllers=\fR\&.
+\fIControllers=\fR
+defaults to the empty list,
+\fIResetControllers=\fR
+defaults to
+cpu\&.
+.RE
+.PP
+Note that setting
+\fIKillUserProcesses=1\fR
+will break tools like
+\fBscreen\fR(1)\&.
+.PP
+Note that
+\fIKillUserProcesses=1\fR
+is a weaker version of
+\fIkill\-session\-processes=1\fR
+which may be configured per\-service for
+\fBpam_systemd\fR(8)\&. The latter kills processes of a session as soon as it ends, the former kills processes as soon as the last session of the user ends\&.
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBsystemd-loginctl\fR(1),
+\fBsystemd.conf\fR(5)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

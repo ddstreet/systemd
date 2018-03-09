@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd-notify</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd-notify"><a id="systemd-notify"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd-notify — Notify init system about start-up completion and other daemon status changes</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-notify [OPTIONS...]  [VARIABLE=VALUE...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id352580"/><h2>Description</h2><p><span class="command"><strong>systemd-notify</strong></span> may be
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd-notify</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd-notify"><a id="systemd-notify"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd-notify — Notify init system about start-up completion and other daemon status changes</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-notify [OPTIONS...]  [VARIABLE=VALUE...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id301871"/><h2>Description</h2><p><span class="command"><strong>systemd-notify</strong></span> may be
                 called by daemon scripts to notify the init system
                 about status changes. It can be used to send arbitrary
                 information, encoded in an environment-block-like list
@@ -14,7 +14,7 @@
                 update.</p><p>Note that systemd will refuse reception of
                 status updates from this command unless
                 <code class="varname">NotifyAccess=all</code> is set for the
-                service unit this command is called from.</p></div><div class="refsect1" title="Options"><a id="id352626"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                service unit this command is called from.</p></div><div class="refsect1" title="Options"><a id="id301917"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--ready</code></span></dt><dd><p>Inform the init system
                                 about service start-up
                                 completion. This is equivalent to
@@ -50,8 +50,8 @@
                                 must be a string, and either "cancel",
                                 "done" or "noreplay". For details
                                 about the semantics of this option see
-                                <span class="citerefentry"><span class="refentrytitle">sd_readahead</span>(3)</span>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id320154"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1" title="Example"><a id="id320165"/><h2>Example</h2><div class="example"><a id="id320171"/><p class="title"><strong>Example 1. Start-up Notification and Status Updates</strong></p><div class="example-contents"><p>A simple shell daemon that sends
+                                <span class="citerefentry"><span class="refentrytitle">sd_readahead</span>(3)</span>.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id269436"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="Example"><a id="id269447"/><h2>Example</h2><div class="example"><a id="id269453"/><p class="title"><strong>Example 1. Start-up Notification and Status Updates</strong></p><div class="example-contents"><p>A simple shell daemon that sends
                         start-up notifications after having set up its
                         communication channel. During runtime it sends
                         further status updates to the init
@@ -67,7 +67,7 @@ while : ; do
         # Do something with $a ...
 
         systemd-notify --status="Waiting for data..."
-done</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id320259"/><h2>See Also</h2><p>
+done</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id269471"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemctl</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

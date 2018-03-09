@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.automount</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.automount"><a id="systemd.automount"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.automount — systemd automount configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.automount</code></p></div><div class="refsect1" title="Description"><a id="id368989"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.automount</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.automount"><a id="systemd.automount"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.automount — systemd automount configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.automount</code></p></div><div class="refsect1" title="Description"><a id="id346289"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.automount</code> encodes information
                 about a file system automount point controlled and
                 supervised by systemd.</p><p>This man page lists the configuration options
@@ -30,14 +30,14 @@
                 on-demand mounting as well as parallelized mounting of
                 file systems.</p><p>If an automount point is beneath another mount
                 point in the file system hierarchy a dependency
-                between both units is created automatically.</p></div><div class="refsect1" title="fstab"><a id="id369083"/><h2><code class="filename">fstab</code></h2><p>Automount units may either be configured via unit
+                between both units is created automatically.</p></div><div class="refsect1" title="fstab"><a id="id346382"/><h2><code class="filename">fstab</code></h2><p>Automount units may either be configured via unit
                 files, or via <code class="filename">/etc/fstab</code> (see
                 <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
                 for details).</p><p>For details how systemd parses
                 <code class="filename">/etc/fstab</code> see
                 <span class="citerefentry"><span class="refentrytitle">systemd.mount</span>(5)</span>.</p><p>If an automount point is configured in both
                 <code class="filename">/etc/fstab</code> and a unit file the
-                configuration in the latter takes precedence.</p></div><div class="refsect1" title="Options"><a id="id336489"/><h2>Options</h2><p>Automount files must include an [Automount]
+                configuration in the latter takes precedence.</p></div><div class="refsect1" title="Options"><a id="id378596"/><h2>Options</h2><p>Automount files must include an [Automount]
                 section, which carries information about the file
                 system automount points it supervises. The options
                 specific to the [Automount] section of automount units
@@ -56,7 +56,7 @@
                                 creating these directories. Takes an
                                 access mode in octal
                                 notation. Defaults to
-                                0755.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id336537"/><h2>See Also</h2><p>
+                                0755.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id378644"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
