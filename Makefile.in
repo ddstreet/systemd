@@ -272,16 +272,17 @@ DIST_COMMON = README $(am__configure_deps) \
 	$(am__dist_systemunit_DATA_DIST) \
 	$(am__dist_tmpfiles_DATA_DIST) $(dist_bashcompletion_DATA) \
 	$(dist_bin_SCRIPTS) $(dist_doc_DATA) $(dist_man_MANS) \
-	$(dist_noinst_DATA) $(dist_pkgsysconf_DATA) \
-	$(dist_udevrules_DATA) $(dist_userunit_DATA) \
-	$(pkginclude_HEADERS) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
-	$(top_srcdir)/configure TODO compile config.guess config.sub \
-	depcomp install-sh libsystemd_basic_la_vala.stamp \
-	libsystemd_core_la_vala.stamp libsystemd_daemon_la_vala.stamp \
-	libsystemd_login_la_vala.stamp ltmain.sh missing \
-	pam_systemd_la_vala.stamp src/gnome-ask-password-agent.c \
-	src/systemadm.c src/systemd-interfaces.c systemadm_vala.stamp \
+	$(dist_noinst_DATA) $(dist_pkgdata_DATA) \
+	$(dist_pkgsysconf_DATA) $(dist_udevrules_DATA) \
+	$(dist_userunit_DATA) $(pkginclude_HEADERS) \
+	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(srcdir)/config.h.in $(top_srcdir)/configure TODO compile \
+	config.guess config.sub depcomp install-sh \
+	libsystemd_basic_la_vala.stamp libsystemd_core_la_vala.stamp \
+	libsystemd_daemon_la_vala.stamp libsystemd_login_la_vala.stamp \
+	ltmain.sh missing pam_systemd_la_vala.stamp \
+	src/gnome-ask-password-agent.c src/systemadm.c \
+	src/systemd-interfaces.c systemadm_vala.stamp \
 	systemctl_vala.stamp systemd_ac_power_vala.stamp \
 	systemd_ask_password_vala.stamp systemd_binfmt_vala.stamp \
 	systemd_cgls_vala.stamp systemd_cgroups_agent_vala.stamp \
@@ -357,12 +358,13 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pamlibdir)" \
 	"$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" \
 	"$(DESTDIR)$(bashcompletiondir)" "$(DESTDIR)$(dbuspolicydir)" \
 	"$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" \
-	"$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(systemunitdir)" \
-	"$(DESTDIR)$(tmpfilesdir)" "$(DESTDIR)$(udevrulesdir)" \
-	"$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(polkitpolicydir)" \
-	"$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(udevrulesdir)" \
-	"$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(pkgconfigdatadir)" \
-	"$(DESTDIR)$(pkgconfiglibdir)" "$(DESTDIR)$(pkgincludedir)"
+	"$(DESTDIR)$(pkgdatadir)" "$(DESTDIR)$(pkgsysconfdir)" \
+	"$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(tmpfilesdir)" \
+	"$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" \
+	"$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(systemunitdir)" \
+	"$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" \
+	"$(DESTDIR)$(pkgconfigdatadir)" "$(DESTDIR)$(pkgconfiglibdir)" \
+	"$(DESTDIR)$(pkgincludedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES) \
 	$(pamlib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
@@ -1087,7 +1089,8 @@ am__dist_systemunit_DATA_DIST = units/graphical.target \
 	units/multi-user.target units/emergency.service \
 	units/emergency.target units/sysinit.target units/basic.target \
 	units/getty.target units/halt.target units/kexec.target \
-	units/local-fs.target units/remote-fs.target \
+	units/local-fs.target units/local-fs-pre.target \
+	units/remote-fs.target units/remote-fs-pre.target \
 	units/cryptsetup.target units/network.target \
 	units/nss-lookup.target units/mail-transfer-agent.target \
 	units/http-daemon.target units/poweroff.target \
@@ -1123,13 +1126,13 @@ am__dist_tmpfiles_DATA_DIST = tmpfiles.d/systemd.conf \
 	tmpfiles.d/tmp.conf tmpfiles.d/x11.conf tmpfiles.d/legacy.conf
 DATA = $(dbusinterface_DATA) $(dist_bashcompletion_DATA) \
 	$(dist_dbuspolicy_DATA) $(dist_dbussystemservice_DATA) \
-	$(dist_doc_DATA) $(dist_noinst_DATA) $(dist_pkgsysconf_DATA) \
-	$(dist_systemunit_DATA) $(dist_tmpfiles_DATA) \
-	$(dist_udevrules_DATA) $(dist_userunit_DATA) \
-	$(nodist_noinst_DATA) $(nodist_polkitpolicy_DATA) \
-	$(nodist_systemunit_DATA) $(nodist_udevrules_DATA) \
-	$(nodist_userunit_DATA) $(pkgconfigdata_DATA) \
-	$(pkgconfiglib_DATA)
+	$(dist_doc_DATA) $(dist_noinst_DATA) $(dist_pkgdata_DATA) \
+	$(dist_pkgsysconf_DATA) $(dist_systemunit_DATA) \
+	$(dist_tmpfiles_DATA) $(dist_udevrules_DATA) \
+	$(dist_userunit_DATA) $(nodist_noinst_DATA) \
+	$(nodist_polkitpolicy_DATA) $(nodist_systemunit_DATA) \
+	$(nodist_udevrules_DATA) $(nodist_userunit_DATA) \
+	$(pkgconfigdata_DATA) $(pkgconfiglib_DATA)
 HEADERS = $(pkginclude_HEADERS)
 RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
@@ -1348,7 +1351,7 @@ udevrulesdir = @udevrulesdir@
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = po
 LIBSYSTEMD_LOGIN_CURRENT = 0
-LIBSYSTEMD_LOGIN_REVISION = 5
+LIBSYSTEMD_LOGIN_REVISION = 6
 LIBSYSTEMD_LOGIN_AGE = 0
 LIBSYSTEMD_DAEMON_CURRENT = 0
 LIBSYSTEMD_DAEMON_REVISION = 0
@@ -1388,7 +1391,8 @@ AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-DSYSTEMD_CRYPTSETUP_PATH=\"$(rootlibexecdir)/systemd-cryptsetup\" \
 	-DSYSTEM_GENERATOR_PATH=\"$(systemgeneratordir)\" \
 	-DUSER_GENERATOR_PATH=\"$(usergeneratordir)\" \
-	-DSYSTEM_SHUTDOWN_PATH=\"$(systemshutdowndir)\" -I \
+	-DSYSTEM_SHUTDOWN_PATH=\"$(systemshutdowndir)\" \
+	-DSYSTEMD_KBD_MODEL_MAP=\"$(pkgdatadir)/kbd-model-map\" -I \
 	$(top_srcdir)/src $(am__append_1) $(am__append_2) \
 	$(am__append_3) $(am__append_4) $(am__append_5) \
 	$(am__append_6) $(am__append_7)
@@ -1448,7 +1452,8 @@ dist_systemunit_DATA = units/graphical.target units/multi-user.target \
 	units/emergency.service units/emergency.target \
 	units/sysinit.target units/basic.target units/getty.target \
 	units/halt.target units/kexec.target units/local-fs.target \
-	units/remote-fs.target units/cryptsetup.target \
+	units/local-fs-pre.target units/remote-fs.target \
+	units/remote-fs-pre.target units/cryptsetup.target \
 	units/network.target units/nss-lookup.target \
 	units/mail-transfer-agent.target units/http-daemon.target \
 	units/poweroff.target units/reboot.target units/rescue.target \
@@ -1914,6 +1919,12 @@ systemd_localed_LDADD = \
 	libsystemd-basic.la \
 	libsystemd-daemon.la \
 	$(DBUS_LIBS)
+
+dist_pkgdata_DATA = \
+        src/kbd-model-map
+
+dist_noinst_SCRIPT = \
+        src/generate-kbd-model-map
 
 systemd_timedated_SOURCES = \
 	src/timedated.c \
@@ -6661,6 +6672,26 @@ uninstall-dist_docDATA:
 	test -n "$$files" || exit 0; \
 	echo " ( cd '$(DESTDIR)$(docdir)' && rm -f" $$files ")"; \
 	cd "$(DESTDIR)$(docdir)" && rm -f $$files
+install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"
+	@list='$(dist_pkgdata_DATA)'; test -n "$(pkgdatadir)" || list=; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(pkgdatadir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(pkgdatadir)" || exit $$?; \
+	done
+
+uninstall-dist_pkgdataDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_pkgdata_DATA)'; test -n "$(pkgdatadir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	test -n "$$files" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(pkgdatadir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(pkgdatadir)" && rm -f $$files
 install-dist_pkgsysconfDATA: $(dist_pkgsysconf_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgsysconfdir)" || $(MKDIR_P) "$(DESTDIR)$(pkgsysconfdir)"
@@ -7233,7 +7264,7 @@ install-binPROGRAMS: install-libLTLIBRARIES
 
 installdirs: installdirs-recursive
 installdirs-am:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(rootbindir)" "$(DESTDIR)$(rootlibexecdir)" "$(DESTDIR)$(systemgeneratordir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" "$(DESTDIR)$(bashcompletiondir)" "$(DESTDIR)$(dbuspolicydir)" "$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" "$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(tmpfilesdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(pkgconfigdatadir)" "$(DESTDIR)$(pkgconfiglibdir)" "$(DESTDIR)$(pkgincludedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pamlibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(rootbindir)" "$(DESTDIR)$(rootlibexecdir)" "$(DESTDIR)$(systemgeneratordir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man1dir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(man8dir)" "$(DESTDIR)$(dbusinterfacedir)" "$(DESTDIR)$(bashcompletiondir)" "$(DESTDIR)$(dbuspolicydir)" "$(DESTDIR)$(dbussystemservicedir)" "$(DESTDIR)$(docdir)" "$(DESTDIR)$(pkgdatadir)" "$(DESTDIR)$(pkgsysconfdir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(tmpfilesdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(polkitpolicydir)" "$(DESTDIR)$(systemunitdir)" "$(DESTDIR)$(udevrulesdir)" "$(DESTDIR)$(userunitdir)" "$(DESTDIR)$(pkgconfigdatadir)" "$(DESTDIR)$(pkgconfiglibdir)" "$(DESTDIR)$(pkgincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-recursive
@@ -7356,14 +7387,15 @@ info-am:
 install-data-am: install-dbusinterfaceDATA \
 	install-dist_bashcompletionDATA install-dist_dbuspolicyDATA \
 	install-dist_dbussystemserviceDATA install-dist_docDATA \
-	install-dist_pkgsysconfDATA install-dist_systemunitDATA \
-	install-dist_tmpfilesDATA install-dist_udevrulesDATA \
-	install-dist_userunitDATA install-man \
-	install-nodist_polkitpolicyDATA install-nodist_systemunitDATA \
-	install-nodist_udevrulesDATA install-nodist_userunitDATA \
-	install-pamlibLTLIBRARIES install-pkgconfigdataDATA \
-	install-pkgconfiglibDATA install-pkgincludeHEADERS \
-	install-rootbinPROGRAMS install-systemgeneratorPROGRAMS
+	install-dist_pkgdataDATA install-dist_pkgsysconfDATA \
+	install-dist_systemunitDATA install-dist_tmpfilesDATA \
+	install-dist_udevrulesDATA install-dist_userunitDATA \
+	install-man install-nodist_polkitpolicyDATA \
+	install-nodist_systemunitDATA install-nodist_udevrulesDATA \
+	install-nodist_userunitDATA install-pamlibLTLIBRARIES \
+	install-pkgconfigdataDATA install-pkgconfiglibDATA \
+	install-pkgincludeHEADERS install-rootbinPROGRAMS \
+	install-systemgeneratorPROGRAMS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 install-dvi: install-dvi-recursive
@@ -7419,10 +7451,11 @@ uninstall-am: uninstall-binPROGRAMS uninstall-dbusinterfaceDATA \
 	uninstall-dist_bashcompletionDATA uninstall-dist_binSCRIPTS \
 	uninstall-dist_dbuspolicyDATA \
 	uninstall-dist_dbussystemserviceDATA uninstall-dist_docDATA \
-	uninstall-dist_pkgsysconfDATA uninstall-dist_systemunitDATA \
-	uninstall-dist_tmpfilesDATA uninstall-dist_udevrulesDATA \
-	uninstall-dist_userunitDATA uninstall-libLTLIBRARIES \
-	uninstall-man uninstall-nodist_polkitpolicyDATA \
+	uninstall-dist_pkgdataDATA uninstall-dist_pkgsysconfDATA \
+	uninstall-dist_systemunitDATA uninstall-dist_tmpfilesDATA \
+	uninstall-dist_udevrulesDATA uninstall-dist_userunitDATA \
+	uninstall-libLTLIBRARIES uninstall-man \
+	uninstall-nodist_polkitpolicyDATA \
 	uninstall-nodist_systemunitDATA uninstall-nodist_udevrulesDATA \
 	uninstall-nodist_userunitDATA uninstall-pamlibLTLIBRARIES \
 	uninstall-pkgconfigdataDATA uninstall-pkgconfiglibDATA \
@@ -7453,22 +7486,22 @@ uninstall-man: uninstall-man1 uninstall-man3 uninstall-man5 \
 	install-data-am install-data-hook install-dbusinterfaceDATA \
 	install-dist_bashcompletionDATA install-dist_binSCRIPTS \
 	install-dist_dbuspolicyDATA install-dist_dbussystemserviceDATA \
-	install-dist_docDATA install-dist_pkgsysconfDATA \
-	install-dist_systemunitDATA install-dist_tmpfilesDATA \
-	install-dist_udevrulesDATA install-dist_userunitDATA \
-	install-dvi install-dvi-am install-exec install-exec-am \
-	install-exec-hook install-html install-html-am install-info \
-	install-info-am install-libLTLIBRARIES install-man \
-	install-man1 install-man3 install-man5 install-man7 \
-	install-man8 install-nodist_polkitpolicyDATA \
-	install-nodist_systemunitDATA install-nodist_udevrulesDATA \
-	install-nodist_userunitDATA install-pamlibLTLIBRARIES \
-	install-pdf install-pdf-am install-pkgconfigdataDATA \
-	install-pkgconfiglibDATA install-pkgincludeHEADERS install-ps \
-	install-ps-am install-rootbinPROGRAMS \
-	install-rootlibexecPROGRAMS install-strip \
-	install-systemgeneratorPROGRAMS installcheck installcheck-am \
-	installdirs installdirs-am maintainer-clean \
+	install-dist_docDATA install-dist_pkgdataDATA \
+	install-dist_pkgsysconfDATA install-dist_systemunitDATA \
+	install-dist_tmpfilesDATA install-dist_udevrulesDATA \
+	install-dist_userunitDATA install-dvi install-dvi-am \
+	install-exec install-exec-am install-exec-hook install-html \
+	install-html-am install-info install-info-am \
+	install-libLTLIBRARIES install-man install-man1 install-man3 \
+	install-man5 install-man7 install-man8 \
+	install-nodist_polkitpolicyDATA install-nodist_systemunitDATA \
+	install-nodist_udevrulesDATA install-nodist_userunitDATA \
+	install-pamlibLTLIBRARIES install-pdf install-pdf-am \
+	install-pkgconfigdataDATA install-pkgconfiglibDATA \
+	install-pkgincludeHEADERS install-ps install-ps-am \
+	install-rootbinPROGRAMS install-rootlibexecPROGRAMS \
+	install-strip install-systemgeneratorPROGRAMS installcheck \
+	installcheck-am installdirs installdirs-am maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags tags-recursive uninstall uninstall-am \
@@ -7476,12 +7509,12 @@ uninstall-man: uninstall-man1 uninstall-man3 uninstall-man5 \
 	uninstall-dist_bashcompletionDATA uninstall-dist_binSCRIPTS \
 	uninstall-dist_dbuspolicyDATA \
 	uninstall-dist_dbussystemserviceDATA uninstall-dist_docDATA \
-	uninstall-dist_pkgsysconfDATA uninstall-dist_systemunitDATA \
-	uninstall-dist_tmpfilesDATA uninstall-dist_udevrulesDATA \
-	uninstall-dist_userunitDATA uninstall-hook \
-	uninstall-libLTLIBRARIES uninstall-man uninstall-man1 \
-	uninstall-man3 uninstall-man5 uninstall-man7 uninstall-man8 \
-	uninstall-nodist_polkitpolicyDATA \
+	uninstall-dist_pkgdataDATA uninstall-dist_pkgsysconfDATA \
+	uninstall-dist_systemunitDATA uninstall-dist_tmpfilesDATA \
+	uninstall-dist_udevrulesDATA uninstall-dist_userunitDATA \
+	uninstall-hook uninstall-libLTLIBRARIES uninstall-man \
+	uninstall-man1 uninstall-man3 uninstall-man5 uninstall-man7 \
+	uninstall-man8 uninstall-nodist_polkitpolicyDATA \
 	uninstall-nodist_systemunitDATA uninstall-nodist_udevrulesDATA \
 	uninstall-nodist_userunitDATA uninstall-pamlibLTLIBRARIES \
 	uninstall-pkgconfigdataDATA uninstall-pkgconfiglibDATA \
@@ -7875,6 +7908,9 @@ upload: all distcheck
 
 git-tag:
 	git tag "v$(VERSION)" -m "systemd $(VERSION)"
+
+update-kbd-model-map:
+	src/generate-kbd-model-map > src/kbd-model-map
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

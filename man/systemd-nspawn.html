@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd-nspawn</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd-nspawn"><a id="systemd-nspawn"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd-nspawn — Spawn a namespace container for debugging, testing and building</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-nspawn [OPTIONS...]  [COMMAND]  [ARGS...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id335773"/><h2>Description</h2><p><span class="command"><strong>systemd-nspawn</strong></span> may be used to
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd-nspawn</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd-nspawn"><a id="systemd-nspawn"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd-nspawn — Spawn a namespace container for debugging, testing and building</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemd-nspawn [OPTIONS...]  [COMMAND]  [ARGS...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id532893"/><h2>Description</h2><p><span class="command"><strong>systemd-nspawn</strong></span> may be used to
                 run a command or OS in a light-weight namespace
                 container. In many ways it is similar to
                 <span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span>,
@@ -42,7 +42,7 @@
                 see each other. The PID namespace separation of the
                 two containers is complete and the containers will
                 share very few runtime objects except for the
-                underlying file system.</p></div><div class="refsect1" title="Options"><a id="id303272"/><h2>Options</h2><p>If no arguments are passed the container is set
+                underlying file system.</p></div><div class="refsect1" title="Options"><a id="id500392"/><h2>Options</h2><p>If no arguments are passed the container is set
                 up and a shell started in it, otherwise the passed
                 command and arguments are executed in it. The
                 following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
@@ -60,17 +60,17 @@
                                 the container. This makes all network
                                 interfaces unavailable in the
                                 container, with the exception of the
-                                loopback device.</p></dd></dl></div></div><div class="refsect1" title="Example 1"><a id="id303356"/><h2>Example 1</h2><pre class="programlisting"># debootstrap --arch=amd64 unstable debian-tree/
+                                loopback device.</p></dd></dl></div></div><div class="refsect1" title="Example 1"><a id="id500476"/><h2>Example 1</h2><pre class="programlisting"># debootstrap --arch=amd64 unstable debian-tree/
 # systemd-nspawn -D debian-tree/</pre><p>This installs a minimal Debian unstable
                 distribution into the directory
                 <code class="filename">debian-tree/</code> and then spawns a
-                shell in a namespace container in it.</p></div><div class="refsect1" title="Example 2"><a id="id303453"/><h2>Example 2</h2><pre class="programlisting"># mock --init
+                shell in a namespace container in it.</p></div><div class="refsect1" title="Example 2"><a id="id500573"/><h2>Example 2</h2><pre class="programlisting"># mock --init
 # systemd-nspawn -D /var/lib/mock/fedora-rawhide-x86_64/root/ /bin/systemd systemd.log_level=debug</pre><p>This installs a minimal Fedora distribution into
                 a subdirectory of <code class="filename">/var/lib/mock/</code>
                 and then boots an OS in a namespace container in it,
                 with systemd as init system, configured for debug
-                logging.</p></div><div class="refsect1" title="Exit status"><a id="id303477"/><h2>Exit status</h2><p>The exit code of the program executed in the
-                container is returned.</p></div><div class="refsect1" title="See Also"><a id="id303488"/><h2>See Also</h2><p>
+                logging.</p></div><div class="refsect1" title="Exit status"><a id="id500597"/><h2>Exit status</h2><p>The exit code of the program executed in the
+                container is returned.</p></div><div class="refsect1" title="See Also"><a id="id500608"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">chroot</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">debootstrap</span>(8)</span>,

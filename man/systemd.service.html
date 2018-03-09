@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id351167"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id312255"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.service</code> encodes information
                 about a process controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -33,7 +33,7 @@
                 <code class="filename">.service</code> suffix removed) and
                 dynamically creates a service unit from that
                 script. This is useful for compatibility with
-                SysV.</p></div><div class="refsect1" title="Options"><a id="id351279"/><h2>Options</h2><p>Service files must include a
+                SysV.</p></div><div class="refsect1" title="Options"><a id="id312367"/><h2>Options</h2><p>Service files must include a
                 <code class="literal">[Service]</code> section, which carries
                 information about the service and the process it
                 supervises. A number of options that may be used in
@@ -191,20 +191,26 @@
                                 main process of the daemon. The
                                 command line accepts % specifiers as
                                 described in
-                                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>. On
-                                top of that basic environment variable
-                                substitution is supported, where
-                                <code class="literal">${FOO}</code> is replaced
-                                by the string value of the environment
-                                variable of the same name. Also
-                                <code class="literal">$FOO</code> may appear as
-                                separate word on the command line in
-                                which case the variable is replaced by
-                                its value split at whitespaces. Note
-                                that the first argument (i.e. the
-                                binary to execute) may not be a
-                                variable, and must be a literal and
-                                absolute path name.</p></dd><dt><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span></dt><dd><p>Additional commands
+                                <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>.</p><p>On top of that basic environment
+                                variable substitution is
+                                supported. Use
+                                <code class="literal">${FOO}</code> as part of a
+                                word, or as word of its own on the
+                                command line, in which case it will be
+                                replaced by the value of the
+                                environment variable including all
+                                whitespace it contains, resulting in a
+                                single argument.  Use
+                                <code class="literal">$FOO</code> as a separate
+                                word on the command line, in which
+                                case it will be replaced by the value
+                                of the environment variable split up
+                                at whitespace, resulting in no or more
+                                arguments. Note that the first
+                                argument (i.e. the program to execute)
+                                may not be a variable, and must be a
+                                literal and absolute path
+                                name.</p></dd><dt><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span></dt><dd><p>Additional commands
                                 that are executed before (resp. after)
                                 the command in
                                 <code class="varname">ExecStart=</code>. Multiple
@@ -497,7 +503,7 @@
                                 <code class="filename">/etc/fstab</code>'s
                                 fs_passno column. See
                                 <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
-                                for details.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id393153"/><h2>See Also</h2><p>
+                                for details.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id354175"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

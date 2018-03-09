@@ -2,12 +2,12 @@
 .\"     Title: systemd.special
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 09/23/2011
+.\"      Date: 10/11/2011
 .\"    Manual: systemd.special
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SPECIAL" "7" "09/23/2011" "systemd" "systemd.special"
+.TH "SYSTEMD\&.SPECIAL" "7" "10/11/2011" "systemd" "systemd.special"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -42,6 +42,7 @@ graphical\&.target,
 halt\&.target,
 kbrequest\&.target,
 local\-fs\&.target,
+local\-fs\-pre\&.target,
 mail\-transfer\-agent\&.target,
 multi\-user\&.target,
 network\&.target,
@@ -49,6 +50,7 @@ nss\-lookup\&.target,
 poweroff\&.target,
 reboot\&.target,
 remote\-fs\&.target,
+remote\-fs\-pre\&.target,
 rescue\&.target,
 rpcbind\&.target,
 runlevel2\&.target,
@@ -159,6 +161,13 @@ $local_fs
 facility\&.
 .RE
 .PP
+local\-fs\-pre\&.target
+.RS 4
+This target unit is automatically ordered before all local mount points marked with
+\fBauto\fR
+(see above)\&. It can be used to execute certain units before all local mounts\&.
+.RE
+.PP
 mail\-transfer\-agent\&.target
 .RS 4
 The mail transfer agent (MTA) service\&. Usually this should pull\-in all units necessary for sending/receiving mails on the local host\&.
@@ -220,6 +229,13 @@ local\-fs\&.target, but for remote mount points\&.
 systemd automatically adds dependencies of type After for this target unit to all SysV init script service units with an LSB header referring to the
 $remote_fs
 facility\&.
+.RE
+.PP
+remote\-fs\-pre\&.target
+.RS 4
+This target unit is automatically ordered before all remote mount points marked with
+\fBauto\fR
+(see above)\&. It can be used to execute certain units before all remote mounts\&.
 .RE
 .PP
 rescue\&.target

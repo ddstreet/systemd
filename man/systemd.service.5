@@ -2,12 +2,12 @@
 .\"     Title: systemd.service
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 09/23/2011
+.\"      Date: 10/11/2011
 .\"    Manual: systemd.service
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SERVICE" "5" "09/23/2011" "systemd" "systemd.service"
+.TH "SYSTEMD\&.SERVICE" "5" "10/11/2011" "systemd" "systemd.service"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -184,11 +184,13 @@ and
 are used for the same command the former must precede the latter\&. Unless
 \fIType=forking\fR
 is set, the process started via this command line will be considered the main process of the daemon\&. The command line accepts % specifiers as described in
-\fBsystemd.unit\fR(5)\&. On top of that basic environment variable substitution is supported, where
+\fBsystemd.unit\fR(5)\&.
+.sp
+On top of that basic environment variable substitution is supported\&. Use
 ${FOO}
-is replaced by the string value of the environment variable of the same name\&. Also
+as part of a word, or as word of its own on the command line, in which case it will be replaced by the value of the environment variable including all whitespace it contains, resulting in a single argument\&. Use
 $FOO
-may appear as separate word on the command line in which case the variable is replaced by its value split at whitespaces\&. Note that the first argument (i\&.e\&. the binary to execute) may not be a variable, and must be a literal and absolute path name\&.
+as a separate word on the command line, in which case it will be replaced by the value of the environment variable split up at whitespace, resulting in no or more arguments\&. Note that the first argument (i\&.e\&. the program to execute) may not be a variable, and must be a literal and absolute path name\&.
 .RE
 .PP
 \fIExecStartPre=\fR, \fIExecStartPost=\fR

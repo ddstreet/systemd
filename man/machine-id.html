@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>machine-id</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="machine-id"><a id="machine-id"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>machine-id — local machine ID configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1" title="Description"><a id="id535191"/><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>machine-id</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="machine-id"><a id="machine-id"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>machine-id — local machine ID configuration file</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/machine-id</code></p></div><div class="refsect1" title="Description"><a id="id301923"/><h2>Description</h2><p>The <code class="filename">/etc/machine-id</code> file
                 contains the unique machine id of the local system
                 that is set during installation. The machine ID is a
                 single newline-terminated, hexadecimal, lowercase 32
@@ -18,7 +18,7 @@
                 changes. Due to this and its greater length it is
                 a more useful replacement for the
                 <span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span>
-                call POSIX specifies.</p></div><div class="refsect1" title="Relation to OSF UUIDs"><a id="id535236"/><h2>Relation to OSF UUIDs</h2><p>Note that the machine ID historically is not an
+                call POSIX specifies.</p></div><div class="refsect1" title="Relation to OSF UUIDs"><a id="id301968"/><h2>Relation to OSF UUIDs</h2><p>Note that the machine ID historically is not an
                 OSF UUID as defined by <a class="ulink" href="http://tools.ietf.org/html/rfc4122">RFC
                 4122</a>, nor a Microsoft GUID. Starting with
                 systemd v30 newly generated machine IDs however do
@@ -33,12 +33,12 @@ id[6] = (id[6] &amp; 0x0F) | 0x40;
 id[8] = (id[8] &amp; 0x3F) | 0x80;</pre><p>(This code is inspired by
                 <code class="literal">generate_random_uuid()</code> of
                 <code class="filename">drivers/char/random.c</code> from the
-                kernel sources.)</p></div><div class="refsect1" title="History"><a id="id535287"/><h2>History</h2><p>The simple configuration file format of
+                kernel sources.)</p></div><div class="refsect1" title="History"><a id="id302020"/><h2>History</h2><p>The simple configuration file format of
                 <code class="filename">/etc/machine-id</code> originates in the
                 <code class="filename">/var/lib/dbus/machine-id</code> file
                 introduced by D-Bus. In fact this latter file might be a
                 symlink to
-                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1" title="See Also"><a id="id535314"/><h2>See Also</h2><p>
+                <code class="varname">/etc/machine-id</code>.</p></div><div class="refsect1" title="See Also"><a id="id302046"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">gethostid</span>(3)</span>,
                           <span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span>,
