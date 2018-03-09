@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>vconsole.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="vconsole.conf"><a id="vconsole.conf"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>vconsole.conf — configuration file for the virtual console</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/vconsole.conf</code></p></div><div class="refsect1" title="Description"><a id="id458698"/><h2>Description</h2><p>The <code class="filename">/etc/vconsole.conf</code> file
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>vconsole.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="vconsole.conf"><a id="vconsole.conf"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>vconsole.conf — configuration file for the virtual console</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/vconsole.conf</code></p></div><div class="refsect1" title="Description"><a id="id505471"/><h2>Description</h2><p>The <code class="filename">/etc/vconsole.conf</code> file
                 configures the virtual console, i.e. keyboard mapping
                 and console font.</p><p>The basic file format of the
                 <code class="filename">vconsole.conf</code> is a
@@ -19,7 +19,7 @@
                 to override the console settings at boot.</p><p>Depending on the operating system other
                 configuration files might be checked for configuration
                 of the virtual console as well, however only as
-                fallback.</p></div><div class="refsect1" title="Options"><a id="id458753"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">KEYMAP=</code>, </span><span class="term"><code class="varname">KEYMAP_TOGGLE=</code></span></dt><dd><p>Configures the key
+                fallback.</p></div><div class="refsect1" title="Options"><a id="id505526"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">KEYMAP=</code>, </span><span class="term"><code class="varname">KEYMAP_TOGGLE=</code></span></dt><dd><p>Configures the key
                                 mapping table of for they
                                 keyboard. <code class="varname">KEYMAP=</code>
                                 defaults to <code class="literal">us</code> if
@@ -31,8 +31,8 @@
                                 font, the console map and the unicode
                                 font map. <code class="varname">FONT=</code>
                                 defaults to
-                                <code class="literal">latarcyrheb-sun16</code>.</p></dd></dl></div></div><div class="refsect1" title="Example"><a id="id426184"/><h2>Example</h2><div class="example"><a id="id426190"/><p class="title"><strong>Example 1. German keyboard and console</strong></p><div class="example-contents"><p><code class="filename">/etc/vconsole.conf:</code></p><pre class="programlisting">KEYMAP=de-latin1
-FONT=latarcyrheb-sun16</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id426210"/><h2>See Also</h2><p>
+                                <code class="literal">latarcyrheb-sun16</code>.</p></dd></dl></div></div><div class="refsect1" title="Example"><a id="id537766"/><h2>Example</h2><div class="example"><a id="id537772"/><p class="title"><strong>Example 1. German keyboard and console</strong></p><div class="example-contents"><p><code class="filename">/etc/vconsole.conf:</code></p><pre class="programlisting">KEYMAP=de-latin1
+FONT=latarcyrheb-sun16</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id537792"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">loadkeys</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">setfont</span>(8)</span>,

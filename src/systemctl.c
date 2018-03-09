@@ -1565,6 +1565,7 @@ static int check_unit(DBusConnection *bus, char **args, unsigned n) {
 
                         dbus_error_free(&error);
                         dbus_message_unref(m);
+                        m = NULL;
                         continue;
                 }
 
@@ -3323,6 +3324,13 @@ static int daemon_reload(DBusConnection *bus, char **args, unsigned n) {
                         goto finish;
                 }
 
+                if (streq(method, "Reexecute") && dbus_error_has_name(&error, DBUS_ERROR_NO_REPLY)) {
+                        /* On reexecution, we expect a disconnect, not
+                         * a reply */
+                        r = 0;
+                        goto finish;
+                }
+
                 log_error("Failed to issue method call: %s", bus_error_message(&error));
                 r = -EIO;
                 goto finish;
@@ -3955,6 +3963,7 @@ static int create_symlink(const char *verb, const char *old_path, const char *ne
                         return 1;
                 }
 
+                free(dest);
                 return 0;
         }
 
@@ -4081,7 +4090,7 @@ static int install_info_apply(const char *verb, LookupPaths *paths, InstallInfo 
         }
 
         if (!f) {
-#if (defined(TARGET_FEDORA) || defined(TARGET_MANDRIVA)) || defined(TARGET_MEEGO) && defined (HAVE_SYSV_COMPAT)
+#if (defined(TARGET_FEDORA) || defined(TARGET_MANDRIVA) || defined(TARGET_SUSE) || defined(TARGET_MEEGO) || defined(TARGET_ALTLINUX)) && defined (HAVE_SYSV_COMPAT)
 
                 if (endswith(i->name, ".service")) {
                         char *sysv;
@@ -4152,20 +4161,21 @@ static int install_info_apply(const char *verb, LookupPaths *paths, InstallInfo 
                 return -ENOENT;
         }
 
-        /* Consider unit files stored in /lib and /usr always enabled
-         * if they have no [Install] data. */
-        if (streq(verb, "is-enabled") &&
-            strv_isempty(i->aliases) &&
-            strv_isempty(i->wanted_by) &&
-            (path_startswith(filename, "/lib") ||
-             path_startswith(filename, "/usr")))
-                return 1;
-
         i->path = filename;
 
         if ((r = config_parse(filename, f, NULL, items, true, i)) < 0) {
                 fclose(f);
                 return r;
+        }
+
+        /* Consider unit files stored in /lib and /usr always enabled
+         * if they have no [Install] data. */
+        if (streq(verb, "is-enabled") &&
+            strv_isempty(i->aliases) &&
+            strv_isempty(i->wanted_by) &&
+            !path_startswith(filename, "/etc")) {
+                fclose(f);
+                return 1;
         }
 
         n_symlinks += strv_length(i->aliases);

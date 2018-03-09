@@ -3,11 +3,11 @@
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.exec"><a id="systemd.exec"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.exec — systemd execution environment configuration</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code>,
                 <code class="filename">systemd.socket</code>,
                 <code class="filename">systemd.mount</code>,
-                <code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id356383"/><h2>Description</h2><p>Unit configuration files for services, sockets
+                <code class="filename">systemd.swap</code></p></div><div class="refsect1" title="Description"><a id="id522487"/><h2>Description</h2><p>Unit configuration files for services, sockets,
                 mount points and swap devices share a subset of
                 configuration options which define the execution
                 environment of spawned processes.</p><p>This man page lists the configuration options
-                shared by these three unit types. See
+                shared by these four unit types. See
                 <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>
                 for the common options of all unit configuration
                 files, and
@@ -20,7 +20,7 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket], [Mount] resp. [Swap] section, depending on the unit
-                type.</p></div><div class="refsect1" title="Options"><a id="id356437"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                type.</p></div><div class="refsect1" title="Options"><a id="id522541"/><h2>Options</h2><div class="variablelist"><dl><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed
                                 processes.</p></dd><dt><span class="term"><code class="varname">RootDirectory=</code></span></dt><dd><p>Takes an absolute
@@ -251,7 +251,25 @@
                                 device node to use if standard input,
                                 output or stderr are connected to a
                                 TTY (see above). Defaults to
-                                <code class="filename">/dev/console</code>.</p></dd><dt><span class="term"><code class="varname">SyslogIdentifier=</code></span></dt><dd><p>Sets the process name
+                                <code class="filename">/dev/console</code>.</p></dd><dt><span class="term"><code class="varname">TTYReset=</code></span></dt><dd><p>Reset the terminal
+                                device specified with
+                                <code class="varname">TTYPath=</code> before and
+                                after execution. Defaults to
+                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">TTYVHangup=</code></span></dt><dd><p>Disconnect all clients
+                                which have opened the terminal device
+                                specified with
+                                <code class="varname">TTYPath=</code>
+                                before and after execution. Defaults
+                                to
+                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">TTYVTDisallocate=</code></span></dt><dd><p>If the the terminal
+                                device specified with
+                                <code class="varname">TTYPath=</code> is a
+                                virtual console terminal try to
+                                deallocate the TTY before and after
+                                execution. This ensures that the
+                                screen and scrollback buffer is
+                                cleared. Defaults to
+                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">SyslogIdentifier=</code></span></dt><dd><p>Sets the process name
                                 to prefix log lines sent to syslog or
                                 the kernel log buffer with. If not set
                                 defaults to the process name of the
@@ -528,7 +546,7 @@
                                 string replacements. This setting is
                                 unset by default, i.e. no utmp/wtmp
                                 entries are created or cleaned up for
-                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id366335"/><h2>See Also</h2><p>
+                                this service.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id564798"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

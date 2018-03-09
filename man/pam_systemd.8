@@ -2,12 +2,12 @@
 .\"     Title: pam_systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: pam_systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "PAM_SYSTEMD" "8" "04/21/2011" "systemd" "pam_systemd"
+.TH "PAM_SYSTEMD" "8" "06/16/2011" "systemd" "pam_systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -241,6 +241,11 @@ Takes a comma separated list of cgroup controllers in which hierarchies a user/s
 \fBreset\-controllers=\fR
 .RS 4
 Takes a comma separated list of cgroup controllers in which hierarchies the logged in processes will be reset to the root cgroup\&. If ommited, defaults to \*(Aqcpu\*(Aq, meaning that a \*(Aqcpu\*(Aq cgroup grouping inherited from the login manager will be reset for the processes of the logged in user\&.
+.RE
+.PP
+\fBdebug=\fR
+.RS 4
+Takes a boolean argument\&. If true, logs debugging information\&.
 .RE
 .PP
 Note that setting

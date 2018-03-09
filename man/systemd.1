@@ -2,12 +2,12 @@
 .\"     Title: systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD" "1" "04/21/2011" "systemd" "systemd"
+.TH "SYSTEMD" "1" "06/16/2011" "systemd" "systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -367,9 +367,9 @@ System unit directories
 .RS 4
 The systemd system manager reads unit configuration from various directories\&. Packages that want to install unit files shall place them in the directory returned by
 \fBpkg\-config systemd \-\-variable=systemdsystemunitdir\fR\&. Other directories checked are
-/usr/local/share/systemd/system
+/usr/local/lib/systemd/system
 and
-/usr/share/systemd/system\&. User configuration always takes precedence\&.
+/usr/lib/systemd/system\&. User configuration always takes precedence\&.
 \fBpkg\-config systemd \-\-variable=systemdsystemconfdir\fR
 returns the path of the system configuration directory\&. Packages should alter the content of these directories only with the
 \fBenable\fR

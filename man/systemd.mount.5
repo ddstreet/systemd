@@ -2,12 +2,12 @@
 .\"     Title: systemd.mount
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: systemd.mount
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.MOUNT" "5" "04/21/2011" "systemd" "systemd.mount"
+.TH "SYSTEMD\&.MOUNT" "5" "06/16/2011" "systemd" "systemd.mount"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -128,7 +128,7 @@ Directories of mount points (and any parent directories) are automatically creat
 .RS 4
 Configures the time to wait for the mount command to finish\&. If a command does not exit within the configured time the mount will be considered failed and be shut down again\&. All commands still running will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL\&. (See
 \fBKillMode=\fR
-below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 3min\&.
+below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
 .RE
 .PP
 \fIKillMode=\fR

@@ -2,12 +2,12 @@
 .\"     Title: tmpfiles.d
 .\"    Author: Brandon Philips <brandon@ifup.org>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: tmpfiles.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "TMPFILES\&.D" "5" "04/21/2011" "systemd" "tmpfiles.d"
+.TH "TMPFILES\&.D" "5" "06/16/2011" "systemd" "tmpfiles.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -31,18 +31,33 @@
 tmpfiles.d \- Configuration for creation, deletion and cleaning of volatile and temporary files
 .SH "SYNOPSIS"
 .PP
+/usr/lib/tmpfiles\&.d/*\&.conf
+.PP
 /etc/tmpfiles\&.d/*\&.conf
+.PP
+/run/tmpfiles\&.d/*\&.conf
 .SH "DESCRIPTION"
 .PP
 \fBsystemd\-tmpfiles\fR
-uses the configuration files in
-/etc/tmpfiles\&.d/
-to describe the creation, cleaning and removal of volatile and temporary files and directories which usually reside in directories such as
+uses the configuration files from the above directories to describe the creation, cleaning and removal of volatile and temporary files and directories which usually reside in directories such as
 /run
 or
-/tmp\&. Each configuration file is named in the style of
-/etc/tmpfiles\&.d/<program>\&.conf\&.
+/tmp\&.
 .SH "CONFIGURATION FORMAT"
+.PP
+Each configuration file is named in the style of
+<program>\&.conf\&. Files in
+/etc/
+overwrite files with the same name in
+/usr/lib/\&. Files in
+/run
+overwrite files with the same name in
+/etc/
+and
+/usr/lib/\&. Packages should install their configuration files in
+/usr/lib/, files in
+/etc/
+are reserved for the local administration, which possibly decides to overwrite the configurations installed from packages\&. All files are sorted by filename in alphabetical order, regardless in which of the directories they reside, to ensure that a specific configuration file takes precedence over another file with an alphabetically later name\&.
 .PP
 The configuration format is one line per path containing action, mode, ownership and age fields:
 .sp

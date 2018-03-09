@@ -2,12 +2,12 @@
 .\"     Title: systemd.unit
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: systemd.unit
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.UNIT" "5" "04/21/2011" "systemd" "systemd.unit"
+.TH "SYSTEMD\&.UNIT" "5" "06/16/2011" "systemd" "systemd.unit"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -260,6 +260,17 @@ Takes a boolean argument\&. If
 \fBtrue\fR
 this unit will not be stopped when isolating another unit\&. Defaults to
 \fBfalse\fR\&.
+.RE
+.PP
+\fIIgnoreOnSnapshot=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+this unit will not be included in snapshots\&. Defaults to
+\fBfalse\fR
+for device and snapshot units,
+\fBtrue\fR
+for the others\&.
 .RE
 .PP
 \fIStopWhenUnneeded=\fR

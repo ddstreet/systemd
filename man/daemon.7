@@ -2,12 +2,12 @@
 .\"     Title: daemon
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: daemon
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "DAEMON" "7" "04/21/2011" "systemd" "daemon"
+.TH "DAEMON" "7" "06/16/2011" "systemd" "daemon"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -384,7 +384,7 @@ might get activated either when Bluetooth hardware is plugged in, or when an app
 .SS "Activation on Boot"
 .PP
 Old\-style daemons are usually activated exclusively on boot (and manually by the administrator) via SysV init scripts, as detailed in the
-\m[blue]\fBLSB Linux Standard Base Core Specification\fR\m[]\&\s-2\u[1]\d\s+2\&. This method of activation is supported ubiquitiously on Linux init systems, both old\-style and new\-style systems\&. Among other issues SysV init scripts have the disadvantage of involving shell scripts in the boot process\&. New\-style init systems generally employ updated versions of activation, both during boot\-up and during runtime and using more minimal service description files\&.
+\m[blue]\fBLSB Linux Standard Base Core Specification\fR\m[]\&\s-2\u[1]\d\s+2\&. This method of activation is supported ubiquitously on Linux init systems, both old\-style and new\-style systems\&. Among other issues SysV init scripts have the disadvantage of involving shell scripts in the boot process\&. New\-style init systems generally employ updated versions of activation, both during boot\-up and during runtime and using more minimal service description files\&.
 .PP
 In systemd, if the developer or administrator wants to make sure a service or other unit is activated automatically on boot it is recommended to place a symlink to the unit file in the
 \&.wants/
@@ -626,7 +626,7 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test \-n "$with_systemdsystemunitdir" \-a "x$with_
 .RE
 .\}
 .PP
-This snippet allows automatic installation of the unit files on systemd machines, and optionally allows their installation even on machines lacking systemd\&. (Modification of this snippet for the user unit directory is left as excercise to the reader\&.)
+This snippet allows automatic installation of the unit files on systemd machines, and optionally allows their installation even on machines lacking systemd\&. (Modification of this snippet for the user unit directory is left as an excercise for the reader\&.)
 .PP
 Additionally, to ensure that
 \fBmake distcheck\fR

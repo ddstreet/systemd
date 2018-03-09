@@ -2,12 +2,12 @@
 .\"     Title: systemd.special
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: systemd.special
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SPECIAL" "7" "04/21/2011" "systemd" "systemd.special"
+.TH "SYSTEMD\&.SPECIAL" "7" "06/16/2011" "systemd" "systemd.special"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -99,7 +99,7 @@ multi\-user\&.target
 or
 graphical\&.target\&.
 .sp
-The default unit systemd starts at bootup can be overriden with the
+The default unit systemd starts at bootup can be overridden with the
 \fIsystemd\&.unit=\fR
 kernel command line option\&.
 .RE
@@ -164,7 +164,7 @@ mail\-transfer\-agent\&.target
 The mail transfer agent (MTA) service\&. Usually this should pull\-in all units necessary for sending/receiving mails on the local host\&.
 .sp
 systemd automatically adds dependencies of type After for this target unit to all SysV init script service units with an LSB header referring to the
-$mail\-transfer\-argent
+$mail\-transfer\-agent
 or
 $mail\-transport\-agent
 facilities, for compatibility with Debian\&.
@@ -246,13 +246,13 @@ facility\&.
 .PP
 runlevel2\&.target
 .RS 4
-This is a target that is called whever the SysV compatibility code asks for runlevel 2\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
+This is a target that is called whenever the SysV compatibility code asks for runlevel 2\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
 multi\-user\&.target\&.
 .RE
 .PP
 runlevel3\&.target
 .RS 4
-This is a target that is called whever the SysV compatibility code asks for runlevel 3\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
+This is a target that is called whenever the SysV compatibility code asks for runlevel 3\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
 multi\-user\&.target
 or
 graphical\&.target\&.
@@ -260,7 +260,7 @@ graphical\&.target\&.
 .PP
 runlevel4\&.target
 .RS 4
-This is a target that is called whever the SysV compatibility code asks for runlevel 4\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
+This is a target that is called whenever the SysV compatibility code asks for runlevel 4\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
 multi\-user\&.target
 or
 graphical\&.target\&.
@@ -268,7 +268,7 @@ graphical\&.target\&.
 .PP
 runlevel5\&.target
 .RS 4
-This is a target that is called whever the SysV compatibility code asks for runlevel 5\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
+This is a target that is called whenever the SysV compatibility code asks for runlevel 5\&. It is a good idea to make this an alias for (i\&.e\&. symlink to)
 multi\-user\&.target
 or
 graphical\&.target\&.

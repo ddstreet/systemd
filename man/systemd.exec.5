@@ -2,12 +2,12 @@
 .\"     Title: systemd.exec
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: systemd.exec
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.EXEC" "5" "04/21/2011" "systemd" "systemd.exec"
+.TH "SYSTEMD\&.EXEC" "5" "06/16/2011" "systemd" "systemd.exec"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -37,9 +37,9 @@ systemd\&.mount,
 systemd\&.swap
 .SH "DESCRIPTION"
 .PP
-Unit configuration files for services, sockets mount points and swap devices share a subset of configuration options which define the execution environment of spawned processes\&.
+Unit configuration files for services, sockets, mount points and swap devices share a subset of configuration options which define the execution environment of spawned processes\&.
 .PP
-This man page lists the configuration options shared by these three unit types\&. See
+This man page lists the configuration options shared by these four unit types\&. See
 \fBsystemd.unit\fR(5)
 for the common options of all unit configuration files, and
 \fBsystemd.service\fR(5),
@@ -244,6 +244,30 @@ the file descriptor used for standard output is duplicated for standard error\&.
 .RS 4
 Sets the terminal device node to use if standard input, output or stderr are connected to a TTY (see above)\&. Defaults to
 /dev/console\&.
+.RE
+.PP
+\fITTYReset=\fR
+.RS 4
+Reset the terminal device specified with
+\fITTYPath=\fR
+before and after execution\&. Defaults to
+no\&.
+.RE
+.PP
+\fITTYVHangup=\fR
+.RS 4
+Disconnect all clients which have opened the terminal device specified with
+\fITTYPath=\fR
+before and after execution\&. Defaults to
+no\&.
+.RE
+.PP
+\fITTYVTDisallocate=\fR
+.RS 4
+If the the terminal device specified with
+\fITTYPath=\fR
+is a virtual console terminal try to deallocate the TTY before and after execution\&. This ensures that the screen and scrollback buffer is cleared\&. Defaults to
+no\&.
 .RE
 .PP
 \fISyslogIdentifier=\fR

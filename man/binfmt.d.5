@@ -2,12 +2,12 @@
 .\"     Title: binfmt.d
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 04/21/2011
+.\"      Date: 06/16/2011
 .\"    Manual: binfmt.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "BINFMT\&.D" "5" "04/21/2011" "systemd" "binfmt.d"
+.TH "BINFMT\&.D" "5" "06/16/2011" "systemd" "binfmt.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -31,14 +31,15 @@
 binfmt.d \- Configure additional binary formats at boot
 .SH "SYNOPSIS"
 .PP
+/usr/lib/binfmt\&.d/*\&.conf
+.PP
 /etc/binfmt\&.d/*\&.conf
+.PP
+/run/binfmt\&.d/*\&.conf
 .SH "DESCRIPTION"
 .PP
 \fBsystemd\fR
-uses
-/etc/binfmt\&.d/
-to configure additional binary formats to register during boot in the kernel\&. Each configuration file is named in the style of
-/etc/binfmt\&.d/<program>\&.conf\&.
+uses files from the above directories to configure additional binary formats to register during boot in the kernel\&.
 .SH "CONFIGURATION FORMAT"
 .PP
 Each file contains a list of binfmt_misc kernel binary format rules\&. Consult
@@ -47,7 +48,19 @@ for more information on registration of additional binary formats and how to wri
 .PP
 Empty lines and lines beginning with ; and # are ignored\&. Note that this means you may not use ; and # as delimiter in binary format rules\&.
 .PP
-Configuration files are loaded in alphabetical order\&. To ensure that a specific rule takes precedence over another place it in a file with an alphabetically later name\&.
+Each configuration file is named in the style of
+<program>\&.conf\&. Files in
+/etc/
+overwrite files with the same name in
+/usr/lib/\&. Files in
+/run
+overwrite files with the same name in
+/etc/
+and
+/usr/lib/\&. Packages should install their configuration files in
+/usr/lib/, files in
+/etc/
+are reserved for the local administration, which possibly decides to overwrite the configurations installed from packages\&. All files are sorted by filename in alphabetical order, regardless in which of the directories they reside, to ensure that a specific configuration file takes precedence over another file with an alphabetically later name\&.
 .SH "EXAMPLE"
 .PP
 \fBExample\ \&1.\ \&/etc/binfmt.d/wine.conf example:\fR
