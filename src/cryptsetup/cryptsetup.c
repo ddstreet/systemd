@@ -1,71 +1,51 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
+
 /***
   This file is part of systemd.
 
   Copyright 2010 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation; either version 2.1 of the License, or
+  under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
+  General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include <errno.h>
-#include <mntent.h>
 #include <string.h>
+#include <errno.h>
 #include <sys/mman.h>
+#include <mntent.h>
 
-#include "sd-device.h"
+#include <libcryptsetup.h>
+#include <libudev.h>
 
-#include "alloc-util.h"
-#include "ask-password-api.h"
-#include "crypt-util.h"
-#include "device-util.h"
-#include "escape.h"
-#include "fileio.h"
 #include "log.h"
-#include "mount-util.h"
-#include "parse-util.h"
-#include "path-util.h"
-#include "string-util.h"
-#include "strv.h"
 #include "util.h"
+#include "strv.h"
+#include "ask-password-api.h"
+#include "def.h"
 
-/* internal helper */
-#define ANY_LUKS "LUKS"
-
-static const char *arg_type = NULL; /* ANY_LUKS, CRYPT_LUKS1, CRYPT_LUKS2, CRYPT_TCRYPT or CRYPT_PLAIN */
-static char *arg_cipher = NULL;
-static unsigned arg_key_size = 0;
-static int arg_key_slot = CRYPT_ANY_SLOT;
-static unsigned arg_keyfile_size = 0;
-static uint64_t arg_keyfile_offset = 0;
-static char *arg_hash = NULL;
-static char *arg_header = NULL;
-static unsigned arg_tries = 3;
-static bool arg_readonly = false;
-static bool arg_verify = false;
-static bool arg_discards = false;
-static bool arg_tcrypt_hidden = false;
-static bool arg_tcrypt_system = false;
-#ifdef CRYPT_TCRYPT_VERA_MODES
-static bool arg_tcrypt_veracrypt = false;
-#endif
-static char **arg_tcrypt_keyfiles = NULL;
-static uint64_t arg_offset = 0;
-static uint64_t arg_skip = 0;
-static usec_t arg_timeout = USEC_INFINITY;
+static const char *opt_type = NULL; /* LUKS1 or PLAIN */
+static char *opt_cipher = NULL;
+static unsigned opt_key_size = 0;
+static char *opt_hash = NULL;
+static unsigned opt_tries = 0;
+static bool opt_readonly = false;
+static bool opt_verify = false;
+static usec_t opt_timeout = DEFAULT_TIMEOUT_USEC;
 
 /* Options Debian's crypttab knows we don't:
 
+    offset=
+    skip=
     precheck=
     check=
     checkargs=
@@ -75,201 +55,101 @@ static usec_t arg_timeout = USEC_INFINITY;
 */
 
 static int parse_one_option(const char *option) {
-        const char *val;
-        int r;
-
         assert(option);
 
         /* Handled outside of this tool */
-        if (STR_IN_SET(option, "noauto", "auto", "nofail", "fail", "_netdev"))
+        if (streq(option, "noauto"))
                 return 0;
 
-        if ((val = startswith(option, "cipher="))) {
-                r = free_and_strdup(&arg_cipher, val);
-                if (r < 0)
-                        return log_oom();
+        if (startswith(option, "cipher=")) {
+                char *t;
 
-        } else if ((val = startswith(option, "size="))) {
+                if (!(t = strdup(option+7)))
+                        return -ENOMEM;
 
-                r = safe_atou(val, &arg_key_size);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to parse %s, ignoring: %m", option);
+                free(opt_cipher);
+                opt_cipher = t;
+
+        } else if (startswith(option, "size=")) {
+
+                if (safe_atou(option+5, &opt_key_size) < 0) {
+                        log_error("size= parse failure, ignoring.");
                         return 0;
                 }
 
-                if (arg_key_size % 8) {
-                        log_error("size= not a multiple of 8, ignoring.");
+        } else if (startswith(option, "hash=")) {
+                char *t;
+
+                if (!(t = strdup(option+5)))
+                        return -ENOMEM;
+
+                free(opt_hash);
+                opt_hash = t;
+
+        } else if (startswith(option, "tries=")) {
+
+                if (safe_atou(option+6, &opt_tries) < 0) {
+                        log_error("tries= parse failure, ignoring.");
                         return 0;
                 }
 
-                arg_key_size /= 8;
-
-        } else if ((val = startswith(option, "key-slot="))) {
-
-                arg_type = ANY_LUKS;
-                r = safe_atoi(val, &arg_key_slot);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to parse %s, ignoring: %m", option);
-                        return 0;
-                }
-
-        } else if ((val = startswith(option, "tcrypt-keyfile="))) {
-
-                arg_type = CRYPT_TCRYPT;
-                if (path_is_absolute(val)) {
-                        if (strv_extend(&arg_tcrypt_keyfiles, val) < 0)
-                                return log_oom();
-                } else
-                        log_error("Key file path \"%s\" is not absolute. Ignoring.", val);
-
-        } else if ((val = startswith(option, "keyfile-size="))) {
-
-                r = safe_atou(val, &arg_keyfile_size);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to parse %s, ignoring: %m", option);
-                        return 0;
-                }
-
-        } else if ((val = startswith(option, "keyfile-offset="))) {
-                uint64_t off;
-
-                r = safe_atou64(val, &off);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to parse %s, ignoring: %m", option);
-                        return 0;
-                }
-
-                if ((size_t) off != off) {
-                        /* https://gitlab.com/cryptsetup/cryptsetup/issues/359 */
-                        log_error("keyfile-offset= value would truncated to %zu, ignoring.", (size_t) off);
-                        return 0;
-                }
-
-                arg_keyfile_offset = off;
-
-        } else if ((val = startswith(option, "hash="))) {
-                r = free_and_strdup(&arg_hash, val);
-                if (r < 0)
-                        return log_oom();
-
-        } else if ((val = startswith(option, "header="))) {
-                arg_type = ANY_LUKS;
-
-                if (!path_is_absolute(val)) {
-                        log_error("Header path \"%s\" is not absolute, refusing.", val);
-                        return -EINVAL;
-                }
-
-                if (arg_header) {
-                        log_error("Duplicate header= option, refusing.");
-                        return -EINVAL;
-                }
-
-                arg_header = strdup(val);
-                if (!arg_header)
-                        return log_oom();
-
-        } else if ((val = startswith(option, "tries="))) {
-
-                r = safe_atou(val, &arg_tries);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to parse %s, ignoring: %m", option);
-                        return 0;
-                }
-
-        } else if (STR_IN_SET(option, "readonly", "read-only"))
-                arg_readonly = true;
+        } else if (streq(option, "readonly"))
+                opt_readonly = true;
         else if (streq(option, "verify"))
-                arg_verify = true;
-        else if (STR_IN_SET(option, "allow-discards", "discard"))
-                arg_discards = true;
+                opt_verify = true;
         else if (streq(option, "luks"))
-                arg_type = ANY_LUKS;
-        else if (streq(option, "tcrypt"))
-                arg_type = CRYPT_TCRYPT;
-        else if (streq(option, "tcrypt-hidden")) {
-                arg_type = CRYPT_TCRYPT;
-                arg_tcrypt_hidden = true;
-        } else if (streq(option, "tcrypt-system")) {
-                arg_type = CRYPT_TCRYPT;
-                arg_tcrypt_system = true;
-        } else if (streq(option, "tcrypt-veracrypt")) {
-#ifdef CRYPT_TCRYPT_VERA_MODES
-                arg_type = CRYPT_TCRYPT;
-                arg_tcrypt_veracrypt = true;
-#else
-                log_error("This version of cryptsetup does not support tcrypt-veracrypt; refusing.");
-                return -EINVAL;
-#endif
-        } else if (STR_IN_SET(option, "plain", "swap", "tmp"))
-                arg_type = CRYPT_PLAIN;
-        else if ((val = startswith(option, "timeout="))) {
+                opt_type = CRYPT_LUKS1;
+        else if (streq(option, "plain") ||
+                 streq(option, "swap") ||
+                 streq(option, "tmp"))
+                opt_type = CRYPT_PLAIN;
+        else if (startswith(option, "timeout=")) {
 
-                r = parse_sec_fix_0(val, &arg_timeout);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to parse %s, ignoring: %m", option);
+                if (parse_usec(option+8, &opt_timeout) < 0) {
+                        log_error("timeout= parse failure, ignoring.");
                         return 0;
                 }
-
-        } else if ((val = startswith(option, "offset="))) {
-
-                r = safe_atou64(val, &arg_offset);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to parse %s: %m", option);
-
-        } else if ((val = startswith(option, "skip="))) {
-
-                r = safe_atou64(val, &arg_skip);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to parse %s: %m", option);
 
         } else if (!streq(option, "none"))
-                log_warning("Encountered unknown /etc/crypttab option '%s', ignoring.", option);
+                log_error("Encountered unknown /etc/crypttab option '%s', ignoring.", option);
 
         return 0;
 }
 
 static int parse_options(const char *options) {
-        const char *word, *state;
+        char *state;
+        char *w;
         size_t l;
-        int r;
 
         assert(options);
 
-        FOREACH_WORD_SEPARATOR(word, l, options, ",", state) {
-                _cleanup_free_ char *o;
+        FOREACH_WORD_SEPARATOR(w, l, options, ",", state) {
+                char *o;
+                int r;
 
-                o = strndup(word, l);
-                if (!o)
+                if (!(o = strndup(w, l)))
                         return -ENOMEM;
+
                 r = parse_one_option(o);
+                free(o);
+
                 if (r < 0)
                         return r;
-        }
-
-        /* sanity-check options */
-        if (arg_type != NULL && !streq(arg_type, CRYPT_PLAIN)) {
-                if (arg_offset)
-                      log_warning("offset= ignored with type %s", arg_type);
-                if (arg_skip)
-                      log_warning("skip= ignored with type %s", arg_type);
         }
 
         return 0;
 }
 
-static char* disk_description(const char *path) {
+static void log_glue(int level, const char *msg, void *usrptr) {
+        log_debug("%s", msg);
+}
 
-        static const char name_fields[] =
-                "ID_PART_ENTRY_NAME\0"
-                "DM_NAME\0"
-                "ID_MODEL_FROM_DATABASE\0"
-                "ID_MODEL\0";
-
-        _cleanup_(sd_device_unrefp) sd_device *device = NULL;
+static char *disk_description(const char *path) {
+        struct udev *udev = NULL;
+        struct udev_device *device = NULL;
         struct stat st;
-        const char *i;
-        int r;
+        char *description = NULL;
+        const char *model;
 
         assert(path);
 
@@ -279,292 +159,53 @@ static char* disk_description(const char *path) {
         if (!S_ISBLK(st.st_mode))
                 return NULL;
 
-        r = sd_device_new_from_devnum(&device, 'b', st.st_rdev);
-        if (r < 0)
+        if (!(udev = udev_new()))
                 return NULL;
 
-        NULSTR_FOREACH(i, name_fields) {
-                const char *name;
+        if (!(device = udev_device_new_from_devnum(udev, 'b', st.st_rdev)))
+                goto finish;
 
-                r = sd_device_get_property_value(device, i, &name);
-                if (r >= 0 && !isempty(name))
-                        return strdup(name);
-        }
+        if ((model = udev_device_get_property_value(device, "ID_MODEL_FROM_DATABASE")) ||
+            (model = udev_device_get_property_value(device, "ID_MODEL")) ||
+            (model = udev_device_get_property_value(device, "DM_NAME")))
+                description = strdup(model);
 
-        return NULL;
+finish:
+        if (device)
+                udev_device_unref(device);
+
+        if (udev)
+                udev_unref(udev);
+
+        return description;
 }
 
 static char *disk_mount_point(const char *label) {
-        _cleanup_free_ char *device = NULL;
-        _cleanup_endmntent_ FILE *f = NULL;
+        char *mp = NULL, *device = NULL;
+        FILE *f = NULL;
         struct mntent *m;
 
         /* Yeah, we don't support native systemd unit files here for now */
 
         if (asprintf(&device, "/dev/mapper/%s", label) < 0)
-                return NULL;
+                goto finish;
 
-        f = setmntent("/etc/fstab", "re");
-        if (!f)
-                return NULL;
+        if (!(f = setmntent("/etc/fstab", "r")))
+                goto finish;
 
         while ((m = getmntent(f)))
-                if (path_equal(m->mnt_fsname, device))
-                        return strdup(m->mnt_dir);
-
-        return NULL;
-}
-
-static int get_password(const char *vol, const char *src, usec_t until, bool accept_cached, char ***ret) {
-        _cleanup_free_ char *description = NULL, *name_buffer = NULL, *mount_point = NULL, *text = NULL, *disk_path = NULL;
-        _cleanup_strv_free_erase_ char **passwords = NULL;
-        const char *name = NULL;
-        char **p, *id;
-        int r = 0;
-
-        assert(vol);
-        assert(src);
-        assert(ret);
-
-        description = disk_description(src);
-        mount_point = disk_mount_point(vol);
-
-        disk_path = cescape(src);
-        if (!disk_path)
-                return log_oom();
-
-        if (description && streq(vol, description))
-                /* If the description string is simply the
-                 * volume name, then let's not show this
-                 * twice */
-                description = mfree(description);
-
-        if (mount_point && description)
-                r = asprintf(&name_buffer, "%s (%s) on %s", description, vol, mount_point);
-        else if (mount_point)
-                r = asprintf(&name_buffer, "%s on %s", vol, mount_point);
-        else if (description)
-                r = asprintf(&name_buffer, "%s (%s)", description, vol);
-
-        if (r < 0)
-                return log_oom();
-
-        name = name_buffer ? name_buffer : vol;
-
-        if (asprintf(&text, "Please enter passphrase for disk %s!", name) < 0)
-                return log_oom();
-
-        id = strjoina("cryptsetup:", disk_path);
-
-        r = ask_password_auto(text, "drive-harddisk", id, "cryptsetup", until,
-                              ASK_PASSWORD_PUSH_CACHE | (accept_cached*ASK_PASSWORD_ACCEPT_CACHED),
-                              &passwords);
-        if (r < 0)
-                return log_error_errno(r, "Failed to query password: %m");
-
-        if (arg_verify) {
-                _cleanup_strv_free_erase_ char **passwords2 = NULL;
-
-                assert(strv_length(passwords) == 1);
-
-                if (asprintf(&text, "Please enter passphrase for disk %s! (verification)", name) < 0)
-                        return log_oom();
-
-                id = strjoina("cryptsetup-verification:", disk_path);
-
-                r = ask_password_auto(text, "drive-harddisk", id, "cryptsetup", until, ASK_PASSWORD_PUSH_CACHE, &passwords2);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to query verification password: %m");
-
-                assert(strv_length(passwords2) == 1);
-
-                if (!streq(passwords[0], passwords2[0])) {
-                        log_warning("Passwords did not match, retrying.");
-                        return -EAGAIN;
-                }
-        }
-
-        strv_uniq(passwords);
-
-        STRV_FOREACH(p, passwords) {
-                char *c;
-
-                if (strlen(*p)+1 >= arg_key_size)
-                        continue;
-
-                /* Pad password if necessary */
-                c = new(char, arg_key_size);
-                if (!c)
-                        return log_oom();
-
-                strncpy(c, *p, arg_key_size);
-                free(*p);
-                *p = c;
-        }
-
-        *ret = passwords;
-        passwords = NULL;
-
-        return 0;
-}
-
-static int attach_tcrypt(
-                struct crypt_device *cd,
-                const char *name,
-                const char *key_file,
-                char **passwords,
-                uint32_t flags) {
-
-        int r = 0;
-        _cleanup_free_ char *passphrase = NULL;
-        struct crypt_params_tcrypt params = {
-                .flags = CRYPT_TCRYPT_LEGACY_MODES,
-                .keyfiles = (const char **)arg_tcrypt_keyfiles,
-                .keyfiles_count = strv_length(arg_tcrypt_keyfiles)
-        };
-
-        assert(cd);
-        assert(name);
-        assert(key_file || (passwords && passwords[0]));
-
-        if (arg_tcrypt_hidden)
-                params.flags |= CRYPT_TCRYPT_HIDDEN_HEADER;
-
-        if (arg_tcrypt_system)
-                params.flags |= CRYPT_TCRYPT_SYSTEM_HEADER;
-
-#ifdef CRYPT_TCRYPT_VERA_MODES
-        if (arg_tcrypt_veracrypt)
-                params.flags |= CRYPT_TCRYPT_VERA_MODES;
-#endif
-
-        if (key_file) {
-                r = read_one_line_file(key_file, &passphrase);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to read password file '%s': %m", key_file);
-                        return -EAGAIN;
+                if (path_equal(m->mnt_fsname, device)) {
+                        mp = strdup(m->mnt_dir);
+                        break;
                 }
 
-                params.passphrase = passphrase;
-        } else
-                params.passphrase = passwords[0];
-        params.passphrase_size = strlen(params.passphrase);
+finish:
+        if (f)
+                endmntent(f);
 
-        r = crypt_load(cd, CRYPT_TCRYPT, &params);
-        if (r < 0) {
-                if (key_file && r == -EPERM) {
-                        log_error("Failed to activate using password file '%s'.", key_file);
-                        return -EAGAIN;
-                }
-                return r;
-        }
+        free(device);
 
-        return crypt_activate_by_volume_key(cd, name, NULL, 0, flags);
-}
-
-static int attach_luks_or_plain(struct crypt_device *cd,
-                                const char *name,
-                                const char *key_file,
-                                const char *data_device,
-                                char **passwords,
-                                uint32_t flags) {
-        int r = 0;
-        bool pass_volume_key = false;
-
-        assert(cd);
-        assert(name);
-        assert(key_file || passwords);
-
-        if (!arg_type || STR_IN_SET(arg_type, ANY_LUKS, CRYPT_LUKS1)) {
-                r = crypt_load(cd, CRYPT_LUKS, NULL);
-                if (r < 0) {
-                        log_error("crypt_load() failed on device %s.\n", crypt_get_device_name(cd));
-                        return r;
-                }
-
-                if (data_device)
-                        r = crypt_set_data_device(cd, data_device);
-        }
-
-        if ((!arg_type && r < 0) || streq_ptr(arg_type, CRYPT_PLAIN)) {
-                struct crypt_params_plain params = {
-                        .offset = arg_offset,
-                        .skip = arg_skip,
-                };
-                const char *cipher, *cipher_mode;
-                _cleanup_free_ char *truncated_cipher = NULL;
-
-                if (arg_hash) {
-                        /* plain isn't a real hash type. it just means "use no hash" */
-                        if (!streq(arg_hash, "plain"))
-                                params.hash = arg_hash;
-                } else if (!key_file)
-                        /* for CRYPT_PLAIN, the behaviour of cryptsetup
-                         * package is to not hash when a key file is provided */
-                        params.hash = "ripemd160";
-
-                if (arg_cipher) {
-                        size_t l;
-
-                        l = strcspn(arg_cipher, "-");
-                        truncated_cipher = strndup(arg_cipher, l);
-                        if (!truncated_cipher)
-                                return log_oom();
-
-                        cipher = truncated_cipher;
-                        cipher_mode = arg_cipher[l] ? arg_cipher+l+1 : "plain";
-                } else {
-                        cipher = "aes";
-                        cipher_mode = "cbc-essiv:sha256";
-                }
-
-                /* for CRYPT_PLAIN limit reads
-                 * from keyfile to key length, and
-                 * ignore keyfile-size */
-                arg_keyfile_size = arg_key_size;
-
-                /* In contrast to what the name
-                 * crypt_setup() might suggest this
-                 * doesn't actually format anything,
-                 * it just configures encryption
-                 * parameters when used for plain
-                 * mode. */
-                r = crypt_format(cd, CRYPT_PLAIN, cipher, cipher_mode, NULL, NULL, arg_keyfile_size, &params);
-
-                /* hash == NULL implies the user passed "plain" */
-                pass_volume_key = (params.hash == NULL);
-        }
-
-        if (r < 0)
-                return log_error_errno(r, "Loading of cryptographic parameters failed: %m");
-
-        log_info("Set cipher %s, mode %s, key size %i bits for device %s.",
-                 crypt_get_cipher(cd),
-                 crypt_get_cipher_mode(cd),
-                 crypt_get_volume_key_size(cd)*8,
-                 crypt_get_device_name(cd));
-
-        if (key_file) {
-                r = crypt_activate_by_keyfile_offset(cd, name, arg_key_slot, key_file, arg_keyfile_size, arg_keyfile_offset, flags);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to activate with key file '%s': %m", key_file);
-                        return -EAGAIN;
-                }
-        } else {
-                char **p;
-
-                STRV_FOREACH(p, passwords) {
-                        if (pass_volume_key)
-                                r = crypt_activate_by_volume_key(cd, name, *p, arg_key_size, flags);
-                        else
-                                r = crypt_activate_by_passphrase(cd, name, arg_key_slot, *p, strlen(*p), flags);
-
-                        if (r >= 0)
-                                break;
-                }
-        }
-
-        return r;
+        return mp;
 }
 
 static int help(void) {
@@ -579,17 +220,21 @@ static int help(void) {
 }
 
 int main(int argc, char *argv[]) {
-        _cleanup_(crypt_freep) struct crypt_device *cd = NULL;
-        int r = -EINVAL;
+        int r = EXIT_FAILURE;
+        struct crypt_device *cd = NULL;
+        char **passwords = NULL, *truncated_cipher = NULL;
+        const char *cipher = NULL, *cipher_mode = NULL, *hash = NULL, *name = NULL;
+        char *description = NULL, *name_buffer = NULL, *mount_point = NULL;
+        unsigned keyfile_size = 0;
 
         if (argc <= 1) {
-                r = help();
-                goto finish;
+                help();
+                return EXIT_SUCCESS;
         }
 
         if (argc < 3) {
                 log_error("This program requires at least two arguments.");
-                goto finish;
+                return EXIT_FAILURE;
         }
 
         log_set_target(LOG_TARGET_AUTO);
@@ -600,10 +245,11 @@ int main(int argc, char *argv[]) {
 
         if (streq(argv[1], "attach")) {
                 uint32_t flags = 0;
-                unsigned tries;
+                int k;
+                unsigned try;
+                const char *key_file = NULL;
                 usec_t until;
                 crypt_status_info status;
-                const char *key_file = NULL;
 
                 /* Arguments: systemd-cryptsetup attach VOLUME SOURCE-DEVICE [PASSWORD] [OPTIONS] */
 
@@ -618,118 +264,241 @@ int main(int argc, char *argv[]) {
                     !streq(argv[4], "none")) {
 
                         if (!path_is_absolute(argv[4]))
-                                log_error("Password file path '%s' is not absolute. Ignoring.", argv[4]);
+                                log_error("Password file path %s is not absolute. Ignoring.", argv[4]);
                         else
                                 key_file = argv[4];
                 }
 
-                if (argc >= 6 && argv[5][0] && !streq(argv[5], "-")) {
-                        if (parse_options(argv[5]) < 0)
-                                goto finish;
-                }
+                if (argc >= 6 && argv[5][0] && !streq(argv[5], "-"))
+                        parse_options(argv[5]);
 
                 /* A delicious drop of snake oil */
                 mlockall(MCL_FUTURE);
 
-                if (arg_header) {
-                        log_debug("LUKS header: %s", arg_header);
-                        r = crypt_init(&cd, arg_header);
-                } else
-                        r = crypt_init(&cd, argv[3]);
-                if (r < 0) {
-                        log_error_errno(r, "crypt_init() failed: %m");
+                description = disk_description(argv[3]);
+                mount_point = disk_mount_point(argv[2]);
+
+                if (description && streq(argv[2], description)) {
+                        /* If the description string is simply the
+                         * volume name, then let's not show this
+                         * twice */
+                        free(description);
+                        description = NULL;
+                }
+
+                if (mount_point && description)
+                        asprintf(&name_buffer, "%s (%s) on %s", description, argv[2], mount_point);
+                else if (mount_point)
+                        asprintf(&name_buffer, "%s on %s", argv[2], mount_point);
+                else if (description)
+                        asprintf(&name_buffer, "%s (%s)", description, argv[2]);
+
+                name = name_buffer ? name_buffer : argv[2];
+
+                if ((k = crypt_init(&cd, argv[3]))) {
+                        log_error("crypt_init() failed: %s", strerror(-k));
                         goto finish;
                 }
 
-                crypt_set_log_callback(cd, cryptsetup_log_glue, NULL);
+                crypt_set_log_callback(cd, log_glue, NULL);
 
                 status = crypt_status(cd, argv[2]);
-                if (IN_SET(status, CRYPT_ACTIVE, CRYPT_BUSY)) {
+                if (status == CRYPT_ACTIVE || status == CRYPT_BUSY) {
                         log_info("Volume %s already active.", argv[2]);
-                        r = 0;
+                        r = EXIT_SUCCESS;
                         goto finish;
                 }
 
-                if (arg_readonly)
+                if (opt_readonly)
                         flags |= CRYPT_ACTIVATE_READONLY;
 
-                if (arg_discards)
-                        flags |= CRYPT_ACTIVATE_ALLOW_DISCARDS;
-
-                if (arg_timeout == USEC_INFINITY)
-                        until = 0;
+                if (opt_timeout > 0)
+                        until = now(CLOCK_MONOTONIC) + opt_timeout;
                 else
-                        until = now(CLOCK_MONOTONIC) + arg_timeout;
+                        until = 0;
 
-                arg_key_size = (arg_key_size > 0 ? arg_key_size : (256 / 8));
+                opt_tries = opt_tries > 0 ? opt_tries : 3;
+                opt_key_size = (opt_key_size > 0 ? opt_key_size : 256);
+                hash = opt_hash ? opt_hash : "ripemd160";
 
-                if (key_file) {
-                        struct stat st;
+                if (opt_cipher) {
+                        size_t l;
 
-                        /* Ideally we'd do this on the open fd, but since this is just a
-                         * warning it's OK to do this in two steps. */
-                        if (stat(key_file, &st) >= 0 && S_ISREG(st.st_mode) && (st.st_mode & 0005))
-                                log_warning("Key file %s is world-readable. This is not a good idea!", key_file);
+                        l = strcspn(opt_cipher, "-");
+
+                        if (!(truncated_cipher = strndup(opt_cipher, l))) {
+                                log_error("Out of memory");
+                                goto finish;
+                        }
+
+                        cipher = truncated_cipher;
+                        cipher_mode = opt_cipher[l] ? opt_cipher+l+1 : "plain";
+                } else {
+                        cipher = "aes";
+                        cipher_mode = "cbc-essiv:sha256";
                 }
 
-                for (tries = 0; arg_tries == 0 || tries < arg_tries; tries++) {
-                        _cleanup_strv_free_erase_ char **passwords = NULL;
+                for (try = 0; try < opt_tries; try++) {
+                        bool pass_volume_key = false;
+
+                        strv_free(passwords);
+                        passwords = NULL;
 
                         if (!key_file) {
-                                r = get_password(argv[2], argv[3], until, tries == 0 && !arg_verify, &passwords);
-                                if (r == -EAGAIN)
-                                        continue;
-                                if (r < 0)
+                                char *text;
+                                char **p;
+
+                                if (asprintf(&text, "Please enter passphrase for disk %s!", name) < 0) {
+                                        log_error("Out of memory");
                                         goto finish;
+                                }
+
+                                k = ask_password_auto(text, "drive-harddisk", until, try == 0 && !opt_verify, &passwords);
+                                free(text);
+
+                                if (k < 0) {
+                                        log_error("Failed to query password: %s", strerror(-k));
+                                        goto finish;
+                                }
+
+                                if (opt_verify) {
+                                        char **passwords2 = NULL;
+
+                                        assert(strv_length(passwords) == 1);
+
+                                        if (asprintf(&text, "Please enter passphrase for disk %s! (verification)", name) < 0) {
+                                                log_error("Out of memory");
+                                                goto finish;
+                                        }
+
+                                        k = ask_password_auto(text, "drive-harddisk", until, false, &passwords2);
+                                        free(text);
+
+                                        if (k < 0) {
+                                                log_error("Failed to query verification password: %s", strerror(-k));
+                                                goto finish;
+                                        }
+
+                                        assert(strv_length(passwords2) == 1);
+
+                                        if (!streq(passwords[0], passwords2[0])) {
+                                                log_warning("Passwords did not match, retrying.");
+                                                strv_free(passwords2);
+                                                continue;
+                                        }
+
+                                        strv_free(passwords2);
+                                }
+
+                                strv_uniq(passwords);
+
+                                STRV_FOREACH(p, passwords) {
+                                        char *c;
+
+                                        if (strlen(*p)+1 >= opt_key_size)
+                                                continue;
+
+                                        /* Pad password if necessary */
+                                        if (!(c = new(char, opt_key_size))) {
+                                                log_error("Out of memory.");
+                                                goto finish;
+                                        }
+
+                                        strncpy(c, *p, opt_key_size);
+                                        free(*p);
+                                        *p = c;
+                                }
                         }
 
-                        if (streq_ptr(arg_type, CRYPT_TCRYPT))
-                                r = attach_tcrypt(cd, argv[2], key_file, passwords, flags);
-                        else
-                                r = attach_luks_or_plain(cd,
-                                                         argv[2],
-                                                         key_file,
-                                                         arg_header ? argv[3] : NULL,
-                                                         passwords,
-                                                         flags);
-                        if (r >= 0)
-                                break;
-                        if (r == -EAGAIN) {
-                                key_file = NULL;
-                                continue;
+                        k = 0;
+
+                        if (!opt_type || streq(opt_type, CRYPT_LUKS1))
+                                k = crypt_load(cd, CRYPT_LUKS1, NULL);
+
+                        if ((!opt_type && k < 0) || streq_ptr(opt_type, CRYPT_PLAIN)) {
+                                struct crypt_params_plain params;
+
+                                zero(params);
+                                params.hash = hash;
+
+                                /* In contrast to what the name
+                                 * crypt_setup() might suggest this
+                                 * doesn't actually format anything,
+                                 * it just configures encryption
+                                 * parameters when used for plain
+                                 * mode. */
+                                k = crypt_format(cd, CRYPT_PLAIN,
+                                                 cipher,
+                                                 cipher_mode,
+                                                 NULL,
+                                                 NULL,
+                                                 opt_key_size / 8,
+                                                 &params);
+
+                                pass_volume_key = streq(hash, "plain");
+
+                               /* for CRYPT_PLAIN limit reads
+                                * from keyfile to key length */
+                                keyfile_size = opt_key_size / 8;
                         }
-                        if (r != -EPERM) {
-                                log_error_errno(r, "Failed to activate: %m");
+
+                        if (k < 0) {
+                                log_error("Loading of cryptographic parameters failed: %s", strerror(-k));
+                                goto finish;
+                        }
+
+                        log_info("Set cipher %s, mode %s, key size %i bits for device %s.",
+                                 crypt_get_cipher(cd),
+                                 crypt_get_cipher_mode(cd),
+                                 crypt_get_volume_key_size(cd)*8,
+                                 argv[3]);
+
+                        if (key_file)
+                                k = crypt_activate_by_keyfile(cd, argv[2], CRYPT_ANY_SLOT, key_file, keyfile_size, flags);
+                        else {
+                                char **p;
+
+                                STRV_FOREACH(p, passwords) {
+
+                                        if (pass_volume_key)
+                                                k = crypt_activate_by_volume_key(cd, argv[2], *p, opt_key_size, flags);
+                                        else
+                                                k = crypt_activate_by_passphrase(cd, argv[2], CRYPT_ANY_SLOT, *p, strlen(*p), flags);
+
+                                        if (k >= 0)
+                                                break;
+                                }
+                        }
+
+                        if (k >= 0)
+                                break;
+
+                        if (k != -EPERM) {
+                                log_error("Failed to activate: %s", strerror(-k));
                                 goto finish;
                         }
 
                         log_warning("Invalid passphrase.");
                 }
 
-                if (arg_tries != 0 && tries >= arg_tries) {
-                        log_error("Too many attempts; giving up.");
-                        r = -EPERM;
+                if (try >= opt_tries) {
+                        log_error("Too many attempts.");
+                        r = EXIT_FAILURE;
                         goto finish;
                 }
 
         } else if (streq(argv[1], "detach")) {
+                int k;
 
-                r = crypt_init_by_name(&cd, argv[2]);
-                if (r == -ENODEV) {
-                        log_info("Volume %s already inactive.", argv[2]);
-                        r = 0;
-                        goto finish;
-                }
-                if (r < 0) {
-                        log_error_errno(r, "crypt_init_by_name() failed: %m");
+                if ((k = crypt_init_by_name(&cd, argv[2]))) {
+                        log_error("crypt_init() failed: %s", strerror(-k));
                         goto finish;
                 }
 
-                crypt_set_log_callback(cd, cryptsetup_log_glue, NULL);
+                crypt_set_log_callback(cd, log_glue, NULL);
 
-                r = crypt_deactivate(cd, argv[2]);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to deactivate: %m");
+                if ((k = crypt_deactivate(cd, argv[2])) < 0) {
+                        log_error("Failed to deactivate: %s", strerror(-k));
                         goto finish;
                 }
 
@@ -738,13 +507,23 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
-        r = 0;
+        r = EXIT_SUCCESS;
 
 finish:
-        free(arg_cipher);
-        free(arg_hash);
-        free(arg_header);
-        strv_free(arg_tcrypt_keyfiles);
 
-        return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+        if (cd)
+                crypt_free(cd);
+
+        free(opt_cipher);
+        free(opt_hash);
+
+        free(truncated_cipher);
+
+        strv_free(passwords);
+
+        free(description);
+        free(mount_point);
+        free(name_buffer);
+
+        return r;
 }

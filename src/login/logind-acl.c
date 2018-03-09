@@ -1,37 +1,33 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
+
 /***
   This file is part of systemd.
 
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation; either version 2.1 of the License, or
+  under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
+  General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+#include <assert.h>
+#include <sys/acl.h>
+#include <acl/libacl.h>
 #include <errno.h>
 #include <string.h>
 
-#include "acl-util.h"
-#include "alloc-util.h"
-#include "dirent-util.h"
-#include "escape.h"
-#include "fd-util.h"
-#include "format-util.h"
 #include "logind-acl.h"
-#include "set.h"
-#include "string-util.h"
-#include "udev-util.h"
 #include "util.h"
+#include "acl-util.h"
 
 static int flush_acl(acl_t acl) {
         acl_entry_t i;
@@ -181,113 +177,72 @@ int devnode_acl_all(struct udev *udev,
                     bool del, uid_t old_uid,
                     bool add, uid_t new_uid) {
 
-        _cleanup_udev_enumerate_unref_ struct udev_enumerate *e = NULL;
         struct udev_list_entry *item = NULL, *first = NULL;
-        _cleanup_set_free_free_ Set *nodes = NULL;
-        _cleanup_closedir_ DIR *dir = NULL;
-        struct dirent *dent;
-        Iterator i;
-        char *n;
+        struct udev_enumerate *e;
         int r;
 
         assert(udev);
 
-        nodes = set_new(&path_hash_ops);
-        if (!nodes)
-                return -ENOMEM;
+        if (isempty(seat))
+                seat = "seat0";
 
         e = udev_enumerate_new(udev);
         if (!e)
                 return -ENOMEM;
-
-        if (isempty(seat))
-                seat = "seat0";
 
         /* We can only match by one tag in libudev. We choose
          * "uaccess" for that. If we could match for two tags here we
          * could add the seat name as second match tag, but this would
          * be hardly optimizable in libudev, and hence checking the
          * second tag manually in our loop is a good solution. */
+
         r = udev_enumerate_add_match_tag(e, "uaccess");
         if (r < 0)
-                return r;
-
-        r = udev_enumerate_add_match_is_initialized(e);
-        if (r < 0)
-                return r;
+                goto finish;
 
         r = udev_enumerate_scan_devices(e);
         if (r < 0)
-                return r;
+                goto finish;
 
         first = udev_enumerate_get_list_entry(e);
         udev_list_entry_foreach(item, first) {
-                _cleanup_udev_device_unref_ struct udev_device *d = NULL;
+                struct udev_device *d;
                 const char *node, *sn;
 
                 d = udev_device_new_from_syspath(udev, udev_list_entry_get_name(item));
-                if (!d)
-                        return -ENOMEM;
+                if (!d) {
+                        r = -ENOMEM;
+                        goto finish;
+                }
 
                 sn = udev_device_get_property_value(d, "ID_SEAT");
                 if (isempty(sn))
                         sn = "seat0";
 
-                if (!streq(seat, sn))
+                if (!streq(seat, sn)) {
+                        udev_device_unref(d);
                         continue;
+                }
 
                 node = udev_device_get_devnode(d);
-                /* In case people mistag devices with nodes, we need to ignore this */
-                if (!node)
+                if (!node) {
+                        /* In case people mistag devices with nodes, we need to ignore this */
+                        udev_device_unref(d);
                         continue;
-
-                n = strdup(node);
-                if (!n)
-                        return -ENOMEM;
-
-                log_debug("Found udev node %s for seat %s", n, seat);
-                r = set_consume(nodes, n);
-                if (r < 0)
-                        return r;
-        }
-
-        /* udev exports "dead" device nodes to allow module on-demand loading,
-         * these devices are not known to the kernel at this moment */
-        dir = opendir("/run/udev/static_node-tags/uaccess");
-        if (dir) {
-                FOREACH_DIRENT(dent, dir, return -errno) {
-                        _cleanup_free_ char *unescaped_devname = NULL;
-
-                        if (cunescape(dent->d_name, UNESCAPE_RELAX, &unescaped_devname) < 0)
-                                return -ENOMEM;
-
-                        n = strappend("/dev/", unescaped_devname);
-                        if (!n)
-                                return -ENOMEM;
-
-                        log_debug("Found static node %s for seat %s", n, seat);
-                        r = set_consume(nodes, n);
-                        if (r == -EEXIST)
-                                continue;
-                        if (r < 0)
-                                return r;
                 }
+
+                log_debug("Fixing up %s for seat %s...", node, sn);
+
+                r = devnode_acl(node, flush, del, old_uid, add, new_uid);
+                udev_device_unref(d);
+
+                if (r < 0)
+                        goto finish;
         }
 
-        r = 0;
-        SET_FOREACH(n, nodes, i) {
-                int k;
-
-                log_debug("Changing ACLs at %s for seat %s (uid "UID_FMT"→"UID_FMT"%s%s)",
-                          n, seat, old_uid, new_uid,
-                          del ? " del" : "", add ? " add" : "");
-
-                k = devnode_acl(n, flush, del, old_uid, add, new_uid);
-                if (k == -ENOENT)
-                        log_debug("Device %s disappeared while setting ACLs", n);
-                else if (k < 0 && r == 0)
-                        r = k;
-        }
+finish:
+        if (e)
+                udev_enumerate_unref(e);
 
         return r;
 }

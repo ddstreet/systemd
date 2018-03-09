@@ -1,701 +1,496 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
+
 /***
   This file is part of systemd.
 
   Copyright 2010 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation; either version 2.1 of the License, or
+  under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
+  General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include <errno.h>
-#include <getopt.h>
-#include <locale.h>
-#include <string.h>
+#include <dbus/dbus.h>
 #include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <getopt.h>
+#include <pwd.h>
 
-#include "sd-bus.h"
-
-#include "alloc-util.h"
-#include "bus-error.h"
-#include "bus-unit-util.h"
-#include "bus-util.h"
-#include "cgroup-show.h"
-#include "cgroup-util.h"
 #include "log.h"
-#include "logs-show.h"
+#include "util.h"
 #include "macro.h"
 #include "pager.h"
-#include "parse-util.h"
-#include "process-util.h"
-#include "sigbus.h"
-#include "signal-util.h"
-#include "spawn-polkit-agent.h"
+#include "dbus-common.h"
+#include "build.h"
 #include "strv.h"
+#include "cgroup-show.h"
 #include "sysfs-show.h"
-#include "terminal-util.h"
-#include "unit-name.h"
-#include "user-util.h"
-#include "util.h"
-#include "verbs.h"
 
 static char **arg_property = NULL;
 static bool arg_all = false;
-static bool arg_value = false;
-static bool arg_full = false;
 static bool arg_no_pager = false;
-static bool arg_legend = true;
 static const char *arg_kill_who = NULL;
 static int arg_signal = SIGTERM;
-static BusTransport arg_transport = BUS_TRANSPORT_LOCAL;
-static char *arg_host = NULL;
-static bool arg_ask_password = true;
-static unsigned arg_lines = 10;
-static OutputMode arg_output = OUTPUT_SHORT;
+static enum transport {
+        TRANSPORT_NORMAL,
+        TRANSPORT_SSH,
+        TRANSPORT_POLKIT
+} arg_transport = TRANSPORT_NORMAL;
+static const char *arg_host = NULL;
 
-static OutputFlags get_output_flags(void) {
+static bool on_tty(void) {
+        static int t = -1;
 
-        return
-                arg_all * OUTPUT_SHOW_ALL |
-                (arg_full || !on_tty() || pager_have()) * OUTPUT_FULL_WIDTH |
-                colors_enabled() * OUTPUT_COLOR;
+        /* Note that this is invoked relatively early, before we start
+         * the pager. That means the value we return reflects whether
+         * we originally were started on a tty, not if we currently
+         * are. But this is intended, since we want colour and so on
+         * when run in our own pager. */
+
+        if (_unlikely_(t < 0))
+                t = isatty(STDOUT_FILENO) > 0;
+
+        return t;
 }
 
-static int get_session_path(sd_bus *bus, const char *session_id, sd_bus_error *error, char **path) {
-        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
+static void pager_open_if_enabled(void) {
+
+        /* Cache result before we open the pager */
+        on_tty();
+
+        if (!arg_no_pager)
+                pager_open();
+}
+
+static int list_sessions(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL, *reply = NULL;
+        DBusError error;
         int r;
-        char *ans;
-
-        r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        "GetSession",
-                        error, &reply,
-                        "s", session_id);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_message_read(reply, "o", &ans);
-        if (r < 0)
-                return r;
-
-        ans = strdup(ans);
-        if (!ans)
-                return -ENOMEM;
-
-        *path = ans;
-        return 0;
-}
-
-static int list_sessions(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
-        const char *id, *user, *seat, *object;
-        sd_bus *bus = userdata;
+        DBusMessageIter iter, sub, sub2;
         unsigned k = 0;
-        uint32_t uid;
-        int r;
+
+        dbus_error_init(&error);
 
         assert(bus);
-        assert(argv);
 
-        pager_open(arg_no_pager, false);
+        pager_open_if_enabled();
 
-        r = sd_bus_call_method(
-                        bus,
+        m = dbus_message_new_method_call(
                         "org.freedesktop.login1",
                         "/org/freedesktop/login1",
                         "org.freedesktop.login1.Manager",
-                        "ListSessions",
-                        &error, &reply,
-                        "");
-        if (r < 0) {
-                log_error("Failed to list sessions: %s", bus_error_message(&error, r));
-                return r;
+                        "ListSessions");
+        if (!m) {
+                log_error("Could not allocate message.");
+                return -ENOMEM;
         }
 
-        r = sd_bus_message_enter_container(reply, 'a', "(susso)");
-        if (r < 0)
-                return bus_log_parse_error(r);
+        reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+        if (!reply) {
+                log_error("Failed to issue method call: %s", bus_error_message(&error));
+                r = -EIO;
+                goto finish;
+        }
 
-        if (arg_legend)
-                printf("%10s %10s %-16s %-16s %-16s\n", "SESSION", "UID", "USER", "SEAT", "TTY");
+        if (!dbus_message_iter_init(reply, &iter) ||
+            dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY ||
+            dbus_message_iter_get_element_type(&iter) != DBUS_TYPE_STRUCT)  {
+                log_error("Failed to parse reply.");
+                r = -EIO;
+                goto finish;
+        }
 
-        while ((r = sd_bus_message_read(reply, "(susso)", &id, &uid, &user, &seat, &object)) > 0) {
-                _cleanup_(sd_bus_error_free) sd_bus_error error2 = SD_BUS_ERROR_NULL;
-                _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply2 = NULL;
-                _cleanup_free_ char *path = NULL;
-                const char *tty = NULL;
+        dbus_message_iter_recurse(&iter, &sub);
 
-                r = get_session_path(bus, id, &error2, &path);
-                if (r < 0)
-                        log_warning("Failed to get session path: %s", bus_error_message(&error, r));
-                else {
-                        r = sd_bus_get_property(
-                                        bus,
-                                        "org.freedesktop.login1",
-                                        path,
-                                        "org.freedesktop.login1.Session",
-                                        "TTY",
-                                        &error2,
-                                        &reply2,
-                                        "s");
-                        if (r < 0)
-                                log_warning("Failed to get TTY for session %s: %s",
-                                            id, bus_error_message(&error2, r));
-                        else {
-                                r = sd_bus_message_read(reply2, "s", &tty);
-                                if (r < 0)
-                                        return bus_log_parse_error(r);
-                        }
+        if (on_tty())
+                printf("%10s %10s %-16s %-16s\n", "SESSION", "UID", "USER", "SEAT");
+
+        while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
+                const char *id, *user, *seat, *object;
+                uint32_t uid;
+
+                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRUCT) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
                 }
 
-                printf("%10s %10"PRIu32" %-16s %-16s %-16s\n", id, uid, user, seat, strna(tty));
-                k++;
-        }
-        if (r < 0)
-                return bus_log_parse_error(r);
+                dbus_message_iter_recurse(&sub, &sub2);
 
-        if (arg_legend)
+                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &id, true) < 0 ||
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_UINT32, &uid, true) < 0 ||
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &user, true) < 0 ||
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &seat, true) < 0 ||
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &object, false) < 0) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
+
+                printf("%10s %10u %-16s %-16s\n", id, (unsigned) uid, user, seat);
+
+                k++;
+
+                dbus_message_iter_next(&sub);
+        }
+
+        if (on_tty())
                 printf("\n%u sessions listed.\n", k);
 
-        return 0;
+        r = 0;
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        if (reply)
+                dbus_message_unref(reply);
+
+        dbus_error_free(&error);
+
+        return r;
 }
 
-static int list_users(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
-        const char *user, *object;
-        sd_bus *bus = userdata;
-        unsigned k = 0;
-        uint32_t uid;
+static int list_users(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL, *reply = NULL;
+        DBusError error;
         int r;
+        DBusMessageIter iter, sub, sub2;
+        unsigned k = 0;
+
+        dbus_error_init(&error);
 
         assert(bus);
-        assert(argv);
 
-        pager_open(arg_no_pager, false);
+        pager_open_if_enabled();
 
-        r = sd_bus_call_method(
-                        bus,
+        m = dbus_message_new_method_call(
                         "org.freedesktop.login1",
                         "/org/freedesktop/login1",
                         "org.freedesktop.login1.Manager",
-                        "ListUsers",
-                        &error, &reply,
-                        "");
-        if (r < 0) {
-                log_error("Failed to list users: %s", bus_error_message(&error, r));
-                return r;
+                        "ListUsers");
+        if (!m) {
+                log_error("Could not allocate message.");
+                return -ENOMEM;
         }
 
-        r = sd_bus_message_enter_container(reply, 'a', "(uso)");
-        if (r < 0)
-                return bus_log_parse_error(r);
+        reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+        if (!reply) {
+                log_error("Failed to issue method call: %s", bus_error_message(&error));
+                r = -EIO;
+                goto finish;
+        }
 
-        if (arg_legend)
+        if (!dbus_message_iter_init(reply, &iter) ||
+            dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY ||
+            dbus_message_iter_get_element_type(&iter) != DBUS_TYPE_STRUCT)  {
+                log_error("Failed to parse reply.");
+                r = -EIO;
+                goto finish;
+        }
+
+        dbus_message_iter_recurse(&iter, &sub);
+
+        if (on_tty())
                 printf("%10s %-16s\n", "UID", "USER");
 
-        while ((r = sd_bus_message_read(reply, "(uso)", &uid, &user, &object)) > 0) {
-                printf("%10"PRIu32" %-16s\n", uid, user);
-                k++;
-        }
-        if (r < 0)
-                return bus_log_parse_error(r);
+        while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
+                const char *user, *object;
+                uint32_t uid;
 
-        if (arg_legend)
+                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRUCT) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_iter_recurse(&sub, &sub2);
+
+                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_UINT32, &uid, true) < 0 ||
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &user, true) < 0 ||
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &object, false) < 0) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
+
+                printf("%10u %-16s\n", (unsigned) uid, user);
+
+                k++;
+
+                dbus_message_iter_next(&sub);
+        }
+
+        if (on_tty())
                 printf("\n%u users listed.\n", k);
 
-        return 0;
+        r = 0;
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        if (reply)
+                dbus_message_unref(reply);
+
+        dbus_error_free(&error);
+
+        return r;
 }
 
-static int list_seats(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
-        const char *seat, *object;
-        sd_bus *bus = userdata;
-        unsigned k = 0;
+static int list_seats(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL, *reply = NULL;
+        DBusError error;
         int r;
+        DBusMessageIter iter, sub, sub2;
+        unsigned k = 0;
+
+        dbus_error_init(&error);
+
         assert(bus);
-        assert(argv);
 
-        pager_open(arg_no_pager, false);
+        pager_open_if_enabled();
 
-        r = sd_bus_call_method(
-                        bus,
+        m = dbus_message_new_method_call(
                         "org.freedesktop.login1",
                         "/org/freedesktop/login1",
                         "org.freedesktop.login1.Manager",
-                        "ListSeats",
-                        &error, &reply,
-                        "");
-        if (r < 0) {
-                log_error("Failed to list seats: %s", bus_error_message(&error, r));
-                return r;
+                        "ListSeats");
+        if (!m) {
+                log_error("Could not allocate message.");
+                return -ENOMEM;
         }
 
-        r = sd_bus_message_enter_container(reply, 'a', "(so)");
-        if (r < 0)
-                return bus_log_parse_error(r);
+        reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+        if (!reply) {
+                log_error("Failed to issue method call: %s", bus_error_message(&error));
+                r = -EIO;
+                goto finish;
+        }
 
-        if (arg_legend)
+        if (!dbus_message_iter_init(reply, &iter) ||
+            dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY ||
+            dbus_message_iter_get_element_type(&iter) != DBUS_TYPE_STRUCT)  {
+                log_error("Failed to parse reply.");
+                r = -EIO;
+                goto finish;
+        }
+
+        dbus_message_iter_recurse(&iter, &sub);
+
+        if (on_tty())
                 printf("%-16s\n", "SEAT");
 
-        while ((r = sd_bus_message_read(reply, "(so)", &seat, &object)) > 0) {
-                printf("%-16s\n", seat);
-                k++;
-        }
-        if (r < 0)
-                return bus_log_parse_error(r);
+        while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
+                const char *seat, *object;
 
-        if (arg_legend)
+                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRUCT) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_iter_recurse(&sub, &sub2);
+
+                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &seat, true) < 0 ||
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &object, false) < 0) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
+
+                printf("%-16s\n", seat);
+
+                k++;
+
+                dbus_message_iter_next(&sub);
+        }
+
+        if (on_tty())
                 printf("\n%u seats listed.\n", k);
 
-        return 0;
-}
+        r = 0;
 
-static int show_unit_cgroup(sd_bus *bus, const char *interface, const char *unit, pid_t leader) {
-        _cleanup_free_ char *cgroup = NULL;
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        unsigned c;
-        int r;
+finish:
+        if (m)
+                dbus_message_unref(m);
 
-        assert(bus);
-        assert(unit);
+        if (reply)
+                dbus_message_unref(reply);
 
-        r = show_cgroup_get_unit_path_and_warn(bus, unit, &cgroup);
-        if (r < 0)
-                return r;
+        dbus_error_free(&error);
 
-        if (isempty(cgroup))
-                return 0;
-
-        c = columns();
-        if (c > 18)
-                c -= 18;
-        else
-                c = 0;
-
-        r = unit_show_processes(bus, unit, cgroup, "\t\t  ", c, get_output_flags(), &error);
-        if (r == -EBADR) {
-
-                if (arg_transport == BUS_TRANSPORT_REMOTE)
-                        return 0;
-
-                /* Fallback for older systemd versions where the GetUnitProcesses() call is not yet available */
-
-                if (cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, cgroup) != 0 && leader <= 0)
-                        return 0;
-
-                show_cgroup_and_extra(SYSTEMD_CGROUP_CONTROLLER, cgroup, "\t\t  ", c, &leader, leader > 0, get_output_flags());
-        } else if (r < 0)
-                return log_error_errno(r, "Failed to dump process list: %s", bus_error_message(&error, r));
-
-        return 0;
+        return r;
 }
 
 typedef struct SessionStatusInfo {
-        char *id;
+        const char *id;
         uid_t uid;
-        char *name;
-        struct dual_timestamp timestamp;
-        unsigned int vtnr;
-        char *seat;
-        char *tty;
-        char *display;
-        int remote;
-        char *remote_host;
-        char *remote_user;
-        char *service;
+        const char *name;
+        usec_t timestamp;
+        const char *control_group;
+        int vtnr;
+        const char *seat;
+        const char *tty;
+        const char *display;
+        bool remote;
+        const char *remote_host;
+        const char *remote_user;
+        const char *service;
         pid_t leader;
-        char *type;
-        char *class;
-        char *state;
-        char *scope;
-        char *desktop;
+        const char *type;
+        const char *class;
+        bool active;
 } SessionStatusInfo;
 
 typedef struct UserStatusInfo {
         uid_t uid;
-        int linger;
-        char *name;
-        struct dual_timestamp timestamp;
-        char *state;
+        const char *name;
+        usec_t timestamp;
+        const char *control_group;
+        const char *state;
         char **sessions;
-        char *display;
-        char *slice;
+        const char *display;
 } UserStatusInfo;
 
 typedef struct SeatStatusInfo {
-        char *id;
-        char *active_session;
+        const char *id;
+        const char *active_session;
         char **sessions;
 } SeatStatusInfo;
 
-static void session_status_info_clear(SessionStatusInfo *info) {
-        if (info) {
-                free(info->id);
-                free(info->name);
-                free(info->seat);
-                free(info->tty);
-                free(info->display);
-                free(info->remote_host);
-                free(info->remote_user);
-                free(info->service);
-                free(info->type);
-                free(info->class);
-                free(info->state);
-                free(info->scope);
-                free(info->desktop);
-                zero(*info);
-        }
-}
-
-static void user_status_info_clear(UserStatusInfo *info) {
-        if (info) {
-                free(info->name);
-                free(info->state);
-                strv_free(info->sessions);
-                free(info->display);
-                free(info->slice);
-                zero(*info);
-        }
-}
-
-static void seat_status_info_clear(SeatStatusInfo *info) {
-        if (info) {
-                free(info->id);
-                free(info->active_session);
-                strv_free(info->sessions);
-                zero(*info);
-        }
-}
-
-static int prop_map_first_of_struct(sd_bus *bus, const char *member, sd_bus_message *m, sd_bus_error *error, void *userdata) {
-        const char *contents;
-        int r;
-
-        r = sd_bus_message_peek_type(m, NULL, &contents);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_message_enter_container(m, SD_BUS_TYPE_STRUCT, contents);
-        if (r < 0)
-                return r;
-
-        if (IN_SET(contents[0], 's', 'o')) {
-                const char *s;
-                char **p = (char **) userdata;
-
-                r = sd_bus_message_read_basic(m, contents[0], &s);
-                if (r < 0)
-                        return r;
-
-                r = free_and_strdup(p, s);
-                if (r < 0)
-                        return r;
-        } else {
-                r = sd_bus_message_read_basic(m, contents[0], userdata);
-                if (r < 0)
-                        return r;
-        }
-
-        r = sd_bus_message_skip(m, contents+1);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_message_exit_container(m);
-        if (r < 0)
-                return r;
-
-        return 0;
-}
-
-static int prop_map_sessions_strv(sd_bus *bus, const char *member, sd_bus_message *m, sd_bus_error *error, void *userdata) {
-        const char *name;
-        int r;
-
-        assert(bus);
-        assert(m);
-
-        r = sd_bus_message_enter_container(m, 'a', "(so)");
-        if (r < 0)
-                return r;
-
-        while ((r = sd_bus_message_read(m, "(so)", &name, NULL)) > 0) {
-                r = strv_extend(userdata, name);
-                if (r < 0)
-                        return r;
-        }
-        if (r < 0)
-                return r;
-
-        return sd_bus_message_exit_container(m);
-}
-
-static int print_session_status_info(sd_bus *bus, const char *path, bool *new_line) {
-
-        static const struct bus_properties_map map[]  = {
-                { "Id",                  "s",    NULL,                     offsetof(SessionStatusInfo, id)                  },
-                { "Name",                "s",    NULL,                     offsetof(SessionStatusInfo, name)                },
-                { "TTY",                 "s",    NULL,                     offsetof(SessionStatusInfo, tty)                 },
-                { "Display",             "s",    NULL,                     offsetof(SessionStatusInfo, display)             },
-                { "RemoteHost",          "s",    NULL,                     offsetof(SessionStatusInfo, remote_host)         },
-                { "RemoteUser",          "s",    NULL,                     offsetof(SessionStatusInfo, remote_user)         },
-                { "Service",             "s",    NULL,                     offsetof(SessionStatusInfo, service)             },
-                { "Desktop",             "s",    NULL,                     offsetof(SessionStatusInfo, desktop)             },
-                { "Type",                "s",    NULL,                     offsetof(SessionStatusInfo, type)                },
-                { "Class",               "s",    NULL,                     offsetof(SessionStatusInfo, class)               },
-                { "Scope",               "s",    NULL,                     offsetof(SessionStatusInfo, scope)               },
-                { "State",               "s",    NULL,                     offsetof(SessionStatusInfo, state)               },
-                { "VTNr",                "u",    NULL,                     offsetof(SessionStatusInfo, vtnr)                },
-                { "Leader",              "u",    NULL,                     offsetof(SessionStatusInfo, leader)              },
-                { "Remote",              "b",    NULL,                     offsetof(SessionStatusInfo, remote)              },
-                { "Timestamp",           "t",    NULL,                     offsetof(SessionStatusInfo, timestamp.realtime)  },
-                { "TimestampMonotonic",  "t",    NULL,                     offsetof(SessionStatusInfo, timestamp.monotonic) },
-                { "User",                "(uo)", prop_map_first_of_struct, offsetof(SessionStatusInfo, uid)                 },
-                { "Seat",                "(so)", prop_map_first_of_struct, offsetof(SessionStatusInfo, seat)                },
-                {}
-        };
-
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        char since1[FORMAT_TIMESTAMP_RELATIVE_MAX], *s1;
+static void print_session_status_info(SessionStatusInfo *i) {
+        char since1[FORMAT_TIMESTAMP_PRETTY_MAX], *s1;
         char since2[FORMAT_TIMESTAMP_MAX], *s2;
-        _cleanup_(session_status_info_clear) SessionStatusInfo i = {};
-        int r;
+        assert(i);
 
-        r = bus_map_all_properties(bus, "org.freedesktop.login1", path, map, &error, &i);
-        if (r < 0)
-                return log_error_errno(r, "Could not get properties: %s", bus_error_message(&error, r));
+        printf("%s - ", strna(i->id));
 
-        if (*new_line)
-                printf("\n");
-
-        *new_line = true;
-
-        printf("%s - ", strna(i.id));
-
-        if (i.name)
-                printf("%s (%"PRIu32")\n", i.name, i.uid);
+        if (i->name)
+                printf("%s (%u)\n", i->name, (unsigned) i->uid);
         else
-                printf("%"PRIu32"\n", i.uid);
+                printf("%u\n", (unsigned) i->uid);
 
-        s1 = format_timestamp_relative(since1, sizeof(since1), i.timestamp.realtime);
-        s2 = format_timestamp(since2, sizeof(since2), i.timestamp.realtime);
+        s1 = format_timestamp_pretty(since1, sizeof(since1), i->timestamp);
+        s2 = format_timestamp(since2, sizeof(since2), i->timestamp);
 
         if (s1)
                 printf("\t   Since: %s; %s\n", s2, s1);
         else if (s2)
                 printf("\t   Since: %s\n", s2);
 
-        if (i.leader > 0) {
-                _cleanup_free_ char *t = NULL;
+        if (i->leader > 0) {
+                char *t = NULL;
 
-                printf("\t  Leader: %"PRIu32, i.leader);
+                printf("\t  Leader: %u", (unsigned) i->leader);
 
-                get_process_comm(i.leader, &t);
-                if (t)
+                get_process_comm(i->leader, &t);
+                if (t) {
                         printf(" (%s)", t);
+                        free(t);
+                }
 
                 printf("\n");
         }
 
-        if (!isempty(i.seat)) {
-                printf("\t    Seat: %s", i.seat);
+        if (i->seat) {
+                printf("\t    Seat: %s", i->seat);
 
-                if (i.vtnr > 0)
-                        printf("; vc%u", i.vtnr);
+                if (i->vtnr > 0)
+                        printf("; vc%i", i->vtnr);
 
                 printf("\n");
         }
 
-        if (i.tty)
-                printf("\t     TTY: %s\n", i.tty);
-        else if (i.display)
-                printf("\t Display: %s\n", i.display);
+        if (i->tty)
+                printf("\t     TTY: %s\n", i->tty);
+        else if (i->display)
+                printf("\t Display: %s\n", i->display);
 
-        if (i.remote_host && i.remote_user)
-                printf("\t  Remote: %s@%s\n", i.remote_user, i.remote_host);
-        else if (i.remote_host)
-                printf("\t  Remote: %s\n", i.remote_host);
-        else if (i.remote_user)
-                printf("\t  Remote: user %s\n", i.remote_user);
-        else if (i.remote)
+        if (i->remote_host && i->remote_user)
+                printf("\t  Remote: %s@%s\n", i->remote_user, i->remote_host);
+        else if (i->remote_host)
+                printf("\t  Remote: %s\n", i->remote_host);
+        else if (i->remote_user)
+                printf("\t  Remote: user %s\n", i->remote_user);
+        else if (i->remote)
                 printf("\t  Remote: Yes\n");
 
-        if (i.service) {
-                printf("\t Service: %s", i.service);
+        if (i->service) {
+                printf("\t Service: %s", i->service);
 
-                if (i.type)
-                        printf("; type %s", i.type);
+                if (i->type)
+                        printf("; type %s", i->type);
 
-                if (i.class)
-                        printf("; class %s", i.class);
-
-                printf("\n");
-        } else if (i.type) {
-                printf("\t    Type: %s", i.type);
-
-                if (i.class)
-                        printf("; class %s", i.class);
+                if (i->class)
+                        printf("; class %s", i->class);
 
                 printf("\n");
-        } else if (i.class)
-                printf("\t   Class: %s\n", i.class);
+        } else if (i->type) {
+                printf("\t    Type: %s\n", i->type);
 
-        if (!isempty(i.desktop))
-                printf("\t Desktop: %s\n", i.desktop);
+                if (i->class)
+                        printf("; class %s", i->class);
+        } else if (i->class)
+                printf("\t   Class: %s\n", i->class);
 
-        if (i.state)
-                printf("\t   State: %s\n", i.state);
 
-        if (i.scope) {
-                printf("\t    Unit: %s\n", i.scope);
-                show_unit_cgroup(bus, "org.freedesktop.systemd1.Scope", i.scope, i.leader);
+        printf("\t  Active: %s\n", yes_no(i->active));
 
-                if (arg_transport == BUS_TRANSPORT_LOCAL) {
+        if (i->control_group) {
+                unsigned c;
 
-                        show_journal_by_unit(
-                                        stdout,
-                                        i.scope,
-                                        arg_output,
-                                        0,
-                                        i.timestamp.monotonic,
-                                        arg_lines,
-                                        0,
-                                        get_output_flags() | OUTPUT_BEGIN_NEWLINE,
-                                        SD_JOURNAL_LOCAL_ONLY,
-                                        true,
-                                        NULL);
+                printf("\t  CGroup: %s\n", i->control_group);
+
+                if (arg_transport != TRANSPORT_SSH) {
+                        c = columns();
+                        if (c > 18)
+                                c -= 18;
+                        else
+                                c = 0;
+
+                        show_cgroup_by_path(i->control_group, "\t\t  ", c, false);
                 }
         }
-
-        return 0;
 }
 
-static int print_user_status_info(sd_bus *bus, const char *path, bool *new_line) {
-
-        static const struct bus_properties_map map[]  = {
-                { "Name",               "s",     NULL,                     offsetof(UserStatusInfo, name)                },
-                { "Linger",             "b",     NULL,                     offsetof(UserStatusInfo, linger)              },
-                { "Slice",              "s",     NULL,                     offsetof(UserStatusInfo, slice)               },
-                { "State",              "s",     NULL,                     offsetof(UserStatusInfo, state)               },
-                { "UID",                "u",     NULL,                     offsetof(UserStatusInfo, uid)                 },
-                { "Timestamp",          "t",     NULL,                     offsetof(UserStatusInfo, timestamp.realtime)  },
-                { "TimestampMonotonic", "t",     NULL,                     offsetof(UserStatusInfo, timestamp.monotonic) },
-                { "Display",            "(so)",  prop_map_first_of_struct, offsetof(UserStatusInfo, display)             },
-                { "Sessions",           "a(so)", prop_map_sessions_strv,   offsetof(UserStatusInfo, sessions)            },
-                {}
-        };
-
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        char since1[FORMAT_TIMESTAMP_RELATIVE_MAX], *s1;
+static void print_user_status_info(UserStatusInfo *i) {
+        char since1[FORMAT_TIMESTAMP_PRETTY_MAX], *s1;
         char since2[FORMAT_TIMESTAMP_MAX], *s2;
-        _cleanup_(user_status_info_clear) UserStatusInfo i = {};
-        int r;
+        assert(i);
 
-        r = bus_map_all_properties(bus, "org.freedesktop.login1", path, map, &error, &i);
-        if (r < 0)
-                return log_error_errno(r, "Could not get properties: %s", bus_error_message(&error, r));
-
-        if (*new_line)
-                printf("\n");
-
-        *new_line = true;
-
-        if (i.name)
-                printf("%s (%"PRIu32")\n", i.name, i.uid);
+        if (i->name)
+                printf("%s (%u)\n", i->name, (unsigned) i->uid);
         else
-                printf("%"PRIu32"\n", i.uid);
+                printf("%u\n", (unsigned) i->uid);
 
-        s1 = format_timestamp_relative(since1, sizeof(since1), i.timestamp.realtime);
-        s2 = format_timestamp(since2, sizeof(since2), i.timestamp.realtime);
+        s1 = format_timestamp_pretty(since1, sizeof(since1), i->timestamp);
+        s2 = format_timestamp(since2, sizeof(since2), i->timestamp);
 
         if (s1)
                 printf("\t   Since: %s; %s\n", s2, s1);
         else if (s2)
                 printf("\t   Since: %s\n", s2);
 
-        if (!isempty(i.state))
-                printf("\t   State: %s\n", i.state);
+        if (!isempty(i->state))
+                printf("\t   State: %s\n", i->state);
 
-        if (!strv_isempty(i.sessions)) {
+        if (!strv_isempty(i->sessions)) {
                 char **l;
                 printf("\tSessions:");
 
-                STRV_FOREACH(l, i.sessions)
-                        printf(" %s%s",
-                               streq_ptr(*l, i.display) ? "*" : "",
-                               *l);
-
-                printf("\n");
-        }
-
-        printf("\t  Linger: %s\n", yes_no(i.linger));
-
-        if (i.slice) {
-                printf("\t    Unit: %s\n", i.slice);
-                show_unit_cgroup(bus, "org.freedesktop.systemd1.Slice", i.slice, 0);
-
-                show_journal_by_unit(
-                                stdout,
-                                i.slice,
-                                arg_output,
-                                0,
-                                i.timestamp.monotonic,
-                                arg_lines,
-                                0,
-                                get_output_flags() | OUTPUT_BEGIN_NEWLINE,
-                                SD_JOURNAL_LOCAL_ONLY,
-                                true,
-                                NULL);
-        }
-
-        return 0;
-}
-
-static int print_seat_status_info(sd_bus *bus, const char *path, bool *new_line) {
-
-        static const struct bus_properties_map map[]  = {
-                { "Id",            "s",     NULL, offsetof(SeatStatusInfo, id) },
-                { "ActiveSession", "(so)",  prop_map_first_of_struct, offsetof(SeatStatusInfo, active_session) },
-                { "Sessions",      "a(so)", prop_map_sessions_strv, offsetof(SeatStatusInfo, sessions) },
-                {}
-        };
-
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        _cleanup_(seat_status_info_clear) SeatStatusInfo i = {};
-        int r;
-
-        r = bus_map_all_properties(bus, "org.freedesktop.login1", path, map, &error, &i);
-        if (r < 0)
-                return log_error_errno(r, "Could not get properties: %s", bus_error_message(&error, r));
-
-        if (*new_line)
-                printf("\n");
-
-        *new_line = true;
-
-        printf("%s\n", strna(i.id));
-
-        if (!strv_isempty(i.sessions)) {
-                char **l;
-                printf("\tSessions:");
-
-                STRV_FOREACH(l, i.sessions) {
-                        if (streq_ptr(*l, i.active_session))
+                STRV_FOREACH(l, i->sessions) {
+                        if (streq_ptr(*l, i->display))
                                 printf(" *%s", *l);
                         else
                                 printf(" %s", *l);
@@ -704,7 +499,43 @@ static int print_seat_status_info(sd_bus *bus, const char *path, bool *new_line)
                 printf("\n");
         }
 
-        if (arg_transport == BUS_TRANSPORT_LOCAL) {
+        if (i->control_group) {
+                unsigned c;
+
+                printf("\t  CGroup: %s\n", i->control_group);
+
+                if (arg_transport != TRANSPORT_SSH) {
+                        c = columns();
+                        if (c > 18)
+                                c -= 18;
+                        else
+                                c = 0;
+
+                        show_cgroup_by_path(i->control_group, "\t\t  ", c, false);
+                }
+        }
+}
+
+static void print_seat_status_info(SeatStatusInfo *i) {
+        assert(i);
+
+        printf("%s\n", strna(i->id));
+
+        if (!strv_isempty(i->sessions)) {
+                char **l;
+                printf("\tSessions:");
+
+                STRV_FOREACH(l, i->sessions) {
+                        if (streq_ptr(*l, i->active_session))
+                                printf(" *%s", *l);
+                        else
+                                printf(" %s", *l);
+                }
+
+                printf("\n");
+        }
+
+        if (arg_transport != TRANSPORT_SSH) {
                 unsigned c;
 
                 c = columns();
@@ -715,708 +546,1135 @@ static int print_seat_status_info(sd_bus *bus, const char *path, bool *new_line)
 
                 printf("\t Devices:\n");
 
-                show_sysfs(i.id, "\t\t  ", c, get_output_flags());
+                show_sysfs(i->id, "\t\t  ", c);
+        }
+}
+
+static int status_property_session(const char *name, DBusMessageIter *iter, SessionStatusInfo *i) {
+        assert(name);
+        assert(iter);
+        assert(i);
+
+        switch (dbus_message_iter_get_arg_type(iter)) {
+
+        case DBUS_TYPE_STRING: {
+                const char *s;
+
+                dbus_message_iter_get_basic(iter, &s);
+
+                if (!isempty(s)) {
+                        if (streq(name, "Id"))
+                                i->id = s;
+                        else if (streq(name, "Name"))
+                                i->name = s;
+                        else if (streq(name, "ControlGroupPath"))
+                                i->control_group = s;
+                        else if (streq(name, "TTY"))
+                                i->tty = s;
+                        else if (streq(name, "Display"))
+                                i->display = s;
+                        else if (streq(name, "RemoteHost"))
+                                i->remote_host = s;
+                        else if (streq(name, "RemoteUser"))
+                                i->remote_user = s;
+                        else if (streq(name, "Service"))
+                                i->service = s;
+                        else if (streq(name, "Type"))
+                                i->type = s;
+                        else if (streq(name, "Class"))
+                                i->class = s;
+                }
+                break;
+        }
+
+        case DBUS_TYPE_UINT32: {
+                uint32_t u;
+
+                dbus_message_iter_get_basic(iter, &u);
+
+                if (streq(name, "VTNr"))
+                        i->vtnr = (int) u;
+                else if (streq(name, "Leader"))
+                        i->leader = (pid_t) u;
+
+                break;
+        }
+
+        case DBUS_TYPE_BOOLEAN: {
+                dbus_bool_t b;
+
+                dbus_message_iter_get_basic(iter, &b);
+
+                if (streq(name, "Remote"))
+                        i->remote = b;
+                else if (streq(name, "Active"))
+                        i->active = b;
+
+                break;
+        }
+
+        case DBUS_TYPE_UINT64: {
+                uint64_t u;
+
+                dbus_message_iter_get_basic(iter, &u);
+
+                if (streq(name, "Timestamp"))
+                        i->timestamp = (usec_t) u;
+
+                break;
+        }
+
+        case DBUS_TYPE_STRUCT: {
+                DBusMessageIter sub;
+
+                dbus_message_iter_recurse(iter, &sub);
+
+                if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_UINT32 && streq(name, "User")) {
+                        uint32_t u;
+
+                        dbus_message_iter_get_basic(&sub, &u);
+                        i->uid = (uid_t) u;
+
+                } else if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING && streq(name, "Seat")) {
+                        const char *s;
+
+                        dbus_message_iter_get_basic(&sub, &s);
+
+                        if (!isempty(s))
+                                i->seat = s;
+                }
+
+                break;
+        }
         }
 
         return 0;
 }
 
-#define property(name, fmt, ...)                                        \
-        do {                                                            \
-                if (arg_value)                                          \
-                        printf(fmt "\n", __VA_ARGS__);                  \
-                else                                                    \
-                        printf("%s=" fmt "\n", name, __VA_ARGS__);      \
-        } while (0)
-
-static int print_property(const char *name, sd_bus_message *m, const char *contents) {
-        int r;
-
+static int status_property_user(const char *name, DBusMessageIter *iter, UserStatusInfo *i) {
         assert(name);
-        assert(m);
-        assert(contents);
+        assert(iter);
+        assert(i);
+
+        switch (dbus_message_iter_get_arg_type(iter)) {
+
+        case DBUS_TYPE_STRING: {
+                const char *s;
+
+                dbus_message_iter_get_basic(iter, &s);
+
+                if (!isempty(s)) {
+                        if (streq(name, "Name"))
+                                i->name = s;
+                        else if (streq(name, "ControlGroupPath"))
+                                i->control_group = s;
+                        else if (streq(name, "State"))
+                                i->state = s;
+                }
+                break;
+        }
+
+        case DBUS_TYPE_UINT32: {
+                uint32_t u;
+
+                dbus_message_iter_get_basic(iter, &u);
+
+                if (streq(name, "UID"))
+                        i->uid = (uid_t) u;
+
+                break;
+        }
+
+        case DBUS_TYPE_UINT64: {
+                uint64_t u;
+
+                dbus_message_iter_get_basic(iter, &u);
+
+                if (streq(name, "Timestamp"))
+                        i->timestamp = (usec_t) u;
+
+                break;
+        }
+
+        case DBUS_TYPE_STRUCT: {
+                DBusMessageIter sub;
+
+                dbus_message_iter_recurse(iter, &sub);
+
+                if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING && streq(name, "Display")) {
+                        const char *s;
+
+                        dbus_message_iter_get_basic(&sub, &s);
+
+                        if (!isempty(s))
+                                i->display = s;
+                }
+
+                break;
+        }
+
+        case DBUS_TYPE_ARRAY: {
+
+                if (dbus_message_iter_get_element_type(iter) == DBUS_TYPE_STRUCT && streq(name, "Sessions")) {
+                        DBusMessageIter sub, sub2;
+
+                        dbus_message_iter_recurse(iter, &sub);
+                        while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRUCT) {
+                                const char *id;
+                                const char *path;
+
+                                dbus_message_iter_recurse(&sub, &sub2);
+
+                                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &id, true) >= 0 &&
+                                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &path, false) >= 0) {
+                                        char **l;
+
+                                        l = strv_append(i->sessions, id);
+                                        if (!l)
+                                                return -ENOMEM;
+
+                                        strv_free(i->sessions);
+                                        i->sessions = l;
+                                }
+
+                                dbus_message_iter_next(&sub);
+                        }
+
+                        return 0;
+                }
+        }
+        }
+
+        return 0;
+}
+
+static int status_property_seat(const char *name, DBusMessageIter *iter, SeatStatusInfo *i) {
+        assert(name);
+        assert(iter);
+        assert(i);
+
+        switch (dbus_message_iter_get_arg_type(iter)) {
+
+        case DBUS_TYPE_STRING: {
+                const char *s;
+
+                dbus_message_iter_get_basic(iter, &s);
+
+                if (!isempty(s)) {
+                        if (streq(name, "Id"))
+                                i->id = s;
+                }
+                break;
+        }
+
+        case DBUS_TYPE_STRUCT: {
+                DBusMessageIter sub;
+
+                dbus_message_iter_recurse(iter, &sub);
+
+                if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING && streq(name, "ActiveSession")) {
+                        const char *s;
+
+                        dbus_message_iter_get_basic(&sub, &s);
+
+                        if (!isempty(s))
+                                i->active_session = s;
+                }
+
+                break;
+        }
+
+        case DBUS_TYPE_ARRAY: {
+
+                if (dbus_message_iter_get_element_type(iter) == DBUS_TYPE_STRUCT && streq(name, "Sessions")) {
+                        DBusMessageIter sub, sub2;
+
+                        dbus_message_iter_recurse(iter, &sub);
+                        while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRUCT) {
+                                const char *id;
+                                const char *path;
+
+                                dbus_message_iter_recurse(&sub, &sub2);
+
+                                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &id, true) >= 0 &&
+                                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &path, false) >= 0) {
+                                        char **l;
+
+                                        l = strv_append(i->sessions, id);
+                                        if (!l)
+                                                return -ENOMEM;
+
+                                        strv_free(i->sessions);
+                                        i->sessions = l;
+                                }
+
+                                dbus_message_iter_next(&sub);
+                        }
+
+                        return 0;
+                }
+        }
+        }
+
+        return 0;
+}
+
+static int print_property(const char *name, DBusMessageIter *iter) {
+        assert(name);
+        assert(iter);
 
         if (arg_property && !strv_find(arg_property, name))
-                /* skip what we didn't read */
-                return sd_bus_message_skip(m, contents);
+                return 0;
 
-        switch (contents[0]) {
+        switch (dbus_message_iter_get_arg_type(iter)) {
 
-        case SD_BUS_TYPE_STRUCT_BEGIN:
+        case DBUS_TYPE_STRUCT: {
+                DBusMessageIter sub;
 
-                if (contents[1] == SD_BUS_TYPE_STRING && STR_IN_SET(name, "Display", "Seat", "ActiveSession")) {
+                dbus_message_iter_recurse(iter, &sub);
+
+                if (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING &&
+                    (streq(name, "Display") || streq(name, "ActiveSession"))) {
                         const char *s;
 
-                        r = sd_bus_message_read(m, "(so)", &s, NULL);
-                        if (r < 0)
-                                return bus_log_parse_error(r);
+                        dbus_message_iter_get_basic(&sub, &s);
 
                         if (arg_all || !isempty(s))
-                                property(name, "%s", s);
-
-                        return 0;
-
-                } else if (contents[1] == SD_BUS_TYPE_UINT32 && streq(name, "User")) {
-                        uint32_t uid;
-
-                        r = sd_bus_message_read(m, "(uo)", &uid, NULL);
-                        if (r < 0)
-                                return bus_log_parse_error(r);
-
-                        if (!uid_is_valid(uid)) {
-                                log_error("Invalid user ID: " UID_FMT, uid);
-                                return -EINVAL;
-                        }
-
-                        property(name, UID_FMT, uid);
+                                printf("%s=%s\n", name, s);
                         return 0;
                 }
-
                 break;
+        }
 
-        case SD_BUS_TYPE_ARRAY:
+        case DBUS_TYPE_ARRAY:
 
-                if (contents[1] == SD_BUS_TYPE_STRUCT_BEGIN && streq(name, "Sessions")) {
-                        const char *s;
-                        bool space = false;
+                if (dbus_message_iter_get_element_type(iter) == DBUS_TYPE_STRUCT && streq(name, "Sessions")) {
+                        DBusMessageIter sub, sub2;
+                        bool found = false;
 
-                        r = sd_bus_message_enter_container(m, SD_BUS_TYPE_ARRAY, "(so)");
-                        if (r < 0)
-                                return bus_log_parse_error(r);
+                        dbus_message_iter_recurse(iter, &sub);
+                        while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRUCT) {
+                                const char *id;
+                                const char *path;
 
-                        if (!arg_value)
-                                printf("%s=", name);
+                                dbus_message_iter_recurse(&sub, &sub2);
 
-                        while ((r = sd_bus_message_read(m, "(so)", &s, NULL)) > 0) {
-                                printf("%s%s", space ? " " : "", s);
-                                space = true;
+                                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &id, true) >= 0 &&
+                                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &path, false) >= 0) {
+                                        if (found)
+                                                printf(" %s", id);
+                                        else {
+                                                printf("%s=%s", name, id);
+                                                found = true;
+                                        }
+                                }
+
+                                dbus_message_iter_next(&sub);
                         }
 
-                        if (space || !arg_value)
+                        if (!found && arg_all)
+                                printf("%s=\n", name);
+                        else if (found)
                                 printf("\n");
 
-                        if (r < 0)
-                                return bus_log_parse_error(r);
-
-                        r = sd_bus_message_exit_container(m);
-                        if (r < 0)
-                                return bus_log_parse_error(r);
-
                         return 0;
                 }
 
                 break;
         }
 
-        r = bus_print_property(name, m, arg_value, arg_all);
-        if (r < 0)
-                return bus_log_parse_error(r);
+        if (generic_print_property(name, iter, arg_all) > 0)
+                return 0;
 
-        if (r == 0) {
-                r = sd_bus_message_skip(m, contents);
-                if (r < 0)
-                        return bus_log_parse_error(r);
-
-                if (arg_all)
-                        printf("%s=[unprintable]\n", name);
-        }
+        if (arg_all)
+                printf("%s=[unprintable]\n", name);
 
         return 0;
 }
 
-static int show_properties(sd_bus *bus, const char *path, bool *new_line) {
-        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+static int show_one(const char *verb, DBusConnection *bus, const char *path, bool show_properties, bool *new_line) {
+        DBusMessage *m = NULL, *reply = NULL;
+        const char *interface = "";
         int r;
+        DBusError error;
+        DBusMessageIter iter, sub, sub2, sub3;
+        SessionStatusInfo session_info;
+        UserStatusInfo user_info;
+        SeatStatusInfo seat_info;
 
         assert(bus);
         assert(path);
         assert(new_line);
 
-        r = sd_bus_call_method(
-                        bus,
+        zero(session_info);
+        zero(user_info);
+        zero(seat_info);
+
+        dbus_error_init(&error);
+
+        m = dbus_message_new_method_call(
                         "org.freedesktop.login1",
                         path,
                         "org.freedesktop.DBus.Properties",
-                        "GetAll",
-                        &error,
-                        &reply,
-                        "s", "");
-        if (r < 0)
-                return log_error_errno(r, "Failed to get properties: %s", bus_error_message(&error, r));
+                        "GetAll");
+        if (!m) {
+                log_error("Could not allocate message.");
+                r = -ENOMEM;
+                goto finish;
+        }
 
-        r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "{sv}");
-        if (r < 0)
-                return bus_log_parse_error(r);
+        if (!dbus_message_append_args(m,
+                                      DBUS_TYPE_STRING, &interface,
+                                      DBUS_TYPE_INVALID)) {
+                log_error("Could not append arguments to message.");
+                r = -ENOMEM;
+                goto finish;
+        }
+
+        reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+        if (!reply) {
+                log_error("Failed to issue method call: %s", bus_error_message(&error));
+                r = -EIO;
+                goto finish;
+        }
+
+        if (!dbus_message_iter_init(reply, &iter) ||
+            dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY ||
+            dbus_message_iter_get_element_type(&iter) != DBUS_TYPE_DICT_ENTRY)  {
+                log_error("Failed to parse reply.");
+                r = -EIO;
+                goto finish;
+        }
+
+        dbus_message_iter_recurse(&iter, &sub);
 
         if (*new_line)
                 printf("\n");
 
         *new_line = true;
 
-        while ((r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_DICT_ENTRY, "sv")) > 0) {
-                const char *name, *contents;
+        while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
+                const char *name;
 
-                r = sd_bus_message_read(reply, "s", &name);
-                if (r < 0)
-                        return bus_log_parse_error(r);
+                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_DICT_ENTRY) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
 
-                r = sd_bus_message_peek_type(reply, NULL, &contents);
-                if (r < 0)
-                        return bus_log_parse_error(r);
+                dbus_message_iter_recurse(&sub, &sub2);
 
-                r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_VARIANT, contents);
-                if (r < 0)
-                        return bus_log_parse_error(r);
+                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &name, true) < 0) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
 
-                r = print_property(name, reply, contents);
-                if (r < 0)
-                        return r;
+                if (dbus_message_iter_get_arg_type(&sub2) != DBUS_TYPE_VARIANT)  {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
 
-                r = sd_bus_message_exit_container(reply);
-                if (r < 0)
-                        return bus_log_parse_error(r);
+                dbus_message_iter_recurse(&sub2, &sub3);
 
-                r = sd_bus_message_exit_container(reply);
-                if (r < 0)
-                        return bus_log_parse_error(r);
+                if (show_properties)
+                        r = print_property(name, &sub3);
+                else if (strstr(verb, "session"))
+                        r = status_property_session(name, &sub3, &session_info);
+                else if (strstr(verb, "user"))
+                        r = status_property_user(name, &sub3, &user_info);
+                else
+                        r = status_property_seat(name, &sub3, &seat_info);
+
+                if (r < 0) {
+                        log_error("Failed to parse reply.");
+                        r = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_iter_next(&sub);
         }
-        if (r < 0)
-                return bus_log_parse_error(r);
 
-        r = sd_bus_message_exit_container(reply);
-        if (r < 0)
-                return bus_log_parse_error(r);
+        if (!show_properties) {
+                if (strstr(verb, "session"))
+                        print_session_status_info(&session_info);
+                else if (strstr(verb, "user"))
+                        print_user_status_info(&user_info);
+                else
+                        print_seat_status_info(&seat_info);
+        }
 
-        return 0;
+        strv_free(seat_info.sessions);
+        strv_free(user_info.sessions);
+
+        r = 0;
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        if (reply)
+                dbus_message_unref(reply);
+
+        dbus_error_free(&error);
+
+        return r;
 }
 
-static int show_session(int argc, char *argv[], void *userdata) {
-        bool properties, new_line = false;
-        sd_bus *bus = userdata;
-        int r, i;
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        _cleanup_free_ char *path = NULL;
+static int show(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL, *reply = NULL;
+        int r, ret = 0;
+        DBusError error;
+        unsigned i;
+        bool show_properties, new_line = false;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        properties = !strstr(argv[0], "status");
+        dbus_error_init(&error);
 
-        pager_open(arg_no_pager, false);
+        show_properties = !strstr(args[0], "status");
 
-        if (argc <= 1) {
-                const char *session, *p = "/org/freedesktop/login1/session/self";
+        if (show_properties)
+                pager_open_if_enabled();
 
-                if (properties)
-                        /* If no argument is specified inspect the manager itself */
-                        return show_properties(bus, "/org/freedesktop/login1", &new_line);
+        if (show_properties && n <= 1) {
+                /* If not argument is specified inspect the manager
+                 * itself */
 
-                /* And in the pretty case, show data of the calling session */
-                session = getenv("XDG_SESSION_ID");
-                if (session) {
-                        r = get_session_path(bus, session, &error, &path);
-                        if (r < 0) {
-                                log_error("Failed to get session path: %s", bus_error_message(&error, r));
-                                return r;
+                ret = show_one(args[0], bus, "/org/freedesktop/login1", show_properties, &new_line);
+                goto finish;
+        }
+
+        for (i = 1; i < n; i++) {
+                const char *path = NULL;
+
+                if (strstr(args[0], "session")) {
+
+                        m = dbus_message_new_method_call(
+                                        "org.freedesktop.login1",
+                                        "/org/freedesktop/login1",
+                                        "org.freedesktop.login1.Manager",
+                                        "GetSession");
+                        if (!m) {
+                                log_error("Could not allocate message.");
+                                ret = -ENOMEM;
+                                goto finish;
                         }
-                        p = path;
+
+                        if (!dbus_message_append_args(m,
+                                                      DBUS_TYPE_STRING, &args[i],
+                                                      DBUS_TYPE_INVALID)) {
+                                log_error("Could not append arguments to message.");
+                                ret = -ENOMEM;
+                                goto finish;
+                        }
+
+                } else if (strstr(args[0], "user")) {
+                        uid_t uid;
+                        uint32_t u;
+
+                        ret = get_user_creds((const char**) (args+i), &uid, NULL, NULL);
+                        if (ret < 0) {
+                                log_error("User %s unknown.", args[i]);
+                                goto finish;
+                        }
+
+                        m = dbus_message_new_method_call(
+                                        "org.freedesktop.login1",
+                                        "/org/freedesktop/login1",
+                                        "org.freedesktop.login1.Manager",
+                                        "GetUser");
+                        if (!m) {
+                                log_error("Could not allocate message.");
+                                ret = -ENOMEM;
+                                goto finish;
+                        }
+
+                        u = (uint32_t) uid;
+                        if (!dbus_message_append_args(m,
+                                                      DBUS_TYPE_UINT32, &u,
+                                                      DBUS_TYPE_INVALID)) {
+                                log_error("Could not append arguments to message.");
+                                ret = -ENOMEM;
+                                goto finish;
+                        }
+                } else {
+
+                        m = dbus_message_new_method_call(
+                                        "org.freedesktop.login1",
+                                        "/org/freedesktop/login1",
+                                        "org.freedesktop.login1.Manager",
+                                        "GetSeat");
+                        if (!m) {
+                                log_error("Could not allocate message.");
+                                ret = -ENOMEM;
+                                goto finish;
+                        }
+
+                        if (!dbus_message_append_args(m,
+                                                      DBUS_TYPE_STRING, &args[i],
+                                                      DBUS_TYPE_INVALID)) {
+                                log_error("Could not append arguments to message.");
+                                ret = -ENOMEM;
+                                goto finish;
+                        }
                 }
 
-                return print_session_status_info(bus, p, &new_line);
-        }
-
-        for (i = 1; i < argc; i++) {
-                r = get_session_path(bus, argv[i], &error, &path);
-                if (r < 0) {
-                        log_error("Failed to get session path: %s", bus_error_message(&error, r));
-                        return r;
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
                 }
 
-                if (properties)
-                        r = show_properties(bus, path, &new_line);
-                else
-                        r = print_session_status_info(bus, path, &new_line);
+                if (!dbus_message_get_args(reply, &error,
+                                           DBUS_TYPE_OBJECT_PATH, &path,
+                                           DBUS_TYPE_INVALID)) {
+                        log_error("Failed to parse reply: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
+                }
 
-                if (r < 0)
-                        return r;
+                r = show_one(args[0], bus, path, show_properties, &new_line);
+                if (r != 0)
+                        ret = r;
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
         }
 
-        return 0;
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        if (reply)
+                dbus_message_unref(reply);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int show_user(int argc, char *argv[], void *userdata) {
-        bool properties, new_line = false;
-        sd_bus *bus = userdata;
-        int r, i;
+static int activate(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL;
+        int ret = 0;
+        DBusError error;
+        unsigned i;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        properties = !strstr(argv[0], "status");
+        dbus_error_init(&error);
 
-        pager_open(arg_no_pager, false);
+        for (i = 1; i < n; i++) {
+                DBusMessage *reply;
 
-        if (argc <= 1) {
-                /* If not argument is specified inspect the manager
-                 * itself */
-                if (properties)
-                        return show_properties(bus, "/org/freedesktop/login1", &new_line);
-
-                return print_user_status_info(bus, "/org/freedesktop/login1/user/self", &new_line);
-        }
-
-        for (i = 1; i < argc; i++) {
-                _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-                _cleanup_(sd_bus_message_unrefp) sd_bus_message * reply = NULL;
-                const char *path = NULL;
-                uid_t uid;
-
-                r = get_user_creds((const char**) (argv+i), &uid, NULL, NULL, NULL);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to look up user %s: %m", argv[i]);
-
-                r = sd_bus_call_method(
-                                bus,
+                m = dbus_message_new_method_call(
                                 "org.freedesktop.login1",
                                 "/org/freedesktop/login1",
                                 "org.freedesktop.login1.Manager",
-                                "GetUser",
-                                &error, &reply,
-                                "u", (uint32_t) uid);
-                if (r < 0) {
-                        log_error("Failed to get user: %s", bus_error_message(&error, r));
-                        return r;
+                                streq(args[0], "lock-session")      ? "LockSession" :
+                                streq(args[0], "unlock-session")    ? "UnlockSession" :
+                                streq(args[0], "terminate-session") ? "TerminateSession" :
+                                                                      "ActivateSession");
+                if (!m) {
+                        log_error("Could not allocate message.");
+                        ret = -ENOMEM;
+                        goto finish;
                 }
 
-                r = sd_bus_message_read(reply, "o", &path);
-                if (r < 0)
-                        return bus_log_parse_error(r);
-
-                if (properties)
-                        r = show_properties(bus, path, &new_line);
-                else
-                        r = print_user_status_info(bus, path, &new_line);
-
-                if (r < 0)
-                        return r;
-        }
-
-        return 0;
-}
-
-static int show_seat(int argc, char *argv[], void *userdata) {
-        bool properties, new_line = false;
-        sd_bus *bus = userdata;
-        int r, i;
-
-        assert(bus);
-        assert(argv);
-
-        properties = !strstr(argv[0], "status");
-
-        pager_open(arg_no_pager, false);
-
-        if (argc <= 1) {
-                /* If not argument is specified inspect the manager
-                 * itself */
-                if (properties)
-                        return show_properties(bus, "/org/freedesktop/login1", &new_line);
-
-                return print_seat_status_info(bus, "/org/freedesktop/login1/seat/self", &new_line);
-        }
-
-        for (i = 1; i < argc; i++) {
-                _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-                _cleanup_(sd_bus_message_unrefp) sd_bus_message * reply = NULL;
-                const char *path = NULL;
-
-                r = sd_bus_call_method(
-                                bus,
-                                "org.freedesktop.login1",
-                                "/org/freedesktop/login1",
-                                "org.freedesktop.login1.Manager",
-                                "GetSeat",
-                                &error, &reply,
-                                "s", argv[i]);
-                if (r < 0) {
-                        log_error("Failed to get seat: %s", bus_error_message(&error, r));
-                        return r;
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_STRING, &args[i],
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        ret = -ENOMEM;
+                        goto finish;
                 }
 
-                r = sd_bus_message_read(reply, "o", &path);
-                if (r < 0)
-                        return bus_log_parse_error(r);
-
-                if (properties)
-                        r = show_properties(bus, path, &new_line);
-                else
-                        r = print_seat_status_info(bus, path, &new_line);
-
-                if (r < 0)
-                        return r;
-        }
-
-        return 0;
-}
-
-static int activate(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        char *short_argv[3];
-        int r, i;
-
-        assert(bus);
-        assert(argv);
-
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
-
-        if (argc < 2) {
-                /* No argument? Let's either use $XDG_SESSION_ID (if specified), or an empty
-                 * session name, in which case logind will try to guess our session. */
-
-                short_argv[0] = argv[0];
-                short_argv[1] = getenv("XDG_SESSION_ID") ?: (char*) "";
-                short_argv[2] = NULL;
-
-                argv = short_argv;
-                argc = 2;
-        }
-
-        for (i = 1; i < argc; i++) {
-
-                r = sd_bus_call_method(
-                                bus,
-                                "org.freedesktop.login1",
-                                "/org/freedesktop/login1",
-                                "org.freedesktop.login1.Manager",
-                                streq(argv[0], "lock-session")      ? "LockSession" :
-                                streq(argv[0], "unlock-session")    ? "UnlockSession" :
-                                streq(argv[0], "terminate-session") ? "TerminateSession" :
-                                                                      "ActivateSession",
-                                &error, NULL,
-                                "s", argv[i]);
-                if (r < 0) {
-                        log_error("Failed to issue method call: %s", bus_error_message(&error, -r));
-                        return r;
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
                 }
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
         }
 
-        return 0;
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int kill_session(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        int r, i;
+static int kill_session(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL;
+        int ret = 0;
+        DBusError error;
+        unsigned i;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
+        dbus_error_init(&error);
 
         if (!arg_kill_who)
                 arg_kill_who = "all";
 
-        for (i = 1; i < argc; i++) {
+        for (i = 1; i < n; i++) {
+                DBusMessage *reply;
 
-                r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        "KillSession",
-                        &error, NULL,
-                        "ssi", argv[i], arg_kill_who, arg_signal);
-                if (r < 0) {
-                        log_error("Could not kill session: %s", bus_error_message(&error, -r));
-                        return r;
+                m = dbus_message_new_method_call(
+                                "org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                "KillSession");
+                if (!m) {
+                        log_error("Could not allocate message.");
+                        ret = -ENOMEM;
+                        goto finish;
                 }
+
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_STRING, &args[i],
+                                              DBUS_TYPE_STRING, &arg_kill_who,
+                                              DBUS_TYPE_INT32, arg_signal,
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        ret = -ENOMEM;
+                        goto finish;
+                }
+
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
         }
 
-        return 0;
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int enable_linger(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        char* short_argv[3];
-        bool b;
-        int r, i;
+static int enable_linger(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL;
+        int ret = 0;
+        DBusError error;
+        unsigned i;
+        dbus_bool_t b, interactive = true;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
+        dbus_error_init(&error);
 
-        b = streq(argv[0], "enable-linger");
+        b = streq(args[0], "enable-linger");
 
-        if (argc < 2) {
-                /* No argument? Let's use an empty user name,
-                 * then logind will use our user. */
-
-                short_argv[0] = argv[0];
-                short_argv[1] = (char*) "";
-                short_argv[2] = NULL;
-                argv = short_argv;
-                argc = 2;
-        }
-
-        for (i = 1; i < argc; i++) {
+        for (i = 1; i < n; i++) {
+                DBusMessage *reply;
+                uint32_t u;
                 uid_t uid;
 
-                if (isempty(argv[i]))
-                        uid = UID_INVALID;
-                else {
-                        r = get_user_creds((const char**) (argv+i), &uid, NULL, NULL, NULL);
-                        if (r < 0)
-                                return log_error_errno(r, "Failed to look up user %s: %m", argv[i]);
+                m = dbus_message_new_method_call(
+                                "org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                "SetUserLinger");
+                if (!m) {
+                        log_error("Could not allocate message.");
+                        ret = -ENOMEM;
+                        goto finish;
                 }
 
-                r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        "SetUserLinger",
-                        &error, NULL,
-                        "ubb", (uint32_t) uid, b, true);
-                if (r < 0) {
-                        log_error("Could not enable linger: %s", bus_error_message(&error, -r));
-                        return r;
+                ret = get_user_creds((const char**) (args+i), &uid, NULL, NULL);
+                if (ret < 0) {
+                        log_error("Failed to resolve user %s: %s", args[i], strerror(-ret));
+                        goto finish;
                 }
+
+                u = (uint32_t) uid;
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_UINT32, &u,
+                                              DBUS_TYPE_BOOLEAN, &b,
+                                              DBUS_TYPE_BOOLEAN, &interactive,
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        ret = -ENOMEM;
+                        goto finish;
+                }
+
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
         }
 
-        return 0;
+        ret = 0;
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int terminate_user(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        int r, i;
+static int terminate_user(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL;
+        int ret = 0;
+        DBusError error;
+        unsigned i;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
+        dbus_error_init(&error);
 
-        for (i = 1; i < argc; i++) {
+        for (i = 1; i < n; i++) {
+                uint32_t u;
                 uid_t uid;
+                DBusMessage *reply;
 
-                r = get_user_creds((const char**) (argv+i), &uid, NULL, NULL, NULL);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to look up user %s: %m", argv[i]);
-
-                r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        "TerminateUser",
-                        &error, NULL,
-                        "u", (uint32_t) uid);
-                if (r < 0) {
-                        log_error("Could not terminate user: %s", bus_error_message(&error, -r));
-                        return r;
+                m = dbus_message_new_method_call(
+                                "org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                "TerminateUser");
+                if (!m) {
+                        log_error("Could not allocate message.");
+                        ret = -ENOMEM;
+                        goto finish;
                 }
+
+                ret = get_user_creds((const char**) (args+i), &uid, NULL, NULL);
+                if (ret < 0) {
+                        log_error("Failed to look up user %s: %s", args[i], strerror(-ret));
+                        goto finish;
+                }
+
+                u = (uint32_t) uid;
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_UINT32, &u,
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        ret = -ENOMEM;
+                        goto finish;
+                }
+
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
         }
 
-        return 0;
+        ret = 0;
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int kill_user(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        int r, i;
+static int kill_user(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL;
+        int ret = 0;
+        DBusError error;
+        unsigned i;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
+        dbus_error_init(&error);
 
         if (!arg_kill_who)
                 arg_kill_who = "all";
 
-        for (i = 1; i < argc; i++) {
+        for (i = 1; i < n; i++) {
+                DBusMessage *reply;
                 uid_t uid;
+                uint32_t u;
 
-                r = get_user_creds((const char**) (argv+i), &uid, NULL, NULL, NULL);
-                if (r < 0)
-                        return log_error_errno(r, "Failed to look up user %s: %m", argv[i]);
-
-                r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        "KillUser",
-                        &error, NULL,
-                        "ui", (uint32_t) uid, arg_signal);
-                if (r < 0) {
-                        log_error("Could not kill user: %s", bus_error_message(&error, -r));
-                        return r;
+                m = dbus_message_new_method_call(
+                                "org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                "KillUser");
+                if (!m) {
+                        log_error("Could not allocate message.");
+                        ret = -ENOMEM;
+                        goto finish;
                 }
+
+                ret = get_user_creds((const char**) (args+i), &uid, NULL, NULL);
+                if (ret < 0) {
+                        log_error("Failed to look up user %s: %s", args[i], strerror(-ret));
+                        goto finish;
+                }
+
+                u = (uint32_t) uid;
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_UINT32, &u,
+                                              DBUS_TYPE_INT32, arg_signal,
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        ret = -ENOMEM;
+                        goto finish;
+                }
+
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
         }
 
-        return 0;
+        ret = 0;
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int attach(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        int r, i;
+static int attach(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL;
+        int ret = 0;
+        DBusError error;
+        unsigned i;
+        dbus_bool_t interactive = true;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
+        dbus_error_init(&error);
 
-        for (i = 2; i < argc; i++) {
+        for (i = 2; i < n; i++) {
+                DBusMessage *reply;
 
-                r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        "AttachDevice",
-                        &error, NULL,
-                        "ssb", argv[1], argv[i], true);
-
-                if (r < 0) {
-                        log_error("Could not attach device: %s", bus_error_message(&error, -r));
-                        return r;
+                m = dbus_message_new_method_call(
+                                "org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                "AttachDevice");
+                if (!m) {
+                        log_error("Could not allocate message.");
+                        ret = -ENOMEM;
+                        goto finish;
                 }
+
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_STRING, &args[1],
+                                              DBUS_TYPE_STRING, &args[i],
+                                              DBUS_TYPE_BOOLEAN, &interactive,
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        ret = -ENOMEM;
+                        goto finish;
+                }
+
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
         }
 
-        return 0;
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int flush_devices(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        int r;
+static int flush_devices(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL, *reply = NULL;
+        int ret = 0;
+        DBusError error;
+        dbus_bool_t interactive = true;
 
         assert(bus);
-        assert(argv);
+        assert(args);
 
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
+        dbus_error_init(&error);
 
-        r = sd_bus_call_method(
-                        bus,
+        m = dbus_message_new_method_call(
                         "org.freedesktop.login1",
                         "/org/freedesktop/login1",
                         "org.freedesktop.login1.Manager",
-                        "FlushDevices",
-                        &error, NULL,
-                        "b", true);
-        if (r < 0)
-                log_error("Could not flush devices: %s", bus_error_message(&error, -r));
-
-        return r;
-}
-
-static int lock_sessions(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        int r;
-
-        assert(bus);
-        assert(argv);
-
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
-
-        r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        streq(argv[0], "lock-sessions") ? "LockSessions" : "UnlockSessions",
-                        &error, NULL,
-                        NULL);
-        if (r < 0)
-                log_error("Could not lock sessions: %s", bus_error_message(&error, -r));
-
-        return r;
-}
-
-static int terminate_seat(int argc, char *argv[], void *userdata) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        sd_bus *bus = userdata;
-        int r, i;
-
-        assert(bus);
-        assert(argv);
-
-        polkit_agent_open_if_enabled(arg_transport, arg_ask_password);
-
-        for (i = 1; i < argc; i++) {
-
-                r = sd_bus_call_method(
-                        bus,
-                        "org.freedesktop.login1",
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        "TerminateSeat",
-                        &error, NULL,
-                        "s", argv[i]);
-                if (r < 0) {
-                        log_error("Could not terminate seat: %s", bus_error_message(&error, -r));
-                        return r;
-                }
+                        "FlushDevices");
+        if (!m) {
+                log_error("Could not allocate message.");
+                ret = -ENOMEM;
+                goto finish;
         }
 
-        return 0;
+        if (!dbus_message_append_args(m,
+                                      DBUS_TYPE_BOOLEAN, &interactive,
+                                      DBUS_TYPE_INVALID)) {
+                log_error("Could not append arguments to message.");
+                ret = -ENOMEM;
+                goto finish;
+        }
+
+        reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+        if (!reply) {
+                log_error("Failed to issue method call: %s", bus_error_message(&error));
+                ret = -EIO;
+                goto finish;
+        }
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        if (reply)
+                dbus_message_unref(reply);
+
+        dbus_error_free(&error);
+
+        return ret;
 }
 
-static int help(int argc, char *argv[], void *userdata) {
+static int terminate_seat(DBusConnection *bus, char **args, unsigned n) {
+        DBusMessage *m = NULL;
+        int ret = 0;
+        DBusError error;
+        unsigned i;
+
+        assert(bus);
+        assert(args);
+
+        dbus_error_init(&error);
+
+        for (i = 1; i < n; i++) {
+                DBusMessage *reply;
+
+                m = dbus_message_new_method_call(
+                                "org.freedesktop.login1",
+                                "/org/freedesktop/login1",
+                                "org.freedesktop.login1.Manager",
+                                "TerminateSeat");
+                if (!m) {
+                        log_error("Could not allocate message.");
+                        ret = -ENOMEM;
+                        goto finish;
+                }
+
+                if (!dbus_message_append_args(m,
+                                              DBUS_TYPE_STRING, &args[i],
+                                              DBUS_TYPE_INVALID)) {
+                        log_error("Could not append arguments to message.");
+                        ret = -ENOMEM;
+                        goto finish;
+                }
+
+                reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
+                if (!reply) {
+                        log_error("Failed to issue method call: %s", bus_error_message(&error));
+                        ret = -EIO;
+                        goto finish;
+                }
+
+                dbus_message_unref(m);
+                dbus_message_unref(reply);
+                m = reply = NULL;
+        }
+
+finish:
+        if (m)
+                dbus_message_unref(m);
+
+        dbus_error_free(&error);
+
+        return ret;
+}
+
+static int help(void) {
 
         printf("%s [OPTIONS...] {COMMAND} ...\n\n"
                "Send control commands to or query the login manager.\n\n"
-               "  -h --help                Show this help\n"
-               "     --version             Show package version\n"
-               "     --no-pager            Do not pipe output into a pager\n"
-               "     --no-legend           Do not show the headers and footers\n"
-               "     --no-ask-password     Don't prompt for password\n"
-               "  -H --host=[USER@]HOST    Operate on remote host\n"
-               "  -M --machine=CONTAINER   Operate on local container\n"
-               "  -p --property=NAME       Show only properties by this name\n"
-               "  -a --all                 Show all properties, including empty ones\n"
-               "     --value               When showing properties, only print the value\n"
-               "  -l --full                Do not ellipsize output\n"
-               "     --kill-who=WHO        Who to send signal to\n"
-               "  -s --signal=SIGNAL       Which signal to send\n"
-               "  -n --lines=INTEGER       Number of journal entries to show\n"
-               "  -o --output=STRING       Change journal output mode (short, short-precise,\n"
-               "                             short-iso, short-iso-precise, short-full,\n"
-               "                             short-monotonic, short-unix, verbose, export,\n"
-               "                             json, json-pretty, json-sse, cat)\n"
-               "Session Commands:\n"
-               "  list-sessions            List sessions\n"
-               "  session-status [ID...]   Show session status\n"
-               "  show-session [ID...]     Show properties of sessions or the manager\n"
-               "  activate [ID]            Activate a session\n"
-               "  lock-session [ID...]     Screen lock one or more sessions\n"
-               "  unlock-session [ID...]   Screen unlock one or more sessions\n"
-               "  lock-sessions            Screen lock all current sessions\n"
-               "  unlock-sessions          Screen unlock all current sessions\n"
-               "  terminate-session ID...  Terminate one or more sessions\n"
-               "  kill-session ID...       Send signal to processes of a session\n\n"
-               "User Commands:\n"
-               "  list-users               List users\n"
-               "  user-status [USER...]    Show user status\n"
-               "  show-user [USER...]      Show properties of users or the manager\n"
-               "  enable-linger [USER...]  Enable linger state of one or more users\n"
-               "  disable-linger [USER...] Disable linger state of one or more users\n"
-               "  terminate-user USER...   Terminate all sessions of one or more users\n"
-               "  kill-user USER...        Send signal to processes of a user\n\n"
-               "Seat Commands:\n"
-               "  list-seats               List seats\n"
-               "  seat-status [NAME...]    Show seat status\n"
-               "  show-seat [NAME...]      Show properties of seats or the manager\n"
-               "  attach NAME DEVICE...    Attach one or more devices to a seat\n"
-               "  flush-devices            Flush all device associations\n"
-               "  terminate-seat NAME...   Terminate all sessions on one or more seats\n"
-               , program_invocation_short_name);
+               "  -h --help           Show this help\n"
+               "     --version        Show package version\n"
+               "  -p --property=NAME  Show only properties by this name\n"
+               "  -a --all            Show all properties, including empty ones\n"
+               "     --kill-who=WHO   Who to send signal to\n"
+               "  -s --signal=SIGNAL  Which signal to send\n"
+               "  -H --host=[USER@]HOST\n"
+               "                      Show information for remote host\n"
+               "  -P --privileged     Acquire privileges before execution\n"
+               "     --no-pager       Do not pipe output into a pager\n\n"
+               "Commands:\n"
+               "  list-sessions                   List sessions\n"
+               "  session-status [ID...]          Show session status\n"
+               "  show-session [ID...]            Show properties of one or more sessions\n"
+               "  activate [ID]                   Activate a session\n"
+               "  lock-session [ID...]            Screen lock one or more sessions\n"
+               "  unlock-session [ID...]          Screen unlock one or more sessions\n"
+               "  terminate-session [ID...]       Terminate one or more sessions\n"
+               "  kill-session [ID...]            Send signal to processes of a session\n"
+               "  list-users                      List users\n"
+               "  user-status [USER...]           Show user status\n"
+               "  show-user [USER...]             Show properties of one or more users\n"
+               "  enable-linger [USER...]         Enable linger state of one or more users\n"
+               "  disable-linger [USER...]        Disable linger state of one or more users\n"
+               "  terminate-user [USER...]        Terminate all sessions of one or more users\n"
+               "  kill-user [USER...]             Send signal to processes of a user\n"
+               "  list-seats                      List seats\n"
+               "  seat-status [NAME...]           Show seat status\n"
+               "  show-seat [NAME...]             Show properties of one or more seats\n"
+               "  attach [NAME] [DEVICE...]       Attach one or more devices to a seat\n"
+               "  flush-devices                   Flush all device associations\n"
+               "  terminate-seat [NAME...]        Terminate all sessions on one or more seats\n",
+               program_invocation_short_name);
 
         return 0;
 }
@@ -1425,52 +1683,51 @@ static int parse_argv(int argc, char *argv[]) {
 
         enum {
                 ARG_VERSION = 0x100,
-                ARG_VALUE,
                 ARG_NO_PAGER,
-                ARG_NO_LEGEND,
-                ARG_KILL_WHO,
-                ARG_NO_ASK_PASSWORD,
+                ARG_KILL_WHO
         };
 
         static const struct option options[] = {
-                { "help",            no_argument,       NULL, 'h'                 },
-                { "version",         no_argument,       NULL, ARG_VERSION         },
-                { "property",        required_argument, NULL, 'p'                 },
-                { "all",             no_argument,       NULL, 'a'                 },
-                { "value",           no_argument,       NULL, ARG_VALUE           },
-                { "full",            no_argument,       NULL, 'l'                 },
-                { "no-pager",        no_argument,       NULL, ARG_NO_PAGER        },
-                { "no-legend",       no_argument,       NULL, ARG_NO_LEGEND       },
-                { "kill-who",        required_argument, NULL, ARG_KILL_WHO        },
-                { "signal",          required_argument, NULL, 's'                 },
-                { "host",            required_argument, NULL, 'H'                 },
-                { "machine",         required_argument, NULL, 'M'                 },
-                { "no-ask-password", no_argument,       NULL, ARG_NO_ASK_PASSWORD },
-                { "lines",           required_argument, NULL, 'n'                 },
-                { "output",          required_argument, NULL, 'o'                 },
-                {}
+                { "help",      no_argument,       NULL, 'h'           },
+                { "version",   no_argument,       NULL, ARG_VERSION   },
+                { "property",  required_argument, NULL, 'p'           },
+                { "all",       no_argument,       NULL, 'a'           },
+                { "no-pager",  no_argument,       NULL, ARG_NO_PAGER  },
+                { "kill-who",  required_argument, NULL, ARG_KILL_WHO  },
+                { "signal",    required_argument, NULL, 's'           },
+                { "host",      required_argument, NULL, 'H'           },
+                { "privileged",no_argument,       NULL, 'P'           },
+                { NULL,        0,                 NULL, 0             }
         };
 
-        int c, r;
+        int c;
 
         assert(argc >= 0);
         assert(argv);
 
-        while ((c = getopt_long(argc, argv, "hp:als:H:M:n:o:", options, NULL)) >= 0)
+        while ((c = getopt_long(argc, argv, "hp:as:H:P", options, NULL)) >= 0) {
 
                 switch (c) {
 
                 case 'h':
-                        help(0, NULL, NULL);
+                        help();
                         return 0;
 
                 case ARG_VERSION:
-                        return version();
+                        puts(PACKAGE_STRING);
+                        puts(DISTRIBUTION);
+                        puts(SYSTEMD_FEATURES);
+                        return 0;
 
                 case 'p': {
-                        r = strv_extend(&arg_property, optarg);
-                        if (r < 0)
-                                return log_oom();
+                        char **l;
+
+                        l = strv_append(arg_property, optarg);
+                        if (!l)
+                                return -ENOMEM;
+
+                        strv_free(arg_property);
+                        arg_property = l;
 
                         /* If the user asked for a particular
                          * property, show it to him, even if it is
@@ -1483,39 +1740,8 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_all = true;
                         break;
 
-                case ARG_VALUE:
-                        arg_value = true;
-                        break;
-
-                case 'l':
-                        arg_full = true;
-                        break;
-
-                case 'n':
-                        if (safe_atou(optarg, &arg_lines) < 0) {
-                                log_error("Failed to parse lines '%s'", optarg);
-                                return -EINVAL;
-                        }
-                        break;
-
-                case 'o':
-                        arg_output = output_mode_from_string(optarg);
-                        if (arg_output < 0) {
-                                log_error("Unknown output '%s'.", optarg);
-                                return -EINVAL;
-                        }
-                        break;
-
                 case ARG_NO_PAGER:
                         arg_no_pager = true;
-                        break;
-
-                case ARG_NO_LEGEND:
-                        arg_legend = false;
-                        break;
-
-                case ARG_NO_ASK_PASSWORD:
-                        arg_ask_password = false;
                         break;
 
                 case ARG_KILL_WHO:
@@ -1530,13 +1756,12 @@ static int parse_argv(int argc, char *argv[]) {
                         }
                         break;
 
-                case 'H':
-                        arg_transport = BUS_TRANSPORT_REMOTE;
-                        arg_host = optarg;
+                case 'P':
+                        arg_transport = TRANSPORT_POLKIT;
                         break;
 
-                case 'M':
-                        arg_transport = BUS_TRANSPORT_MACHINE;
+                case 'H':
+                        arg_transport = TRANSPORT_SSH;
                         arg_host = optarg;
                         break;
 
@@ -1544,76 +1769,158 @@ static int parse_argv(int argc, char *argv[]) {
                         return -EINVAL;
 
                 default:
-                        assert_not_reached("Unhandled option");
+                        log_error("Unknown option code %c", c);
+                        return -EINVAL;
                 }
+        }
 
         return 1;
 }
 
-static int loginctl_main(int argc, char *argv[], sd_bus *bus) {
+static int loginctl_main(DBusConnection *bus, int argc, char *argv[], DBusError *error) {
 
-        static const Verb verbs[] = {
-                { "help",              VERB_ANY, VERB_ANY, 0,            help              },
-                { "list-sessions",     VERB_ANY, 1,        VERB_DEFAULT, list_sessions     },
-                { "session-status",    VERB_ANY, VERB_ANY, 0,            show_session      },
-                { "show-session",      VERB_ANY, VERB_ANY, 0,            show_session      },
-                { "activate",          VERB_ANY, 2,        0,            activate          },
-                { "lock-session",      VERB_ANY, VERB_ANY, 0,            activate          },
-                { "unlock-session",    VERB_ANY, VERB_ANY, 0,            activate          },
-                { "lock-sessions",     VERB_ANY, 1,        0,            lock_sessions     },
-                { "unlock-sessions",   VERB_ANY, 1,        0,            lock_sessions     },
-                { "terminate-session", 2,        VERB_ANY, 0,            activate          },
-                { "kill-session",      2,        VERB_ANY, 0,            kill_session      },
-                { "list-users",        VERB_ANY, 1,        0,            list_users        },
-                { "user-status",       VERB_ANY, VERB_ANY, 0,            show_user         },
-                { "show-user",         VERB_ANY, VERB_ANY, 0,            show_user         },
-                { "enable-linger",     VERB_ANY, VERB_ANY, 0,            enable_linger     },
-                { "disable-linger",    VERB_ANY, VERB_ANY, 0,            enable_linger     },
-                { "terminate-user",    2,        VERB_ANY, 0,            terminate_user    },
-                { "kill-user",         2,        VERB_ANY, 0,            kill_user         },
-                { "list-seats",        VERB_ANY, 1,        0,            list_seats        },
-                { "seat-status",       VERB_ANY, VERB_ANY, 0,            show_seat         },
-                { "show-seat",         VERB_ANY, VERB_ANY, 0,            show_seat         },
-                { "attach",            3,        VERB_ANY, 0,            attach            },
-                { "flush-devices",     VERB_ANY, 1,        0,            flush_devices     },
-                { "terminate-seat",    2,        VERB_ANY, 0,            terminate_seat    },
-                {}
+        static const struct {
+                const char* verb;
+                const enum {
+                        MORE,
+                        LESS,
+                        EQUAL
+                } argc_cmp;
+                const int argc;
+                int (* const dispatch)(DBusConnection *bus, char **args, unsigned n);
+        } verbs[] = {
+                { "list-sessions",         LESS,   1, list_sessions    },
+                { "session-status",        MORE,   2, show             },
+                { "show-session",          MORE,   1, show             },
+                { "activate",              EQUAL,  2, activate         },
+                { "lock-session",          MORE,   2, activate         },
+                { "unlock-session",        MORE,   2, activate         },
+                { "terminate-session",     MORE,   2, activate         },
+                { "kill-session",          MORE,   2, kill_session     },
+                { "list-users",            EQUAL,  1, list_users       },
+                { "user-status",           MORE,   2, show             },
+                { "show-user",             MORE,   1, show             },
+                { "enable-linger",         MORE,   2, enable_linger    },
+                { "disable-linger",        MORE,   2, enable_linger    },
+                { "terminate-user",        MORE,   2, terminate_user   },
+                { "kill-user",             MORE,   2, kill_user        },
+                { "list-seats",            EQUAL,  1, list_seats       },
+                { "seat-status",           MORE,   2, show             },
+                { "show-seat",             MORE,   1, show             },
+                { "attach",                MORE,   3, attach           },
+                { "flush-devices",         EQUAL,  1, flush_devices    },
+                { "terminate-seat",        MORE,   2, terminate_seat   },
         };
 
-        return dispatch_verb(argc, argv, verbs, bus);
+        int left;
+        unsigned i;
+
+        assert(argc >= 0);
+        assert(argv);
+        assert(error);
+
+        left = argc - optind;
+
+        if (left <= 0)
+                /* Special rule: no arguments means "list-sessions" */
+                i = 0;
+        else {
+                if (streq(argv[optind], "help")) {
+                        help();
+                        return 0;
+                }
+
+                for (i = 0; i < ELEMENTSOF(verbs); i++)
+                        if (streq(argv[optind], verbs[i].verb))
+                                break;
+
+                if (i >= ELEMENTSOF(verbs)) {
+                        log_error("Unknown operation %s", argv[optind]);
+                        return -EINVAL;
+                }
+        }
+
+        switch (verbs[i].argc_cmp) {
+
+        case EQUAL:
+                if (left != verbs[i].argc) {
+                        log_error("Invalid number of arguments.");
+                        return -EINVAL;
+                }
+
+                break;
+
+        case MORE:
+                if (left < verbs[i].argc) {
+                        log_error("Too few arguments.");
+                        return -EINVAL;
+                }
+
+                break;
+
+        case LESS:
+                if (left > verbs[i].argc) {
+                        log_error("Too many arguments.");
+                        return -EINVAL;
+                }
+
+                break;
+
+        default:
+                assert_not_reached("Unknown comparison operator.");
+        }
+
+        if (!bus) {
+                log_error("Failed to get D-Bus connection: %s", error->message);
+                return -EIO;
+        }
+
+        return verbs[i].dispatch(bus, argv + optind, left);
 }
 
-int main(int argc, char *argv[]) {
-        sd_bus *bus = NULL;
-        int r;
+int main(int argc, char*argv[]) {
+        int r, retval = EXIT_FAILURE;
+        DBusConnection *bus = NULL;
+        DBusError error;
 
-        setlocale(LC_ALL, "");
+        dbus_error_init(&error);
+
         log_parse_environment();
         log_open();
-        sigbus_install();
 
         r = parse_argv(argc, argv);
-        if (r <= 0)
+        if (r < 0)
                 goto finish;
-
-        r = bus_connect_transport(arg_transport, arg_host, false, &bus);
-        if (r < 0) {
-                log_error_errno(r, "Failed to create bus connection: %m");
+        else if (r == 0) {
+                retval = EXIT_SUCCESS;
                 goto finish;
         }
 
-        sd_bus_set_allow_interactive_authorization(bus, arg_ask_password);
+        if (arg_transport == TRANSPORT_NORMAL)
+                bus = dbus_bus_get_private(DBUS_BUS_SYSTEM, &error);
+        else if (arg_transport == TRANSPORT_POLKIT)
+                bus_connect_system_polkit(&bus, &error);
+        else if (arg_transport == TRANSPORT_SSH)
+                bus_connect_system_ssh(NULL, arg_host, &bus, &error);
+        else
+                assert_not_reached("Uh, invalid transport...");
 
-        r = loginctl_main(argc, argv, bus);
+        r = loginctl_main(bus, argc, argv, &error);
+        retval = r < 0 ? EXIT_FAILURE : r;
 
 finish:
-        /* make sure we terminate the bus connection first, and then close the
-         * pager, see issue #3543 for the details. */
-        sd_bus_flush_close_unref(bus);
-        pager_close();
-        polkit_agent_close();
+        if (bus) {
+                dbus_connection_flush(bus);
+                dbus_connection_close(bus);
+                dbus_connection_unref(bus);
+        }
+
+        dbus_error_free(&error);
+        dbus_shutdown();
 
         strv_free(arg_property);
 
-        return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+        pager_close();
+
+        return retval;
 }

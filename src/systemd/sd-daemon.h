@@ -1,35 +1,46 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
+
 #ifndef foosddaemonhfoo
 #define foosddaemonhfoo
 
 /***
-  This file is part of systemd.
+  Copyright 2010 Lennart Poettering
 
-  Copyright 2013 Lennart Poettering
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
 
-  systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation; either version 2.1 of the License, or
-  (at your option) any later version.
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
 
-  systemd is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public License
-  along with systemd; If not, see <http://www.gnu.org/licenses/>.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 ***/
 
-#include <inttypes.h>
 #include <sys/types.h>
-#include <sys/socket.h>
+#include <inttypes.h>
 
-#include "_sd-common.h"
-
-_SD_BEGIN_DECLARATIONS;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
+  Reference implementation of a few systemd related interfaces for
+  writing daemons. These interfaces are trivial to implement. To
+  simplify porting we provide this reference implementation.
+  Applications are welcome to reimplement the algorithms described
+  here if they do not want to include these two source files.
+
   The following functionality is provided:
 
   - Support for logging with log levels on stderr
@@ -37,8 +48,32 @@ _SD_BEGIN_DECLARATIONS;
   - Daemon startup and status notification
   - Detection of systemd boots
 
-  See sd-daemon(3) for more information.
+  You may compile this with -DDISABLE_SYSTEMD to disable systemd
+  support. This makes all those calls NOPs that are directly related to
+  systemd (i.e. only sd_is_xxx() will stay useful).
+
+  Since this is drop-in code we don't want any of our symbols to be
+  exported in any case. Hence we declare hidden visibility for all of
+  them.
+
+  You may find an up-to-date version of these source files online:
+
+  http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h
+  http://cgit.freedesktop.org/systemd/systemd/plain/src/sd-daemon.c
+
+  This should compile on non-Linux systems, too, but with the
+  exception of the sd_is_xxx() calls all functions will become NOPs.
+
+  See sd-daemon(7) for more information.
 */
+
+#ifndef _sd_printf_attr_
+#if __GNUC__ >= 4
+#define _sd_printf_attr_(a,b) __attribute__ ((format (printf, a, b)))
+#else
+#define _sd_printf_attr_(a,b)
+#endif
+#endif
 
 /*
   Log levels for usage on stderr:
@@ -75,8 +110,6 @@ _SD_BEGIN_DECLARATIONS;
   See sd_listen_fds(3) for more information.
 */
 int sd_listen_fds(int unset_environment);
-
-int sd_listen_fds_with_names(int unset_environment, char ***names);
 
 /*
   Helper call for identifying a passed file descriptor. Returns 1 if
@@ -133,18 +166,6 @@ int sd_is_socket(int fd, int family, int type, int listening);
 int sd_is_socket_inet(int fd, int family, int type, int listening, uint16_t port);
 
 /*
-  Helper call for identifying a passed file descriptor. Returns 1 if the
-  file descriptor is an Internet socket of the specified type
-  (SOCK_DGRAM, SOCK_STREAM, ...), and if the address of the socket is
-  the same as the address specified by addr. The listening flag is used
-  the same way as in sd_is_socket(). Returns a negative errno style
-  error code on failure.
-
-  See sd_is_socket_sockaddr(3) for more information.
-*/
-int sd_is_socket_sockaddr(int fd, int type, const struct sockaddr* addr, unsigned addr_len, int listening);
-
-/*
   Helper call for identifying a passed file descriptor. Returns 1 if
   the file descriptor is an AF_UNIX socket of the specified type
   (SOCK_DGRAM, SOCK_STREAM, ...) and path, 0 otherwise. If type is 0
@@ -165,8 +186,6 @@ int sd_is_socket_unix(int fd, int type, int listening, const char *path, size_t 
   the file descriptor is a POSIX Message Queue of the specified name,
   0 otherwise. If path is NULL a message queue name check is not
   done. Returns a negative errno style error code on failure.
-
-  See sd_is_mq(3) for more information.
 */
 int sd_is_mq(int fd, const char *path);
 
@@ -175,24 +194,14 @@ int sd_is_mq(int fd, const char *path);
   newline separated environment-style variable assignments in a
   string. The following variables are known:
 
-     MAINPID=...  The main PID of a daemon, in case systemd did not
-                  fork off the process itself. Example: "MAINPID=4711"
-
-     READY=1      Tells systemd that daemon startup or daemon reload
-                  is finished (only relevant for services of Type=notify).
-                  The passed argument is a boolean "1" or "0". Since there
-                  is little value in signaling non-readiness the only
+     READY=1      Tells systemd that daemon startup is finished (only
+                  relevant for services of Type=notify). The passed
+                  argument is a boolean "1" or "0". Since there is
+                  little value in signaling non-readiness the only
                   value daemons should send is "READY=1".
 
-     RELOADING=1  Tell systemd that the daemon began reloading its
-                  configuration. When the configuration has been
-                  reloaded completely, READY=1 should be sent to inform
-                  systemd about this.
-
-     STOPPING=1   Tells systemd that the daemon is about to go down.
-
      STATUS=...   Passes a single-line status string back to systemd
-                  that describes the daemon state. This is free-form
+                  that describes the daemon state. This is free-from
                   and can be used for various purposes: general state
                   feedback, fsck-like programs could pass completion
                   percentages and failing programs could pass a human
@@ -205,31 +214,13 @@ int sd_is_mq(int fd, const char *path);
      BUSERROR=... If a daemon fails, the D-Bus error-style error
                   code. Example: "BUSERROR=org.freedesktop.DBus.Error.TimedOut"
 
+     MAINPID=...  The main pid of a daemon, in case systemd did not
+                  fork off the process itself. Example: "MAINPID=4711"
+
      WATCHDOG=1   Tells systemd to update the watchdog timestamp.
                   Services using this feature should do this in
                   regular intervals. A watchdog framework can use the
-                  timestamps to detect failed services. Also see
-                  sd_watchdog_enabled() below.
-
-     WATCHDOG_USEC=...
-                  Reset watchdog_usec value during runtime.
-                  To reset watchdog_usec value, start the service again.
-                  Example: "WATCHDOG_USEC=20000000"
-
-     FDSTORE=1    Store the file descriptors passed along with the
-                  message in the per-service file descriptor store,
-                  and pass them to the main process again on next
-                  invocation. This variable is only supported with
-                  sd_pid_notify_with_fds().
-
-     FDSTOREREMOVE=1
-                  Remove one or more file descriptors from the file
-                  descriptor store, identified by the name specified
-                  in FDNAME=, see below.
-
-     FDNAME=      A name to assign to new file descriptors stored in the
-                  file descriptor store, or the name of the file descriptors
-                  to remove in case of FDSTOREREMOVE=1.
+                  timestamps to detect failed services.
 
   Daemons can choose to send additional variables. However, it is
   recommended to prefix variable names not listed above with X_.
@@ -269,26 +260,7 @@ int sd_notify(int unset_environment, const char *state);
 
   See sd_notifyf(3) for more information.
 */
-int sd_notifyf(int unset_environment, const char *format, ...) _sd_printf_(2,3);
-
-/*
-  Similar to sd_notify(), but send the message on behalf of another
-  process, if the appropriate permissions are available.
-*/
-int sd_pid_notify(pid_t pid, int unset_environment, const char *state);
-
-/*
-  Similar to sd_notifyf(), but send the message on behalf of another
-  process, if the appropriate permissions are available.
-*/
-int sd_pid_notifyf(pid_t pid, int unset_environment, const char *format, ...) _sd_printf_(3,4);
-
-/*
-  Similar to sd_pid_notify(), but also passes the specified fd array
-  to the service manager for storage. This is particularly useful for
-  FDSTORE=1 messages.
-*/
-int sd_pid_notify_with_fds(pid_t pid, int unset_environment, const char *state, const int *fds, unsigned n_fds);
+int sd_notifyf(int unset_environment, const char *format, ...) _sd_printf_attr_(2,3);
 
 /*
   Returns > 0 if the system was booted with systemd. Returns < 0 on
@@ -303,22 +275,8 @@ int sd_pid_notify_with_fds(pid_t pid, int unset_environment, const char *state, 
 */
 int sd_booted(void);
 
-/*
-  Returns > 0 if the service manager expects watchdog keep-alive
-  events to be sent regularly via sd_notify(0, "WATCHDOG=1"). Returns
-  0 if it does not expect this. If the usec argument is non-NULL
-  returns the watchdog timeout in µs after which the service manager
-  will act on a process that has not sent a watchdog keep alive
-  message. This function is useful to implement services that
-  recognize automatically if they are being run under supervision of
-  systemd with WatchdogSec= set. It is recommended for clients to
-  generate keep-alive pings via sd_notify(0, "WATCHDOG=1") every half
-  of the returned time.
-
-  See sd_watchdog_enabled(3) for more information.
-*/
-int sd_watchdog_enabled(int unset_environment, uint64_t *usec);
-
-_SD_END_DECLARATIONS;
+#ifdef __cplusplus
+}
+#endif
 
 #endif

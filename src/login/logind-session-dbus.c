@@ -1,697 +1,479 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
+
 /***
   This file is part of systemd.
 
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation; either version 2.1 of the License, or
+  under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
+  General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
 #include <errno.h>
 #include <string.h>
 
-#include "alloc-util.h"
-#include "bus-common-errors.h"
-#include "bus-label.h"
-#include "bus-util.h"
-#include "fd-util.h"
-#include "logind-session-device.h"
-#include "logind-session.h"
 #include "logind.h"
-#include "signal-util.h"
-#include "strv.h"
+#include "logind-session.h"
+#include "dbus-common.h"
 #include "util.h"
 
-static int property_get_user(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
+#define BUS_SESSION_INTERFACE \
+        " <interface name=\"org.freedesktop.login1.Session\">\n"        \
+        "  <method name=\"Terminate\"/>\n"                              \
+        "  <method name=\"Activate\"/>\n"                               \
+        "  <method name=\"Lock\"/>\n"                                   \
+        "  <method name=\"Unlock\"/>\n"                                 \
+        "  <method name=\"SetIdleHint\">\n"                             \
+        "   <arg name=\"b\" type=\"b\"/>\n"                             \
+        "  </method>\n"                                                 \
+        "  <method name=\"Kill\">\n"                                    \
+        "   <arg name=\"who\" type=\"s\"/>\n"                           \
+        "   <arg name=\"signal\" type=\"s\"/>\n"                        \
+        "  </method>\n"                                                 \
+        "  <property name=\"Id\" type=\"s\" access=\"read\"/>\n"        \
+        "  <property name=\"User\" type=\"(uo)\" access=\"read\"/>\n"   \
+        "  <property name=\"Name\" type=\"s\" access=\"read\"/>\n"      \
+        "  <property name=\"Timestamp\" type=\"t\" access=\"read\"/>\n" \
+        "  <property name=\"TimestampMonotonic\" type=\"t\" access=\"read\"/>\n" \
+        "  <property name=\"ControlGroupPath\" type=\"s\" access=\"read\"/>\n" \
+        "  <property name=\"VTNr\" type=\"u\" access=\"read\"/>\n"      \
+        "  <property name=\"Seat\" type=\"(so)\" access=\"read\"/>\n"   \
+        "  <property name=\"TTY\" type=\"s\" access=\"read\"/>\n"       \
+        "  <property name=\"Display\" type=\"s\" access=\"read\"/>\n"   \
+        "  <property name=\"Remote\" type=\"b\" access=\"read\"/>\n"    \
+        "  <property name=\"RemoteHost\" type=\"s\" access=\"read\"/>\n" \
+        "  <property name=\"RemoteUser\" type=\"s\" access=\"read\"/>\n" \
+        "  <property name=\"Service\" type=\"s\" access=\"read\"/>\n" \
+        "  <property name=\"Leader\" type=\"u\" access=\"read\"/>\n"    \
+        "  <property name=\"Audit\" type=\"u\" access=\"read\"/>\n"     \
+        "  <property name=\"Type\" type=\"s\" access=\"read\"/>\n"      \
+        "  <property name=\"Class\" type=\"s\" access=\"read\"/>\n"      \
+        "  <property name=\"Active\" type=\"b\" access=\"read\"/>\n"    \
+        "  <property name=\"Controllers\" type=\"as\" access=\"read\"/>\n" \
+        "  <property name=\"ResetControllers\" type=\"as\" access=\"read\"/>\n" \
+        "  <property name=\"KillProcesses\" type=\"b\" access=\"read\"/>\n" \
+        "  <property name=\"IdleHint\" type=\"b\" access=\"read\"/>\n"  \
+        "  <property name=\"IdleSinceHint\" type=\"t\" access=\"read\"/>\n" \
+        "  <property name=\"IdleSinceHintMonotonic\" type=\"t\" access=\"read\"/>\n" \
+        " </interface>\n"
 
-        _cleanup_free_ char *p = NULL;
-        Session *s = userdata;
+#define INTROSPECTION                                                   \
+        DBUS_INTROSPECT_1_0_XML_DOCTYPE_DECL_NODE                       \
+        "<node>\n"                                                      \
+        BUS_SESSION_INTERFACE                                           \
+        BUS_PROPERTIES_INTERFACE                                        \
+        BUS_PEER_INTERFACE                                              \
+        BUS_INTROSPECTABLE_INTERFACE                                    \
+        "</node>\n"
 
-        assert(bus);
-        assert(reply);
+#define INTERFACES_LIST                              \
+        BUS_GENERIC_INTERFACES_LIST                  \
+        "org.freedesktop.login1.Session\0"
+
+static int bus_session_append_seat(DBusMessageIter *i, const char *property, void *data) {
+        DBusMessageIter sub;
+        Session *s = data;
+        const char *id, *path;
+        char *p = NULL;
+
+        assert(i);
+        assert(property);
         assert(s);
 
-        p = user_bus_path(s->user);
+        if (!dbus_message_iter_open_container(i, DBUS_TYPE_STRUCT, NULL, &sub))
+                return -ENOMEM;
+
+        if (s->seat) {
+                id = s->seat->id;
+                path = p = seat_bus_path(s->seat);
+
+                if (!p)
+                        return -ENOMEM;
+        } else {
+                id = "";
+                path = "/";
+        }
+
+        if (!dbus_message_iter_append_basic(&sub, DBUS_TYPE_STRING, &id) ||
+            !dbus_message_iter_append_basic(&sub, DBUS_TYPE_OBJECT_PATH, &path)) {
+                free(p);
+                return -ENOMEM;
+        }
+
+        free(p);
+
+        if (!dbus_message_iter_close_container(i, &sub))
+                return -ENOMEM;
+
+        return 0;
+}
+
+static int bus_session_append_user(DBusMessageIter *i, const char *property, void *data) {
+        DBusMessageIter sub;
+        User *u = data;
+        char *p = NULL;
+
+        assert(i);
+        assert(property);
+        assert(u);
+
+        if (!dbus_message_iter_open_container(i, DBUS_TYPE_STRUCT, NULL, &sub))
+                return -ENOMEM;
+
+        p = user_bus_path(u);
         if (!p)
                 return -ENOMEM;
 
-        return sd_bus_message_append(reply, "(uo)", (uint32_t) s->user->uid, p);
-}
+        if (!dbus_message_iter_append_basic(&sub, DBUS_TYPE_UINT32, &u->uid) ||
+            !dbus_message_iter_append_basic(&sub, DBUS_TYPE_OBJECT_PATH, &p)) {
+                free(p);
+                return -ENOMEM;
+        }
 
-static int property_get_name(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
+        free(p);
 
-        Session *s = userdata;
-
-        assert(bus);
-        assert(reply);
-        assert(s);
-
-        return sd_bus_message_append(reply, "s", s->user->name);
-}
-
-static int property_get_seat(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
-
-        _cleanup_free_ char *p = NULL;
-        Session *s = userdata;
-
-        assert(bus);
-        assert(reply);
-        assert(s);
-
-        p = s->seat ? seat_bus_path(s->seat) : strdup("/");
-        if (!p)
+        if (!dbus_message_iter_close_container(i, &sub))
                 return -ENOMEM;
 
-        return sd_bus_message_append(reply, "(so)", s->seat ? s->seat->id : "", p);
+        return 0;
 }
 
-static BUS_DEFINE_PROPERTY_GET_ENUM(property_get_type, session_type, SessionType);
-static BUS_DEFINE_PROPERTY_GET_ENUM(property_get_class, session_class, SessionClass);
+static int bus_session_append_active(DBusMessageIter *i, const char *property, void *data) {
+        Session *s = data;
+        dbus_bool_t b;
 
-static int property_get_active(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
-
-        Session *s = userdata;
-
-        assert(bus);
-        assert(reply);
+        assert(i);
+        assert(property);
         assert(s);
 
-        return sd_bus_message_append(reply, "b", session_is_active(s));
+        b = session_is_active(s);
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_BOOLEAN, &b))
+                return -ENOMEM;
+
+        return 0;
 }
 
-static int property_get_state(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
+static int bus_session_append_idle_hint(DBusMessageIter *i, const char *property, void *data) {
+        Session *s = data;
+        int b;
 
-        Session *s = userdata;
-
-        assert(bus);
-        assert(reply);
+        assert(i);
+        assert(property);
         assert(s);
 
-        return sd_bus_message_append(reply, "s", session_state_to_string(session_get_state(s)));
+        b = session_get_idle_hint(s, NULL) > 0;
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_BOOLEAN, &b))
+                return -ENOMEM;
+
+        return 0;
 }
 
-static int property_get_idle_hint(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
-
-        Session *s = userdata;
-
-        assert(bus);
-        assert(reply);
-        assert(s);
-
-        return sd_bus_message_append(reply, "b", session_get_idle_hint(s, NULL) > 0);
-}
-
-static int property_get_idle_since_hint(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
-
-        Session *s = userdata;
-        dual_timestamp t = DUAL_TIMESTAMP_NULL;
+static int bus_session_append_idle_hint_since(DBusMessageIter *i, const char *property, void *data) {
+        Session *s = data;
+        dual_timestamp t;
         uint64_t u;
-        int r;
 
-        assert(bus);
-        assert(reply);
+        assert(i);
+        assert(property);
         assert(s);
 
-        r = session_get_idle_hint(s, &t);
-        if (r < 0)
-                return r;
-
+        session_get_idle_hint(s, &t);
         u = streq(property, "IdleSinceHint") ? t.realtime : t.monotonic;
 
-        return sd_bus_message_append(reply, "t", u);
+        if (!dbus_message_iter_append_basic(i, DBUS_TYPE_UINT64, &u))
+                return -ENOMEM;
+
+        return 0;
 }
 
-static int property_get_locked_hint(
-                sd_bus *bus,
-                const char *path,
-                const char *interface,
-                const char *property,
-                sd_bus_message *reply,
-                void *userdata,
-                sd_bus_error *error) {
+static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_session_append_type, session_type, SessionType);
+static DEFINE_BUS_PROPERTY_APPEND_ENUM(bus_session_append_class, session_class, SessionClass);
 
-        Session *s = userdata;
+static int get_session_for_path(Manager *m, const char *path, Session **_s) {
+        Session *s;
+        char *id;
 
-        assert(bus);
-        assert(reply);
-        assert(s);
+        assert(m);
+        assert(path);
+        assert(_s);
 
-        return sd_bus_message_append(reply, "b", session_get_locked_hint(s) > 0);
+        if (!startswith(path, "/org/freedesktop/login1/session/"))
+                return -EINVAL;
+
+        id = bus_path_unescape(path + 32);
+        if (!id)
+                return -ENOMEM;
+
+        s = hashmap_get(m->sessions, id);
+        free(id);
+
+        if (!s)
+                return -ENOENT;
+
+        *_s = s;
+        return 0;
 }
 
-int bus_session_method_terminate(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-        int r;
-
-        assert(message);
-        assert(s);
-
-        r = bus_verify_polkit_async(
-                        message,
-                        CAP_KILL,
-                        "org.freedesktop.login1.manage",
-                        NULL,
-                        false,
-                        s->user->uid,
-                        &s->manager->polkit_registry,
-                        error);
-        if (r < 0)
-                return r;
-        if (r == 0)
-                return 1; /* Will call us back */
-
-        r = session_stop(s, true);
-        if (r < 0)
-                return r;
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-int bus_session_method_activate(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-        int r;
-
-        assert(message);
-        assert(s);
-
-        r = session_activate(s);
-        if (r < 0)
-                return r;
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-int bus_session_method_lock(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-        int r;
-
-        assert(message);
-        assert(s);
-
-        r = bus_verify_polkit_async(
-                        message,
-                        CAP_SYS_ADMIN,
-                        "org.freedesktop.login1.lock-sessions",
-                        NULL,
-                        false,
-                        s->user->uid,
-                        &s->manager->polkit_registry,
-                        error);
-        if (r < 0)
-                return r;
-        if (r == 0)
-                return 1; /* Will call us back */
-
-        r = session_send_lock(s, strstr(sd_bus_message_get_member(message), "Lock"));
-        if (r < 0)
-                return r;
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-static int method_set_idle_hint(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        _cleanup_(sd_bus_creds_unrefp) sd_bus_creds *creds = NULL;
-        Session *s = userdata;
-        uid_t uid;
-        int r, b;
-
-        assert(message);
-        assert(s);
-
-        r = sd_bus_message_read(message, "b", &b);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_query_sender_creds(message, SD_BUS_CREDS_EUID, &creds);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_creds_get_euid(creds, &uid);
-        if (r < 0)
-                return r;
-
-        if (uid != 0 && uid != s->user->uid)
-                return sd_bus_error_setf(error, SD_BUS_ERROR_ACCESS_DENIED, "Only owner of session may set idle hint");
-
-        session_set_idle_hint(s, b);
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-static int method_set_locked_hint(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        _cleanup_(sd_bus_creds_unrefp) sd_bus_creds *creds = NULL;
-        Session *s = userdata;
-        uid_t uid;
-        int r, b;
-
-        assert(message);
-        assert(s);
-
-        r = sd_bus_message_read(message, "b", &b);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_query_sender_creds(message, SD_BUS_CREDS_EUID, &creds);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_creds_get_euid(creds, &uid);
-        if (r < 0)
-                return r;
-
-        if (uid != 0 && uid != s->user->uid)
-                return sd_bus_error_setf(error, SD_BUS_ERROR_ACCESS_DENIED, "Only owner of session may set locked hint");
-
-        session_set_locked_hint(s, b);
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-int bus_session_method_kill(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-        const char *swho;
-        int32_t signo;
-        KillWho who;
-        int r;
-
-        assert(message);
-        assert(s);
-
-        r = sd_bus_message_read(message, "si", &swho, &signo);
-        if (r < 0)
-                return r;
-
-        if (isempty(swho))
-                who = KILL_ALL;
-        else {
-                who = kill_who_from_string(swho);
-                if (who < 0)
-                        return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid kill parameter '%s'", swho);
-        }
-
-        if (!SIGNAL_VALID(signo))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid signal %i", signo);
-
-        r = bus_verify_polkit_async(
-                        message,
-                        CAP_KILL,
-                        "org.freedesktop.login1.manage",
-                        NULL,
-                        false,
-                        s->user->uid,
-                        &s->manager->polkit_registry,
-                        error);
-        if (r < 0)
-                return r;
-        if (r == 0)
-                return 1; /* Will call us back */
-
-        r = session_kill(s, who, signo);
-        if (r < 0)
-                return r;
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-static int method_take_control(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        _cleanup_(sd_bus_creds_unrefp) sd_bus_creds *creds = NULL;
-        Session *s = userdata;
-        int r, force;
-        uid_t uid;
-
-        assert(message);
-        assert(s);
-
-        r = sd_bus_message_read(message, "b", &force);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_query_sender_creds(message, SD_BUS_CREDS_EUID, &creds);
-        if (r < 0)
-                return r;
-
-        r = sd_bus_creds_get_euid(creds, &uid);
-        if (r < 0)
-                return r;
-
-        if (uid != 0 && (force || uid != s->user->uid))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_ACCESS_DENIED, "Only owner of session may take control");
-
-        r = session_set_controller(s, sd_bus_message_get_sender(message), force, true);
-        if (r < 0)
-                return r;
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-static int method_release_control(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-
-        assert(message);
-        assert(s);
-
-        if (!session_is_controller(s, sd_bus_message_get_sender(message)))
-                return sd_bus_error_setf(error, BUS_ERROR_NOT_IN_CONTROL, "You are not in control of this session");
-
-        session_drop_controller(s);
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-static int method_take_device(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-        uint32_t major, minor;
-        SessionDevice *sd;
-        dev_t dev;
-        int r;
-
-        assert(message);
-        assert(s);
-
-        r = sd_bus_message_read(message, "uu", &major, &minor);
-        if (r < 0)
-                return r;
-
-        if (!session_is_controller(s, sd_bus_message_get_sender(message)))
-                return sd_bus_error_setf(error, BUS_ERROR_NOT_IN_CONTROL, "You are not in control of this session");
-
-        dev = makedev(major, minor);
-        sd = hashmap_get(s->devices, &dev);
-        if (sd)
-                /* We don't allow retrieving a device multiple times.
-                 * The related ReleaseDevice call is not ref-counted.
-                 * The caller should use dup() if it requires more
-                 * than one fd (it would be functionally
-                 * equivalent). */
-                return sd_bus_error_setf(error, BUS_ERROR_DEVICE_IS_TAKEN, "Device already taken");
-
-        r = session_device_new(s, dev, true, &sd);
-        if (r < 0)
-                return r;
-
-        r = session_device_save(sd);
-        if (r < 0)
-                goto error;
-
-        r = sd_bus_reply_method_return(message, "hb", sd->fd, !sd->active);
-        if (r < 0)
-                goto error;
-
-        session_save(s);
-        return 1;
-
-error:
-        session_device_free(sd);
-        return r;
-}
-
-static int method_release_device(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-        uint32_t major, minor;
-        SessionDevice *sd;
-        dev_t dev;
-        int r;
-
-        assert(message);
-        assert(s);
-
-        r = sd_bus_message_read(message, "uu", &major, &minor);
-        if (r < 0)
-                return r;
-
-        if (!session_is_controller(s, sd_bus_message_get_sender(message)))
-                return sd_bus_error_setf(error, BUS_ERROR_NOT_IN_CONTROL, "You are not in control of this session");
-
-        dev = makedev(major, minor);
-        sd = hashmap_get(s->devices, &dev);
-        if (!sd)
-                return sd_bus_error_setf(error, BUS_ERROR_DEVICE_NOT_TAKEN, "Device not taken");
-
-        session_device_free(sd);
-        session_save(s);
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-static int method_pause_device_complete(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        Session *s = userdata;
-        uint32_t major, minor;
-        SessionDevice *sd;
-        dev_t dev;
-        int r;
-
-        assert(message);
-        assert(s);
-
-        r = sd_bus_message_read(message, "uu", &major, &minor);
-        if (r < 0)
-                return r;
-
-        if (!session_is_controller(s, sd_bus_message_get_sender(message)))
-                return sd_bus_error_setf(error, BUS_ERROR_NOT_IN_CONTROL, "You are not in control of this session");
-
-        dev = makedev(major, minor);
-        sd = hashmap_get(s->devices, &dev);
-        if (!sd)
-                return sd_bus_error_setf(error, BUS_ERROR_DEVICE_NOT_TAKEN, "Device not taken");
-
-        session_device_complete_pause(sd);
-
-        return sd_bus_reply_method_return(message, NULL);
-}
-
-const sd_bus_vtable session_vtable[] = {
-        SD_BUS_VTABLE_START(0),
-
-        SD_BUS_PROPERTY("Id", "s", NULL, offsetof(Session, id), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("User", "(uo)", property_get_user, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Name", "s", property_get_name, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        BUS_PROPERTY_DUAL_TIMESTAMP("Timestamp", offsetof(Session, timestamp), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("VTNr", "u", NULL, offsetof(Session, vtnr), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Seat", "(so)", property_get_seat, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("TTY", "s", NULL, offsetof(Session, tty), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Display", "s", NULL, offsetof(Session, display), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Remote", "b", bus_property_get_bool, offsetof(Session, remote), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("RemoteHost", "s", NULL, offsetof(Session, remote_host), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("RemoteUser", "s", NULL, offsetof(Session, remote_user), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Service", "s", NULL, offsetof(Session, service), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Desktop", "s", NULL, offsetof(Session, desktop), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Scope", "s", NULL, offsetof(Session, scope), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Leader", "u", bus_property_get_pid, offsetof(Session, leader), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Audit", "u", NULL, offsetof(Session, audit_id), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Type", "s", property_get_type, offsetof(Session, type), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Class", "s", property_get_class, offsetof(Session, class), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Active", "b", property_get_active, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-        SD_BUS_PROPERTY("State", "s", property_get_state, 0, 0),
-        SD_BUS_PROPERTY("IdleHint", "b", property_get_idle_hint, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-        SD_BUS_PROPERTY("IdleSinceHint", "t", property_get_idle_since_hint, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-        SD_BUS_PROPERTY("IdleSinceHintMonotonic", "t", property_get_idle_since_hint, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-        SD_BUS_PROPERTY("LockedHint", "b", property_get_locked_hint, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-
-        SD_BUS_METHOD("Terminate", NULL, NULL, bus_session_method_terminate, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("Activate", NULL, NULL, bus_session_method_activate, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("Lock", NULL, NULL, bus_session_method_lock, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("Unlock", NULL, NULL, bus_session_method_lock, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("SetIdleHint", "b", NULL, method_set_idle_hint, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("SetLockedHint", "b", NULL, method_set_locked_hint, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("Kill", "si", NULL, bus_session_method_kill, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("TakeControl", "b", NULL, method_take_control, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("ReleaseControl", NULL, NULL, method_release_control, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("TakeDevice", "uu", "hb", method_take_device, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("ReleaseDevice", "uu", NULL, method_release_device, SD_BUS_VTABLE_UNPRIVILEGED),
-        SD_BUS_METHOD("PauseDeviceComplete", "uu", NULL, method_pause_device_complete, SD_BUS_VTABLE_UNPRIVILEGED),
-
-        SD_BUS_SIGNAL("PauseDevice", "uus", 0),
-        SD_BUS_SIGNAL("ResumeDevice", "uuh", 0),
-        SD_BUS_SIGNAL("Lock", NULL, 0),
-        SD_BUS_SIGNAL("Unlock", NULL, 0),
-
-        SD_BUS_VTABLE_END
+static const BusProperty bus_login_session_properties[] = {
+        { "Id",                     bus_property_append_string,         "s", offsetof(Session, id),                 true },
+        { "Timestamp",              bus_property_append_usec,           "t", offsetof(Session, timestamp.realtime)  },
+        { "TimestampMonotonic",     bus_property_append_usec,           "t", offsetof(Session, timestamp.monotonic) },
+        { "ControlGroupPath",       bus_property_append_string,         "s", offsetof(Session, cgroup_path),        true },
+        { "VTNr",                   bus_property_append_uint32,         "u", offsetof(Session, vtnr)                },
+        { "Seat",                   bus_session_append_seat,         "(so)", 0 },
+        { "TTY",                    bus_property_append_string,         "s", offsetof(Session, tty),                true },
+        { "Display",                bus_property_append_string,         "s", offsetof(Session, display),            true },
+        { "Remote",                 bus_property_append_bool,           "b", offsetof(Session, remote)              },
+        { "RemoteUser",             bus_property_append_string,         "s", offsetof(Session, remote_user),        true },
+        { "RemoteHost",             bus_property_append_string,         "s", offsetof(Session, remote_host),        true },
+        { "Service",                bus_property_append_string,         "s", offsetof(Session, service),            true },
+        { "Leader",                 bus_property_append_pid,            "u", offsetof(Session, leader)              },
+        { "Audit",                  bus_property_append_uint32,         "u", offsetof(Session, audit_id)            },
+        { "Type",                   bus_session_append_type,            "s", offsetof(Session, type)                },
+        { "Class",                  bus_session_append_class,           "s", offsetof(Session, class)               },
+        { "Active",                 bus_session_append_active,          "b", 0 },
+        { "Controllers",            bus_property_append_strv,          "as", offsetof(Session, controllers),        true },
+        { "ResetControllers",       bus_property_append_strv,          "as", offsetof(Session, reset_controllers),  true },
+        { "KillProcesses",          bus_property_append_bool,           "b", offsetof(Session, kill_processes)      },
+        { "IdleHint",               bus_session_append_idle_hint,       "b", 0 },
+        { "IdleSinceHint",          bus_session_append_idle_hint_since, "t", 0 },
+        { "IdleSinceHintMonotonic", bus_session_append_idle_hint_since, "t", 0 },
+        { NULL, }
 };
 
-int session_object_find(sd_bus *bus, const char *path, const char *interface, void *userdata, void **found, sd_bus_error *error) {
-        Manager *m = userdata;
-        Session *session;
+static const BusProperty bus_login_session_user_properties[] = {
+        { "User",                   bus_session_append_user,         "(uo)", 0 },
+        { "Name",                   bus_property_append_string,         "s", offsetof(User, name),                  true },
+        { NULL, }
+};
+
+static DBusHandlerResult session_message_dispatch(
+                Session *s,
+                DBusConnection *connection,
+                DBusMessage *message) {
+
+        DBusError error;
+        DBusMessage *reply = NULL;
         int r;
 
-        assert(bus);
-        assert(path);
-        assert(interface);
-        assert(found);
-        assert(m);
+        assert(s);
+        assert(connection);
+        assert(message);
 
-        if (streq(path, "/org/freedesktop/login1/session/self")) {
-                sd_bus_message *message;
+        dbus_error_init(&error);
 
-                message = sd_bus_get_current_message(bus);
-                if (!message)
-                        return 0;
+        if (dbus_message_is_method_call(message, "org.freedesktop.login1.Session", "Terminate")) {
 
-                r = manager_get_session_from_creds(m, message, NULL, error, &session);
+                r = session_stop(s);
                 if (r < 0)
-                        return r;
+                        return bus_send_error_reply(connection, message, NULL, r);
+
+                reply = dbus_message_new_method_return(message);
+                if (!reply)
+                        goto oom;
+
+        } else if (dbus_message_is_method_call(message, "org.freedesktop.login1.Session", "Activate")) {
+
+                r = session_activate(s);
+                if (r < 0)
+                        return bus_send_error_reply(connection, message, NULL, r);
+
+                reply = dbus_message_new_method_return(message);
+                if (!reply)
+                        goto oom;
+
+        } else if (dbus_message_is_method_call(message, "org.freedesktop.login1.Session", "Lock") ||
+                   dbus_message_is_method_call(message, "org.freedesktop.login1.Session", "Unlock")) {
+
+                if (session_send_lock(s, streq(dbus_message_get_member(message), "Lock")) < 0)
+                        goto oom;
+
+                reply = dbus_message_new_method_return(message);
+                if (!reply)
+                        goto oom;
+
+        } else if (dbus_message_is_method_call(message, "org.freedesktop.login1.Session", "SetIdleHint")) {
+                dbus_bool_t b;
+                unsigned long ul;
+
+                if (!dbus_message_get_args(
+                                    message,
+                                    &error,
+                                    DBUS_TYPE_BOOLEAN, &b,
+                                    DBUS_TYPE_INVALID))
+                        return bus_send_error_reply(connection, message, &error, -EINVAL);
+
+                ul = dbus_bus_get_unix_user(connection, dbus_message_get_sender(message), &error);
+                if (ul == (unsigned long) -1)
+                        return bus_send_error_reply(connection, message, &error, -EIO);
+
+                if (ul != 0 && ul != s->user->uid)
+                        return bus_send_error_reply(connection, message, NULL, -EPERM);
+
+                session_set_idle_hint(s, b);
+
+                reply = dbus_message_new_method_return(message);
+                if (!reply)
+                        goto oom;
+
+        } else if (dbus_message_is_method_call(message, "org.freedesktop.login1.Session", "Kill")) {
+                const char *swho;
+                int32_t signo;
+                KillWho who;
+
+                if (!dbus_message_get_args(
+                                    message,
+                                    &error,
+                                    DBUS_TYPE_STRING, &swho,
+                                    DBUS_TYPE_INT32, &signo,
+                                    DBUS_TYPE_INVALID))
+                        return bus_send_error_reply(connection, message, &error, -EINVAL);
+
+                if (isempty(swho))
+                        who = KILL_ALL;
+                else {
+                        who = kill_who_from_string(swho);
+                        if (who < 0)
+                                return bus_send_error_reply(connection, message, &error, -EINVAL);
+                }
+
+                if (signo <= 0 || signo >= _NSIG)
+                        return bus_send_error_reply(connection, message, &error, -EINVAL);
+
+                r = session_kill(s, who, signo);
+                if (r < 0)
+                        return bus_send_error_reply(connection, message, NULL, r);
+
+                reply = dbus_message_new_method_return(message);
+                if (!reply)
+                        goto oom;
+
         } else {
-                _cleanup_free_ char *e = NULL;
-                const char *p;
-
-                p = startswith(path, "/org/freedesktop/login1/session/");
-                if (!p)
-                        return 0;
-
-                e = bus_label_unescape(p);
-                if (!e)
-                        return -ENOMEM;
-
-                session = hashmap_get(m->sessions, e);
-                if (!session)
-                        return 0;
+                const BusBoundProperties bps[] = {
+                        { "org.freedesktop.login1.Session", bus_login_session_properties,      s       },
+                        { "org.freedesktop.login1.Session", bus_login_session_user_properties, s->user },
+                        { NULL, }
+                };
+                return bus_default_message_handler(connection, message, INTROSPECTION, INTERFACES_LIST, bps);
         }
 
-        *found = session;
-        return 1;
+        if (reply) {
+                if (!dbus_connection_send(connection, reply, NULL))
+                        goto oom;
+
+                dbus_message_unref(reply);
+        }
+
+        return DBUS_HANDLER_RESULT_HANDLED;
+
+oom:
+        if (reply)
+                dbus_message_unref(reply);
+
+        dbus_error_free(&error);
+
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
 }
 
+static DBusHandlerResult session_message_handler(
+                DBusConnection *connection,
+                DBusMessage *message,
+                void *userdata) {
+
+        Manager *m = userdata;
+        Session *s;
+        int r;
+
+        r = get_session_for_path(m, dbus_message_get_path(message), &s);
+        if (r < 0) {
+
+                if (r == -ENOMEM)
+                        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+
+                if (r == -ENOENT) {
+                        DBusError e;
+
+                        dbus_error_init(&e);
+                        dbus_set_error_const(&e, DBUS_ERROR_UNKNOWN_OBJECT, "Unknown session");
+                        return bus_send_error_reply(connection, message, &e, r);
+                }
+
+                return bus_send_error_reply(connection, message, NULL, r);
+        }
+
+        return session_message_dispatch(s, connection, message);
+}
+
+const DBusObjectPathVTable bus_session_vtable = {
+        .message_function = session_message_handler
+};
+
 char *session_bus_path(Session *s) {
-        _cleanup_free_ char *t = NULL;
+        char *t, *r;
 
         assert(s);
 
-        t = bus_label_escape(s->id);
+        t = bus_path_escape(s->id);
         if (!t)
                 return NULL;
 
-        return strappend("/org/freedesktop/login1/session/", t);
-}
+        r = strappend("/org/freedesktop/login1/session/", t);
+        free(t);
 
-int session_node_enumerator(sd_bus *bus, const char *path, void *userdata, char ***nodes, sd_bus_error *error) {
-        _cleanup_strv_free_ char **l = NULL;
-        sd_bus_message *message;
-        Manager *m = userdata;
-        Session *session;
-        Iterator i;
-        int r;
-
-        assert(bus);
-        assert(path);
-        assert(nodes);
-
-        HASHMAP_FOREACH(session, m->sessions, i) {
-                char *p;
-
-                p = session_bus_path(session);
-                if (!p)
-                        return -ENOMEM;
-
-                r = strv_consume(&l, p);
-                if (r < 0)
-                        return r;
-        }
-
-        message = sd_bus_get_current_message(bus);
-        if (message) {
-                _cleanup_(sd_bus_creds_unrefp) sd_bus_creds *creds = NULL;
-                const char *name;
-
-                r = sd_bus_query_sender_creds(message, SD_BUS_CREDS_SESSION|SD_BUS_CREDS_AUGMENT, &creds);
-                if (r >= 0) {
-                        r = sd_bus_creds_get_session(creds, &name);
-                        if (r >= 0) {
-                                session = hashmap_get(m->sessions, name);
-                                if (session) {
-                                        r = strv_extend(&l, "/org/freedesktop/login1/session/self");
-                                        if (r < 0)
-                                                return r;
-                                }
-                        }
-                }
-        }
-
-        *nodes = l;
-        l = NULL;
-
-        return 1;
+        return r;
 }
 
 int session_send_signal(Session *s, bool new_session) {
-        _cleanup_free_ char *p = NULL;
+        DBusMessage *m;
+        int r = -ENOMEM;
+        char *p = NULL;
 
         assert(s);
 
-        p = session_bus_path(s);
-        if (!p)
+        m = dbus_message_new_signal("/org/freedesktop/login1",
+                                    "org.freedesktop.login1.Manager",
+                                    new_session ? "SessionNew" : "SessionRemoved");
+
+        if (!m)
                 return -ENOMEM;
 
-        return sd_bus_emit_signal(
-                        s->manager->bus,
-                        "/org/freedesktop/login1",
-                        "org.freedesktop.login1.Manager",
-                        new_session ? "SessionNew" : "SessionRemoved",
-                        "so", s->id, p);
+        p = session_bus_path(s);
+        if (!p)
+                goto finish;
+
+        if (!dbus_message_append_args(
+                            m,
+                            DBUS_TYPE_STRING, &s->id,
+                            DBUS_TYPE_OBJECT_PATH, &p,
+                            DBUS_TYPE_INVALID))
+                goto finish;
+
+        if (!dbus_connection_send(s->manager->bus, m, NULL))
+                goto finish;
+
+        r = 0;
+
+finish:
+        dbus_message_unref(m);
+        free(p);
+
+        return r;
 }
 
-int session_send_changed(Session *s, const char *properties, ...) {
-        _cleanup_free_ char *p = NULL;
-        char **l;
+int session_send_changed(Session *s, const char *properties) {
+        DBusMessage *m;
+        int r = -ENOMEM;
+        char *p = NULL;
 
         assert(s);
 
@@ -702,100 +484,45 @@ int session_send_changed(Session *s, const char *properties, ...) {
         if (!p)
                 return -ENOMEM;
 
-        l = strv_from_stdarg_alloca(properties);
+        m = bus_properties_changed_new(p, "org.freedesktop.login1.Session", properties);
+        if (!m)
+                goto finish;
 
-        return sd_bus_emit_properties_changed_strv(s->manager->bus, p, "org.freedesktop.login1.Session", l);
-}
+        if (!dbus_connection_send(s->manager->bus, m, NULL))
+                goto finish;
 
-int session_send_lock(Session *s, bool lock) {
-        _cleanup_free_ char *p = NULL;
+        r = 0;
 
-        assert(s);
-
-        p = session_bus_path(s);
-        if (!p)
-                return -ENOMEM;
-
-        return sd_bus_emit_signal(
-                        s->manager->bus,
-                        p,
-                        "org.freedesktop.login1.Session",
-                        lock ? "Lock" : "Unlock",
-                        NULL);
-}
-
-int session_send_lock_all(Manager *m, bool lock) {
-        Session *session;
-        Iterator i;
-        int r = 0;
-
-        assert(m);
-
-        HASHMAP_FOREACH(session, m->sessions, i) {
-                int k;
-
-                k = session_send_lock(session, lock);
-                if (k < 0)
-                        r = k;
-        }
+finish:
+        if (m)
+                dbus_message_unref(m);
+        free(p);
 
         return r;
 }
 
-int session_send_create_reply(Session *s, sd_bus_error *error) {
-        _cleanup_(sd_bus_message_unrefp) sd_bus_message *c = NULL;
-        _cleanup_close_ int fifo_fd = -1;
-        _cleanup_free_ char *p = NULL;
+int session_send_lock(Session *s, bool lock) {
+        DBusMessage *m;
+        bool b;
+        char *p;
 
         assert(s);
-
-        /* This is called after the session scope and the user service
-         * were successfully created, and finishes where
-         * bus_manager_create_session() left off. */
-
-        if (!s->create_message)
-                return 0;
-
-        if (!sd_bus_error_is_set(error) && (s->scope_job || s->user->service_job))
-                return 0;
-
-        c = s->create_message;
-        s->create_message = NULL;
-
-        if (error)
-                return sd_bus_reply_method_error(c, error);
-
-        fifo_fd = session_create_fifo(s);
-        if (fifo_fd < 0)
-                return fifo_fd;
-
-        /* Update the session state file before we notify the client
-         * about the result. */
-        session_save(s);
 
         p = session_bus_path(s);
         if (!p)
                 return -ENOMEM;
 
-        log_debug("Sending reply about created session: "
-                  "id=%s object_path=%s uid=%u runtime_path=%s "
-                  "session_fd=%d seat=%s vtnr=%u",
-                  s->id,
-                  p,
-                  (uint32_t) s->user->uid,
-                  s->user->runtime_path,
-                  fifo_fd,
-                  s->seat ? s->seat->id : "",
-                  (uint32_t) s->vtnr);
+        m = dbus_message_new_signal(p, "org.freedesktop.login1.Session", lock ? "Lock" : "Unlock");
+        free(p);
 
-        return sd_bus_reply_method_return(
-                        c, "soshusub",
-                        s->id,
-                        p,
-                        s->user->runtime_path,
-                        fifo_fd,
-                        (uint32_t) s->user->uid,
-                        s->seat ? s->seat->id : "",
-                        (uint32_t) s->vtnr,
-                        false);
+        if (!m)
+                return -ENOMEM;
+
+        b = dbus_connection_send(s->manager->bus, m, NULL);
+        dbus_message_unref(m);
+
+        if (!b)
+                return -ENOMEM;
+
+        return 0;
 }

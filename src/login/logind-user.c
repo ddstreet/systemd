@@ -1,158 +1,111 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/*-*- Mode: C; c-basic-offset: 8; indent-tabs-mode: nil -*-*/
+
 /***
   This file is part of systemd.
 
   Copyright 2011 Lennart Poettering
 
   systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation; either version 2.1 of the License, or
+  under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
   (at your option) any later version.
 
   systemd is distributed in the hope that it will be useful, but
   WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
+  General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public License
+  You should have received a copy of the GNU General Public License
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#include <errno.h>
 #include <string.h>
-#include <sys/mount.h>
 #include <unistd.h>
-#include <stdio_ext.h>
+#include <errno.h>
 
-#include "alloc-util.h"
-#include "bus-common-errors.h"
-#include "bus-error.h"
-#include "bus-util.h"
-#include "cgroup-util.h"
-#include "clean-ipc.h"
-#include "conf-parser.h"
-#include "escape.h"
-#include "fd-util.h"
-#include "fileio.h"
-#include "format-util.h"
-#include "fs-util.h"
-#include "hashmap.h"
-#include "label.h"
 #include "logind-user.h"
-#include "mkdir.h"
-#include "mount-util.h"
-#include "parse-util.h"
-#include "path-util.h"
-#include "rm-rf.h"
-#include "smack-util.h"
-#include "special.h"
-#include "stdio-util.h"
-#include "string-table.h"
-#include "unit-name.h"
-#include "user-util.h"
 #include "util.h"
+#include "cgroup-util.h"
+#include "hashmap.h"
+#include "strv.h"
 
-int user_new(User **out, Manager *m, uid_t uid, gid_t gid, const char *name) {
-        _cleanup_(user_freep) User *u = NULL;
-        char lu[DECIMAL_STR_MAX(uid_t) + 1];
-        int r;
+User* user_new(Manager *m, uid_t uid, gid_t gid, const char *name) {
+        User *u;
 
-        assert(out);
         assert(m);
         assert(name);
 
         u = new0(User, 1);
         if (!u)
-                return -ENOMEM;
+                return NULL;
+
+        u->name = strdup(name);
+        if (!u->name) {
+                free(u);
+                return NULL;
+        }
+
+        if (asprintf(&u->state_file, "/run/systemd/users/%lu", (unsigned long) uid) < 0) {
+                free(u->name);
+                free(u);
+                return NULL;
+        }
+
+        if (hashmap_put(m->users, ULONG_TO_PTR((unsigned long) uid), u) < 0) {
+                free(u->state_file);
+                free(u->name);
+                free(u);
+                return NULL;
+        }
 
         u->manager = m;
         u->uid = uid;
         u->gid = gid;
-        xsprintf(lu, UID_FMT, uid);
 
-        u->name = strdup(name);
-        if (!u->name)
-                return -ENOMEM;
-
-        if (asprintf(&u->state_file, "/run/systemd/users/"UID_FMT, uid) < 0)
-                return -ENOMEM;
-
-        if (asprintf(&u->runtime_path, "/run/user/"UID_FMT, uid) < 0)
-                return -ENOMEM;
-
-        r = slice_build_subslice(SPECIAL_USER_SLICE, lu, &u->slice);
-        if (r < 0)
-                return r;
-
-        r = unit_name_build("user", lu, ".service", &u->service);
-        if (r < 0)
-                return r;
-
-        r = hashmap_put(m->users, UID_TO_PTR(uid), u);
-        if (r < 0)
-                return r;
-
-        r = hashmap_put(m->user_units, u->slice, u);
-        if (r < 0)
-                return r;
-
-        r = hashmap_put(m->user_units, u->service, u);
-        if (r < 0)
-                return r;
-
-        *out = u;
-        u = NULL;
-        return 0;
+        return u;
 }
 
-User *user_free(User *u) {
-        if (!u)
-                return NULL;
+void user_free(User *u) {
+        assert(u);
 
         if (u->in_gc_queue)
-                LIST_REMOVE(gc_queue, u->manager->user_gc_queue, u);
+                LIST_REMOVE(User, gc_queue, u->manager->user_gc_queue, u);
 
         while (u->sessions)
                 session_free(u->sessions);
 
-        if (u->service)
-                hashmap_remove_value(u->manager->user_units, u->service, u);
+        free(u->cgroup_path);
 
-        if (u->slice)
-                hashmap_remove_value(u->manager->user_units, u->slice, u);
+        free(u->service);
+        free(u->runtime_path);
 
-        hashmap_remove_value(u->manager->users, UID_TO_PTR(u->uid), u);
+        hashmap_remove(u->manager->users, ULONG_TO_PTR((unsigned long) u->uid));
 
-        u->slice_job = mfree(u->slice_job);
-        u->service_job = mfree(u->service_job);
-
-        u->service = mfree(u->service);
-        u->slice = mfree(u->slice);
-        u->runtime_path = mfree(u->runtime_path);
-        u->state_file = mfree(u->state_file);
-        u->name = mfree(u->name);
-
-        return mfree(u);
+        free(u->name);
+        free(u->state_file);
+        free(u);
 }
 
-static int user_save_internal(User *u) {
-        _cleanup_free_ char *temp_path = NULL;
-        _cleanup_fclose_ FILE *f = NULL;
+int user_save(User *u) {
+        FILE *f;
         int r;
+        char *temp_path;
 
         assert(u);
         assert(u->state_file);
 
-        r = mkdir_safe_label("/run/systemd/users", 0755, 0, 0, false);
+        if (!u->started)
+                return 0;
+
+        r = safe_mkdir("/run/systemd/users", 0755, 0, 0);
         if (r < 0)
-                goto fail;
+                goto finish;
 
         r = fopen_temporary(u->state_file, &f, &temp_path);
         if (r < 0)
-                goto fail;
+                goto finish;
 
-        (void) __fsetlocking(f, FSETLOCKING_BYCALLER);
-        (void) fchmod(fileno(f), 0644);
+        fchmod(fileno(f), 0644);
 
         fprintf(f,
                 "# This is private data. Do not parse.\n"
@@ -161,275 +114,192 @@ static int user_save_internal(User *u) {
                 u->name,
                 user_state_to_string(user_get_state(u)));
 
-        /* LEGACY: no-one reads RUNTIME= anymore, drop it at some point */
+        if (u->cgroup_path)
+                fprintf(f,
+                        "CGROUP=%s\n",
+                        u->cgroup_path);
+
         if (u->runtime_path)
-                fprintf(f, "RUNTIME=%s\n", u->runtime_path);
+                fprintf(f,
+                        "RUNTIME=%s\n",
+                        u->runtime_path);
 
-        if (u->service_job)
-                fprintf(f, "SERVICE_JOB=%s\n", u->service_job);
-
-        if (u->slice_job)
-                fprintf(f, "SLICE_JOB=%s\n", u->slice_job);
+        if (u->service)
+                fprintf(f,
+                        "SERVICE=%s\n",
+                        u->service);
 
         if (u->display)
-                fprintf(f, "DISPLAY=%s\n", u->display->id);
-
-        if (dual_timestamp_is_set(&u->timestamp))
                 fprintf(f,
-                        "REALTIME="USEC_FMT"\n"
-                        "MONOTONIC="USEC_FMT"\n",
-                        u->timestamp.realtime,
-                        u->timestamp.monotonic);
+                        "DISPLAY=%s\n",
+                        u->display->id);
 
         if (u->sessions) {
                 Session *i;
-                bool first;
 
                 fputs("SESSIONS=", f);
-                first = true;
                 LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                        if (first)
-                                first = false;
-                        else
-                                fputc(' ', f);
-
-                        fputs(i->id, f);
+                        fprintf(f,
+                                "%s%c",
+                                i->id,
+                                i->sessions_by_user_next ? ' ' : '\n');
                 }
 
-                fputs("\nSEATS=", f);
-                first = true;
+                fputs("SEATS=", f);
                 LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                        if (!i->seat)
-                                continue;
-
-                        if (first)
-                                first = false;
-                        else
-                                fputc(' ', f);
-
-                        fputs(i->seat->id, f);
+                        if (i->seat)
+                                fprintf(f,
+                                        "%s%c",
+                                        i->seat->id,
+                                        i->sessions_by_user_next ? ' ' : '\n');
                 }
 
-                fputs("\nACTIVE_SESSIONS=", f);
-                first = true;
+                fputs("ACTIVE_SESSIONS=", f);
+                LIST_FOREACH(sessions_by_user, i, u->sessions)
+                        if (session_is_active(i))
+                                fprintf(f,
+                                        "%lu%c",
+                                        (unsigned long) i->user->uid,
+                                        i->sessions_by_user_next ? ' ' : '\n');
+
+                fputs("ACTIVE_SEATS=", f);
                 LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                        if (!session_is_active(i))
-                                continue;
-
-                        if (first)
-                                first = false;
-                        else
-                                fputc(' ', f);
-
-                        fputs(i->id, f);
+                        if (session_is_active(i) && i->seat)
+                                fprintf(f,
+                                        "%s%c",
+                                        i->seat->id,
+                                        i->sessions_by_user_next ? ' ' : '\n');
                 }
-
-                fputs("\nONLINE_SESSIONS=", f);
-                first = true;
-                LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                        if (session_get_state(i) == SESSION_CLOSING)
-                                continue;
-
-                        if (first)
-                                first = false;
-                        else
-                                fputc(' ', f);
-
-                        fputs(i->id, f);
-                }
-
-                fputs("\nACTIVE_SEATS=", f);
-                first = true;
-                LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                        if (!session_is_active(i) || !i->seat)
-                                continue;
-
-                        if (first)
-                                first = false;
-                        else
-                                fputc(' ', f);
-
-                        fputs(i->seat->id, f);
-                }
-
-                fputs("\nONLINE_SEATS=", f);
-                first = true;
-                LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                        if (session_get_state(i) == SESSION_CLOSING || !i->seat)
-                                continue;
-
-                        if (first)
-                                first = false;
-                        else
-                                fputc(' ', f);
-
-                        fputs(i->seat->id, f);
-                }
-                fputc('\n', f);
         }
 
-        r = fflush_and_check(f);
-        if (r < 0)
-                goto fail;
+        fflush(f);
 
-        if (rename(temp_path, u->state_file) < 0) {
+        if (ferror(f) || rename(temp_path, u->state_file) < 0) {
                 r = -errno;
-                goto fail;
+                unlink(u->state_file);
+                unlink(temp_path);
         }
 
-        return 0;
+        fclose(f);
+        free(temp_path);
 
-fail:
-        (void) unlink(u->state_file);
+finish:
+        if (r < 0)
+                log_error("Failed to save user data for %s: %s", u->name, strerror(-r));
 
-        if (temp_path)
-                (void) unlink(temp_path);
-
-        return log_error_errno(r, "Failed to save user data %s: %m", u->state_file);
-}
-
-int user_save(User *u) {
-        assert(u);
-
-        if (!u->started)
-                return 0;
-
-        return user_save_internal (u);
+        return r;
 }
 
 int user_load(User *u) {
-        _cleanup_free_ char *display = NULL, *realtime = NULL, *monotonic = NULL;
-        Session *s = NULL;
         int r;
+        char *display = NULL;
+        Session *s = NULL;
 
         assert(u);
 
         r = parse_env_file(u->state_file, NEWLINE,
-                           "SERVICE_JOB", &u->service_job,
-                           "SLICE_JOB",   &u->slice_job,
-                           "DISPLAY",     &display,
-                           "REALTIME",    &realtime,
-                           "MONOTONIC",   &monotonic,
+                           "CGROUP", &u->cgroup_path,
+                           "RUNTIME", &u->runtime_path,
+                           "SERVICE", &u->service,
+                           "DISPLAY", &display,
                            NULL);
         if (r < 0) {
+                free(display);
+
                 if (r == -ENOENT)
                         return 0;
 
-                return log_error_errno(r, "Failed to read %s: %m", u->state_file);
+                log_error("Failed to read %s: %s", u->state_file, strerror(-r));
+                return r;
         }
 
-        if (display)
+        if (display) {
                 s = hashmap_get(u->manager->sessions, display);
+                free(display);
+        }
 
         if (s && s->display && display_is_local(s->display))
                 u->display = s;
-
-        if (realtime)
-                timestamp_deserialize(realtime, &u->timestamp.realtime);
-        if (monotonic)
-                timestamp_deserialize(monotonic, &u->timestamp.monotonic);
 
         return r;
 }
 
 static int user_mkdir_runtime_path(User *u) {
+        char *p;
         int r;
 
         assert(u);
 
-        r = mkdir_safe_label("/run/user", 0755, 0, 0, false);
-        if (r < 0)
-                return log_error_errno(r, "Failed to create /run/user: %m");
-
-        if (path_is_mount_point(u->runtime_path, NULL, 0) <= 0) {
-                _cleanup_free_ char *t = NULL;
-
-                r = asprintf(&t, "mode=0700,uid=" UID_FMT ",gid=" GID_FMT ",size=%zu%s",
-                             u->uid, u->gid, u->manager->runtime_dir_size,
-                             mac_smack_use() ? ",smackfsroot=*" : "");
-                if (r < 0)
-                        return log_oom();
-
-                (void) mkdir_label(u->runtime_path, 0700);
-
-                r = mount("tmpfs", u->runtime_path, "tmpfs", MS_NODEV|MS_NOSUID, t);
-                if (r < 0) {
-                        if (!IN_SET(errno, EPERM, EACCES)) {
-                                r = log_error_errno(errno, "Failed to mount per-user tmpfs directory %s: %m", u->runtime_path);
-                                goto fail;
-                        }
-
-                        log_debug_errno(errno, "Failed to mount per-user tmpfs directory %s, assuming containerized execution, ignoring: %m", u->runtime_path);
-
-                        r = chmod_and_chown(u->runtime_path, 0700, u->uid, u->gid);
-                        if (r < 0) {
-                                log_error_errno(r, "Failed to change runtime directory ownership and mode: %m");
-                                goto fail;
-                        }
-                }
-
-                r = label_fix(u->runtime_path, false, false);
-                if (r < 0)
-                        log_warning_errno(r, "Failed to fix label of '%s', ignoring: %m", u->runtime_path);
+        r = safe_mkdir("/run/user", 0755, 0, 0);
+        if (r < 0) {
+                log_error("Failed to create /run/user: %s", strerror(-r));
+                return r;
         }
 
-        return 0;
+        if (!u->runtime_path) {
+                p = strappend("/run/user/", u->name);
 
-fail:
-        /* Try to clean up, but ignore errors */
-        (void) rmdir(u->runtime_path);
-        return r;
+                if (!p) {
+                        log_error("Out of memory");
+                        return -ENOMEM;
+                }
+        } else
+                p = u->runtime_path;
+
+        r = safe_mkdir(p, 0700, u->uid, u->gid);
+        if (r < 0) {
+                log_error("Failed to create runtime directory %s: %s", p, strerror(-r));
+                free(p);
+                u->runtime_path = NULL;
+                return r;
+        }
+
+        u->runtime_path = p;
+        return 0;
 }
 
-static int user_start_slice(User *u) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        const char *description;
-        char *job;
+static int user_create_cgroup(User *u) {
+        char **k;
+        char *p;
         int r;
 
         assert(u);
 
-        u->slice_job = mfree(u->slice_job);
-        description = strjoina("User Slice of ", u->name);
+        if (!u->cgroup_path) {
+                if (asprintf(&p, "%s/%s", u->manager->cgroup_path, u->name) < 0) {
+                        log_error("Out of memory");
+                        return -ENOMEM;
+                }
+        } else
+                p = u->cgroup_path;
 
-        r = manager_start_slice(
-                        u->manager,
-                        u->slice,
-                        description,
-                        "systemd-logind.service",
-                        "systemd-user-sessions.service",
-                        u->manager->user_tasks_max,
-                        &error,
-                        &job);
-        if (r >= 0)
-                u->slice_job = job;
-        else if (!sd_bus_error_has_name(&error, BUS_ERROR_UNIT_EXISTS))
-                /* we don't fail due to this, let's try to continue */
-                log_error_errno(r, "Failed to start user slice %s, ignoring: %s (%s)",
-                                u->slice, bus_error_message(&error, r), error.name);
+        r = cg_create(SYSTEMD_CGROUP_CONTROLLER, p);
+        if (r < 0) {
+                log_error("Failed to create cgroup "SYSTEMD_CGROUP_CONTROLLER":%s: %s", p, strerror(-r));
+                free(p);
+                u->cgroup_path = NULL;
+                return r;
+        }
+
+        u->cgroup_path = p;
+
+        STRV_FOREACH(k, u->manager->controllers) {
+
+                if (strv_contains(u->manager->reset_controllers, *k))
+                        continue;
+
+                r = cg_create(*k, p);
+                if (r < 0)
+                        log_warning("Failed to create cgroup %s:%s: %s", *k, p, strerror(-r));
+        }
 
         return 0;
 }
 
 static int user_start_service(User *u) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        char *job;
-        int r;
-
         assert(u);
 
-        u->service_job = mfree(u->service_job);
-
-        r = manager_start_unit(
-                        u->manager,
-                        u->service,
-                        &error,
-                        &job);
-        if (r < 0)
-                /* we don't fail due to this, let's try to continue */
-                log_error_errno(r, "Failed to start user service, ignoring: %s", bus_error_message(&error, r));
-        else
-                u->service_job = job;
+        /* FIXME: Fill me in later ... */
 
         return 0;
 }
@@ -439,95 +309,97 @@ int user_start(User *u) {
 
         assert(u);
 
-        if (u->started && !u->stopping)
+        if (u->started)
                 return 0;
 
-        /*
-         * If u->stopping is set, the user is marked for removal and the slice
-         * and service stop-jobs are queued. We have to clear that flag before
-         * queing the start-jobs again. If they succeed, the user object can be
-         * re-used just fine (pid1 takes care of job-ordering and proper
-         * restart), but if they fail, we want to force another user_stop() so
-         * possibly pending units are stopped.
-         * Note that we don't clear u->started, as we have no clue what state
-         * the user is in on failure here. Hence, we pretend the user is
-         * running so it will be properly taken down by GC. However, we clearly
-         * return an error from user_start() in that case, so no further
-         * reference to the user is taken.
-         */
-        u->stopping = false;
+        log_debug("New user %s logged in.", u->name);
 
-        if (!u->started) {
-                log_debug("Starting services for new user %s.", u->name);
-
-                /* Make XDG_RUNTIME_DIR */
-                r = user_mkdir_runtime_path(u);
-                if (r < 0)
-                        return r;
-        }
-
-        /* Create cgroup */
-        r = user_start_slice(u);
+        /* Make XDG_RUNTIME_DIR */
+        r = user_mkdir_runtime_path(u);
         if (r < 0)
                 return r;
 
-        /* Save the user data so far, because pam_systemd will read the
-         * XDG_RUNTIME_DIR out of it while starting up systemd --user.
-         * We need to do user_save_internal() because we have not
-         * "officially" started yet. */
-        user_save_internal(u);
+        /* Create cgroup */
+        r = user_create_cgroup(u);
+        if (r < 0)
+                return r;
 
         /* Spawn user systemd */
         r = user_start_service(u);
         if (r < 0)
                 return r;
 
-        if (!u->started) {
-                if (!dual_timestamp_is_set(&u->timestamp))
-                        dual_timestamp_get(&u->timestamp);
-                user_send_signal(u, true);
-                u->started = true;
-        }
+        dual_timestamp_get(&u->timestamp);
+
+        u->started = true;
 
         /* Save new user data */
         user_save(u);
 
+        user_send_signal(u, true);
+
         return 0;
 }
 
-static int user_stop_slice(User *u) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        char *job;
-        int r;
-
+static int user_stop_service(User *u) {
         assert(u);
 
-        r = manager_stop_unit(u->manager, u->slice, &error, &job);
-        if (r < 0) {
-                log_error("Failed to stop user slice: %s", bus_error_message(&error, r));
-                return r;
-        }
+        if (!u->service)
+                return 0;
 
-        free(u->slice_job);
-        u->slice_job = job;
-
-        return r;
+        return 0;
 }
 
-static int user_stop_service(User *u) {
-        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        char *job;
+static int user_shall_kill(User *u) {
+        assert(u);
+
+        if (!u->manager->kill_user_processes)
+                return false;
+
+        if (strv_contains(u->manager->kill_exclude_users, u->name))
+                return false;
+
+        if (strv_isempty(u->manager->kill_only_users))
+                return true;
+
+        return strv_contains(u->manager->kill_only_users, u->name);
+}
+
+static int user_terminate_cgroup(User *u) {
         int r;
+        char **k;
 
         assert(u);
 
-        r = manager_stop_unit(u->manager, u->service, &error, &job);
-        if (r < 0) {
-                log_error("Failed to stop user service: %s", bus_error_message(&error, r));
-                return r;
+        if (!u->cgroup_path)
+                return 0;
+
+        cg_trim(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, false);
+
+        if (user_shall_kill(u)) {
+
+                r = cg_kill_recursive_and_wait(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, true);
+                if (r < 0)
+                        log_error("Failed to kill user cgroup: %s", strerror(-r));
+        } else {
+
+                r = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, true);
+                if (r < 0)
+                        log_error("Failed to check user cgroup: %s", strerror(-r));
+                else if (r > 0) {
+                        r = cg_delete(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path);
+                        if (r < 0)
+                                log_error("Failed to delete user cgroup: %s", strerror(-r));
+                } else
+                        r = -EBUSY;
         }
 
-        free_and_replace(u->service_job, job);
+        STRV_FOREACH(k, u->manager->controllers)
+                cg_trim(*k, u->cgroup_path, true);
+
+        free(u->cgroup_path);
+        u->cgroup_path = NULL;
+
         return r;
 }
 
@@ -536,37 +408,29 @@ static int user_remove_runtime_path(User *u) {
 
         assert(u);
 
-        r = rm_rf(u->runtime_path, 0);
-        if (r < 0)
-                log_error_errno(r, "Failed to remove runtime directory %s (before unmounting): %m", u->runtime_path);
+        if (!u->runtime_path)
+                return 0;
 
-        /* Ignore cases where the directory isn't mounted, as that's
-         * quite possible, if we lacked the permissions to mount
-         * something */
-        r = umount2(u->runtime_path, MNT_DETACH);
-        if (r < 0 && !IN_SET(errno, EINVAL, ENOENT))
-                log_error_errno(errno, "Failed to unmount user runtime directory %s: %m", u->runtime_path);
-
-        r = rm_rf(u->runtime_path, REMOVE_ROOT);
+        r = rm_rf(u->runtime_path, false, true, false);
         if (r < 0)
-                log_error_errno(r, "Failed to remove runtime directory %s (after unmounting): %m", u->runtime_path);
+                log_error("Failed to remove runtime directory %s: %s", u->runtime_path, strerror(-r));
+
+        free(u->runtime_path);
+        u->runtime_path = NULL;
 
         return r;
 }
 
-int user_stop(User *u, bool force) {
+int user_stop(User *u) {
         Session *s;
         int r = 0, k;
         assert(u);
 
-        /* Stop jobs have already been queued */
-        if (u->stopping) {
-                user_save(u);
-                return r;
-        }
+        if (u->started)
+                log_debug("User %s logged out.", u->name);
 
         LIST_FOREACH(sessions_by_user, s, u->sessions) {
-                k = session_stop(s, force);
+                k = session_stop(s);
                 if (k < 0)
                         r = k;
         }
@@ -577,56 +441,22 @@ int user_stop(User *u, bool force) {
                 r = k;
 
         /* Kill cgroup */
-        k = user_stop_slice(u);
+        k = user_terminate_cgroup(u);
         if (k < 0)
                 r = k;
-
-        u->stopping = true;
-
-        user_save(u);
-
-        return r;
-}
-
-int user_finalize(User *u) {
-        Session *s;
-        int r = 0, k;
-
-        assert(u);
-
-        if (u->started)
-                log_debug("User %s logged out.", u->name);
-
-        LIST_FOREACH(sessions_by_user, s, u->sessions) {
-                k = session_finalize(s);
-                if (k < 0)
-                        r = k;
-        }
 
         /* Kill XDG_RUNTIME_DIR */
         k = user_remove_runtime_path(u);
         if (k < 0)
                 r = k;
 
-        /* Clean SysV + POSIX IPC objects, but only if this is not a system user. Background: in many setups cronjobs
-         * are run in full PAM and thus logind sessions, even if the code run doesn't belong to actual users but to
-         * system components. Since enable RemoveIPC= globally for all users, we need to be a bit careful with such
-         * cases, as we shouldn't accidentally remove a system service's IPC objects while it is running, just because
-         * a cronjob running as the same user just finished. Hence: exclude system users generally from IPC clean-up,
-         * and do it only for normal users. */
-        if (u->manager->remove_ipc && !uid_is_system(u->uid)) {
-                k = clean_ipc_by_uid(u->uid);
-                if (k < 0)
-                        r = k;
-        }
-
         unlink(u->state_file);
         user_add_to_gc_queue(u);
 
-        if (u->started) {
+        if (u->started)
                 user_send_signal(u, false);
-                u->started = false;
-        }
+
+        u->started = false;
 
         return r;
 }
@@ -634,7 +464,7 @@ int user_finalize(User *u) {
 int user_get_idle_hint(User *u, dual_timestamp *t) {
         Session *s;
         bool idle_hint = true;
-        dual_timestamp ts = DUAL_TIMESTAMP_NULL;
+        dual_timestamp ts = { 0, 0 };
 
         assert(u);
 
@@ -667,38 +497,37 @@ int user_get_idle_hint(User *u, dual_timestamp *t) {
         return idle_hint;
 }
 
-int user_check_linger_file(User *u) {
-        _cleanup_free_ char *cc = NULL;
-        char *p = NULL;
+int user_check_gc(User *u, bool drop_not_started) {
+        int r;
+        char *p;
 
-        cc = cescape(u->name);
-        if (!cc)
-                return -ENOMEM;
-
-        p = strjoina("/var/lib/systemd/linger/", cc);
-
-        return access(p, F_OK) >= 0;
-}
-
-bool user_may_gc(User *u, bool drop_not_started) {
         assert(u);
 
         if (drop_not_started && !u->started)
-                return true;
+                return 0;
 
         if (u->sessions)
-                return false;
+                return 1;
 
-        if (user_check_linger_file(u) > 0)
-                return false;
+        if (asprintf(&p, "/var/lib/systemd/linger/%s", u->name) < 0)
+                return -ENOMEM;
 
-        if (u->slice_job && manager_job_is_active(u->manager, u->slice_job))
-                return false;
+        r = access(p, F_OK) >= 0;
+        free(p);
 
-        if (u->service_job && manager_job_is_active(u->manager, u->service_job))
-                return false;
+        if (r > 0)
+                return 1;
 
-        return true;
+        if (u->cgroup_path) {
+                r = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, false);
+                if (r < 0)
+                        return r;
+
+                if (r <= 0)
+                        return 1;
+        }
+
+        return 0;
 }
 
 void user_add_to_gc_queue(User *u) {
@@ -707,7 +536,7 @@ void user_add_to_gc_queue(User *u) {
         if (u->in_gc_queue)
                 return;
 
-        LIST_PREPEND(gc_queue, u->manager->user_gc_queue, u);
+        LIST_PREPEND(User, gc_queue, u->manager->user_gc_queue, u);
         u->in_gc_queue = true;
 }
 
@@ -716,212 +545,45 @@ UserState user_get_state(User *u) {
 
         assert(u);
 
-        if (u->stopping)
-                return USER_CLOSING;
-
-        if (!u->started || u->slice_job || u->service_job)
-                return USER_OPENING;
-
-        if (u->sessions) {
-                bool all_closing = true;
-
-                LIST_FOREACH(sessions_by_user, i, u->sessions) {
-                        SessionState state;
-
-                        state = session_get_state(i);
-                        if (state == SESSION_ACTIVE)
-                                return USER_ACTIVE;
-                        if (state != SESSION_CLOSING)
-                                all_closing = false;
-                }
-
-                return all_closing ? USER_CLOSING : USER_ONLINE;
-        }
-
-        if (user_check_linger_file(u) > 0)
+        if (!u->sessions)
                 return USER_LINGERING;
 
-        return USER_CLOSING;
+        LIST_FOREACH(sessions_by_user, i, u->sessions)
+                if (session_is_active(i))
+                        return USER_ACTIVE;
+
+        return USER_ONLINE;
 }
 
 int user_kill(User *u, int signo) {
-        assert(u);
-
-        return manager_kill_unit(u->manager, u->slice, KILL_ALL, signo, NULL);
-}
-
-static bool elect_display_filter(Session *s) {
-        /* Return true if the session is a candidate for the user’s ‘primary
-         * session’ or ‘display’. */
-        assert(s);
-
-        return (s->class == SESSION_USER && !s->stopping);
-}
-
-static int elect_display_compare(Session *s1, Session *s2) {
-        /* Indexed by SessionType. Lower numbers mean more preferred. */
-        const int type_ranks[_SESSION_TYPE_MAX] = {
-                [SESSION_UNSPECIFIED] = 0,
-                [SESSION_TTY] = -2,
-                [SESSION_X11] = -3,
-                [SESSION_WAYLAND] = -3,
-                [SESSION_MIR] = -3,
-                [SESSION_WEB] = -1,
-        };
-
-        /* Calculate the partial order relationship between s1 and s2,
-         * returning < 0 if s1 is preferred as the user’s ‘primary session’,
-         * 0 if s1 and s2 are equally preferred or incomparable, or > 0 if s2
-         * is preferred.
-         *
-         * s1 or s2 may be NULL. */
-        if (!s1 && !s2)
-                return 0;
-
-        if ((s1 == NULL) != (s2 == NULL))
-                return (s1 == NULL) - (s2 == NULL);
-
-        if (s1->stopping != s2->stopping)
-                return s1->stopping - s2->stopping;
-
-        if ((s1->class != SESSION_USER) != (s2->class != SESSION_USER))
-                return (s1->class != SESSION_USER) - (s2->class != SESSION_USER);
-
-        if ((s1->type == _SESSION_TYPE_INVALID) != (s2->type == _SESSION_TYPE_INVALID))
-                return (s1->type == _SESSION_TYPE_INVALID) - (s2->type == _SESSION_TYPE_INVALID);
-
-        if (s1->type != s2->type)
-                return type_ranks[s1->type] - type_ranks[s2->type];
-
-        return 0;
-}
-
-void user_elect_display(User *u) {
-        Session *s;
+        int r = 0, q;
+        Set *pid_set = NULL;
 
         assert(u);
 
-        /* This elects a primary session for each user, which we call
-         * the "display". We try to keep the assignment stable, but we
-         * "upgrade" to better choices. */
-        log_debug("Electing new display for user %s", u->name);
+        if (!u->cgroup_path)
+                return -ESRCH;
 
-        LIST_FOREACH(sessions_by_user, s, u->sessions) {
-                if (!elect_display_filter(s)) {
-                        log_debug("Ignoring session %s", s->id);
-                        continue;
-                }
+        pid_set = set_new(trivial_hash_func, trivial_compare_func);
+        if (!pid_set)
+                return -ENOMEM;
 
-                if (elect_display_compare(s, u->display) < 0) {
-                        log_debug("Choosing session %s in preference to %s", s->id, u->display ? u->display->id : "-");
-                        u->display = s;
-                }
-        }
+        q = cg_kill_recursive(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, signo, false, true, false, pid_set);
+        if (q < 0)
+                if (q != -EAGAIN && q != -ESRCH && q != -ENOENT)
+                        r = q;
+
+        if (pid_set)
+                set_free(pid_set);
+
+        return r;
 }
 
 static const char* const user_state_table[_USER_STATE_MAX] = {
         [USER_OFFLINE] = "offline",
-        [USER_OPENING] = "opening",
         [USER_LINGERING] = "lingering",
         [USER_ONLINE] = "online",
-        [USER_ACTIVE] = "active",
-        [USER_CLOSING] = "closing"
+        [USER_ACTIVE] = "active"
 };
 
 DEFINE_STRING_TABLE_LOOKUP(user_state, UserState);
-
-int config_parse_tmpfs_size(
-                const char* unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        size_t *sz = data;
-        int r;
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-        assert(data);
-
-        /* First, try to parse as percentage */
-        r = parse_percent(rvalue);
-        if (r > 0 && r < 100)
-                *sz = physical_memory_scale(r, 100U);
-        else {
-                uint64_t k;
-
-                /* If the passed argument was not a percentage, or out of range, parse as byte size */
-
-                r = parse_size(rvalue, 1024, &k);
-                if (r < 0 || k <= 0 || (uint64_t) (size_t) k != k) {
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse size value, ignoring: %s", rvalue);
-                        return 0;
-                }
-
-                *sz = PAGE_ALIGN((size_t) k);
-        }
-
-        return 0;
-}
-
-int config_parse_user_tasks_max(
-                const char* unit,
-                const char *filename,
-                unsigned line,
-                const char *section,
-                unsigned section_line,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        uint64_t *m = data;
-        uint64_t k;
-        int r;
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-        assert(data);
-
-        if (isempty(rvalue)) {
-                *m = system_tasks_max_scale(DEFAULT_USER_TASKS_MAX_PERCENTAGE, 100U);
-                return 0;
-        }
-
-        if (streq(rvalue, "infinity")) {
-                *m = CGROUP_LIMIT_MAX;
-                return 0;
-        }
-
-        /* Try to parse as percentage */
-        r = parse_percent(rvalue);
-        if (r >= 0)
-                k = system_tasks_max_scale(r, 100U);
-        else {
-
-                /* If the passed argument was not a percentage, or out of range, parse as byte size */
-
-                r = safe_atou64(rvalue, &k);
-                if (r < 0) {
-                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse tasks maximum, ignoring: %s", rvalue);
-                        return 0;
-                }
-        }
-
-        if (k <= 0 || k >= UINT64_MAX) {
-                log_syntax(unit, LOG_ERR, filename, line, 0, "Tasks maximum out of range, ignoring: %s", rvalue);
-                return 0;
-        }
-
-        *m = k;
-        return 0;
-}
