@@ -124,6 +124,9 @@
 /* Target is Gentoo */
 #undef TARGET_GENTOO
 
+/* Target is Mandriva */
+#undef TARGET_MANDRIVA
+
 /* Target is Slackware */
 #undef TARGET_SLACKWARE
 

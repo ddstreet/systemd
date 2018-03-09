@@ -2,12 +2,12 @@
 .\"     Title: systemd.exec
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/01/2011
+.\"      Date: 03/08/2011
 .\"    Manual: systemd.exec
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.EXEC" "5" "03/01/2011" "systemd" "systemd.exec"
+.TH "SYSTEMD\&.EXEC" "5" "03/08/2011" "systemd" "systemd.exec"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -159,7 +159,8 @@ for details\&.
 .RS 4
 Similar to
 \fIEnvironment=\fR
-but reads the environment variables from a text file\&. The text file should contain new\-line separated variable assignments\&. Empty lines and lines starting with ; or # will be ignored, which may be used for commenting\&. The argument passed should be an absolute file name, optionally prefixed with "\-", which indicates that if the file does not exist it won\*(Aqt be read and no error or warning message is logged\&.
+but reads the environment variables from a text file\&. The text file should contain new\-line separated variable assignments\&. Empty lines and lines starting with ; or # will be ignored, which may be used for commenting\&. The argument passed should be an absolute file name, optionally prefixed with "\-", which indicates that if the file does not exist it won\*(Aqt be read and no error or warning message is logged\&. The files listed with this directive will be read shortly before the process is executed\&. Settings from these files override settings made with
+\fIEnvironment=\fR\&. If the same variable is set twice from these files the files will be read in the order they are specified and the later setting will override the earlier setting\&.
 .RE
 .PP
 \fIStandardInput=\fR

@@ -1,0 +1,69 @@
+'\" t
+.\"     Title: machine-id
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 03/08/2011
+.\"    Manual: /etc/machine-id
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "MACHINE\-ID" "5" "03/08/2011" "systemd" "/etc/machine-id"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+machine-id \- local machine ID configuration file
+.SH "SYNOPSIS"
+.PP
+/etc/machine\-id
+.SH "DESCRIPTION"
+.PP
+The
+/etc/machine\-id
+file configures the unique machine id of the local system that is set during installation\&. It should contain a single newline\-terminated, hexadecimal, lowercase 16 character machine ID string\&.
+.PP
+The machine ID is usually generated from a random source during system installation and stays constant for all subsequent boots\&. Optionally, for stateless systems it is generated during runtime at boot\&.
+.PP
+The machine ID does not change based on user configuration, or when hardware is replaced\&.
+.PP
+This machine id follows the same format and logic as the D\-Bus machine ID\&.
+.PP
+Programs may use this ID to identify the host with a globally unique ID in the network, that does not change even if the local network configuration changes\&. Due to this and its greater length it is a more useful replacement than the
+\fBgethostid\fR(3)
+call POSIX specifies\&.
+.SH "HISTORY"
+.PP
+The simple configuration file format of
+/etc/machine\-id
+originates in the
+/var/lib/dbus/machine\-id
+file introduced by D\-Bus\&. In fact this latter file might be a symlink to the
+\fI/etc/machine\-id\fR\&.
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBgethostid\fR(3),
+\fBhostname\fR(5)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE
