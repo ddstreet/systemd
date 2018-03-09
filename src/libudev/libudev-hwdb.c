@@ -140,9 +140,13 @@ static const struct trie_node_f *node_lookup_f(struct udev_hwdb *hwdb, const str
 }
 
 static int hwdb_add_property(struct udev_hwdb *hwdb, const char *key, const char *value) {
-        /* TODO: add sub-matches (+) against DMI data */
+        /*
+         * Silently ignore all properties which do not start with a
+         * space; future extensions might use additional prefixes.
+         */
         if (key[0] != ' ')
                 return 0;
+
         if (udev_list_entry_add(&hwdb->properties_list, key+1, value) == NULL)
                 return -ENOMEM;
         return 0;
@@ -271,40 +275,40 @@ _public_ struct udev_hwdb *udev_hwdb_new(struct udev *udev) {
         hwdb->refcount = 1;
         udev_list_init(udev, &hwdb->properties_list, true);
 
-        hwdb->f = fopen(UDEVLIBEXECDIR "/hwdb.bin", "re");
+        hwdb->f = fopen("/etc/udev/hwdb.bin", "re");
         if (!hwdb->f) {
-                log_debug("error reading " UDEVLIBEXECDIR "/hwdb.bin: %m");
+                log_debug("error reading /etc/udev/hwdb.bin: %m");
                 udev_hwdb_unref(hwdb);
                 return NULL;
         }
 
         if (fstat(fileno(hwdb->f), &hwdb->st) < 0 ||
             (size_t)hwdb->st.st_size < offsetof(struct trie_header_f, strings_len) + 8) {
-                log_debug("error reading " UDEVLIBEXECDIR "/hwdb.bin: %m");
+                log_debug("error reading /etc/udev/hwdb.bin: %m");
                 udev_hwdb_unref(hwdb);
                 return NULL;
         }
 
         hwdb->map = mmap(0, hwdb->st.st_size, PROT_READ, MAP_SHARED, fileno(hwdb->f), 0);
         if (hwdb->map == MAP_FAILED) {
-                log_debug("error mapping " UDEVLIBEXECDIR "/hwdb.bin: %m");
+                log_debug("error mapping /etc/udev/hwdb.bin: %m");
                 udev_hwdb_unref(hwdb);
                 return NULL;
         }
 
         if (memcmp(hwdb->map, sig, sizeof(hwdb->head->signature)) != 0 ||
             (size_t)hwdb->st.st_size != le64toh(hwdb->head->file_size)) {
-                log_debug("error recognizing the format of " UDEVLIBEXECDIR "/hwdb.bin");
+                log_debug("error recognizing the format of /etc/udev/hwdb.bin");
                 udev_hwdb_unref(hwdb);
                 return NULL;
         }
 
         log_debug("=== trie on-disk ===\n");
-        log_debug("tool version:          %llu", (unsigned long long)le64toh(hwdb->head->tool_version));
-        log_debug("file size:        %8llu bytes\n", (unsigned long long)hwdb->st.st_size);
-        log_debug("header size       %8llu bytes\n", (unsigned long long)le64toh(hwdb->head->header_size));
-        log_debug("strings           %8llu bytes\n", (unsigned long long)le64toh(hwdb->head->strings_len));
-        log_debug("nodes             %8llu bytes\n", (unsigned long long)le64toh(hwdb->head->nodes_len));
+        log_debug("tool version:          %"PRIu64, le64toh(hwdb->head->tool_version));
+        log_debug("file size:        %8llu bytes\n", (unsigned long long) hwdb->st.st_size);
+        log_debug("header size       %8"PRIu64" bytes\n", le64toh(hwdb->head->header_size));
+        log_debug("strings           %8"PRIu64" bytes\n", le64toh(hwdb->head->strings_len));
+        log_debug("nodes             %8"PRIu64" bytes\n", le64toh(hwdb->head->nodes_len));
         return hwdb;
 }
 
@@ -354,7 +358,7 @@ bool udev_hwdb_validate(struct udev_hwdb *hwdb) {
                 return false;
         if (!hwdb->f)
                 return false;
-        if (fstat(fileno(hwdb->f), &st) < 0)
+        if (stat("/etc/udev/hwdb.bin", &st) < 0)
                 return true;
         if (timespec_load(&hwdb->st.st_mtim) != timespec_load(&st.st_mtim))
                 return true;
