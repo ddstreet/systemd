@@ -27,7 +27,7 @@ ConditionPathExists=/dev/tty0
 
 [Service]
 # the VT is cleared by TTYVTDisallocate
-ExecStart=-/sbin/agetty --noclear %I
+ExecStart=-/sbin/agetty --noclear %I $TERM
 Type=idle
 Restart=always
 RestartSec=0
@@ -46,3 +46,4 @@ Environment=LANG= LANGUAGE= LC_CTYPE= LC_NUMERIC= LC_TIME= LC_COLLATE= LC_MONETA
 
 [Install]
 WantedBy=getty.target
+DefaultInstance=tty1

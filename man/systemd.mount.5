@@ -1,5 +1,5 @@
 '\" t
-.TH "SYSTEMD\&.MOUNT" "5" "" "systemd 208" "systemd.mount"
+.TH "SYSTEMD\&.MOUNT" "5" "" "systemd 215" "systemd.mount"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -51,7 +51,7 @@ if it is not run as UID 0\&.
 Mount units must be named after the mount point directories they control\&. Example: the mount point
 /home/lennart
 must be configured in a unit file
-home\-lennart\&.mount\&. For details about the escaping logic used to convert a file system path to a unit name see
+home\-lennart\&.mount\&. For details about the escaping logic used to convert a file system path to a unit name, see
 \fBsystemd.unit\fR(5)\&.
 .PP
 Optionally, a mount unit may be accompanied by an automount unit, to allow on\-demand or parallelized mounting\&. See
@@ -75,7 +75,9 @@ Mount units may either be configured via unit files, or via
 \fBfstab\fR(5)
 for details)\&. Mounts listed in
 /etc/fstab
-will be converted into native units dynamically at boot and when the configuration of the system manager is reloaded\&. See
+will be converted into native units dynamically at boot and when the configuration of the system manager is reloaded\&. In general, configuring mount points through
+/etc/fstab
+is the preferred approach\&. See
 \fBsystemd-fstab-generator\fR(8)
 for details about the conversion\&.
 .PP
@@ -84,21 +86,63 @@ When reading
 a few special mount options are understood by systemd which influence how dependencies are created for mount points from
 /etc/fstab\&. systemd will create a dependency of type
 \fBWants\fR
-from either
+or
+\fBRequires\fR
+(see option
+\fBnofail\fR
+below), from either
 local\-fs\&.target
 or
-remote\-fs\&.target, depending whether the file system is local or remote\&. If
+remote\-fs\&.target, depending whether the file system is local or remote\&.
+.PP
 \fBx\-systemd\&.automount\fR
-is set, an automount unit will be created for the file system\&. See
+.RS 4
+An automount unit will be created for the file system\&. See
 \fBsystemd.automount\fR(5)
-for details\&. If
+for details\&.
+.RE
+.PP
 \fBx\-systemd\&.device\-timeout=\fR
-is specified, it may be used to configure how long systemd should wait for a device to show up before giving up on an entry from
-/etc/fstab\&. Specify a time in seconds or explicitly specify a unit as
+.RS 4
+Configure how long systemd should wait for a device to show up before giving up on an entry from
+/etc/fstab\&. Specify a time in seconds or explicitly append a unit as
 "s",
 "min",
 "h",
 "ms"\&.
+.sp
+Note that this option can only be used in
+/etc/fstab, and will be ignored when part of
+\fIOptions=\fR
+setting in a unit file\&.
+.RE
+.PP
+\fBnofail\fR, \fBfail\fR
+.RS 4
+With
+\fBnofail\fR
+this mount will be only wanted, not required, by the
+local\-fs\&.target\&. This means that the boot will continue even if this mount point is not mounted successfully\&. Option
+\fBfail\fR
+has the opposite meaning and is the default\&.
+.RE
+.PP
+\fBnoauto\fR, \fBauto\fR
+.RS 4
+With
+\fBnoauto\fR, this mount will not be added as a dependency for
+local\-fs\&.target\&. This means that it will not be mounted automatically during boot, unless it is pulled in by some other unit\&. Option
+\fBauto\fR
+has the opposite meaning and is the default\&.
+.RE
+.PP
+\fBx\-initrd\&.mount\fR
+.RS 4
+An additional filesystem to be mounted in the initramfs\&. See
+initrd\-fs\&.target
+description in
+\fBsystemd.special\fR(7)\&.
+.RE
 .PP
 If a mount point is configured in both
 /etc/fstab
@@ -141,6 +185,16 @@ for details\&. This setting is optional\&.
 Mount options to use when mounting\&. This takes a comma\-separated list of options\&. This setting is optional\&.
 .RE
 .PP
+\fISloppyOptions=\fR
+.RS 4
+Takes a boolean argument\&. If true, parsing of the options specified in
+\fIOptions=\fR
+is relaxed, and unknown mount options are tolerated\&. This corresponds with
+\fBmount\fR(8)\*(Aqs
+\fI\-s\fR
+switch\&. Defaults to off\&.
+.RE
+.PP
 \fIDirectoryMode=\fR
 .RS 4
 Directories of mount points (and any parent directories) are automatically created if needed\&. This option specifies the file system access mode used when creating these directories\&. Takes an access mode in octal notation\&. Defaults to 0755\&.
@@ -153,7 +207,9 @@ Configures the time to wait for the mount command to finish\&. If a command does
 \fBSIGKILL\fR\&. (See
 \fBKillMode=\fR
 in
-\fBsystemd.kill\fR(5)\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 90s\&.
+\fBsystemd.kill\fR(5)\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. The default value is set from the manager configuration file\*(Aqs
+\fIDefaultTimeoutStart=\fR
+variable\&.
 .RE
 .PP
 Check
@@ -161,18 +217,6 @@ Check
 and
 \fBsystemd.kill\fR(5)
 for more settings\&.
-.SH "COMPATIBILITY OPTIONS"
-.PP
-The following option is also available in the
-"[Mount]"
-section, but exists purely for compatibility reasons and should not be used in newly written mount files\&.
-.PP
-\fIFsckPassNo=\fR
-.RS 4
-The pass number for the file system checking service for this mount\&. See
-\fBsystemd.service\fR(5)
-for more information on this setting\&.
-.RE
 .SH "SEE ALSO"
 .PP
 \fBsystemd\fR(1),
