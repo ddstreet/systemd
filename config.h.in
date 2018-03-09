@@ -6,8 +6,11 @@
 /* Canonical host string. */
 #undef CANONICAL_HOST
 
-/* Target Distribution */
-#undef DISTRIBUTION
+/* Define if EFI support is to be enabled */
+#undef ENABLE_EFI
+
+/* Define if PolicyKit support is to be enabled */
+#undef ENABLE_POLKIT
 
 /* ACL available */
 #undef HAVE_ACL
@@ -15,17 +18,74 @@
 /* Define to 1 if you have the <acl/libacl.h> header file. */
 #undef HAVE_ACL_LIBACL_H
 
+/* Define to 1 if you have the <arpa/inet.h> header file. */
+#undef HAVE_ARPA_INET_H
+
+/* Define to 1 if you have the <attr/xattr.h> header file. */
+#undef HAVE_ATTR_XATTR_H
+
 /* AUDIT available */
 #undef HAVE_AUDIT
+
+/* Define if blkid is available */
+#undef HAVE_BLKID
+
+/* Define if CHKCONFIG is available */
+#undef HAVE_CHKCONFIG
+
+/* Define to 1 if you have the declaration of `gettid', and to 0 if you don't.
+   */
+#undef HAVE_DECL_GETTID
+
+/* Define to 1 if you have the declaration of `name_to_handle_at', and to 0 if
+   you don't. */
+#undef HAVE_DECL_NAME_TO_HANDLE_AT
+
+/* Define to 1 if you have the declaration of `pivot_root', and to 0 if you
+   don't. */
+#undef HAVE_DECL_PIVOT_ROOT
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
-/* Define if GTK is available */
-#undef HAVE_GTK
+/* Define to 1 if you have the `fanotify_init' function. */
+#undef HAVE_FANOTIFY_INIT
+
+/* Define to 1 if you have the `fanotify_mark' function. */
+#undef HAVE_FANOTIFY_MARK
+
+/* Define to 1 if you have the <fcntl.h> header file. */
+#undef HAVE_FCNTL_H
+
+/* Define if FIRMWARE is available */
+#undef HAVE_FIRMWARE
+
+/* GCRYPT available */
+#undef HAVE_GCRYPT
+
+/* Define to 1 if you have the `gethostbyaddr' function. */
+#undef HAVE_GETHOSTBYADDR
+
+/* Define to 1 if you have the `gethostbyname' function. */
+#undef HAVE_GETHOSTBYNAME
+
+/* Define to 1 if you have the `gettimeofday' function. */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define if glib is available */
+#undef HAVE_GLIB
+
+/* Define if IMA is available */
+#undef HAVE_IMA
+
+/* Define to 1 if you have the `inet_ntoa' function. */
+#undef HAVE_INET_NTOA
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define if kmod is available */
+#undef HAVE_KMOD
 
 /* Define to 1 if you have the <libaudit.h> header file. */
 #undef HAVE_LIBAUDIT_H
@@ -39,11 +99,36 @@
 /* Logind support available */
 #undef HAVE_LOGIND
 
+/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
+   to 0 otherwise. */
+#undef HAVE_MALLOC
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Define to 1 if you have the `memset' function. */
+#undef HAVE_MEMSET
+
+/* Define if microhttpd is available */
+#undef HAVE_MICROHTTPD
+
+/* Define to 1 if you have the <netdb.h> header file. */
+#undef HAVE_NETDB_H
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <nss.h> header file. */
+#undef HAVE_NSS_H
+
 /* PAM available */
 #undef HAVE_PAM
+
+/* Define if qrencode is available */
+#undef HAVE_QRENCODE
+
+/* Define to 1 if you have the `secure_getenv' function. */
+#undef HAVE_SECURE_GETENV
 
 /* Define to 1 if you have the <security/pam_ext.h> header file. */
 #undef HAVE_SECURITY_PAM_EXT_H
@@ -54,8 +139,14 @@
 /* Define to 1 if you have the <security/pam_modutil.h> header file. */
 #undef HAVE_SECURITY_PAM_MODUTIL_H
 
+/* Define to 1 if you have the `select' function. */
+#undef HAVE_SELECT
+
 /* Define if SELinux is available */
 #undef HAVE_SELINUX
+
+/* Define to 1 if you have the `socket' function. */
+#undef HAVE_SOCKET
 
 /* Define if /bin, /sbin aren't symlinks into /usr */
 #undef HAVE_SPLIT_USR
@@ -66,11 +157,29 @@
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
 
+/* Define to 1 if you have the `strcasecmp' function. */
+#undef HAVE_STRCASECMP
+
+/* Define to 1 if you have the `strcspn' function. */
+#undef HAVE_STRCSPN
+
+/* Define to 1 if you have the `strdup' function. */
+#undef HAVE_STRDUP
+
+/* Define to 1 if you have the `strerror' function. */
+#undef HAVE_STRERROR
+
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Define to 1 if you have the `strncasecmp' function. */
+#undef HAVE_STRNCASECMP
+
+/* Define to 1 if you have the `strspn' function. */
+#undef HAVE_STRSPN
 
 /* SysV init scripts and rcN.d links are supported. */
 #undef HAVE_SYSV_COMPAT
@@ -81,8 +190,20 @@
 /* Define to 1 if you have the <sys/capability.h> header file. */
 #undef HAVE_SYS_CAPABILITY_H
 
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#undef HAVE_SYS_IOCTL_H
+
+/* Define to 1 if you have the <sys/select.h> header file. */
+#undef HAVE_SYS_SELECT_H
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#undef HAVE_SYS_SOCKET_H
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/time.h> header file. */
+#undef HAVE_SYS_TIME_H
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
@@ -90,8 +211,23 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if you have the <valgrind/memcheck.h> header file. */
+#undef HAVE_VALGRIND_MEMCHECK_H
+
+/* XATTR available */
+#undef HAVE_XATTR
+
 /* Define if XZ is available */
 #undef HAVE_XZ
+
+/* Define to 1 if you have the `__secure_getenv' function. */
+#undef HAVE___SECURE_GETENV
+
+/* Path of loadkeys */
+#undef KBD_LOADKEYS
+
+/* Path of setfont */
+#undef KBD_SETFONT
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
@@ -121,47 +257,29 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Path of /etc/rc.local script */
+#undef RC_LOCAL_SCRIPT_PATH_START
+
+/* Path of /usr/sbin/halt.local script */
+#undef RC_LOCAL_SCRIPT_PATH_STOP
+
+/* Define to the type of arg 1 for `select'. */
+#undef SELECT_TYPE_ARG1
+
+/* Define to the type of args 2, 3 and 4 for `select'. */
+#undef SELECT_TYPE_ARG234
+
+/* Define to the type of arg 5 for `select'. */
+#undef SELECT_TYPE_ARG5
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Target is ALTLinux */
-#undef TARGET_ALTLINUX
+/* Path to telinit */
+#undef TELINIT
 
-/* Target is Ångström */
-#undef TARGET_ANGSTROM
-
-/* Target is ArchLinux */
-#undef TARGET_ARCH
-
-/* Target is Debian */
-#undef TARGET_DEBIAN
-
-/* Target is Fedora/RHEL */
-#undef TARGET_FEDORA
-
-/* Target is Frugalware */
-#undef TARGET_FRUGALWARE
-
-/* Target is Gentoo */
-#undef TARGET_GENTOO
-
-/* Target is Mageia */
-#undef TARGET_MAGEIA
-
-/* Target is Mandriva */
-#undef TARGET_MANDRIVA
-
-/* Target is MeeGo */
-#undef TARGET_MEEGO
-
-/* Target is Slackware */
-#undef TARGET_SLACKWARE
-
-/* Target is openSUSE/SLE */
-#undef TARGET_SUSE
-
-/* Target is Ubuntu */
-#undef TARGET_UBUNTU
+/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+#undef TIME_WITH_SYS_TIME
 
 /* GID of the 'tty' group */
 #undef TTY_GID
@@ -191,6 +309,11 @@
 /* Version number of package */
 #undef VERSION
 
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
@@ -206,3 +329,12 @@
 
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 #undef _POSIX_SOURCE
+
+/* Define to empty if `const' does not conform to ANSI C. */
+#undef const
+
+/* Define to rpl_malloc if the replacement function should be used. */
+#undef malloc
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+#undef size_t
