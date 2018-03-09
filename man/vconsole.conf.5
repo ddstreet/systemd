@@ -2,12 +2,12 @@
 .\"     Title: vconsole.conf
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/08/2011
+.\"      Date: 01/22/2011
 .\"    Manual: vconsole.conf
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "VCONSOLE\&.CONF" "5" "01/08/2011" "systemd" "vconsole.conf"
+.TH "VCONSOLE\&.CONF" "5" "01/22/2011" "systemd" "vconsole.conf"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -73,6 +73,22 @@ Configures the console font, the console map and the unicode font map\&.
 defaults to
 latarcyrheb\-sun16\&.
 .RE
+.SH "EXAMPLE"
+.PP
+\fBExample\ \&1.\ \&German keyboard and console\fR
+.PP
+/etc/vconsole\&.conf:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+KEYMAP=de\-latin1
+FONT=latarcyrheb\-sun16
+.fi
+.if n \{\
+.RE
+.\}
 .SH "SEE ALSO"
 .PP
 

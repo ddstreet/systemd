@@ -2,12 +2,12 @@
 .\"     Title: systemd.socket
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/08/2011
+.\"      Date: 01/22/2011
 .\"    Manual: systemd.socket
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.SOCKET" "5" "01/08/2011" "systemd" "systemd.socket"
+.TH "SYSTEMD\&.SOCKET" "5" "01/22/2011" "systemd" "systemd.socket"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -293,6 +293,16 @@ This option is mostly equivalent to the
 option of service files\&. See
 \fBsystemd.service\fR(5)
 for details\&.
+.RE
+.PP
+\fIKillSignal=\fR
+.RS 4
+Specifies which signal to use when killing a process of this socket\&. Defaults to SIGTERM\&.
+.RE
+.PP
+\fISendSIGKILL=\fR
+.RS 4
+Specifies whether to send SIGKILL to remaining processes after a timeout, if the normal shutdown procedure left processes of the socket around\&. Takes a boolean value\&. Defaults to "yes"\&.
 .RE
 .PP
 \fIService=\fR

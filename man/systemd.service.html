@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id434589"/><h2>Description</h2><p>A unit configuration file whose name ends in
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="systemd.service"><a id="systemd.service"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemd.service — systemd service configuration files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">systemd.service</code></p></div><div class="refsect1" title="Description"><a id="id503265"/><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.service</code> encodes information
                 about a process controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -33,7 +33,7 @@
                 <code class="filename">.service</code> suffix removed) and
                 dynamically creates a service unit from that
                 script. This is useful for compatibility with
-                SysV.</p></div><div class="refsect1" title="Options"><a id="id434701"/><h2>Options</h2><p>Service files must include a
+                SysV.</p></div><div class="refsect1" title="Options"><a id="id503377"/><h2>Options</h2><p>Service files must include a
                 <code class="literal">[Service]</code> section, which carries
                 information about the service and the process it
                 supervises. A number of options that may be used in
@@ -387,15 +387,29 @@
                                 to exist after stop unless it is
                                 empty. Defaults to
                                 <code class="option">control-group</code>.</p><p>Processes will first be
-                                terminated via SIGTERM. If then after
-                                a delay (configured via the
+                                terminated via SIGTERM (unless the
+                                signal to send is changed via
+                                <code class="varname">KillSignal=</code>). If
+                                then after a delay (configured via the
                                 <code class="varname">TimeoutSec=</code> option)
                                 processes still remain, the
                                 termination request is repeated with
-                                the SIGKILL signal. See
+                                the SIGKILL signal (unless this is
+                                disabled via the
+                                <code class="varname">SendSIGKILL=</code>
+                                option). See
                                 <span class="citerefentry"><span class="refentrytitle">kill</span>(2)</span>
                                 for more
-                                information.</p></dd><dt><span class="term"><code class="varname">NonBlocking=</code></span></dt><dd><p>Set O_NONBLOCK flag
+                                information.</p></dd><dt><span class="term"><code class="varname">KillSignal=</code></span></dt><dd><p>Specifies which signal
+                                to use when killing a
+                                service. Defaults to SIGTERM.
+                                </p></dd><dt><span class="term"><code class="varname">SendSIGKILL=</code></span></dt><dd><p>Specifies whether to
+                                send SIGKILL to remaining processes
+                                after a timeout, if the normal
+                                shutdown procedure left processes of
+                                the service around. Takes a boolean
+                                value. Defaults to "yes".
+                                </p></dd><dt><span class="term"><code class="varname">NonBlocking=</code></span></dt><dd><p>Set O_NONBLOCK flag
                                 for all file descriptors passed via
                                 socket-based activation. If true, all
                                 file descriptors &gt;= 3 (i.e. all except
@@ -467,7 +481,7 @@
                                 <code class="filename">/etc/fstab</code>'s
                                 fs_passno column. See
                                 <span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span>
-                                for details.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id476510"/><h2>See Also</h2><p>
+                                for details.</p></dd></dl></div></div><div class="refsect1" title="See Also"><a id="id545223"/><h2>See Also</h2><p>
                           <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span>,
                           <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,

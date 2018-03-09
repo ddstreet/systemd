@@ -2,12 +2,12 @@
 .\"     Title: pam_systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/08/2011
+.\"      Date: 01/22/2011
 .\"    Manual: pam_systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "PAM_SYSTEMD" "8" "01/08/2011" "systemd" "pam_systemd"
+.TH "PAM_SYSTEMD" "8" "01/22/2011" "systemd" "pam_systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -211,6 +211,15 @@ Takes a boolean argument\&. If true, all processes created by the user during hi
 and is more friendly for users logged in more than once, as their processes are terminated only on their complete logout\&.
 .RE
 .PP
+\fBkeep\-root=\fR
+.RS 4
+Takes a boolean argument\&. If true, all processes created by the root user (UID 0) during his session and from his session will be kept around after he logged out\&. This option allows cancelling the effect of
+\fBkill\-session=1\fR
+and
+\fBkill\-user=1\fR
+for the root user\&.
+.RE
+.PP
 \fBcontrollers=\fR
 .RS 4
 Takes a comma separated list of cgroup controllers in which hierarchies a user/session cgroup will be created by default for each user logging in\&. If ommited, defaults to \*(Aqcpu\*(Aq, meaning that in addition to creating per\-user and per\-session cgroups in systemd\*(Aqs own hierarchy, groups are created in the \*(Aqcpu\*(Aq hierarchy, on order to ensure that every use and every sessions gets an equal amount of CPU time, regardless how many processes a user or session might own\&.
@@ -226,7 +235,8 @@ will break tools like
 If the options are omitted they default to
 \fBcreate\-session=1\fR,
 \fBkill\-session=0\fR,
-\fBkill\-user=0\fR\&.
+\fBkill\-user=0\fR,
+\fBkeep\-root=1\fR\&.
 .SH "MODULE TYPES PROVIDED"
 .PP
 Only
