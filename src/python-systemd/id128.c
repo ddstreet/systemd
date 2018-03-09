@@ -52,9 +52,9 @@ PyDoc_STRVAR(get_boot__doc__,
 );
 
 static PyObject* make_uuid(sd_id128_t id) {
-        PyObject _cleanup_Py_DECREF_
+        _cleanup_Py_DECREF_ PyObject
                 *uuid = NULL, *UUID = NULL, *bytes = NULL,
-                *args = NULL, *kwargs = NULL, *obj = NULL;
+                *args = NULL, *kwargs = NULL;
 
         uuid = PyImport_ImportModule("uuid");
         if (!uuid)
@@ -134,7 +134,7 @@ static struct PyModuleDef module = {
         PyModuleDef_HEAD_INIT,
         "id128", /* name of module */
         module__doc__, /* module documentation, may be NULL */
-        0, /* size of per-interpreter state of the module */
+        -1, /* size of per-interpreter state of the module */
         methods
 };
 

@@ -42,6 +42,7 @@
 #include <sys/vfs.h>
 #include <getopt.h>
 #include <sys/inotify.h>
+#include <math.h>
 
 #ifdef HAVE_FANOTIFY_INIT
 #include <sys/fanotify.h>
@@ -67,16 +68,14 @@
  */
 
 static ReadaheadShared *shared = NULL;
+static usec_t starttime;
 
 /* Avoid collisions with the NULL pointer */
 #define SECTOR_TO_PTR(s) ULONG_TO_PTR((s)+1)
 #define PTR_TO_SECTOR(p) (PTR_TO_ULONG(p)-1)
 
 static int btrfs_defrag(int fd) {
-        struct btrfs_ioctl_vol_args data;
-
-        zero(data);
-        data.fd = fd;
+        struct btrfs_ioctl_vol_args data = { .fd = fd };
 
         return ioctl(fd, BTRFS_IOC_DEFRAG, &data);
 }
@@ -184,11 +183,10 @@ static unsigned long fd_first_block(int fd) {
         struct {
                 struct fiemap fiemap;
                 struct fiemap_extent extent;
-        } data;
-
-        zero(data);
-        data.fiemap.fm_length = ~0ULL;
-        data.fiemap.fm_extent_count = 1;
+        } data = {
+                .fiemap.fm_length = ~0ULL,
+                .fiemap.fm_extent_count = 1,
+        };
 
         if (ioctl(fd, FS_IOC_FIEMAP, &data) < 0)
                 return 0;
@@ -205,6 +203,7 @@ static unsigned long fd_first_block(int fd) {
 struct item {
         const char *path;
         unsigned long block;
+        unsigned long bin;
 };
 
 static int qsort_compare(const void *a, const void *b) {
@@ -213,6 +212,13 @@ static int qsort_compare(const void *a, const void *b) {
         i = a;
         j = b;
 
+        /* sort by bin first */
+        if (i->bin < j->bin)
+                return -1;
+        if (i->bin > j->bin)
+                return 1;
+
+        /* then sort by sector */
         if (i->block < j->block)
                 return -1;
         if (i->block > j->block)
@@ -228,7 +234,7 @@ static int collect(const char *root) {
                 FD_INOTIFY,   /* We get notifications to quit early via this fd */
                 _FD_MAX
         };
-        struct pollfd pollfd[_FD_MAX];
+        struct pollfd pollfd[_FD_MAX] = {};
         int fanotify_fd = -1, signal_fd = -1, inotify_fd = -1, r = 0;
         pid_t my_pid;
         Hashmap *files = NULL;
@@ -249,6 +255,8 @@ static int collect(const char *root) {
                 r = log_oom();
                 goto finish;
         }
+
+        starttime = now(CLOCK_MONOTONIC);
 
         /* If there's no pack file yet we lower the kernel readahead
          * so that mincore() is accurate. If there is a pack file
@@ -272,13 +280,15 @@ static int collect(const char *root) {
                 goto finish;
         }
 
-        if (!(files = hashmap_new(string_hash_func, string_compare_func))) {
+        files = hashmap_new(string_hash_func, string_compare_func);
+        if (!files) {
                 log_error("Failed to allocate set.");
                 r = -ENOMEM;
                 goto finish;
         }
 
-        if ((fanotify_fd = fanotify_init(FAN_CLOEXEC|FAN_NONBLOCK, O_RDONLY|O_LARGEFILE|O_CLOEXEC|O_NOATIME)) < 0)  {
+        fanotify_fd = fanotify_init(FAN_CLOEXEC|FAN_NONBLOCK, O_RDONLY|O_LARGEFILE|O_CLOEXEC|O_NOATIME);
+        if (fanotify_fd < 0)  {
                 log_error("Failed to create fanotify object: %m");
                 r = -errno;
                 goto finish;
@@ -290,7 +300,8 @@ static int collect(const char *root) {
                 goto finish;
         }
 
-        if ((inotify_fd = open_inotify()) < 0) {
+        inotify_fd = open_inotify();
+        if (inotify_fd < 0) {
                 r = inotify_fd;
                 goto finish;
         }
@@ -299,7 +310,6 @@ static int collect(const char *root) {
 
         my_pid = getpid();
 
-        zero(pollfd);
         pollfd[FD_FANOTIFY].fd = fanotify_fd;
         pollfd[FD_FANOTIFY].events = POLLIN;
         pollfd[FD_SIGNAL].fd = signal_fd;
@@ -447,10 +457,29 @@ static int collect(const char *root) {
                                         free(p);
                                 else {
                                         unsigned long ul;
+                                        usec_t entrytime;
+                                        struct item *entry;
+
+                                        entry = new0(struct item, 1);
+                                        if (!entry) {
+                                                r = log_oom();
+                                                goto finish;
+                                        }
 
                                         ul = fd_first_block(m->fd);
 
-                                        if ((k = hashmap_put(files, p, SECTOR_TO_PTR(ul))) < 0) {
+                                        entrytime = now(CLOCK_MONOTONIC);
+
+                                        entry->block = ul;
+                                        entry->path = strdup(p);
+                                        if (!entry->path) {
+                                                free(entry);
+                                                r = log_oom();
+                                                goto finish;
+                                        }
+                                        entry->bin = (entrytime - starttime) / 2000000;
+
+                                        if ((k = hashmap_put(files, p, entry)) < 0) {
                                                 log_warning("set_put() failed: %s", strerror(-k));
                                                 free(p);
                                         }
@@ -476,7 +505,7 @@ done:
         on_ssd = fs_on_ssd(root) > 0;
         log_debug("On SSD: %s", yes_no(on_ssd));
 
-        on_btrfs = statfs(root, &sfs) >= 0 && (long) sfs.f_type == (long) BTRFS_SUPER_MAGIC;
+        on_btrfs = statfs(root, &sfs) >= 0 && sfs.f_type == (__SWORD_TYPE) BTRFS_SUPER_MAGIC;
         log_debug("On btrfs: %s", yes_no(on_btrfs));
 
         if (asprintf(&pack_fn_new, "%s/.readahead.new", root) < 0) {
@@ -518,8 +547,7 @@ done:
 
                 j = ordered;
                 HASHMAP_FOREACH_KEY(q, p, files, i) {
-                        j->path = p;
-                        j->block = PTR_TO_SECTOR(q);
+                        memcpy(j, q, sizeof(struct item));
                         j++;
                 }
 

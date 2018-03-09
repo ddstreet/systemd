@@ -68,12 +68,12 @@ typedef struct StatusInfo {
         const char *timezone;
         bool local_rtc;
         bool ntp;
+        bool can_ntp;
 } StatusInfo;
 
 static bool ntp_synced(void) {
-        struct timex txc;
+        struct timex txc = {};
 
-        zero(txc);
         if (adjtimex(&txc) < 0)
                 return false;
 
@@ -153,7 +153,7 @@ static void print_status_info(StatusInfo *i) {
                " RTC in local TZ: %s\n",
                strna(i->timezone),
                a,
-               yes_no(i->ntp),
+               i->can_ntp ? yes_no(i->ntp) : "n/a",
                yes_no(ntp_synced()),
                yes_no(i->local_rtc));
 
@@ -228,6 +228,8 @@ static int status_property(const char *name, DBusMessageIter *iter, StatusInfo *
                         i->local_rtc = b;
                 else if (streq(name, "NTP"))
                         i->ntp = b;
+                else if (streq(name, "CanNTP"))
+                        i->can_ntp = b;
         }
         }
 
@@ -239,7 +241,7 @@ static int show_status(DBusConnection *bus, char **args, unsigned n) {
         const char *interface = "";
         int r;
         DBusMessageIter iter, sub, sub2, sub3;
-        StatusInfo info;
+        StatusInfo info = {};
 
         assert(args);
 
@@ -263,7 +265,6 @@ static int show_status(DBusConnection *bus, char **args, unsigned n) {
                 return -EIO;
         }
 
-        zero(info);
         dbus_message_iter_recurse(&iter, &sub);
 
         while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {

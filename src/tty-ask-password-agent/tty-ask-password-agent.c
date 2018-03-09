@@ -60,11 +60,11 @@ static int ask_password_plymouth(
                 char ***_passphrases) {
 
         int fd = -1, notify = -1;
-        union sockaddr_union sa;
+        union sockaddr_union sa = {};
         char *packet = NULL;
         ssize_t k;
         int r, n;
-        struct pollfd pollfd[2];
+        struct pollfd pollfd[2] = {};
         char buffer[LINE_MAX];
         size_t p = 0;
         enum {
@@ -91,7 +91,6 @@ static int ask_password_plymouth(
                 goto finish;
         }
 
-        zero(sa);
         sa.sa.sa_family = AF_UNIX;
         strncpy(sa.un.sun_path+1, "/org/freedesktop/plymouthd", sizeof(sa.un.sun_path)-1);
         if (connect(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + 1 + strlen(sa.un.sun_path+1)) < 0) {
@@ -116,7 +115,6 @@ static int ask_password_plymouth(
                 goto finish;
         }
 
-        zero(pollfd);
         pollfd[POLL_SOCKET].fd = fd;
         pollfd[POLL_SOCKET].events = POLLIN;
         pollfd[POLL_INOTIFY].fd = notify;
@@ -277,7 +275,7 @@ static int parse_password(const char *filename, char **wall) {
                 return -errno;
         }
 
-        r = config_parse(filename, f, NULL, config_item_table_lookup, (void*) items, true, NULL);
+        r = config_parse(NULL, filename, f, NULL, config_item_table_lookup, (void*) items, true, NULL);
         if (r < 0) {
                 log_error("Failed to parse password file %s: %s", filename, strerror(-r));
                 goto finish;
@@ -325,7 +323,7 @@ static int parse_password(const char *filename, char **wall) {
                 union {
                         struct sockaddr sa;
                         struct sockaddr_un un;
-                } sa;
+                } sa = {};
                 size_t packet_length = 0;
 
                 assert(arg_action == ACTION_QUERY ||
@@ -341,7 +339,7 @@ static int parse_password(const char *filename, char **wall) {
                 }
 
                 if (arg_plymouth) {
-                        char **passwords = NULL;
+                        _cleanup_strv_free_ char **passwords = NULL;
 
                         if ((r = ask_password_plymouth(message, not_after, filename, accept_cached, &passwords)) >= 0) {
                                 char **p;
@@ -410,7 +408,6 @@ static int parse_password(const char *filename, char **wall) {
                         goto finish;
                 }
 
-                zero(sa);
                 sa.un.sun_family = AF_UNIX;
                 strncpy(sa.un.sun_path, socket_name, sizeof(sa.un.sun_path));
 
@@ -563,7 +560,7 @@ static int watch_passwords(void) {
         };
 
         int notify = -1, signal_fd = -1, tty_block_fd = -1;
-        struct pollfd pollfd[_FD_MAX];
+        struct pollfd pollfd[_FD_MAX] = {};
         sigset_t mask;
         int r;
 
@@ -591,7 +588,6 @@ static int watch_passwords(void) {
                 goto finish;
         }
 
-        zero(pollfd);
         pollfd[FD_INOTIFY].fd = notify;
         pollfd[FD_INOTIFY].events = POLLIN;
         pollfd[FD_SIGNAL].fd = signal_fd;

@@ -21,6 +21,8 @@
 ***/
 
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "util.h"
 
@@ -41,6 +43,29 @@ static void test_first_word(void) {
         assert_se(!first_word("Hello", "Hellooo"));
         assert_se(!first_word("Hello", "xxxxx"));
         assert_se(!first_word("Hellooo", "Hello"));
+}
+
+static void test_close_many(void) {
+        int fds[3];
+        char name0[] = "/tmp/test-close-many.XXXXXX";
+        char name1[] = "/tmp/test-close-many.XXXXXX";
+        char name2[] = "/tmp/test-close-many.XXXXXX";
+
+        fds[0] = mkstemp(name0);
+        fds[1] = mkstemp(name1);
+        fds[2] = mkstemp(name2);
+
+        close_many(fds, 2);
+
+        assert_se(fcntl(fds[0], F_GETFD) == -1);
+        assert_se(fcntl(fds[1], F_GETFD) == -1);
+        assert_se(fcntl(fds[2], F_GETFD) >= 0);
+
+        close_nointr_nofail(fds[2]);
+
+        unlink(name0);
+        unlink(name1);
+        unlink(name2);
 }
 
 static void test_parse_boolean(void) {
@@ -127,6 +152,22 @@ static void test_safe_atod(void) {
 
         r = safe_atod("junk", &d);
         assert_se(r == -EINVAL);
+}
+
+static void test_strappend(void) {
+       _cleanup_free_ char *t1, *t2, *t3, *t4;
+
+       t1 = strappend(NULL, NULL);
+       assert_se(streq(t1, ""));
+
+       t2 = strappend(NULL, "suf");
+       assert_se(streq(t2, "suf"));
+
+       t3 = strappend("pre", NULL);
+       assert_se(streq(t3, "pre"));
+
+       t4 = strappend("pre", "suf");
+       assert_se(streq(t4, "presuf"));
 }
 
 static void test_strstrip(void) {
@@ -284,14 +325,84 @@ static void test_bus_path_escape(void) {
         test_bus_path_escape_one(":1", "_3a1");
 }
 
+static void test_hostname_is_valid(void) {
+        assert(hostname_is_valid("foobar"));
+        assert(hostname_is_valid("foobar.com"));
+        assert(!hostname_is_valid("fööbar"));
+        assert(!hostname_is_valid(""));
+        assert(!hostname_is_valid("."));
+        assert(!hostname_is_valid(".."));
+        assert(!hostname_is_valid("foobar."));
+        assert(!hostname_is_valid(".foobar"));
+        assert(!hostname_is_valid("foo..bar"));
+        assert(!hostname_is_valid("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"));
+}
+
+static void test_u64log2(void) {
+        assert(u64log2(0) == 0);
+        assert(u64log2(8) == 3);
+        assert(u64log2(9) == 3);
+        assert(u64log2(15) == 3);
+        assert(u64log2(16) == 4);
+        assert(u64log2(1024*1024) == 20);
+        assert(u64log2(1024*1024+5) == 20);
+}
+
+static void test_get_process_comm(void) {
+        _cleanup_free_ char *a = NULL, *c = NULL, *d = NULL, *f = NULL, *i = NULL;
+        unsigned long long b;
+        pid_t e;
+        uid_t u;
+        gid_t g;
+        dev_t h;
+        int r;
+
+        assert_se(get_process_comm(1, &a) >= 0);
+        log_info("pid1 comm: '%s'", a);
+
+        assert_se(get_starttime_of_pid(1, &b) >= 0);
+        log_info("pid1 starttime: '%llu'", b);
+
+        assert_se(get_process_cmdline(1, 0, true, &c) >= 0);
+        log_info("pid1 cmdline: '%s'", c);
+
+        assert_se(get_process_cmdline(1, 8, false, &d) >= 0);
+        log_info("pid1 cmdline truncated: '%s'", d);
+
+        assert_se(get_parent_of_pid(1, &e) >= 0);
+        log_info("pid1 ppid: '%llu'", (unsigned long long) e);
+        assert_se(e == 0);
+
+        assert_se(is_kernel_thread(1) == 0);
+
+        r = get_process_exe(1, &f);
+        assert_se(r >= 0 || r == -EACCES);
+        log_info("pid1 exe: '%s'", strna(f));
+
+        assert_se(get_process_uid(1, &u) == 0);
+        log_info("pid1 uid: '%llu'", (unsigned long long) u);
+        assert_se(u == 0);
+
+        assert_se(get_process_gid(1, &g) == 0);
+        log_info("pid1 gid: '%llu'", (unsigned long long) g);
+        assert_se(g == 0);
+
+        assert(get_ctty_devnr(1, &h) == -ENOENT);
+
+        getenv_for_pid(1, "PATH", &i);
+        log_info("pid1 $PATH: '%s'", strna(i));
+}
+
 int main(int argc, char *argv[]) {
         test_streq_ptr();
         test_first_word();
+        test_close_many();
         test_parse_boolean();
         test_parse_pid();
         test_parse_uid();
         test_safe_atolli();
         test_safe_atod();
+        test_strappend();
         test_strstrip();
         test_delete_chars();
         test_in_charset();
@@ -306,6 +417,9 @@ int main(int argc, char *argv[]) {
         test_default_term_for_tty();
         test_memdup_multiply();
         test_bus_path_escape();
+        test_hostname_is_valid();
+        test_u64log2();
+        test_get_process_comm();
 
         return 0;
 }

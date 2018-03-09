@@ -2,10 +2,10 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd.kill"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.kill — Kill environment configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.kill"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.kill — Kill environment configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
                 <code class="filename"><em class="replaceable"><code>socket</code></em>.socket</code>,
                 <code class="filename"><em class="replaceable"><code>mount</code></em>.mount</code>,
-                <code class="filename"><em class="replaceable"><code>swap</code></em>.swap</code></p></div><div class="refsect1"><a name="idp3967248"></a><h2>Description</h2><p>Unit configuration files for services, sockets,
+                <code class="filename"><em class="replaceable"><code>swap</code></em>.swap</code></p></div><div class="refsect1"><a name="idp154064"></a><h2>Description</h2><p>Unit configuration files for services, sockets,
                 mount points and swap devices share a subset of
                 configuration options which define the process killing
                 parameters of spawned processes.</p><p>This man page lists the configuration options
@@ -22,7 +22,7 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket], [Mount], or [Swap] section, depending on the unit
-                type.</p></div><div class="refsect1"><a name="idp3973728"></a><h2>Options</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
+                type.</p></div><div class="refsect1"><a name="idp86240"></a><h2>Options</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">KillMode=</code></span></dt><dd><p>Specifies how
                                 processes of this service shall be
                                 killed. One of
                                 <code class="option">control-group</code>,
@@ -69,7 +69,7 @@
                                 shutdown procedure left processes of
                                 the service around. Takes a boolean
                                 value. Defaults to "yes".
-                                </p></dd></dl></div></div><div class="refsect1"><a name="idp32240"></a><h2>See Also</h2><p>
+                                </p></dd></dl></div></div><div class="refsect1"><a name="idp24560"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                           <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(8)</span></a>,

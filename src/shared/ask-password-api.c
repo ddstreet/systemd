@@ -109,7 +109,6 @@ int ask_password_tty(
         }
 
         zero(pollfd);
-
         pollfd[POLL_TTY].fd = ttyfd >= 0 ? ttyfd : STDIN_FILENO;
         pollfd[POLL_TTY].events = POLLIN;
         pollfd[POLL_INOTIFY].fd = notify;
@@ -248,25 +247,25 @@ static int create_socket(char **name) {
         union {
                 struct sockaddr sa;
                 struct sockaddr_un un;
-        } sa;
+        } sa = {
+                .un.sun_family = AF_UNIX,
+        };
         int one = 1, r;
         char *c;
-        mode_t u;
 
         assert(name);
 
-        if ((fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0)) < 0) {
+        fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0);
+        if (fd < 0) {
                 log_error("socket() failed: %m");
                 return -errno;
         }
 
-        zero(sa);
-        sa.un.sun_family = AF_UNIX;
         snprintf(sa.un.sun_path, sizeof(sa.un.sun_path)-1, "/run/systemd/ask-password/sck.%llu", random_ull());
 
-        u = umask(0177);
-        r = bind(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + strlen(sa.un.sun_path));
-        umask(u);
+        RUN_WITH_UMASK(0177) {
+                r = bind(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + strlen(sa.un.sun_path));
+        }
 
         if (r < 0) {
                 r = -errno;
@@ -280,7 +279,8 @@ static int create_socket(char **name) {
                 goto fail;
         }
 
-        if (!(c = strdup(sa.un.sun_path))) {
+        c = strdup(sa.un.sun_path);
+        if (!c) {
                 r = log_oom();
                 goto fail;
         }
@@ -315,7 +315,6 @@ int ask_password_agent(
         int socket_fd = -1, signal_fd = -1;
         sigset_t mask, oldmask;
         struct pollfd pollfd[_FD_MAX];
-        mode_t u;
 
         assert(_passphrases);
 
@@ -325,9 +324,9 @@ int ask_password_agent(
 
         mkdir_p_label("/run/systemd/ask-password", 0755);
 
-        u = umask(0022);
-        fd = mkostemp(temp, O_CLOEXEC|O_CREAT|O_WRONLY);
-        umask(u);
+        RUN_WITH_UMASK(0022) {
+                fd = mkostemp(temp, O_CLOEXEC|O_CREAT|O_WRONLY);
+        }
 
         if (fd < 0) {
                 log_error("Failed to create password file: %m");

@@ -69,7 +69,6 @@ global:
         udev_monitor_get_fd;
         udev_monitor_get_udev;
         udev_monitor_new_from_netlink;
-        udev_monitor_new_from_socket;
         udev_monitor_receive_device;
         udev_monitor_ref;
         udev_monitor_set_receive_buffer_size;
@@ -108,3 +107,7 @@ global:
         udev_hwdb_unref;
         udev_hwdb_get_properties_list_entry;
 } LIBUDEV_189;
+
+LIBUDEV_199 {
+        udev_device_set_sysattr_value;
+} LIBUDEV_196;

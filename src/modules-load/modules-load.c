@@ -76,7 +76,7 @@ static int add_modules(const char *p) {
 }
 
 static int parse_proc_cmdline(void) {
-        char _cleanup_free_ *line = NULL;
+        _cleanup_free_ char *line = NULL;
         char *w, *state;
         int r;
         size_t l;
@@ -91,7 +91,7 @@ static int parse_proc_cmdline(void) {
         }
 
         FOREACH_WORD_QUOTED(w, l, line, state) {
-                char _cleanup_free_ *word;
+                _cleanup_free_ char *word;
 
                 word = strndup(w, l);
                 if (!word)
@@ -148,7 +148,7 @@ static int load_module(struct kmod_ctx *ctx, const char *m) {
                         break;
 
                 case KMOD_MODULE_LIVE:
-                        log_info("Module '%s' is already loaded", kmod_module_get_name(mod));
+                        log_debug("Module '%s' is already loaded", kmod_module_get_name(mod));
                         break;
 
                 default:
@@ -206,7 +206,7 @@ static int apply_file(struct kmod_ctx *ctx, const char *path, bool ignore_enoent
                 l = strstrip(line);
                 if (!*l)
                         continue;
-                if (strchr(COMMENTS, *l))
+                if (strchr(COMMENTS "\n", *l))
                         continue;
 
                 k = load_module(ctx, l);

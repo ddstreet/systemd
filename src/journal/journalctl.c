@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/poll.h>
 #include <time.h>
 #include <getopt.h>
 #include <signal.h>
@@ -35,9 +34,15 @@
 #include <sys/ioctl.h>
 #include <linux/fs.h>
 
+#ifdef HAVE_ACL
+#include <sys/acl.h>
+#include "acl-util.h"
+#endif
+
 #include <systemd/sd-journal.h>
 
 #include "log.h"
+#include "logs-show.h"
 #include "util.h"
 #include "path-util.h"
 #include "build.h"
@@ -75,11 +80,12 @@ static usec_t arg_interval = DEFAULT_FSS_INTERVAL_USEC;
 #endif
 static usec_t arg_since, arg_until;
 static bool arg_since_set = false, arg_until_set = false;
-static const char *arg_unit = NULL;
-static const char *arg_unit_type = NULL;
+static char **arg_system_units = NULL;
+static char **arg_user_units = NULL;
 static const char *arg_field = NULL;
 static bool arg_catalog = false;
 static bool arg_reverse = false;
+static const char *arg_root = NULL;
 
 static enum {
         ACTION_SHOW,
@@ -89,6 +95,7 @@ static enum {
         ACTION_VERIFY,
         ACTION_DISK_USAGE,
         ACTION_LIST_CATALOG,
+        ACTION_DUMP_CATALOG,
         ACTION_UPDATE_CATALOG
 } arg_action = ACTION_SHOW;
 
@@ -118,6 +125,7 @@ static int help(void) {
                "     --no-pager          Do not pipe output into a pager\n"
                "  -m --merge             Show entries from all available journals\n"
                "  -D --directory=PATH    Show journal files from directory\n"
+               "     --root=ROOT         Operate on catalog files underneath the root ROOT\n"
 #ifdef HAVE_GCRYPT
                "     --interval=TIME     Time interval for changing the FSS sealing key\n"
                "     --verify-key=KEY    Specify FSS verification key\n"
@@ -130,6 +138,7 @@ static int help(void) {
                "     --disk-usage        Show total disk usage\n"
                "  -F --field=FIELD       List all values a certain field takes\n"
                "     --list-catalog      Show message IDs of all entries in the message catalog\n"
+               "     --dump-catalog      Show entries in the message catalog\n"
                "     --update-catalog    Update the message catalog database\n"
 #ifdef HAVE_GCRYPT
                "     --setup-keys        Generate new FSS key pair\n"
@@ -147,6 +156,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_NO_PAGER,
                 ARG_NO_TAIL,
                 ARG_NEW_ID128,
+                ARG_ROOT,
                 ARG_HEADER,
                 ARG_FULL,
                 ARG_SETUP_KEYS,
@@ -158,6 +168,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_UNTIL,
                 ARG_USER_UNIT,
                 ARG_LIST_CATALOG,
+                ARG_DUMP_CATALOG,
                 ARG_UPDATE_CATALOG
         };
 
@@ -177,6 +188,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "merge",        no_argument,       NULL, 'm'              },
                 { "this-boot",    no_argument,       NULL, 'b'              },
                 { "directory",    required_argument, NULL, 'D'              },
+                { "root",         required_argument, NULL, ARG_ROOT         },
                 { "header",       no_argument,       NULL, ARG_HEADER       },
                 { "priority",     required_argument, NULL, 'p'              },
                 { "setup-keys",   no_argument,       NULL, ARG_SETUP_KEYS   },
@@ -187,11 +199,12 @@ static int parse_argv(int argc, char *argv[]) {
                 { "cursor",       required_argument, NULL, 'c'              },
                 { "since",        required_argument, NULL, ARG_SINCE        },
                 { "until",        required_argument, NULL, ARG_UNTIL        },
-                { "user-unit",    required_argument, NULL, ARG_USER_UNIT    },
                 { "unit",         required_argument, NULL, 'u'              },
+                { "user-unit",    required_argument, NULL, ARG_USER_UNIT    },
                 { "field",        required_argument, NULL, 'F'              },
                 { "catalog",      no_argument,       NULL, 'x'              },
                 { "list-catalog", no_argument,       NULL, ARG_LIST_CATALOG },
+                { "dump-catalog", no_argument,       NULL, ARG_DUMP_CATALOG },
                 { "update-catalog",no_argument,      NULL, ARG_UPDATE_CATALOG },
                 { "reverse",      no_argument,       NULL, 'r'              },
                 { NULL,           0,                 NULL, 0                }
@@ -308,6 +321,10 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_directory = optarg;
                         break;
 
+                case ARG_ROOT:
+                        arg_root = optarg;
+                        break;
+
                 case 'c':
                         arg_cursor = optarg;
                         break;
@@ -337,7 +354,7 @@ static int parse_argv(int argc, char *argv[]) {
                         break;
 
                 case ARG_INTERVAL:
-                        r = parse_usec(optarg, &arg_interval);
+                        r = parse_sec(optarg, &arg_interval);
                         if (r < 0 || arg_interval <= 0) {
                                 log_error("Failed to parse sealing key change interval: %s", optarg);
                                 return -EINVAL;
@@ -419,14 +436,16 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_until_set = true;
                         break;
 
-                case ARG_USER_UNIT:
-                        arg_unit = optarg;
-                        arg_unit_type = "_SYSTEMD_USER_UNIT=";
+                case 'u':
+                        r = strv_extend(&arg_system_units, optarg);
+                        if (r < 0)
+                                return log_oom();
                         break;
 
-                case 'u':
-                        arg_unit = optarg;
-                        arg_unit_type = "_SYSTEMD_UNIT=";
+                case ARG_USER_UNIT:
+                        r = strv_extend(&arg_user_units, optarg);
+                        if (r < 0)
+                                return log_oom();
                         break;
 
                 case '?':
@@ -442,6 +461,10 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case ARG_LIST_CATALOG:
                         arg_action = ACTION_LIST_CATALOG;
+                        break;
+
+                case ARG_DUMP_CATALOG:
+                        arg_action = ACTION_DUMP_CATALOG;
                         break;
 
                 case ARG_UPDATE_CATALOG:
@@ -512,16 +535,16 @@ static int generate_new_id128(void) {
 
 static int add_matches(sd_journal *j, char **args) {
         char **i;
-        int r;
 
         assert(j);
 
         STRV_FOREACH(i, args) {
+                int r;
 
                 if (streq(*i, "+"))
                         r = sd_journal_add_disjunction(j);
                 else if (path_is_absolute(*i)) {
-                        char *p, *t = NULL;
+                        _cleanup_free_ char *p, *t = NULL;
                         const char *path;
                         struct stat st;
 
@@ -529,7 +552,6 @@ static int add_matches(sd_journal *j, char **args) {
                         path = p ? p : *i;
 
                         if (stat(path, &st) < 0)  {
-                                free(p);
                                 log_error("Couldn't stat file: %m");
                                 return -errno;
                         }
@@ -541,18 +563,14 @@ static int add_matches(sd_journal *j, char **args) {
                         else if (S_ISBLK(st.st_mode))
                                 asprintf(&t, "_KERNEL_DEVICE=b%u:%u", major(st.st_rdev), minor(st.st_rdev));
                         else {
-                                free(p);
-                                log_error("File is not a device node, regular file or is not executable: %s", *i);
+                                log_error("File is neither a device node, nor regular file, nor executable: %s", *i);
                                 return -EINVAL;
                         }
-
-                        free(p);
 
                         if (!t)
                                 return log_oom();
 
                         r = sd_journal_add_match(j, t, 0);
-                        free(t);
                 } else
                         r = sd_journal_add_match(j, *i, 0);
 
@@ -588,32 +606,50 @@ static int add_this_boot(sd_journal *j) {
                 return r;
         }
 
+        r = sd_journal_add_conjunction(j);
+        if (r < 0)
+                return r;
+
         return 0;
 }
 
-static int add_unit(sd_journal *j) {
-        _cleanup_free_ char *m = NULL, *u = NULL;
+static int add_units(sd_journal *j) {
+        _cleanup_free_ char *u = NULL;
         int r;
+        char **i;
 
         assert(j);
 
-        if (isempty(arg_unit))
-                return 0;
-
-        u = unit_name_mangle(arg_unit);
-        if (!u)
-                return log_oom();
-
-        m = strappend(arg_unit_type, u);
-
-        if (!m)
-                return log_oom();
-
-        r = sd_journal_add_match(j, m, strlen(m));
-        if (r < 0) {
-                log_error("Failed to add match: %s", strerror(-r));
-                return r;
+        STRV_FOREACH(i, arg_system_units) {
+                u = unit_name_mangle(*i);
+                if (!u)
+                        return log_oom();
+                r = add_matches_for_unit(j, u);
+                if (r < 0)
+                        return r;
+                r = sd_journal_add_disjunction(j);
+                if (r < 0)
+                        return r;
         }
+
+        STRV_FOREACH(i, arg_user_units) {
+                u = unit_name_mangle(*i);
+                if (!u)
+                        return log_oom();
+
+                r = add_matches_for_user_unit(j, u, getuid());
+                if (r < 0)
+                        return r;
+
+                r = sd_journal_add_disjunction(j);
+                if (r < 0)
+                        return r;
+
+        }
+
+        r = sd_journal_add_conjunction(j);
+        if (r < 0)
+                return r;
 
         return 0;
 }
@@ -621,7 +657,6 @@ static int add_unit(sd_journal *j) {
 static int add_priorities(sd_journal *j) {
         char match[] = "PRIORITY=0";
         int i, r;
-
         assert(j);
 
         if (arg_priorities == 0xFF)
@@ -637,6 +672,10 @@ static int add_priorities(sd_journal *j) {
                                 return r;
                         }
                 }
+
+        r = sd_journal_add_conjunction(j);
+        if (r < 0)
+                return r;
 
         return 0;
 }
@@ -791,7 +830,7 @@ static int setup_keys(void) {
                 fprintf(stderr,
                         ANSI_HIGHLIGHT_OFF "\n"
                         "The sealing key is automatically changed every %s.\n",
-                        format_timespan(tsb, sizeof(tsb), arg_interval));
+                        format_timespan(tsb, sizeof(tsb), arg_interval, 0));
 
                 hn = gethostname_malloc();
 
@@ -865,10 +904,10 @@ static int verify(sd_journal *j) {
                                         log_info("=> Validated from %s to %s, final %s entries not sealed.",
                                                  format_timestamp(a, sizeof(a), first),
                                                  format_timestamp(b, sizeof(b), validated),
-                                                 format_timespan(c, sizeof(c), last > validated ? last - validated : 0));
+                                                 format_timespan(c, sizeof(c), last > validated ? last - validated : 0, 0));
                                 } else if (last > 0)
                                         log_info("=> No sealing yet, %s of entries not sealed.",
-                                                 format_timespan(c, sizeof(c), last - first));
+                                                 format_timespan(c, sizeof(c), last - first, 0));
                                 else
                                         log_info("=> No sealing yet, no entries in file.");
                         }
@@ -878,29 +917,118 @@ static int verify(sd_journal *j) {
         return r;
 }
 
-static int access_check(void) {
-
 #ifdef HAVE_ACL
-        if (access("/var/log/journal", F_OK) < 0 && geteuid() != 0 && in_group("systemd-journal") <= 0) {
-                log_error("Unprivileged users can't see messages unless persistent log storage is enabled. Users in the group 'systemd-journal' can always see messages.");
-                return -EACCES;
+static int access_check_var_log_journal(sd_journal *j) {
+        _cleanup_strv_free_ char **g = NULL;
+        bool have_access;
+        int r;
+
+        assert(j);
+
+        have_access = in_group("systemd-journal") > 0;
+
+        if (!have_access) {
+                /* Let's enumerate all groups from the default ACL of
+                 * the directory, which generally should allow access
+                 * to most journal files too */
+                r = search_acl_groups(&g, "/var/log/journal/", &have_access);
+                if (r < 0)
+                        return r;
         }
 
-        if (!arg_quiet && geteuid() != 0 && in_group("systemd-journal") <= 0)
-                log_warning("Showing user generated messages only. Users in the group 'systemd-journal' can see all messages. Pass -q to turn this notice off.");
-#else
-        if (geteuid() != 0 && in_group("systemd-journal") <= 0) {
-                log_error("No access to messages. Only users in the group 'systemd-journal' can see messages.");
-                return -EACCES;
+        if (!have_access) {
+
+                if (strv_isempty(g))
+                        log_notice("Hint: You are currently not seeing messages from other users and the system.\n"
+                                   "      Users in the 'systemd-journal' group can see all messages. Pass -q to\n"
+                                   "      turn off this notice.");
+                else {
+                        _cleanup_free_ char *s = NULL;
+
+                        r = strv_extend(&g, "systemd-journal");
+                        if (r < 0)
+                                return log_oom();
+
+                        strv_sort(g);
+                        strv_uniq(g);
+
+                        s = strv_join(g, "', '");
+                        if (!s)
+                                return log_oom();
+
+                        log_notice("Hint: You are currently not seeing messages from other users and the system.\n"
+                                   "      Users in the groups '%s' can see all messages.\n"
+                                   "      Pass -q to turn off this notice.", s);
+                }
         }
-#endif
 
         return 0;
+}
+#endif
+
+static int access_check(sd_journal *j) {
+        Iterator it;
+        void *code;
+        int r = 0;
+
+        assert(j);
+
+        if (set_isempty(j->errors)) {
+                if (hashmap_isempty(j->files))
+                        log_notice("No journal files were found.");
+                return 0;
+        }
+
+        if (set_contains(j->errors, INT_TO_PTR(-EACCES))) {
+#ifdef HAVE_ACL
+                /* If /var/log/journal doesn't even exist,
+                 * unprivileged users have no access at all */
+                if (access("/var/log/journal", F_OK) < 0 &&
+                    geteuid() != 0 &&
+                    in_group("systemd-journal") <= 0) {
+                        log_error("Unprivileged users cannot access messages, unless persistent log storage is\n"
+                                  "enabled. Users in the 'systemd-journal' group may always access messages.");
+                        return -EACCES;
+                }
+
+                /* If /var/log/journal exists, try to pring a nice
+                   notice if the user lacks access to it */
+                if (!arg_quiet && geteuid() != 0) {
+                        r = access_check_var_log_journal(j);
+                        if (r < 0)
+                                return r;
+                }
+#else
+                if (geteuid() != 0 && in_group("systemd-journal") <= 0) {
+                        log_error("Unprivileged users cannot access messages. Users in the 'systemd-journal' group\n"
+                                  "group may access messages.");
+                        return -EACCES;
+                }
+#endif
+
+                if (hashmap_isempty(j->files)) {
+                        log_error("No journal files were opened due to insufficient permissions.");
+                        r = -EACCES;
+                }
+        }
+
+        SET_FOREACH(code, j->errors, it) {
+                int err;
+
+                err = -PTR_TO_INT(code);
+                assert(err > 0);
+
+                if (err != EACCES)
+                        log_warning("Error was encountered while opening journal files: %s",
+                                    strerror(err));
+        }
+
+        return r;
 }
 
 int main(int argc, char *argv[]) {
         int r;
-        sd_journal *j = NULL;
+        _cleanup_journal_close_ sd_journal*j = NULL;
         bool need_seek = false;
         sd_id128_t previous_boot_id;
         bool previous_boot_id_valid = false, first_line = true;
@@ -926,21 +1054,40 @@ int main(int argc, char *argv[]) {
                 goto finish;
         }
 
-        if (arg_action == ACTION_LIST_CATALOG)  {
-                r = catalog_list(stdout);
-                if (r < 0)
-                        log_error("Failed to list catalog: %s", strerror(-r));
+        if (arg_action == ACTION_UPDATE_CATALOG ||
+            arg_action == ACTION_LIST_CATALOG ||
+            arg_action == ACTION_DUMP_CATALOG) {
+
+                const char* database = CATALOG_DATABASE;
+                _cleanup_free_ char *copy = NULL;
+                if (arg_root) {
+                        copy = strjoin(arg_root, "/", CATALOG_DATABASE, NULL);
+                        if (!copy) {
+                                r = log_oom();
+                                goto finish;
+                        }
+                        path_kill_slashes(copy);
+                        database = copy;
+                }
+
+                if (arg_action == ACTION_UPDATE_CATALOG) {
+                        r = catalog_update(database, arg_root, catalog_file_dirs);
+                        if (r < 0)
+                                log_error("Failed to list catalog: %s", strerror(-r));
+                } else {
+                        bool oneline = arg_action == ACTION_LIST_CATALOG;
+
+                        if (optind < argc)
+                                r = catalog_list_items(stdout, database,
+                                                       oneline, argv + optind);
+                        else
+                                r = catalog_list(stdout, database, oneline);
+                        if (r < 0)
+                                log_error("Failed to list catalog: %s", strerror(-r));
+                }
+
                 goto finish;
         }
-
-        if (arg_action == ACTION_UPDATE_CATALOG)  {
-                r = catalog_update();
-                goto finish;
-        }
-
-        r = access_check();
-        if (r < 0)
-                goto finish;
 
         if (arg_directory)
                 r = sd_journal_open_directory(&j, arg_directory, 0);
@@ -948,8 +1095,12 @@ int main(int argc, char *argv[]) {
                 r = sd_journal_open(&j, arg_merge ? 0 : SD_JOURNAL_LOCAL_ONLY);
         if (r < 0) {
                 log_error("Failed to open journal: %s", strerror(-r));
-                goto finish;
+                return EXIT_FAILURE;
         }
+
+        r = access_check(j);
+        if (r < 0)
+                return EXIT_FAILURE;
 
         if (arg_action == ACTION_VERIFY) {
                 r = verify(j);
@@ -958,8 +1109,7 @@ int main(int argc, char *argv[]) {
 
         if (arg_action == ACTION_PRINT_HEADER) {
                 journal_print_header(j);
-                r = 0;
-                goto finish;
+                return EXIT_SUCCESS;
         }
 
         if (arg_action == ACTION_DISK_USAGE) {
@@ -968,42 +1118,51 @@ int main(int argc, char *argv[]) {
 
                 r = sd_journal_get_usage(j, &bytes);
                 if (r < 0)
-                        goto finish;
+                        return EXIT_FAILURE;
 
-                printf("Journals take up %s on disk.\n", format_bytes(sbytes, sizeof(sbytes), bytes));
-                r = 0;
-                goto finish;
+                printf("Journals take up %s on disk.\n",
+                       format_bytes(sbytes, sizeof(sbytes), bytes));
+                return EXIT_SUCCESS;
         }
 
         r = add_this_boot(j);
         if (r < 0)
-                goto finish;
+                return EXIT_FAILURE;
 
-        r = add_unit(j);
-        if (r < 0)
-                goto finish;
+        r = add_units(j);
+        strv_free(arg_system_units);
+        strv_free(arg_user_units);
 
-        r = add_matches(j, argv + optind);
         if (r < 0)
-                goto finish;
+                return EXIT_FAILURE;
 
         r = add_priorities(j);
         if (r < 0)
-                goto finish;
+                return EXIT_FAILURE;
+
+        r = add_matches(j, argv + optind);
+        if (r < 0)
+                return EXIT_FAILURE;
 
         /* Opening the fd now means the first sd_journal_wait() will actually wait */
         r = sd_journal_get_fd(j);
         if (r < 0)
-                goto finish;
+                return EXIT_FAILURE;
 
         if (arg_field) {
                 const void *data;
                 size_t size;
 
+                r = sd_journal_set_data_threshold(j, 0);
+                if (r < 0) {
+                        log_error("Failed to unset data size threshold");
+                        return EXIT_FAILURE;
+                }
+
                 r = sd_journal_query_unique(j, arg_field);
                 if (r < 0) {
                         log_error("Failed to query unique data objects: %s", strerror(-r));
-                        goto finish;
+                        return EXIT_FAILURE;
                 }
 
                 SD_JOURNAL_FOREACH_UNIQUE(j, data, size) {
@@ -1021,15 +1180,14 @@ int main(int argc, char *argv[]) {
                         n_shown ++;
                 }
 
-                r = 0;
-                goto finish;
+                return EXIT_SUCCESS;
         }
 
         if (arg_cursor) {
                 r = sd_journal_seek_cursor(j, arg_cursor);
                 if (r < 0) {
                         log_error("Failed to seek to cursor: %s", strerror(-r));
-                        goto finish;
+                        return EXIT_FAILURE;
                 }
                 if (!arg_reverse)
                         r = sd_journal_next(j);
@@ -1040,7 +1198,7 @@ int main(int argc, char *argv[]) {
                 r = sd_journal_seek_realtime_usec(j, arg_since);
                 if (r < 0) {
                         log_error("Failed to seek to date: %s", strerror(-r));
-                        goto finish;
+                        return EXIT_FAILURE;
                 }
                 r = sd_journal_next(j);
 
@@ -1048,7 +1206,7 @@ int main(int argc, char *argv[]) {
                 r = sd_journal_seek_realtime_usec(j, arg_until);
                 if (r < 0) {
                         log_error("Failed to seek to date: %s", strerror(-r));
-                        goto finish;
+                        return EXIT_FAILURE;
                 }
                 r = sd_journal_previous(j);
 
@@ -1056,7 +1214,7 @@ int main(int argc, char *argv[]) {
                 r = sd_journal_seek_tail(j);
                 if (r < 0) {
                         log_error("Failed to seek to tail: %s", strerror(-r));
-                        goto finish;
+                        return EXIT_FAILURE;
                 }
 
                 r = sd_journal_previous_skip(j, arg_lines);
@@ -1065,7 +1223,7 @@ int main(int argc, char *argv[]) {
                 r = sd_journal_seek_tail(j);
                 if (r < 0) {
                         log_error("Failed to seek to tail: %s", strerror(-r));
-                        goto finish;
+                        return EXIT_FAILURE;
                 }
 
                 r = sd_journal_previous(j);
@@ -1074,7 +1232,7 @@ int main(int argc, char *argv[]) {
                 r = sd_journal_seek_head(j);
                 if (r < 0) {
                         log_error("Failed to seek to head: %s", strerror(-r));
-                        goto finish;
+                        return EXIT_FAILURE;
                 }
 
                 r = sd_journal_next(j);
@@ -1082,7 +1240,7 @@ int main(int argc, char *argv[]) {
 
         if (r < 0) {
                 log_error("Failed to iterate through journal: %s", strerror(-r));
-                goto finish;
+                return EXIT_FAILURE;
         }
 
         if (!arg_no_pager && !arg_follow)
@@ -1192,9 +1350,6 @@ int main(int argc, char *argv[]) {
         }
 
 finish:
-        if (j)
-                sd_journal_close(j);
-
         pager_close();
 
         return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;

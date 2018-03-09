@@ -125,7 +125,7 @@ static void swap_done(Unit *u) {
         free(s->parameters_fragment.what);
         s->parameters_fragment.what = NULL;
 
-        exec_context_done(&s->exec_context);
+        exec_context_done(&s->exec_context, manager_is_reloading_or_reexecuting(u->manager));
         exec_command_done_array(s->exec_command, _SWAP_EXEC_COMMAND_MAX);
         s->control_command = NULL;
 
@@ -214,7 +214,7 @@ static int swap_add_default_dependencies(Swap *s) {
 
 static int swap_verify(Swap *s) {
         bool b;
-        char _cleanup_free_ *e = NULL;
+        _cleanup_free_ char *e = NULL;
 
         if (UNIT(s)->load_state != UNIT_LOADED)
                   return 0;
@@ -315,7 +315,7 @@ static int swap_add_one(
                 bool set_flags) {
 
         Unit *u = NULL;
-        char _cleanup_free_ *e = NULL;
+        _cleanup_free_ char *e = NULL;
         char *wp = NULL;
         bool delete = false;
         int r;
@@ -632,6 +632,7 @@ static void swap_enter_dead(Swap *s, SwapResult f) {
         if (f != SWAP_SUCCESS)
                 s->result = f;
 
+        exec_context_tmp_dirs_done(&s->exec_context);
         swap_set_state(s, s->result != SWAP_SUCCESS ? SWAP_FAILED : SWAP_DEAD);
 }
 
@@ -831,6 +832,8 @@ static int swap_serialize(Unit *u, FILE *f, FDSet *fds) {
         if (s->control_command_id >= 0)
                 unit_serialize_item(u, f, "control-command", swap_exec_command_to_string(s->control_command_id));
 
+        exec_context_serialize(&s->exec_context, UNIT(s), f);
+
         return 0;
 }
 
@@ -874,7 +877,22 @@ static int swap_deserialize_item(Unit *u, const char *key, const char *value, FD
                         s->control_command_id = id;
                         s->control_command = s->exec_command + id;
                 }
+        } else if (streq(key, "tmp-dir")) {
+                char *t;
 
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                s->exec_context.tmp_dir = t;
+        } else if (streq(key, "var-tmp-dir")) {
+                char *t;
+
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                s->exec_context.var_tmp_dir = t;
         } else
                 log_debug_unit(u->id, "Unknown serialization key '%s'", key);
 
@@ -1224,20 +1242,20 @@ static void swap_shutdown(Manager *m) {
 
 static int swap_enumerate(Manager *m) {
         int r;
-        struct epoll_event ev;
         assert(m);
 
         if (!m->proc_swaps) {
+                struct epoll_event ev = {
+                        .events = EPOLLPRI,
+                        .data.ptr = &m->swap_watch,
+                };
+
                 m->proc_swaps = fopen("/proc/swaps", "re");
                 if (!m->proc_swaps)
                         return (errno == ENOENT) ? 0 : -errno;
 
                 m->swap_watch.type = WATCH_SWAP;
                 m->swap_watch.fd = fileno(m->proc_swaps);
-
-                zero(ev);
-                ev.events = EPOLLPRI;
-                ev.data.ptr = &m->swap_watch;
 
                 if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->swap_watch.fd, &ev) < 0)
                         return -errno;
@@ -1262,53 +1280,7 @@ static void swap_reset_failed(Unit *u) {
 }
 
 static int swap_kill(Unit *u, KillWho who, int signo, DBusError *error) {
-        Swap *s = SWAP(u);
-        int r = 0;
-        Set *pid_set = NULL;
-
-        assert(s);
-
-        if (who == KILL_MAIN) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "Swap units have no main processes");
-                return -ESRCH;
-        }
-
-        if (s->control_pid <= 0 && who == KILL_CONTROL) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No control process to kill");
-                return -ESRCH;
-        }
-
-        if (who == KILL_CONTROL || who == KILL_ALL)
-                if (s->control_pid > 0)
-                        if (kill(s->control_pid, signo) < 0)
-                                r = -errno;
-
-        if (who == KILL_ALL) {
-                int q;
-
-                pid_set = set_new(trivial_hash_func, trivial_compare_func);
-                if (!pid_set)
-                        return -ENOMEM;
-
-                /* Exclude the control pid from being killed via the cgroup */
-                if (s->control_pid > 0) {
-                        q = set_put(pid_set, LONG_TO_PTR(s->control_pid));
-                        if (q < 0) {
-                                r = q;
-                                goto finish;
-                        }
-                }
-
-                q = cgroup_bonding_kill_list(UNIT(s)->cgroup_bondings, signo, false, false, pid_set, NULL);
-                if (q < 0 && q != -EAGAIN && q != -ESRCH && q != -ENOENT)
-                        r = q;
-        }
-
-finish:
-        if (pid_set)
-                set_free(pid_set);
-
-        return r;
+        return unit_kill_common(u, who, signo, -1, SWAP(u)->control_pid, error);
 }
 
 static const char* const swap_state_table[_SWAP_STATE_MAX] = {

@@ -273,7 +273,7 @@ _systemd-nspawn(){
 }
 
 _systemd_inhibit_command(){
-    if (( CURRENT == 1 )); then 
+    if (( CURRENT == 1 )); then
         compset -q
         _normal
     else
@@ -317,7 +317,7 @@ _outputmodes() {
     _output_opts=(short short-monotonic verbose export json json-pretty json-see cat)
     _describe -t output 'output mode' _output_opts || compadd "$@"
 }
-        
+
 
 (( $+functions[_systemctl_command] )) || _systemctl_command()
 {
@@ -404,7 +404,9 @@ _outputmodes() {
 
 __systemctl()
 {
-  systemctl --full --no-legend --no-pager "$@"
+  local -a _modes
+  _modes=("--user" "--system")
+  systemctl ${words:*_modes} --full --no-legend --no-pager "$@"
 }
 
 
@@ -414,7 +416,7 @@ _systemctl_all_units()
   if ( [[ ${+_sys_all_units} -eq 0 ]] || _cache_invalid SYS_ALL_UNITS ) &&
     ! _retrieve_cache SYS_ALL_UNITS;
   then
-    _sys_all_units=( $(__systemctl list-units --all | { while read a b; do echo "$a"; done; }) )
+    _sys_all_units=( $(__systemctl list-units --all | { while read a b; do echo " $a"; done; }) )
     _store_cache SYS_ALL_UNITS _sys_all_units
   fi
 }
@@ -427,7 +429,7 @@ _systemctl_really_all_units()
   if ( [[ ${+_sys_really_all_units} -eq 0 ]] || _cache_invalid SYS_REALLY_ALL_UNITS ) &&
     ! _retrieve_cache SYS_REALLY_ALL_UNITS;
   then
-    all_unit_files=( $(__systemctl list-unit-files | { while read a b; do echo "$a"; done; }) )
+    all_unit_files=( $(__systemctl list-unit-files | { while read a b; do echo " $a"; done; }) )
     _systemctl_all_units
     really_all_units=($_sys_all_units $all_unit_files)
     _sys_really_all_units=(${(u)really_all_units})
@@ -447,17 +449,17 @@ _filter_units_by_property() {
     unit=${units[i]}
     prop=${(f)"$(_call_program units "$service show --no-pager --property="$property" ${unit} 2>/dev/null")"}
     if [[ "${prop}" = "$property=$value" ]]; then
-      echo "${unit}"
+      echo " ${unit}"
     fi
   done
 }
 
-_systemctl_active_units()  {_sys_active_units=(  $(__systemctl list-units          | { while read a b; do echo "$a"; done; }) )}
-_systemctl_inactive_units(){_sys_inactive_units=($(__systemctl list-units --all    | { while read a b c d; do [[ $c == "inactive" ]] && echo "$a"; done; }) )}
-_systemctl_failed_units()  {_sys_failed_units=(  $(__systemctl list-units --failed | { while read a b; do echo "$a"; done; }) )}
-_systemctl_enabled_units() {_sys_enabled_units=( $(__systemctl list-unit-files     | { while read a b; do [[ $b == "enabled" ]] && echo "$a"; done; }) )}
-_systemctl_disabled_units(){_sys_disabled_units=($(__systemctl list-unit-files     | { while read a b; do [[ $b == "disabled" ]] && echo "$a"; done; }) )}
-_systemctl_masked_units()  {_sys_masked_units=(  $(__systemctl list-unit-files     | { while read a b; do [[ $b == "masked" ]] && echo "$a"; done; }) )}
+_systemctl_active_units()  {_sys_active_units=(  $(__systemctl list-units          | { while read a b; do echo " $a"; done; }) )}
+_systemctl_inactive_units(){_sys_inactive_units=($(__systemctl list-units --all    | { while read a b c d; do [[ $c == "inactive" || $c == "failed" ]] && echo " $a"; done; }) )}
+_systemctl_failed_units()  {_sys_failed_units=(  $(__systemctl list-units --failed | { while read a b; do echo " $a"; done; }) )}
+_systemctl_enabled_units() {_sys_enabled_units=( $(__systemctl list-unit-files     | { while read a b; do [[ $b == "enabled" ]] && echo " $a"; done; }) )}
+_systemctl_disabled_units(){_sys_disabled_units=($(__systemctl list-unit-files     | { while read a b; do [[ $b == "disabled" ]] && echo " $a"; done; }) )}
+_systemctl_masked_units()  {_sys_masked_units=(  $(__systemctl list-unit-files     | { while read a b; do [[ $b == "masked" ]] && echo " $a"; done; }) )}
 
 # Completion functions for ALL_UNITS
 for fun in is-active is-failed is-enabled status show mask preset ; do
@@ -473,7 +475,8 @@ for fun in disable reenable ; do
   (( $+functions[_systemctl_$fun] )) || _systemctl_$fun()
   {
     _systemctl_enabled_units
-    compadd "$@" -a - _sys_enabled_units
+    _systemctl_disabled_units
+    compadd "$@" -a - _sys_enabled_units _sys_disabled_units
   }
 done
 
@@ -533,7 +536,7 @@ for fun in restart reload-or-restart ; do
     _systemctl_all_units
     compadd "$@" - $( _filter_units_by_property CanStart yes \
       ${_sys_all_units[*]} | while read line; do \
-      [[ "$line" =~ \.(device|snapshot|socket|timer)$ ]] || echo "$line"; \
+      [[ "$line" =~ \.device$ ]] || echo " $line"; \
       done )
   }
 done
@@ -556,7 +559,7 @@ done
 (( $+functions[_systemctl_delete] )) || _systemctl_delete()
 {
   compadd "$@" - $(__systemctl list-units --type snapshot --all \
-    | cut -d' ' -f1  2>/dev/null ) || _message "no snampshot found"
+    | cut -d' ' -f1  2>/dev/null ) || _message "no snapshot found"
 }
 
 # Completion functions for ENVS
@@ -570,7 +573,7 @@ for fun in set-environment unset-environment ; do
     fi
 
     compadd "$@" ${suf} - $(systemctl show-environment \
-      | while read line; do echo "${line%%\=}";done )
+      | while read line; do echo " ${line%%\=}";done )
   }
 done
 
@@ -630,15 +633,15 @@ _journal_none() {
 _journal_fields() {
     local -a _fields cmd
     cmd=("journalctl" "-F ${@[-1]}" "2>/dev/null" )
-    _fields=( ${(f)"$(_call_program fields $cmd[@])"} ) 
+    _fields=( ${(f)"$(_call_program fields $cmd[@])"} )
     typeset -U _fields
     _describe 'possible values' _fields
 }
 
 
-_loginctl_all_sessions(){_sys_all_sessions=($(loginctl list-sessions | { while read a b; do echo "$a"; done; }) )}
-_loginctl_all_users()   {_sys_all_users=(   $(loginctl list-users    | { while read a b; do echo "$a"; done; }) )}
-_loginctl_all_seats()   {_sys_all_seats=(   $(loginctl list-seats    | { while read a b; do echo "$a"; done; }) )}
+_loginctl_all_sessions(){_sys_all_sessions=($(loginctl list-sessions | { while read a b; do echo " $a"; done; }) )}
+_loginctl_all_users()   {_sys_all_users=(   $(loginctl list-users    | { while read a b; do echo " $a"; done; }) )}
+_loginctl_all_seats()   {_sys_all_seats=(   $(loginctl list-seats    | { while read a b; do echo " $a"; done; }) )}
 
 # Completion functions for SESSIONS
 for fun in session-status show-session activate lock-session unlock-session terminate-session kill-session ; do
@@ -787,8 +790,8 @@ _localectl_set-x11-keymap() {
         #_model=( ${(f)"$(echo $_file[2] | awk '/^  / {print $1}')"} )
         #_variant=( ${(f)"$(echo $_file[3] | awk '/^  / {print $1}')"} )
         #_options=( ${(f)"$(echo ${_file[4]//:/\\:} | awk '/^  / {print $1}')"} )
-        
-        case $CURRENT in 
+
+        case $CURRENT in
             2) _describe layouts _layout ;;
             3) _describe models _model;;
             4) _describe variants _variant;;
@@ -955,7 +958,7 @@ _udevadm_control(){
         '--timeout=[The maximum number of seconds to wait for a reply from systemd-udevd.]' \
         '--help[Print help text.]'
 }
- 
+
 _udevadm_monitor(){
     _arguments \
         '--kernel[Print the kernel uevents.]' \
@@ -978,7 +981,7 @@ _udevadm_test-builtin(){
     if (( CURRENT == 2 )); then
     _arguments \
         '--help[Print help text]' \
-        '*::builtins:(blkid btrfs firmware hwdb input_id kmod path_id usb_id uaccess)'
+        '*::builtins:(blkid btrfs hwdb input_id kmod path_id usb_id uaccess)'
     elif  (( CURRENT == 3 )); then
         _arguments \
             '--help[Print help text]' \

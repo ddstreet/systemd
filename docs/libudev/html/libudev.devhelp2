@@ -57,6 +57,7 @@
     <keyword type="function" name="udev_device_get_devnum ()" link="libudev-udev-device.html#udev-device-get-devnum"/>
     <keyword type="function" name="udev_device_get_action ()" link="libudev-udev-device.html#udev-device-get-action"/>
     <keyword type="function" name="udev_device_get_sysattr_value ()" link="libudev-udev-device.html#udev-device-get-sysattr-value"/>
+    <keyword type="function" name="udev_device_set_sysattr_value ()" link="libudev-udev-device.html#udev-device-set-sysattr-value"/>
     <keyword type="function" name="udev_device_get_sysattr_list_entry ()" link="libudev-udev-device.html#udev-device-get-sysattr-list-entry"/>
     <keyword type="function" name="udev_device_get_seqnum ()" link="libudev-udev-device.html#udev-device-get-seqnum"/>
     <keyword type="function" name="udev_device_get_usec_since_initialized ()" link="libudev-udev-device.html#udev-device-get-usec-since-initialized"/>

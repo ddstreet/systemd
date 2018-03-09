@@ -40,7 +40,7 @@
 #include "fdset.h"
 #include "special.h"
 #include "conf-parser.h"
-#include "bus-errors.h"
+#include "dbus-common.h"
 #include "missing.h"
 #include "label.h"
 #include "build.h"
@@ -55,6 +55,7 @@
 #include "env-util.h"
 #include "hwclock.h"
 #include "sd-daemon.h"
+#include "sd-messages.h"
 
 #include "mount-setup.h"
 #include "loopback-setup.h"
@@ -107,20 +108,21 @@ _noreturn_ static void crash(int sig) {
         if (!arg_dump_core)
                 log_error("Caught <%s>, not dumping core.", signal_to_string(sig));
         else {
-                struct sigaction sa;
+                struct sigaction sa = {
+                        .sa_handler = nop_handler,
+                        .sa_flags = SA_NOCLDSTOP|SA_RESTART,
+                };
                 pid_t pid;
 
                 /* We want to wait for the core process, hence let's enable SIGCHLD */
-                zero(sa);
-                sa.sa_handler = nop_handler;
-                sa.sa_flags = SA_NOCLDSTOP|SA_RESTART;
                 assert_se(sigaction(SIGCHLD, &sa, NULL) == 0);
 
-                if ((pid = fork()) < 0)
+                pid = fork();
+                if (pid < 0)
                         log_error("Caught <%s>, cannot fork for core dump: %s", signal_to_string(sig), strerror(errno));
 
                 else if (pid == 0) {
-                        struct rlimit rl;
+                        struct rlimit rl = {};
 
                         /* Enable default signal handler for core dump */
                         zero(sa);
@@ -128,7 +130,6 @@ _noreturn_ static void crash(int sig) {
                         assert_se(sigaction(sig, &sa, NULL) == 0);
 
                         /* Don't limit the core dump size */
-                        zero(rl);
                         rl.rlim_cur = RLIM_INFINITY;
                         rl.rlim_max = RLIM_INFINITY;
                         setrlimit(RLIMIT_CORE, &rl);
@@ -147,7 +148,8 @@ _noreturn_ static void crash(int sig) {
                         int r;
 
                         /* Order things nicely. */
-                        if ((r = wait_for_terminate(pid, &status)) < 0)
+                        r = wait_for_terminate(pid, &status);
+                        if (r < 0)
                                 log_error("Caught <%s>, waitpid() failed: %s", signal_to_string(sig), strerror(-r));
                         else if (status.si_code != CLD_DUMPED)
                                 log_error("Caught <%s>, core dump failed.", signal_to_string(sig));
@@ -160,16 +162,16 @@ _noreturn_ static void crash(int sig) {
                 chvt(arg_crash_chvt);
 
         if (arg_crash_shell) {
-                struct sigaction sa;
+                struct sigaction sa = {
+                        .sa_handler = SIG_IGN,
+                        .sa_flags = SA_NOCLDSTOP|SA_NOCLDWAIT|SA_RESTART,
+                };
                 pid_t pid;
 
                 log_info("Executing crash shell in 10s...");
                 sleep(10);
 
                 /* Let the kernel reap children for us */
-                zero(sa);
-                sa.sa_handler = SIG_IGN;
-                sa.sa_flags = SA_NOCLDSTOP|SA_NOCLDWAIT|SA_RESTART;
                 assert_se(sigaction(SIGCHLD, &sa, NULL) == 0);
 
                 pid = fork();
@@ -191,12 +193,10 @@ _noreturn_ static void crash(int sig) {
 }
 
 static void install_crash_handler(void) {
-        struct sigaction sa;
-
-        zero(sa);
-
-        sa.sa_handler = crash;
-        sa.sa_flags = SA_NODEFER;
+        struct sigaction sa = {
+                .sa_handler = crash,
+                .sa_flags = SA_NODEFER,
+        };
 
         sigaction_many(&sa, SIGNALS_CRASH_HANDLER, -1);
 }
@@ -422,87 +422,47 @@ static int parse_proc_cmdline_word(const char *word) {
         return 0;
 }
 
-static int config_parse_level2(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
+#define DEFINE_SETTER(name, func, descr)                              \
+        static int name(const char *unit,                             \
+                        const char *filename,                         \
+                        unsigned line,                                \
+                        const char *section,                          \
+                        const char *lvalue,                           \
+                        int ltype,                                    \
+                        const char *rvalue,                           \
+                        void *data,                                   \
+                        void *userdata) {                             \
+                                                                      \
+                int r;                                                \
+                                                                      \
+                assert(filename);                                     \
+                assert(lvalue);                                       \
+                assert(rvalue);                                       \
+                                                                      \
+                r = func(rvalue);                                     \
+                if (r < 0)                                            \
+                        log_syntax(unit, LOG_ERR, filename, line, -r, \
+                                   "Invalid " descr "'%s': %s",       \
+                                   rvalue, strerror(-r));             \
+                                                                      \
+                return 0;                                             \
+        }
 
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
+DEFINE_SETTER(config_parse_level2, log_set_max_level_from_string, "log level")
+DEFINE_SETTER(config_parse_target, log_set_target_from_string, "target")
+DEFINE_SETTER(config_parse_color, log_show_color_from_string, "color" )
+DEFINE_SETTER(config_parse_location, log_show_location_from_string, "location")
 
-        log_set_max_level_from_string(rvalue);
-        return 0;
-}
 
-static int config_parse_target(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-
-        log_set_target_from_string(rvalue);
-        return 0;
-}
-
-static int config_parse_color(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-
-        log_show_color_from_string(rvalue);
-        return 0;
-}
-
-static int config_parse_location(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
-
-        assert(filename);
-        assert(lvalue);
-        assert(rvalue);
-
-        log_show_location_from_string(rvalue);
-        return 0;
-}
-
-static int config_parse_cpu_affinity2(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
+static int config_parse_cpu_affinity2(const char *unit,
+                                      const char *filename,
+                                      unsigned line,
+                                      const char *section,
+                                      const char *lvalue,
+                                      int ltype,
+                                      const char *rvalue,
+                                      void *data,
+                                      void *userdata) {
 
         char *w;
         size_t l;
@@ -530,7 +490,8 @@ static int config_parse_cpu_affinity2(
                                 return log_oom();
 
                 if (r < 0 || cpu >= ncpus) {
-                        log_error("[%s:%u] Failed to parse CPU affinity: %s", filename, line, rvalue);
+                        log_syntax(unit, LOG_ERR, filename, line, -r,
+                                   "Failed to parse CPU affinity '%s'", rvalue);
                         CPU_FREE(c);
                         return -EBADMSG;
                 }
@@ -540,7 +501,7 @@ static int config_parse_cpu_affinity2(
 
         if (c) {
                 if (sched_setaffinity(0, CPU_ALLOC_SIZE(ncpus), c) < 0)
-                        log_warning("Failed to set CPU affinity: %m");
+                        log_warning_unit(unit, "Failed to set CPU affinity: %m");
 
                 CPU_FREE(c);
         }
@@ -568,15 +529,15 @@ static void free_join_controllers(void) {
         arg_join_controllers = NULL;
 }
 
-static int config_parse_join_controllers(
-                const char *filename,
-                unsigned line,
-                const char *section,
-                const char *lvalue,
-                int ltype,
-                const char *rvalue,
-                void *data,
-                void *userdata) {
+static int config_parse_join_controllers(const char *unit,
+                                         const char *filename,
+                                         unsigned line,
+                                         const char *section,
+                                         const char *lvalue,
+                                         int ltype,
+                                         const char *rvalue,
+                                         void *data,
+                                         void *userdata) {
 
         unsigned n = 0;
         char *state, *w;
@@ -682,8 +643,8 @@ static int parse_config_file(void) {
                 { "Manager", "DefaultStandardOutput", config_parse_output,       0, &arg_default_std_output  },
                 { "Manager", "DefaultStandardError",  config_parse_output,       0, &arg_default_std_error   },
                 { "Manager", "JoinControllers",       config_parse_join_controllers, 0, &arg_join_controllers },
-                { "Manager", "RuntimeWatchdogSec",    config_parse_usec,         0, &arg_runtime_watchdog    },
-                { "Manager", "ShutdownWatchdogSec",   config_parse_usec,         0, &arg_shutdown_watchdog   },
+                { "Manager", "RuntimeWatchdogSec",    config_parse_sec,          0, &arg_runtime_watchdog    },
+                { "Manager", "ShutdownWatchdogSec",   config_parse_sec,          0, &arg_shutdown_watchdog   },
                 { "Manager", "CapabilityBoundingSet", config_parse_bounding_set, 0, &arg_capability_bounding_set_drop },
                 { "Manager", "TimerSlackNSec",        config_parse_nsec,         0, &arg_timer_slack_nsec    },
                 { "Manager", "DefaultLimitCPU",       config_parse_limit,        0, &arg_default_rlimit[RLIMIT_CPU]},
@@ -705,7 +666,7 @@ static int parse_config_file(void) {
                 { NULL, NULL, NULL, 0, NULL }
         };
 
-        FILE *f;
+        _cleanup_fclose_ FILE *f;
         const char *fn;
         int r;
 
@@ -719,17 +680,16 @@ static int parse_config_file(void) {
                 return 0;
         }
 
-        r = config_parse(fn, f, "Manager\0", config_item_table_lookup, (void*) items, false, NULL);
+        r = config_parse(NULL, fn, f, "Manager\0", config_item_table_lookup, (void*) items, false, NULL);
         if (r < 0)
                 log_warning("Failed to parse configuration file: %s", strerror(-r));
-
-        fclose(f);
 
         return 0;
 }
 
 static int parse_proc_cmdline(void) {
-        char *line, *w, *state;
+        _cleanup_free_ char *line = NULL;
+        char *w, *state;
         int r;
         size_t l;
 
@@ -738,34 +698,27 @@ static int parse_proc_cmdline(void) {
         if (detect_container(NULL) > 0)
                 return 0;
 
-        if ((r = read_one_line_file("/proc/cmdline", &line)) < 0) {
+        r = read_one_line_file("/proc/cmdline", &line);
+        if (r < 0) {
                 log_warning("Failed to read /proc/cmdline, ignoring: %s", strerror(-r));
                 return 0;
         }
 
         FOREACH_WORD_QUOTED(w, l, line, state) {
-                char *word;
+                _cleanup_free_ char *word;
 
-                if (!(word = strndup(w, l))) {
-                        r = -ENOMEM;
-                        goto finish;
-                }
+                word = strndup(w, l);
+                if (!word)
+                        return log_oom();
 
                 r = parse_proc_cmdline_word(word);
                 if (r < 0) {
                         log_error("Failed on cmdline argument %s: %s", word, strerror(-r));
-                        free(word);
-                        goto finish;
+                        return r;
                 }
-
-                free(word);
         }
 
-        r = 0;
-
-finish:
-        free(line);
-        return r;
+        return 0;
 }
 
 static int parse_argv(int argc, char *argv[]) {
@@ -1091,7 +1044,7 @@ static int version(void) {
         return 0;
 }
 
-static int prepare_reexecute(Manager *m, FILE **_f, FDSet **_fds, bool serialize_jobs) {
+static int prepare_reexecute(Manager *m, FILE **_f, FDSet **_fds, bool switching_root) {
         FILE *f = NULL;
         FDSet *fds = NULL;
         int r;
@@ -1116,7 +1069,7 @@ static int prepare_reexecute(Manager *m, FILE **_f, FDSet **_fds, bool serialize
                 goto fail;
         }
 
-        r = manager_serialize(m, f, fds, serialize_jobs);
+        r = manager_serialize(m, f, fds, switching_root);
         if (r < 0) {
                 log_error("Failed to serialize state: %s", strerror(-r));
                 goto fail;
@@ -1310,19 +1263,13 @@ int main(int argc, char *argv[]) {
         /* Determine if this is a reexecution or normal bootup. We do
          * the full command line parsing much later, so let's just
          * have a quick peek here. */
-        for (j = 1; j < argc; j++)
-                if (streq(argv[j], "--deserialize")) {
-                        skip_setup = true;
-                        break;
-                }
+        if (strv_find(argv+1, "--deserialize"))
+                skip_setup = true;
 
         /* If we have switched root, do all the special setup
          * things */
-        for (j = 1; j < argc; j++)
-                if (streq(argv[j], "--switched-root")) {
-                        skip_setup = false;
-                        break;
-                }
+        if (strv_find(argv+1, "--switched-root"))
+                skip_setup = false;
 
         /* If we get started via the /sbin/init symlink then we are
            called 'init'. After a subsequent reexecution we are then
@@ -1437,7 +1384,7 @@ int main(int argc, char *argv[]) {
 
         /* Mount /proc, /sys and friends, so that /proc/cmdline and
          * /proc/$PID/fd is available. */
-        if (geteuid() == 0 && !getenv("SYSTEMD_SKIP_API_MOUNTS")) {
+        if (getpid() == 1) {
                 r = mount_setup(loaded_policy);
                 if (r < 0)
                         goto finish;
@@ -1579,10 +1526,9 @@ int main(int argc, char *argv[]) {
 
         /* Make sure we leave a core dump without panicing the
          * kernel. */
-        if (getpid() == 1)
+        if (getpid() == 1) {
                 install_crash_handler();
 
-        if (geteuid() == 0 && !getenv("SYSTEMD_SKIP_API_MOUNTS")) {
                 r = mount_cgroup_controllers(arg_join_controllers);
                 if (r < 0)
                         goto finish;
@@ -1757,7 +1703,7 @@ int main(int argc, char *argv[]) {
                 after_startup = now(CLOCK_MONOTONIC);
                 log_full(arg_action == ACTION_TEST ? LOG_INFO : LOG_DEBUG,
                          "Loaded units and determined initial transaction in %s.",
-                          format_timespan(timespan, sizeof(timespan), after_startup - before_startup));
+                         format_timespan(timespan, sizeof(timespan), after_startup - before_startup, 0));
 
                 if (arg_action == ACTION_TEST) {
                         printf("-> By jobs:\n");
@@ -1790,7 +1736,7 @@ int main(int argc, char *argv[]) {
 
                 case MANAGER_REEXECUTE:
 
-                        if (prepare_reexecute(m, &serialization, &fds, true) < 0)
+                        if (prepare_reexecute(m, &serialization, &fds, false) < 0)
                                 goto finish;
 
                         reexecute = true;
@@ -1804,7 +1750,7 @@ int main(int argc, char *argv[]) {
                         m->switch_root = m->switch_root_init = NULL;
 
                         if (!switch_root_init)
-                                if (prepare_reexecute(m, &serialization, &fds, false) < 0)
+                                if (prepare_reexecute(m, &serialization, &fds, true) < 0)
                                         goto finish;
 
                         reexecute = true;

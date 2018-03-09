@@ -159,19 +159,6 @@ static bool valid_chassis(const char *chassis) {
                         chassis);
 }
 
-static bool pretty_string_is_safe(const char *p) {
-	const char *t;
-
-	assert(p);
-
-	for (t = p; *t; t++) {
-		if (*t >= '\0' && *t < ' ')
-			return false;
-	}
-
-	return true;
-}
-
 static const char* fallback_chassis(void) {
         int r;
         char *type;
@@ -302,7 +289,7 @@ static int write_data_static_hostname(void) {
 
                 return 0;
         }
-        return write_one_line_file_atomic_label("/etc/hostname", data[PROP_STATIC_HOSTNAME]);
+        return write_string_file_atomic_label("/etc/hostname", data[PROP_STATIC_HOSTNAME]);
 }
 
 static int write_data_other(void) {
@@ -316,7 +303,7 @@ static int write_data_other(void) {
         char **l = NULL;
         int r, p;
 
-        r = load_env_file("/etc/machine-info", &l);
+        r = load_env_file("/etc/machine-info", NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -457,7 +444,7 @@ static DBusHandlerResult hostname_message_handler(
                                 return bus_send_error_reply(connection, message, NULL, r);
                         }
 
-                        log_info("Changed host name to '%s'", strempty(data[PROP_HOSTNAME]));
+                        log_info("Changed host name to '%s'", strna(data[PROP_HOSTNAME]));
 
                         changed = bus_properties_changed_new(
                                         "/org/freedesktop/hostname1",
@@ -511,7 +498,7 @@ static DBusHandlerResult hostname_message_handler(
                                 return bus_send_error_reply(connection, message, NULL, r);
                         }
 
-                        log_info("Changed static host name to '%s'", strempty(data[PROP_STATIC_HOSTNAME]));
+                        log_info("Changed static host name to '%s'", strna(data[PROP_STATIC_HOSTNAME]));
 
                         changed = bus_properties_changed_new(
                                         "/org/freedesktop/hostname1",
@@ -566,7 +553,7 @@ static DBusHandlerResult hostname_message_handler(
                                  * safe than sorry */
                                 if (k == PROP_ICON_NAME && !filename_is_safe(name))
                                         return bus_send_error_reply(connection, message, NULL, -EINVAL);
-                                if (k == PROP_PRETTY_HOSTNAME && !pretty_string_is_safe(name))
+                                if (k == PROP_PRETTY_HOSTNAME && string_has_cc(name))
                                         return bus_send_error_reply(connection, message, NULL, -EINVAL);
                                 if (k == PROP_CHASSIS && !valid_chassis(name))
                                         return bus_send_error_reply(connection, message, NULL, -EINVAL);
@@ -587,7 +574,7 @@ static DBusHandlerResult hostname_message_handler(
 
                         log_info("Changed %s to '%s'",
                                  k == PROP_PRETTY_HOSTNAME ? "pretty host name" :
-                                 k == PROP_CHASSIS ? "chassis" : "icon name", strempty(data[k]));
+                                 k == PROP_CHASSIS ? "chassis" : "icon name", strna(data[k]));
 
                         changed = bus_properties_changed_new(
                                         "/org/freedesktop/hostname1",
@@ -605,7 +592,7 @@ static DBusHandlerResult hostname_message_handler(
         if (!reply)
                 goto oom;
 
-        if (!dbus_connection_send(connection, reply, NULL))
+        if (!bus_maybe_send_reply(connection, message, reply))
                 goto oom;
 
         dbus_message_unref(reply);

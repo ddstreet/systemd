@@ -2,9 +2,9 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="timedatectl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>timedatectl — Control the system time and date</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">timedatectl [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idp3428864"></a><h2>Description</h2><p><span class="command"><strong>timedatectl</strong></span> may be used to
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="timedatectl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>timedatectl — Control the system time and date</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">timedatectl [OPTIONS...]  {COMMAND}</code> </p></div></div><div class="refsect1"><a name="idp3908224"></a><h2>Description</h2><p><span class="command"><strong>timedatectl</strong></span> may be used to
                 query and change the system clock and its
-                settings.</p></div><div class="refsect1"><a name="idp150560"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+                settings.</p></div><div class="refsect1"><a name="idp3053808"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
                                 text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version
                                 string and exits.</p></dd><dt><span class="term"><code class="option">--no-pager</code></span></dt><dd><p>Do not pipe output into a
                                 pager.</p></dd><dt><span class="term"><code class="option">--no-ask-password</code></span></dt><dd><p>Don't query the user
@@ -66,13 +66,13 @@
                                 argument. Controls whether NTP based
                                 network time synchronization is
                                 enabled (if
-                                available).</p></dd></dl></div></div><div class="refsect1"><a name="idp35232"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-                code otherwise.</p></div><div class="refsect1"><a name="idp36416"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
+                                available).</p></dd></dl></div></div><div class="refsect1"><a name="idp2457808"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1"><a name="idp4709744"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when
                                 <code class="option">--no-pager</code> is not given;
                                 overrides <code class="varname">$PAGER</code>.  Setting
                                 this to an empty string or the value
                                 <code class="literal">cat</code> is equivalent to passing
-                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp48672"></a><h2>Examples</h2><p>Show current settings:
+                                <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp3996080"></a><h2>Examples</h2><p>Show current settings:
                 </p><pre class="programlisting">
 $ timedatectl
       Local time: Fri, 2012-11-02 09:26:46 CET
@@ -109,7 +109,7 @@ chronyd.service - NTP client/server
           Active: active (running) since Fri, 2012-11-02 09:36:25 CET; 5s ago
 ...
                 </pre><p>
-                </p></div><div class="refsect1"><a name="idp54048"></a><h2>See Also</h2><p>
+                </p></div><div class="refsect1"><a name="idp4304144"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="hwclock.html"><span class="citerefentry"><span class="refentrytitle">hwclock</span>(8)</span></a>,
                         <a href="date.html"><span class="citerefentry"><span class="refentrytitle">date</span>(1)</span></a>,

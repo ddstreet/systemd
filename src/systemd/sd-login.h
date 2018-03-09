@@ -23,6 +23,7 @@
 ***/
 
 #include <sys/types.h>
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,9 +62,18 @@ int sd_pid_get_session(pid_t pid, char **session);
  * return an error for system processes. */
 int sd_pid_get_owner_uid(pid_t pid, uid_t *uid);
 
-/* Get systemd unit (i.e. service) name from PID. This will return an
- * error for non-service processes. */
-int sd_pid_get_unit(pid_t, char **unit);
+/* Get systemd unit (i.e. service) name from PID, for system
+ * services. This will return an error for non-service processes. */
+int sd_pid_get_unit(pid_t pid, char **unit);
+
+/* Get systemd unit (i.e. service) name from PID, for user
+ * services. This will return an error for non-user-service
+ * processes. */
+int sd_pid_get_user_unit(pid_t pid, char **unit);
+
+/* Get machine name from PID, for processes assigned to VM or
+ * container. This will return an error for non-service processes. */
+int sd_pid_get_machine_name(pid_t pid, char **name);
 
 /* Get state from uid. Possible states: offline, lingering, online, active, closing */
 int sd_uid_get_state(uid_t uid, char**state);
@@ -155,6 +165,12 @@ int sd_login_monitor_flush(sd_login_monitor *m);
 
 /* Get FD from monitor */
 int sd_login_monitor_get_fd(sd_login_monitor *m);
+
+/* Get poll() mask to monitor */
+int sd_login_monitor_get_events(sd_login_monitor *m);
+
+/* Get timeout for poll(), as usec value relative to CLOCK_MONOTONIC's epoch */
+int sd_login_monitor_get_timeout(sd_login_monitor *m, uint64_t *timeout_usec);
 
 #ifdef __cplusplus
 }

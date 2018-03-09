@@ -62,7 +62,7 @@ int detect_vm(const char **id) {
         union {
                 uint32_t sig32[3];
                 char text[13];
-        } sig;
+        } sig = {};
         unsigned i;
         const char *j, *k;
         bool hypervisor;
@@ -84,7 +84,6 @@ int detect_vm(const char **id) {
                 return r;
 
         /* http://lwn.net/Articles/301888/ */
-        zero(sig);
 
 #if defined (__i386__)
 #define REG_a "eax"
@@ -169,7 +168,7 @@ int detect_vm(const char **id) {
 }
 
 int detect_container(const char **id) {
-        char *e = NULL;
+        _cleanup_free_ char *e = NULL;
         int r;
 
         /* Unfortunately many of these operations require root access
@@ -216,8 +215,6 @@ int detect_container(const char **id) {
                 if (id)
                         *id = "other";
         }
-
-        free(e);
 
         return r;
 }

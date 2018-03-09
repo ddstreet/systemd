@@ -118,21 +118,7 @@ static const char * const names[_PROP_MAX] = {
         [PROP_LC_IDENTIFICATION] = "LC_IDENTIFICATION"
 };
 
-static char *data[_PROP_MAX] = {
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL
-};
+static char *data[_PROP_MAX] = {};
 
 typedef struct State {
         char *x11_layout, *x11_model, *x11_variant, *x11_options;
@@ -355,7 +341,7 @@ static int write_data_locale(void) {
         int r, p;
         char **l = NULL;
 
-        r = load_env_file("/etc/locale.conf", &l);
+        r = load_env_file("/etc/locale.conf", NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -494,7 +480,7 @@ static int write_data_vconsole(void) {
         int r;
         char **l = NULL;
 
-        r = load_env_file("/etc/vconsole.conf", &l);
+        r = load_env_file("/etc/vconsole.conf", NULL, &l);
         if (r < 0 && r != -ENOENT)
                 return r;
 
@@ -1011,7 +997,7 @@ static DBusHandlerResult locale_message_handler(
                 dbus_bool_t interactive;
                 DBusMessageIter iter;
                 bool modified = false;
-                bool passed[_PROP_MAX];
+                bool passed[_PROP_MAX] = {};
                 int p;
 
                 if (!dbus_message_iter_init(message, &iter))
@@ -1032,8 +1018,6 @@ static DBusHandlerResult locale_message_handler(
                 }
 
                 dbus_message_iter_get_basic(&iter, &interactive);
-
-                zero(passed);
 
                 /* Check whether a variable changed and if so valid */
                 STRV_FOREACH(i, l) {
@@ -1277,7 +1261,7 @@ static DBusHandlerResult locale_message_handler(
         if (!(reply = dbus_message_new_method_return(message)))
                 goto oom;
 
-        if (!dbus_connection_send(connection, reply, NULL))
+        if (!bus_maybe_send_reply(connection, message, reply))
                 goto oom;
 
         dbus_message_unref(reply);

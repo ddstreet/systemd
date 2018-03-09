@@ -40,6 +40,7 @@
 #include <sys/poll.h>
 #include <linux/seccomp-bpf.h>
 #include <glob.h>
+#include <libgen.h>
 
 #ifdef HAVE_PAM
 #include <security/pam_appl.h>
@@ -173,6 +174,18 @@ static bool is_terminal_output(ExecOutput o) {
                 o == EXEC_OUTPUT_JOURNAL_AND_CONSOLE;
 }
 
+void exec_context_serialize(const ExecContext *context, Unit *u, FILE *f) {
+        assert(context);
+        assert(u);
+        assert(f);
+
+        if (context->tmp_dir)
+                unit_serialize_item(u, f, "tmp-dir", context->tmp_dir);
+
+        if (context->var_tmp_dir)
+                unit_serialize_item(u, f, "var-tmp-dir", context->var_tmp_dir);
+}
+
 static int open_null_as(int flags, int nfd) {
         int fd, r;
 
@@ -192,7 +205,10 @@ static int open_null_as(int flags, int nfd) {
 
 static int connect_logger_as(const ExecContext *context, ExecOutput output, const char *ident, const char *unit_id, int nfd) {
         int fd, r;
-        union sockaddr_union sa;
+        union sockaddr_union sa = {
+                .un.sun_family = AF_UNIX,
+                .un.sun_path = "/run/systemd/journal/stdout",
+        };
 
         assert(context);
         assert(output < _EXEC_OUTPUT_MAX);
@@ -202,10 +218,6 @@ static int connect_logger_as(const ExecContext *context, ExecOutput output, cons
         fd = socket(AF_UNIX, SOCK_STREAM, 0);
         if (fd < 0)
                 return -errno;
-
-        zero(sa);
-        sa.un.sun_family = AF_UNIX;
-        strncpy(sa.un.sun_path, "/run/systemd/journal/stdout", sizeof(sa.un.sun_path));
 
         r = connect(fd, &sa.sa, offsetof(struct sockaddr_un, sun_path) + strlen(sa.un.sun_path));
         if (r < 0) {
@@ -658,9 +670,9 @@ static int enforce_user(const ExecContext *context, uid_t uid) {
 
                 /* First step: If we need to keep capabilities but
                  * drop privileges we need to make sure we keep our
-                 * caps, whiel we drop privileges. */
+                 * caps, while we drop privileges. */
                 if (uid != 0) {
-                        int sb = context->secure_bits|SECURE_KEEP_CAPS;
+                        int sb = context->secure_bits | 1<<SECURE_KEEP_CAPS;
 
                         if (prctl(PR_GET_SECUREBITS) != sb)
                                 if (prctl(PR_SET_SECUREBITS, sb) < 0)
@@ -925,7 +937,7 @@ static int apply_seccomp(uint32_t *syscall_filter) {
         int i;
         unsigned n;
         struct sock_filter *f;
-        struct sock_fprog prog;
+        struct sock_fprog prog = {};
 
         assert(syscall_filter);
 
@@ -957,7 +969,6 @@ static int apply_seccomp(uint32_t *syscall_filter) {
         memcpy(f + (ELEMENTSOF(header) + 2*n), footer, sizeof(footer));
 
         /* Third: install the filter */
-        zero(prog);
         prog.len = ELEMENTSOF(header) + ELEMENTSOF(footer) + 2*n;
         prog.filter = f;
         if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) < 0)
@@ -968,7 +979,7 @@ static int apply_seccomp(uint32_t *syscall_filter) {
 
 int exec_spawn(ExecCommand *command,
                char **argv,
-               const ExecContext *context,
+               ExecContext *context,
                int fds[], unsigned n_fds,
                char **environment,
                bool apply_permissions,
@@ -986,7 +997,7 @@ int exec_spawn(ExecCommand *command,
         int r;
         char *line;
         int socket_fd;
-        char _cleanup_strv_free_ **files_env = NULL;
+        _cleanup_strv_free_ char **files_env = NULL;
 
         assert(command);
         assert(context);
@@ -1025,16 +1036,28 @@ int exec_spawn(ExecCommand *command,
                 return log_oom();
 
         log_struct_unit(LOG_DEBUG,
-                   unit_id,
-                   "MESSAGE=About to execute %s", line,
-                   NULL);
+                        unit_id,
+                        "EXECUTABLE=%s", command->path,
+                        "MESSAGE=About to execute: %s", line,
+                        NULL);
         free(line);
 
         r = cgroup_bonding_realize_list(cgroup_bondings);
         if (r < 0)
                 return r;
 
+        /* We must initialize the attributes in the parent, before we
+        fork, because we really need them initialized before making
+        the process a member of the group (which we do in both the
+        child and the parent), and we cannot really apply them twice
+        (due to 'append' style attributes) */
         cgroup_attribute_apply_list(cgroup_attributes, cgroup_bondings);
+
+        if (context->private_tmp && !context->tmp_dir && !context->var_tmp_dir) {
+                r = setup_tmpdirs(&context->tmp_dir, &context->var_tmp_dir);
+                if (r < 0)
+                        return r;
+        }
 
         pid = fork();
         if (pid < 0)
@@ -1046,7 +1069,7 @@ int exec_spawn(ExecCommand *command,
                 const char *username = NULL, *home = NULL;
                 uid_t uid = (uid_t) -1;
                 gid_t gid = (gid_t) -1;
-                char _cleanup_strv_free_ **our_env = NULL, **pam_env = NULL,
+                _cleanup_strv_free_ char **our_env = NULL, **pam_env = NULL,
                         **final_env = NULL, **final_argv = NULL;
                 unsigned n_env = 0;
                 bool set_access = false;
@@ -1176,7 +1199,7 @@ int exec_spawn(ExecCommand *command,
                         snprintf(t, sizeof(t), "%i", context->oom_score_adjust);
                         char_array_0(t);
 
-                        if (write_one_line_file("/proc/self/oom_score_adj", t) < 0) {
+                        if (write_string_file("/proc/self/oom_score_adj", t) < 0) {
                                 err = -errno;
                                 r = EXIT_OOM_ADJUST;
                                 goto fail_child;
@@ -1191,13 +1214,16 @@ int exec_spawn(ExecCommand *command,
                         }
 
                 if (context->cpu_sched_set) {
-                        struct sched_param param;
+                        struct sched_param param = {
+                                .sched_priority = context->cpu_sched_priority,
+                        };
 
-                        zero(param);
-                        param.sched_priority = context->cpu_sched_priority;
-
-                        if (sched_setscheduler(0, context->cpu_sched_policy |
-                                               (context->cpu_sched_reset_on_fork ? SCHED_RESET_ON_FORK : 0), &param) < 0) {
+                        r = sched_setscheduler(0,
+                                               context->cpu_sched_policy |
+                                               (context->cpu_sched_reset_on_fork ?
+                                                SCHED_RESET_ON_FORK : 0),
+                                               &param);
+                        if (r < 0) {
                                 err = -errno;
                                 r = EXIT_SETSCHEDULER;
                                 goto fail_child;
@@ -1247,7 +1273,12 @@ int exec_spawn(ExecCommand *command,
                         if (cgroup_bondings && context->control_group_modify) {
                                 err = cgroup_bonding_set_group_access_list(cgroup_bondings, 0755, uid, gid);
                                 if (err >= 0)
-                                        err = cgroup_bonding_set_task_access_list(cgroup_bondings, 0644, uid, gid, context->control_group_persistent);
+                                        err = cgroup_bonding_set_task_access_list(
+                                                        cgroup_bondings,
+                                                        0644,
+                                                        uid,
+                                                        gid,
+                                                        context->control_group_persistent);
                                 if (err < 0) {
                                         r = EXIT_CGROUP;
                                         goto fail_child;
@@ -1258,7 +1289,12 @@ int exec_spawn(ExecCommand *command,
                 }
 
                 if (cgroup_bondings && !set_access && context->control_group_persistent >= 0)  {
-                        err = cgroup_bonding_set_task_access_list(cgroup_bondings, (mode_t) -1, (uid_t) -1, (uid_t) -1, context->control_group_persistent);
+                        err = cgroup_bonding_set_task_access_list(
+                                        cgroup_bondings,
+                                        (mode_t) -1,
+                                        (uid_t) -1,
+                                        (uid_t) -1,
+                                        context->control_group_persistent);
                         if (err < 0) {
                                 r = EXIT_CGROUP;
                                 goto fail_child;
@@ -1302,6 +1338,8 @@ int exec_spawn(ExecCommand *command,
                         err = setup_namespace(context->read_write_dirs,
                                               context->read_only_dirs,
                                               context->inaccessible_dirs,
+                                              context->tmp_dir,
+                                              context->var_tmp_dir,
                                               context->private_tmp,
                                               context->mount_flags);
                         if (err < 0) {
@@ -1324,7 +1362,7 @@ int exec_spawn(ExecCommand *command,
                                 goto fail_child;
                         }
                 } else {
-                        char _cleanup_free_ *d = NULL;
+                        _cleanup_free_ char *d = NULL;
 
                         if (asprintf(&d, "%s/%s",
                                      context->root_directory ? context->root_directory : "",
@@ -1416,7 +1454,8 @@ int exec_spawn(ExecCommand *command,
                         }
                 }
 
-                if (!(our_env = new0(char*, 7))) {
+                our_env = new0(char*, 7);
+                if (!our_env) {
                         err = -ENOMEM;
                         r = EXIT_MEMORY;
                         goto fail_child;
@@ -1456,20 +1495,21 @@ int exec_spawn(ExecCommand *command,
 
                 assert(n_env <= 7);
 
-                if (!(final_env = strv_env_merge(
-                                      5,
-                                      environment,
-                                      our_env,
-                                      context->environment,
-                                      files_env,
-                                      pam_env,
-                                      NULL))) {
+                final_env = strv_env_merge(5,
+                                           environment,
+                                           our_env,
+                                           context->environment,
+                                           files_env,
+                                           pam_env,
+                                           NULL);
+                if (!final_env) {
                         err = -ENOMEM;
                         r = EXIT_MEMORY;
                         goto fail_child;
                 }
 
-                if (!(final_argv = replace_env_argv(argv, final_env))) {
+                final_argv = replace_env_argv(argv, final_env);
+                if (!final_argv) {
                         err = -ENOMEM;
                         r = EXIT_MEMORY;
                         goto fail_child;
@@ -1477,6 +1517,20 @@ int exec_spawn(ExecCommand *command,
 
                 final_env = strv_env_clean(final_env);
 
+                if (_unlikely_(log_get_max_level() >= LOG_PRI(LOG_DEBUG))) {
+                        line = exec_command_line(final_argv);
+                        if (line) {
+                                log_open();
+                                log_struct_unit(LOG_DEBUG,
+                                                unit_id,
+                                                "EXECUTABLE=%s", command->path,
+                                                "MESSAGE=Executing: %s", line,
+                                                NULL);
+                                log_close();
+                                free(line);
+                                line = NULL;
+                        }
+                }
                 execve(command->path, final_argv, final_env);
                 err = -errno;
                 r = EXIT_EXEC;
@@ -1498,18 +1552,17 @@ int exec_spawn(ExecCommand *command,
         }
 
         log_struct_unit(LOG_DEBUG,
-                   unit_id,
-                   "MESSAGE=Forked %s as %lu",
-                          command->path, (unsigned long) pid,
-                   NULL);
+                        unit_id,
+                        "MESSAGE=Forked %s as %lu",
+                        command->path, (unsigned long) pid,
+                        NULL);
 
         /* We add the new process to the cgroup both in the child (so
          * that we can be sure that no user code is ever executed
          * outside of the cgroup) and in the parent (so that we can be
          * sure that when we kill the cgroup the process will be
          * killed too). */
-        if (cgroup_bondings)
-                cgroup_bonding_install_list(cgroup_bondings, pid, cgroup_suffix);
+        cgroup_bonding_install_list(cgroup_bondings, pid, cgroup_suffix);
 
         exec_status_start(&command->exec_status, pid);
 
@@ -1530,7 +1583,35 @@ void exec_context_init(ExecContext *c) {
         c->timer_slack_nsec = (nsec_t) -1;
 }
 
-void exec_context_done(ExecContext *c) {
+void exec_context_tmp_dirs_done(ExecContext *c) {
+        char* dirs[] = {c->tmp_dir ? c->tmp_dir : c->var_tmp_dir,
+                        c->tmp_dir ? c->var_tmp_dir : NULL,
+                        NULL};
+        char **dirp;
+
+        for(dirp = dirs; *dirp; dirp++) {
+                char *dir;
+                int r;
+
+                r = rm_rf_dangerous(*dirp, false, true, false);
+                dir = dirname(*dirp);
+                if (r < 0)
+                        log_warning("Failed to remove content of temporary directory %s: %s",
+                                    dir, strerror(-r));
+                else {
+                        r = rmdir(dir);
+                        if (r < 0)
+                                log_warning("Failed to remove  temporary directory %s: %s",
+                                            dir, strerror(-r));
+                }
+
+                free(*dirp);
+        }
+
+        c->tmp_dir = c->var_tmp_dir = NULL;
+}
+
+void exec_context_done(ExecContext *c, bool reloading_or_reexecuting) {
         unsigned l;
 
         assert(c);
@@ -1594,6 +1675,9 @@ void exec_context_done(ExecContext *c) {
 
         free(c->syscall_filter);
         c->syscall_filter = NULL;
+
+        if (!reloading_or_reexecuting)
+                exec_context_tmp_dirs_done(c);
 }
 
 void exec_command_done(ExecCommand *c) {
@@ -1643,7 +1727,7 @@ int exec_context_load_environment(const ExecContext *c, char ***l) {
                 int k;
                 bool ignore = false;
                 char **p;
-                glob_t pglob;
+                _cleanup_globfree_ glob_t pglob = {};
                 int count, n;
 
                 fn = *i;
@@ -1654,7 +1738,6 @@ int exec_context_load_environment(const ExecContext *c, char ***l) {
                 }
 
                 if (!path_is_absolute(fn)) {
-
                         if (ignore)
                                 continue;
 
@@ -1663,10 +1746,8 @@ int exec_context_load_environment(const ExecContext *c, char ***l) {
                 }
 
                 /* Filename supports globbing, take all matching files */
-                zero(pglob);
                 errno = 0;
                 if (glob(fn, 0, NULL, &pglob) != 0) {
-                        globfree(&pglob);
                         if (ignore)
                                 continue;
 
@@ -1675,7 +1756,6 @@ int exec_context_load_environment(const ExecContext *c, char ***l) {
                 }
                 count = pglob.gl_pathc;
                 if (count == 0) {
-                        globfree(&pglob);
                         if (ignore)
                                 continue;
 
@@ -1683,15 +1763,17 @@ int exec_context_load_environment(const ExecContext *c, char ***l) {
                         return -EINVAL;
                 }
                 for (n = 0; n < count; n++) {
-                        k = load_env_file(pglob.gl_pathv[n], &p);
+                        k = load_env_file(pglob.gl_pathv[n], NULL, &p);
                         if (k < 0) {
                                 if (ignore)
                                         continue;
 
                                 strv_free(r);
-                                globfree(&pglob);
                                 return k;
                          }
+                        /* Log invalid environment variables with filename */
+			if (p)
+	                        p = strv_env_clean_log(p, pglob.gl_pathv[n]);
 
                         if (r == NULL)
                                 r = p;
@@ -1701,16 +1783,12 @@ int exec_context_load_environment(const ExecContext *c, char ***l) {
                                 m = strv_env_merge(2, r, p);
                                 strv_free(r);
                                 strv_free(p);
-
-                                if (!m) {
-                                        globfree(&pglob);
+                                if (!m)
                                         return -ENOMEM;
-                                }
 
                                 r = m;
                         }
                 }
-                globfree(&pglob);
         }
 
         *l = r;
@@ -1911,12 +1989,12 @@ void exec_context_dump(ExecContext *c, FILE* f, const char *prefix) {
         if (c->secure_bits)
                 fprintf(f, "%sSecure Bits:%s%s%s%s%s%s\n",
                         prefix,
-                        (c->secure_bits & SECURE_KEEP_CAPS) ? " keep-caps" : "",
-                        (c->secure_bits & SECURE_KEEP_CAPS_LOCKED) ? " keep-caps-locked" : "",
-                        (c->secure_bits & SECURE_NO_SETUID_FIXUP) ? " no-setuid-fixup" : "",
-                        (c->secure_bits & SECURE_NO_SETUID_FIXUP_LOCKED) ? " no-setuid-fixup-locked" : "",
-                        (c->secure_bits & SECURE_NOROOT) ? " noroot" : "",
-                        (c->secure_bits & SECURE_NOROOT_LOCKED) ? "noroot-locked" : "");
+                        (c->secure_bits & 1<<SECURE_KEEP_CAPS) ? " keep-caps" : "",
+                        (c->secure_bits & 1<<SECURE_KEEP_CAPS_LOCKED) ? " keep-caps-locked" : "",
+                        (c->secure_bits & 1<<SECURE_NO_SETUID_FIXUP) ? " no-setuid-fixup" : "",
+                        (c->secure_bits & 1<<SECURE_NO_SETUID_FIXUP_LOCKED) ? " no-setuid-fixup-locked" : "",
+                        (c->secure_bits & 1<<SECURE_NOROOT) ? " noroot" : "",
+                        (c->secure_bits & 1<<SECURE_NOROOT_LOCKED) ? "noroot-locked" : "");
 
         if (c->capability_bounding_set_drop) {
                 unsigned long l;

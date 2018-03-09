@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="os-release"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>os-release — Operating system identification</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/os-release</code></p></div><div class="refsect1"><a name="idp3965184"></a><h2>Description</h2><p>The <code class="filename">/etc/os-release</code> file
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="os-release"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>os-release — Operating system identification</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/os-release</code></p></div><div class="refsect1"><a name="idp3908096"></a><h2>Description</h2><p>The <code class="filename">/etc/os-release</code> file
                 contains operating system identification data.</p><p>The basic file format of
                 <code class="filename">os-release</code> is a newline-separated
                 list of environment-like shell-compatible variable
@@ -30,7 +30,7 @@
                 the file is available from earliest boot on, and hence
                 must be located on the root file system.</p><p>For a longer rationale for
                 <code class="filename">/etc/os-release</code> please refer to
-                the <a class="ulink" href="http://0pointer.de/blog/projects/os-release" target="_top">Announcement of <code class="filename">/etc/os-release</code></a>.</p></div><div class="refsect1"><a name="idp3974640"></a><h2>Options</h2><p>The following OS identifications parameters may be set using
+                the <a class="ulink" href="http://0pointer.de/blog/projects/os-release" target="_top">Announcement of <code class="filename">/etc/os-release</code></a>.</p></div><div class="refsect1"><a name="idp3917296"></a><h2>Options</h2><p>The following OS identifications parameters may be set using
                 <code class="filename">/etc/os-release</code>:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">NAME=</code></span></dt><dd><p>A string identifying
                                 the operating system, without a
                                 version component, and suitable for
@@ -167,7 +167,24 @@
                                 all available resources. Examples:
                                 <code class="literal">HOME_URL="https://fedoraproject.org/"</code>
                                 and
-                                <code class="literal">BUG_REPORT_URL="https://bugzilla.redhat.com/"</code></p></dd></dl></div><p>If you are reading this file from C code or a
+                                <code class="literal">BUG_REPORT_URL="https://bugzilla.redhat.com/"</code></p></dd><dt><span class="term"><code class="varname">BUILD_ID=</code></span></dt><dd><p>A string uniquely
+                                identifying the system image used as
+                                the origin for a distribution (it is
+                                not updated with system updates). The
+                                field can be identical between
+                                different VERSION_IDs as BUILD_ID is
+                                an only a unique identifier to a
+                                specific version. Distributions that
+                                release each update as a new version
+                                would only need to use VERSION_ID as
+                                each build is already distinct based
+                                on the VERSION_ID. This field is
+                                optional. Example:
+                                <code class="literal">BUILD_ID="2013-03-20.3"</code>
+                                or
+                                <code class="literal">BUILD_ID=201303203</code>.
+
+                                </p></dd></dl></div><p>If you are reading this file from C code or a
                 shell script to determine the OS or a specific version
                 of it, use the ID and VERSION_ID fields, possibly with
                 ID_LIKE as fallback for ID. When looking for an OS
@@ -181,7 +198,7 @@
                 recommended to prefix new fields with an OS specific
                 name in order to avoid name clashes. Applications
                 reading this file must ignore unknown fields. Example:
-                <code class="literal">DEBIAN_BTS="debbugs://bugs.debian.org/"</code></p></div><div class="refsect1"><a name="idp5040784"></a><h2>Example</h2><pre class="programlisting">NAME=Fedora
+                <code class="literal">DEBIAN_BTS="debbugs://bugs.debian.org/"</code></p></div><div class="refsect1"><a name="idp4986560"></a><h2>Example</h2><pre class="programlisting">NAME=Fedora
 VERSION="17 (Beefy Miracle)"
 ID=fedora
 VERSION_ID=17
@@ -189,7 +206,7 @@ PRETTY_NAME="Fedora 17 (Beefy Miracle)"
 ANSI_COLOR="0;34"
 CPE_NAME="cpe:/o:fedoraproject:fedora:17"
 HOME_URL="https://fedoraproject.org/"
-BUG_REPORT_URL="https://bugzilla.redhat.com/"</pre></div><div class="refsect1"><a name="idp5042448"></a><h2>See Also</h2><p>
+BUG_REPORT_URL="https://bugzilla.redhat.com/"</pre></div><div class="refsect1"><a name="idp4988224"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="lsb_release.html"><span class="citerefentry"><span class="refentrytitle">lsb_release</span>(1)</span></a>,
                           <a href="hostname.html"><span class="citerefentry"><span class="refentrytitle">hostname</span>(5)</span></a>,

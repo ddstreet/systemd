@@ -68,9 +68,9 @@
 #include "socket-util.h"
 #include "fileio.h"
 
-static const char *arg_type = NULL;
-static const char *arg_load_state = NULL;
-static char **arg_property = NULL;
+static char **arg_types = NULL;
+static char **arg_load_states = NULL;
+static char **arg_properties = NULL;
 static bool arg_all = false;
 static const char *arg_job_mode = "replace";
 static UnitFileScope arg_scope = UNIT_FILE_SYSTEM;
@@ -80,6 +80,7 @@ static bool arg_no_pager = false;
 static bool arg_no_wtmp = false;
 static bool arg_no_wall = false;
 static bool arg_no_reload = false;
+static bool arg_show_types = false;
 static bool arg_ignore_inhibitors = false;
 static bool arg_dry = false;
 static bool arg_quiet = false;
@@ -295,9 +296,9 @@ static bool output_show_unit(const struct unit_info *u) {
         if (arg_failed)
                 return streq(u->active_state, "failed");
 
-        return (!arg_type || ((dot = strrchr(u->id, '.')) &&
-                              streq(dot+1, arg_type))) &&
-                (!arg_load_state || streq(u->load_state, arg_load_state)) &&
+        return (!arg_types || ((dot = strrchr(u->id, '.')) &&
+                               strv_find(arg_types, dot+1))) &&
+                (!arg_load_states || strv_find(arg_load_states, u->load_state)) &&
                 (arg_all || !(streq(u->active_state, "inactive")
                               || u->following[0]) || u->job_id > 0);
 }
@@ -328,7 +329,7 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
 
         if (!arg_full) {
                 unsigned basic_len;
-                id_len = MIN(max_id_len, 25);
+                id_len = MIN(max_id_len, 25u);
                 basic_len = 5 + id_len + 5 + active_len + sub_len;
                 if (job_count)
                         basic_len += job_len + 1;
@@ -337,7 +338,7 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
                         extra_len = columns() - basic_len;
                         /* Either UNIT already got 25, or is fully satisfied.
                          * Grant up to 25 to DESC now. */
-                        incr = MIN(extra_len, 25);
+                        incr = MIN(extra_len, 25u);
                         desc_len += incr;
                         extra_len -= incr;
                         /* split the remaining space between UNIT and DESC,
@@ -352,9 +353,9 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
                 id_len = max_id_len;
 
         for (u = unit_infos; u < unit_infos + c; u++) {
-                char _cleanup_free_ *e = NULL;
-                const char *on_loaded, *off_loaded;
-                const char *on_active, *off_active;
+                _cleanup_free_ char *e = NULL;
+                const char *on_loaded, *off_loaded, *on = "";
+                const char *on_active, *off_active, *off = "";
 
                 if (!output_show_unit(u))
                         continue;
@@ -373,21 +374,21 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
                 n_shown++;
 
                 if (streq(u->load_state, "error")) {
-                        on_loaded = ansi_highlight_red(true);
-                        off_loaded = ansi_highlight_red(false);
+                        on_loaded = on = ansi_highlight_red(true);
+                        off_loaded = off = ansi_highlight_red(false);
                 } else
                         on_loaded = off_loaded = "";
 
                 if (streq(u->active_state, "failed")) {
-                        on_active = ansi_highlight_red(true);
-                        off_active = ansi_highlight_red(false);
+                        on_active = on = ansi_highlight_red(true);
+                        off_active = off = ansi_highlight_red(false);
                 } else
                         on_active = off_active = "";
 
                 e = arg_full ? NULL : ellipsize(u->id, id_len, 33);
 
-                printf("%-*s %s%-6s%s %s%-*s %-*s%s %-*s",
-                       id_len, e ? e : u->id,
+                printf("%s%-*s%s %s%-6s%s %s%-*s %-*s%s %-*s",
+                       on, id_len, e ? e : u->id, off,
                        on_loaded, u->load_state, off_loaded,
                        on_active, active_len, u->active_state,
                        sub_len, u->sub_state, off_active,
@@ -429,7 +430,7 @@ static void output_units_list(const struct unit_info *unit_infos, unsigned c) {
 static int get_unit_list(DBusConnection *bus, DBusMessage **reply,
                          struct unit_info **unit_infos, unsigned *c) {
         DBusMessageIter iter, sub;
-        unsigned n_units = 0;
+        size_t size = 0;
         int r;
 
         assert(bus);
@@ -458,29 +459,14 @@ static int get_unit_list(DBusConnection *bus, DBusMessage **reply,
         dbus_message_iter_recurse(&iter, &sub);
 
         while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
-                struct unit_info *u;
+                if (!GREEDY_REALLOC(*unit_infos, size, *c + 1))
+                        return log_oom();
 
-                if (*c >= n_units) {
-                        struct unit_info *w;
-
-                        n_units = MAX(2 * *c, 16);
-                        w = realloc(*unit_infos, sizeof(struct unit_info) * n_units);
-                        if (!w)
-                                return log_oom();
-
-                        *unit_infos = w;
-                }
-
-                u = *unit_infos + *c;
-
-                bus_parse_unit_info(&sub, u);
+                bus_parse_unit_info(&sub, *unit_infos + *c);
+                (*c)++;
 
                 dbus_message_iter_next(&sub);
-                (*c)++;
         }
-
-        if (*c > 0)
-                qsort(*unit_infos, *c, sizeof(struct unit_info), compare_unit_info);
 
         return 0;
 }
@@ -497,8 +483,276 @@ static int list_units(DBusConnection *bus, char **args) {
         if (r < 0)
                 return r;
 
-        if (c > 0)
-                output_units_list(unit_infos, c);
+        qsort(unit_infos, c, sizeof(struct unit_info), compare_unit_info);
+
+        output_units_list(unit_infos, c);
+
+        return 0;
+}
+
+static int get_triggered_units(DBusConnection *bus, const char* unit_path,
+                               char*** triggered)
+{
+        const char *interface = "org.freedesktop.systemd1.Unit",
+                   *triggers_property = "Triggers";
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
+        DBusMessageIter iter, sub;
+        int r;
+
+        r = bus_method_call_with_reply(bus,
+                                       "org.freedesktop.systemd1",
+                                       unit_path,
+                                       "org.freedesktop.DBus.Properties",
+                                       "Get",
+                                       &reply,
+                                       NULL,
+                                       DBUS_TYPE_STRING, &interface,
+                                       DBUS_TYPE_STRING, &triggers_property,
+                                       DBUS_TYPE_INVALID);
+        if (r < 0)
+                return r;
+
+        if (!dbus_message_iter_init(reply, &iter) ||
+            dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT) {
+                log_error("Failed to parse reply.");
+                return -EBADMSG;
+        }
+
+        dbus_message_iter_recurse(&iter, &sub);
+        dbus_message_iter_recurse(&sub, &iter);
+        sub = iter;
+
+        while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
+                const char *unit;
+
+                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRING) {
+                        log_error("Failed to parse reply.");
+                        return -EBADMSG;
+                }
+
+                dbus_message_iter_get_basic(&sub, &unit);
+                r = strv_extend(triggered, unit);
+                if (r < 0)
+                        return r;
+
+                dbus_message_iter_next(&sub);
+        }
+
+        return 0;
+}
+
+static int get_listening(DBusConnection *bus, const char* unit_path,
+                         char*** listen, unsigned *c)
+{
+        const char *interface = "org.freedesktop.systemd1.Socket",
+                   *listen_property = "Listen";
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
+        DBusMessageIter iter, sub;
+        int r;
+
+        r = bus_method_call_with_reply(bus,
+                                       "org.freedesktop.systemd1",
+                                       unit_path,
+                                       "org.freedesktop.DBus.Properties",
+                                       "Get",
+                                       &reply,
+                                       NULL,
+                                       DBUS_TYPE_STRING, &interface,
+                                       DBUS_TYPE_STRING, &listen_property,
+                                       DBUS_TYPE_INVALID);
+        if (r < 0)
+                return r;
+
+        if (!dbus_message_iter_init(reply, &iter) ||
+            dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT) {
+                log_error("Failed to parse reply.");
+                return -EBADMSG;
+        }
+
+        dbus_message_iter_recurse(&iter, &sub);
+        dbus_message_iter_recurse(&sub, &iter);
+        sub = iter;
+
+        while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
+                DBusMessageIter sub2;
+                const char *type, *path;
+
+                if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRUCT) {
+                        log_error("Failed to parse reply.");
+                        return -EBADMSG;
+                }
+
+                dbus_message_iter_recurse(&sub, &sub2);
+
+                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &type, true) >= 0 &&
+                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &path, false) >= 0) {
+                        r = strv_extend(listen, type);
+                        if (r < 0)
+                                return r;
+
+                        r = strv_extend(listen, path);
+                        if (r < 0)
+                                return r;
+
+                        (*c) ++;
+                }
+
+                dbus_message_iter_next(&sub);
+        }
+
+        return 0;
+}
+
+struct socket_info {
+        const char* id;
+
+        char* type;
+        char* path;
+
+        /* Note: triggered is a list here, although it almost certainly
+         * will always be one unit. Nevertheless, dbus API allows for multiple
+         * values, so let's follow that.*/
+        char** triggered;
+
+        /* The strv above is shared. free is set only in the first one. */
+        bool own_triggered;
+};
+
+static int socket_info_compare(struct socket_info *a, struct socket_info *b) {
+        int o = strcmp(a->path, b->path);
+        if (o == 0)
+                o = strcmp(a->type, b->type);
+        return o;
+}
+
+static int output_sockets_list(struct socket_info *socket_infos, unsigned cs) {
+        struct socket_info *s;
+        unsigned pathlen = sizeof("LISTEN") - 1,
+                typelen = (sizeof("TYPE") - 1) * arg_show_types,
+                socklen = sizeof("UNIT") - 1,
+                servlen = sizeof("ACTIVATES") - 1;
+        const char *on, *off;
+
+        for (s = socket_infos; s < socket_infos + cs; s++) {
+                char **a;
+                unsigned tmp = 0;
+
+                socklen = MAX(socklen, strlen(s->id));
+                if (arg_show_types)
+                        typelen = MAX(typelen, strlen(s->type));
+                pathlen = MAX(pathlen, strlen(s->path));
+
+                STRV_FOREACH(a, s->triggered)
+                        tmp += strlen(*a) + 2*(a != s->triggered);
+                servlen = MAX(servlen, tmp);
+        }
+
+        if (cs) {
+                printf("%-*s %-*.*s%-*s %s\n",
+                       pathlen, "LISTEN",
+                       typelen + arg_show_types, typelen + arg_show_types, "TYPE ",
+                       socklen, "UNIT",
+                       "ACTIVATES");
+
+                for (s = socket_infos; s < socket_infos + cs; s++) {
+                        char **a;
+
+                        if (arg_show_types)
+                                printf("%-*s %-*s %-*s",
+                                       pathlen, s->path, typelen, s->type, socklen, s->id);
+                        else
+                                printf("%-*s %-*s",
+                                       pathlen, s->path, socklen, s->id);
+                        STRV_FOREACH(a, s->triggered)
+                                printf("%s %s",
+                                       a == s->triggered ? "" : ",", *a);
+                        printf("\n");
+                }
+
+                on = ansi_highlight(true);
+                off = ansi_highlight(false);
+                printf("\n");
+        } else {
+                on = ansi_highlight_red(true);
+                off = ansi_highlight_red(false);
+        }
+
+        printf("%s%u sockets listed.%s\n", on, cs, off);
+        if (!arg_all)
+                printf("Pass --all to see loaded but inactive sockets, too.\n");
+
+        return 0;
+}
+
+static int list_sockets(DBusConnection *bus, char **args) {
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
+        _cleanup_free_ struct unit_info *unit_infos = NULL;
+        struct socket_info *socket_infos = NULL;
+        const struct unit_info *u;
+        struct socket_info *s;
+        unsigned cu = 0, cs = 0;
+        size_t size = 0;
+        int r;
+
+        pager_open_if_enabled();
+
+        r = get_unit_list(bus, &reply, &unit_infos, &cu);
+        if (r < 0)
+                return r;
+
+        for (u = unit_infos; u < unit_infos + cu; u++) {
+                const char *dot;
+                _cleanup_strv_free_ char **listen = NULL, **triggered = NULL;
+                unsigned c = 0, i;
+
+                if (!output_show_unit(u))
+                        continue;
+
+                if ((dot = strrchr(u->id, '.')) && !streq(dot+1, "socket"))
+                        continue;
+
+                r = get_triggered_units(bus, u->unit_path, &triggered);
+                if (r < 0)
+                        goto cleanup;
+
+                r = get_listening(bus, u->unit_path, &listen, &c);
+                if (r < 0)
+                        goto cleanup;
+
+                if (!GREEDY_REALLOC(socket_infos, size, cs + c)) {
+                        r = log_oom();
+                        goto cleanup;
+                }
+
+                for (i = 0; i < c; i++)
+                        socket_infos[cs + i] = (struct socket_info) {
+                                .id = u->id,
+                                .type = listen[i*2],
+                                .path = listen[i*2 + 1],
+                                .triggered = triggered,
+                                .own_triggered = i==0,
+                        };
+
+                /* from this point on we will cleanup those socket_infos */
+                cs += c;
+                free(listen);
+                listen = triggered = NULL; /* avoid cleanup */
+        }
+
+        qsort(socket_infos, cs, sizeof(struct socket_info),
+              (__compar_fn_t) socket_info_compare);
+
+        output_sockets_list(socket_infos, cs);
+
+ cleanup:
+        assert(cs == 0 || socket_infos);
+        for (s = socket_infos; s < socket_infos + cs; s++) {
+                free(s->type);
+                free(s->path);
+                if (s->own_triggered)
+                        strv_free(s->triggered);
+        }
+        free(socket_infos);
 
         return 0;
 }
@@ -524,7 +778,7 @@ static int compare_unit_file_list(const void *a, const void *b) {
 static bool output_show_unit_file(const UnitFileList *u) {
         const char *dot;
 
-        return !arg_type || ((dot = strrchr(u->path, '.')) && streq(dot+1, arg_type));
+        return !arg_types || ((dot = strrchr(u->path, '.')) && strv_find(arg_types, dot+1));
 }
 
 static void output_unit_file_list(const UnitFileList *units, unsigned c) {
@@ -543,7 +797,7 @@ static void output_unit_file_list(const UnitFileList *units, unsigned c) {
 
         if (!arg_full) {
                 unsigned basic_cols;
-                id_cols = MIN(max_id_len, 25);
+                id_cols = MIN(max_id_len, 25u);
                 basic_cols = 1 + id_cols + state_cols;
                 if (basic_cols < (unsigned) columns())
                         id_cols += MIN(columns() - basic_cols, max_id_len - id_cols);
@@ -554,7 +808,7 @@ static void output_unit_file_list(const UnitFileList *units, unsigned c) {
                 printf("%-*s %-*s\n", id_cols, "UNIT FILE", state_cols, "STATE");
 
         for (u = units; u < units + c; u++) {
-                char _cleanup_free_ *e = NULL;
+                _cleanup_free_ char *e = NULL;
                 const char *on, *off;
                 const char *id;
 
@@ -657,7 +911,7 @@ static int list_unit_files(DBusConnection *bus, char **args) {
                         if (c >= n_units) {
                                 UnitFileList *w;
 
-                                n_units = MAX(2*c, 16);
+                                n_units = MAX(2*c, 16u);
                                 w = realloc(units, sizeof(struct UnitFileList) * n_units);
                                 if (!w)
                                         return log_oom();
@@ -694,7 +948,7 @@ static int list_dependencies_print(const char *name, int level, unsigned int bra
         int i;
         _cleanup_free_ char *n = NULL;
         size_t len = 0;
-        size_t max_len = MAX(columns(),20);
+        size_t max_len = MAX(columns(),20u);
 
         for (i = level - 1; i >= 0; i--) {
                 len += 2;
@@ -838,7 +1092,7 @@ static int list_dependencies_compare(const void *_a, const void *_b) {
 }
 
 static int list_dependencies_one(DBusConnection *bus, const char *name, int level, char **units, unsigned int branches) {
-        char _cleanup_strv_free_ **deps = NULL, **u;
+        _cleanup_strv_free_ char **deps = NULL, **u;
         char **c;
         int r = 0;
 
@@ -895,13 +1149,84 @@ static int list_dependencies(DBusConnection *bus, char **args) {
         return list_dependencies_one(bus, u, 0, NULL, 0);
 }
 
+struct job_info {
+        uint32_t id;
+        char *name, *type, *state;
+};
+
+static void list_jobs_print(struct job_info* jobs, size_t n) {
+        size_t i;
+        struct job_info *j;
+        const char *on, *off;
+        bool shorten = false;
+
+        assert(n == 0 || jobs);
+
+        if (n == 0) {
+                on = ansi_highlight_green(true);
+                off = ansi_highlight_green(false);
+
+                printf("%sNo jobs running.%s\n", on, off);
+                return;
+        }
+
+        pager_open_if_enabled();
+
+        {
+                /* JOB UNIT TYPE STATE */
+                unsigned l0 = 3, l1 = 4, l2 = 4, l3 = 5;
+
+                for (i = 0, j = jobs; i < n; i++, j++) {
+                        assert(j->name && j->type && j->state);
+                        l0 = MAX(l0, DECIMAL_STR_WIDTH(j->id));
+                        l1 = MAX(l1, strlen(j->name));
+                        l2 = MAX(l2, strlen(j->type));
+                        l3 = MAX(l3, strlen(j->state));
+                }
+
+                if (!arg_full && l0 + 1 + l1 + l2 + 1 + l3 > columns()) {
+                        l1 = MAX(33u, columns() - l0 - l2 - l3 - 3);
+                        shorten = true;
+                }
+
+                if (on_tty())
+                        printf("%*s %-*s %-*s %-*s\n",
+                               l0, "JOB",
+                               l1, "UNIT",
+                               l2, "TYPE",
+                               l3, "STATE");
+
+                for (i = 0, j = jobs; i < n; i++, j++) {
+                        _cleanup_free_ char *e = NULL;
+
+                        if (streq(j->state, "running")) {
+                                on = ansi_highlight(true);
+                                off = ansi_highlight(false);
+                        } else
+                                on = off = "";
+
+                        e = shorten ? ellipsize(j->name, l1, 33) : NULL;
+                        printf("%*u %s%-*s%s %-*s %s%-*s%s\n",
+                               l0, j->id,
+                               on, l1, e ? e : j->name, off,
+                               l2, j->type,
+                               on, l3, j->state, off);
+                }
+        }
+
+        on = ansi_highlight(true);
+        off = ansi_highlight(false);
+
+        if (on_tty())
+                printf("\n%s%zu jobs listed%s.\n", on, n, off);
+}
+
 static int list_jobs(DBusConnection *bus, char **args) {
         _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         DBusMessageIter iter, sub, sub2;
-        unsigned k = 0;
         int r;
-
-        pager_open_if_enabled();
+        struct job_info *jobs = NULL;
+        size_t size = 0, used = 0;
 
         r = bus_method_call_with_reply(
                         bus,
@@ -924,13 +1249,9 @@ static int list_jobs(DBusConnection *bus, char **args) {
 
         dbus_message_iter_recurse(&iter, &sub);
 
-        if (on_tty())
-                printf("%4s %-25s %-15s %-7s\n", "JOB", "UNIT", "TYPE", "STATE");
-
         while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
                 const char *name, *type, *state, *job_path, *unit_path;
                 uint32_t id;
-                char _cleanup_free_ *e = NULL;
 
                 if (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_STRUCT) {
                         log_error("Failed to parse reply.");
@@ -946,19 +1267,37 @@ static int list_jobs(DBusConnection *bus, char **args) {
                     bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &job_path, true) < 0 ||
                     bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_OBJECT_PATH, &unit_path, false) < 0) {
                         log_error("Failed to parse reply.");
-                        return -EIO;
+                        r = -EIO;
+                        goto finish;
                 }
 
-                e = arg_full ? NULL : ellipsize(name, 25, 33);
-                printf("%4u %-25s %-15s %-7s\n", id, e ? e : name, type, state);
+                if (!greedy_realloc((void**) &jobs, &size,
+                                    sizeof(struct job_info) * (used + 1))) {
+                        r = log_oom();
+                        goto finish;
+                }
 
-                k++;
+                jobs[used++] = (struct job_info) { id,
+                                                   strdup(name),
+                                                   strdup(type),
+                                                   strdup(state) };
+                if (!jobs[used-1].name || !jobs[used-1].type || !jobs[used-1].state) {
+                        r = log_oom();
+                        goto finish;
+                }
 
                 dbus_message_iter_next(&sub);
         }
 
-        if (on_tty())
-                printf("\n%u jobs listed.\n", k);
+        list_jobs_print(jobs, used);
+
+ finish:
+        while (used--) {
+                free(jobs[used].name);
+                free(jobs[used].type);
+                free(jobs[used].state);
+        }
+        free(jobs);
 
         return 0;
 }
@@ -1100,7 +1439,7 @@ typedef struct WaitData {
 } WaitData;
 
 static DBusHandlerResult wait_filter(DBusConnection *connection, DBusMessage *message, void *data) {
-        DBusError _cleanup_dbus_error_free_ error;
+        _cleanup_dbus_error_free_ DBusError error;
         WaitData *d = data;
 
         dbus_error_init(&error);
@@ -1193,13 +1532,10 @@ static int enable_wait_for_jobs(DBusConnection *bus) {
 
 static int wait_for_jobs(DBusConnection *bus, Set *s) {
         int r = 0;
-        WaitData d;
+        WaitData d = { .set = s };
 
         assert(bus);
         assert(s);
-
-        zero(d);
-        d.set = s;
 
         if (!dbus_connection_add_filter(bus, wait_filter, &d, NULL))
                 return log_oom();
@@ -1339,7 +1675,7 @@ static void check_triggering_units(
                    *load_state_property = "LoadState",
                    *triggered_by_property = "TriggeredBy",
                    *state;
-        char _cleanup_free_ *unit_path = NULL, *n = NULL;
+        _cleanup_free_ char *unit_path = NULL, *n = NULL;
         bool print_warning_label = true;
         int r;
 
@@ -1553,8 +1889,8 @@ static int start_unit(DBusConnection *bus, char **args) {
 
         int r, ret = 0;
         const char *method, *mode, *one_name;
-        Set _cleanup_set_free_free_ *s = NULL;
-        DBusError _cleanup_dbus_error_free_ error;
+        _cleanup_set_free_free_ Set *s = NULL;
+        _cleanup_dbus_error_free_ DBusError error;
         char **name;
 
         dbus_error_init(&error);
@@ -2053,7 +2389,7 @@ static int set_cgroup_attr(DBusConnection *bus, char **args) {
 }
 
 static int get_cgroup_attr(DBusConnection *bus, char **args) {
-        _cleanup_dbus_message_unref_ DBusMessage *m = NULL, *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         _cleanup_free_ char *n = NULL;
         char **argument;
         int r;
@@ -2225,6 +2561,8 @@ typedef struct UnitStatusInfo {
         const char *source_path;
         const char *default_control_group;
 
+        char **dropin_paths;
+
         const char *load_error;
         const char *result;
 
@@ -2255,6 +2593,9 @@ typedef struct UnitStatusInfo {
         unsigned n_connections;
         bool accept;
 
+        /* Pairs of type, path */
+        char **listen;
+
         /* Device */
         const char *sysfs_path;
 
@@ -2280,8 +2621,19 @@ static void print_status_info(UnitStatusInfo *i) {
                 on_tty() * OUTPUT_COLOR |
                 !arg_quiet * OUTPUT_WARN_CUTOFF |
                 arg_full * OUTPUT_FULL_WIDTH;
+        int maxlen = 8; /* a value that'll suffice most of the time */
+        char **t, **t2;
 
         assert(i);
+
+        STRV_FOREACH_PAIR(t, t2, i->listen)
+                maxlen = MAX(maxlen, (int)(sizeof("Listen") - 1 + strlen(*t)));
+        if (i->accept)
+                maxlen = MAX(maxlen, (int)sizeof("Accept") - 1);
+        if (i->main_pid > 0)
+                maxlen = MAX(maxlen, (int)sizeof("Main PID") - 1);
+        else if (i->control_pid > 0)
+                maxlen = MAX(maxlen, (int)sizeof("Control") - 1);
 
         /* This shows pretty information about a unit. See
          * print_property() for a low-level property printer */
@@ -2294,7 +2646,7 @@ static void print_status_info(UnitStatusInfo *i) {
         printf("\n");
 
         if (i->following)
-                printf("\t  Follow: unit currently follows state of %s\n", i->following);
+                printf(" %*s: unit currently follows state of %s\n", maxlen, "Follow", i->following);
 
         if (streq_ptr(i->load_state, "error")) {
                 on = ansi_highlight_red(true);
@@ -2305,13 +2657,45 @@ static void print_status_info(UnitStatusInfo *i) {
         path = i->source_path ? i->source_path : i->fragment_path;
 
         if (i->load_error)
-                printf("\t  Loaded: %s%s%s (Reason: %s)\n", on, strna(i->load_state), off, i->load_error);
+                printf(" %*s: %s%s%s (Reason: %s)\n",
+                       maxlen, "Loaded", on, strna(i->load_state), off, i->load_error);
         else if (path && i->unit_file_state)
-                printf("\t  Loaded: %s%s%s (%s; %s)\n", on, strna(i->load_state), off, path, i->unit_file_state);
+                printf(" %*s: %s%s%s (%s; %s)\n",
+                       maxlen, "Loaded", on, strna(i->load_state), off, path, i->unit_file_state);
         else if (path)
-                printf("\t  Loaded: %s%s%s (%s)\n", on, strna(i->load_state), off, path);
+                printf(" %*s: %s%s%s (%s)\n",
+                       maxlen, "Loaded", on, strna(i->load_state), off, path);
         else
-                printf("\t  Loaded: %s%s%s\n", on, strna(i->load_state), off);
+                printf(" %*s: %s%s%s\n",
+                       maxlen, "Loaded", on, strna(i->load_state), off);
+
+        if (!strv_isempty(i->dropin_paths)) {
+                char ** dropin;
+                char * dir = NULL;
+                bool last = false;
+
+                STRV_FOREACH(dropin, i->dropin_paths) {
+                        if (! dir || last) {
+                                printf("  %*s ", maxlen, dir ? "" : "Drop-In:");
+
+                                free(dir);
+
+                                if (path_get_parent(*dropin, &dir) < 0) {
+                                        log_oom();
+                                        return;
+                                }
+
+                                printf("%s\n %*s  %s", dir, maxlen, "",
+                                       draw_special_char(DRAW_TREE_RIGHT));
+                        }
+
+                        last = ! (*(dropin + 1) && startswith(*(dropin + 1), dir));
+
+                        printf("%s%s", path_get_file_name(*dropin), last ? "\n" : ", ");
+                }
+
+                free(dir);
+        }
 
         ss = streq_ptr(i->active_state, i->sub_state) ? NULL : i->sub_state;
 
@@ -2325,16 +2709,11 @@ static void print_status_info(UnitStatusInfo *i) {
                 on = off = "";
 
         if (ss)
-                printf("\t  Active: %s%s (%s)%s",
-                       on,
-                       strna(i->active_state),
-                       ss,
-                       off);
+                printf(" %*s: %s%s (%s)%s",
+                       maxlen, "Active",  on, strna(i->active_state), ss, off);
         else
-                printf("\t  Active: %s%s%s",
-                       on,
-                       strna(i->active_state),
-                       off);
+                printf(" %*s: %s%s%s",
+                       maxlen, "Active", on, strna(i->active_state), off);
 
         if (!isempty(i->result) && !streq(i->result, "success"))
                 printf(" (Result: %s)", i->result);
@@ -2361,44 +2740,37 @@ static void print_status_info(UnitStatusInfo *i) {
                 s2 = format_timestamp(since2, sizeof(since2), i->condition_timestamp);
 
                 if (s1)
-                        printf("\t          start condition failed at %s; %s\n", s2, s1);
+                        printf(" %*s start condition failed at %s; %s\n", maxlen, "", s2, s1);
                 else if (s2)
-                        printf("\t          start condition failed at %s\n", s2);
+                        printf(" %*s start condition failed at %s\n", maxlen, "", s2);
         }
 
         if (i->sysfs_path)
-                printf("\t  Device: %s\n", i->sysfs_path);
+                printf(" %*s: %s\n", maxlen, "Device", i->sysfs_path);
         if (i->where)
-                printf("\t   Where: %s\n", i->where);
+                printf(" %*s: %s\n", maxlen, "Where", i->where);
         if (i->what)
-                printf("\t    What: %s\n", i->what);
+                printf(" %*s: %s\n", maxlen, "What", i->what);
 
-        if (!strv_isempty(i->documentation)) {
-                char **t;
-                bool first = true;
+        STRV_FOREACH(t, i->documentation)
+                printf(" %*s %s\n", maxlen+1, t == i->documentation ? "Docs:" : "", *t);
 
-                STRV_FOREACH(t, i->documentation) {
-                        if (first) {
-                                printf("\t    Docs: %s\n", *t);
-                                first = false;
-                        } else
-                                printf("\t          %s\n", *t);
-                }
-        }
+        STRV_FOREACH_PAIR(t, t2, i->listen)
+                printf(" %*s %s (%s)\n", maxlen+1, t == i->listen ? "Listen:" : "", *t2, *t);
 
         if (i->accept)
-                printf("\tAccepted: %u; Connected: %u\n", i->n_accepted, i->n_connections);
+                printf(" %*s: %u; Connected: %u\n", maxlen, "Accepted", i->n_accepted, i->n_connections);
 
         LIST_FOREACH(exec, p, i->exec) {
-                _cleanup_free_ char *t = NULL;
+                _cleanup_free_ char *argv = NULL;
                 bool good;
 
                 /* Only show exited processes here */
                 if (p->code == 0)
                         continue;
 
-                t = strv_join(p->argv, " ");
-                printf("\t Process: %u %s=%s ", p->pid, p->name, strna(t));
+                argv = strv_join(p->argv, " ");
+                printf(" %*s: %u %s=%s ", maxlen, "Process", p->pid, p->name, strna(argv));
 
                 good = is_clean_exit_lsb(p->code, p->status, NULL);
                 if (!good) {
@@ -2434,16 +2806,14 @@ static void print_status_info(UnitStatusInfo *i) {
         }
 
         if (i->main_pid > 0 || i->control_pid > 0) {
-                printf("\t");
-
                 if (i->main_pid > 0) {
-                        printf("Main PID: %u", (unsigned) i->main_pid);
+                        printf(" %*s: %u", maxlen, "Main PID", (unsigned) i->main_pid);
 
                         if (i->running) {
-                                _cleanup_free_ char *t = NULL;
-                                get_process_comm(i->main_pid, &t);
-                                if (t)
-                                        printf(" (%s)", t);
+                                _cleanup_free_ char *comm = NULL;
+                                get_process_comm(i->main_pid, &comm);
+                                if (comm)
+                                        printf(" (%s)", comm);
                         } else if (i->exit_code > 0) {
                                 printf(" (code=%s, ", sigchld_code_to_string(i->exit_code));
 
@@ -2460,40 +2830,43 @@ static void print_status_info(UnitStatusInfo *i) {
                                         printf("signal=%s", signal_to_string(i->exit_status));
                                 printf(")");
                         }
+
+                        if (i->control_pid > 0)
+                                printf(";");
                 }
 
-                if (i->main_pid > 0 && i->control_pid > 0)
-                        printf(";");
-
                 if (i->control_pid > 0) {
-                        _cleanup_free_ char *t = NULL;
+                        _cleanup_free_ char *c = NULL;
 
-                        printf(" Control: %u", (unsigned) i->control_pid);
+                        printf(" %*s: %u", i->main_pid ? 0 : maxlen, "Control", (unsigned) i->control_pid);
 
-                        get_process_comm(i->control_pid, &t);
-                        if (t)
-                                printf(" (%s)", t);
+                        get_process_comm(i->control_pid, &c);
+                        if (c)
+                                printf(" (%s)", c);
                 }
 
                 printf("\n");
         }
 
         if (i->status_text)
-                printf("\t  Status: \"%s\"\n", i->status_text);
+                printf(" %*s: \"%s\"\n", maxlen, "Status", i->status_text);
 
         if (i->default_control_group &&
             (i->main_pid > 0 || i->control_pid > 0 || cg_is_empty_by_spec(i->default_control_group, false) == 0)) {
                 unsigned c;
 
-                printf("\t  CGroup: %s\n", i->default_control_group);
+                printf(" %*s: %s\n", maxlen, "CGroup", i->default_control_group);
 
                 if (arg_transport != TRANSPORT_SSH) {
                         unsigned k = 0;
                         pid_t extra[2];
+                        char prefix[maxlen + 4];
+                        memset(prefix, ' ', sizeof(prefix) - 1);
+                        prefix[sizeof(prefix) - 1] = '\0';
 
                         c = columns();
-                        if (c > 18)
-                                c -= 18;
+                        if (c > sizeof(prefix) - 1)
+                                c -= sizeof(prefix) - 1;
                         else
                                 c = 0;
 
@@ -2503,29 +2876,22 @@ static void print_status_info(UnitStatusInfo *i) {
                         if (i->control_pid > 0)
                                 extra[k++] = i->control_pid;
 
-                        show_cgroup_and_extra_by_spec(i->default_control_group, "\t\t  ", c, false, extra, k, flags);
+                        show_cgroup_and_extra_by_spec(i->default_control_group, prefix,
+                                                      c, false, extra, k, flags);
                 }
         }
 
         if (i->id && arg_transport != TRANSPORT_SSH) {
                 printf("\n");
-                if(arg_scope == UNIT_FILE_SYSTEM)
-                        show_journal_by_unit(stdout,
-                                             i->id,
-                                             arg_output,
-                                             0,
-                                             i->inactive_exit_timestamp_monotonic,
-                                             arg_lines,
-                                             flags);
-                else
-                        show_journal_by_user_unit(stdout,
-                                                  i->id,
-                                                  arg_output,
-                                                  0,
-                                                  i->inactive_exit_timestamp_monotonic,
-                                                  arg_lines,
-                                                  getuid(),
-                                                  flags);
+                show_journal_by_unit(stdout,
+                                     i->id,
+                                     arg_output,
+                                     0,
+                                     i->inactive_exit_timestamp_monotonic,
+                                     arg_lines,
+                                     getuid(),
+                                     flags,
+                                     arg_scope == UNIT_FILE_SYSTEM);
         }
 
         if (i->need_daemon_reload)
@@ -2550,7 +2916,7 @@ static void show_unit_help(UnitStatusInfo *i) {
                 if (startswith(*p, "man:")) {
                         size_t k;
                         char *e = NULL;
-                        char _cleanup_free_ *page = NULL, *section = NULL;
+                        _cleanup_free_ char *page = NULL, *section = NULL;
                         const char *args[4] = { "man", NULL, NULL, NULL };
                         pid_t pid;
 
@@ -2744,6 +3110,38 @@ static int status_property(const char *name, DBusMessageIter *iter, UnitStatusIn
 
                                 dbus_message_iter_next(&sub);
                         }
+
+                } else if (dbus_message_iter_get_element_type(iter) == DBUS_TYPE_STRUCT && streq(name, "Listen")) {
+                        DBusMessageIter sub, sub2;
+
+                        dbus_message_iter_recurse(iter, &sub);
+                        while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRUCT) {
+                                const char *type, *path;
+
+                                dbus_message_iter_recurse(&sub, &sub2);
+
+                                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &type, true) >= 0 &&
+                                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &path, false) >= 0) {
+                                        int r;
+
+                                        r = strv_extend(&i->listen, type);
+                                        if (r < 0)
+                                                return r;
+                                        r = strv_extend(&i->listen, path);
+                                        if (r < 0)
+                                                return r;
+                                }
+
+                                dbus_message_iter_next(&sub);
+                        }
+
+                        return 0;
+
+                } else if (dbus_message_iter_get_element_type(iter) == DBUS_TYPE_STRING && streq(name, "DropInPaths")) {
+                        int r = bus_parse_strv_iter(iter, &i->dropin_paths);
+                        if (r < 0)
+                                return r;
+
                 } else if (dbus_message_iter_get_element_type(iter) == DBUS_TYPE_STRING &&
                            streq(name, "Documentation")) {
 
@@ -2752,16 +3150,13 @@ static int status_property(const char *name, DBusMessageIter *iter, UnitStatusIn
                         dbus_message_iter_recurse(iter, &sub);
                         while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRING) {
                                 const char *s;
-                                char **l;
+                                int r;
 
                                 dbus_message_iter_get_basic(&sub, &s);
 
-                                l = strv_append(i->documentation, s);
-                                if (!l)
-                                        return -ENOMEM;
-
-                                strv_free(i->documentation);
-                                i->documentation = l;
+                                r = strv_extend(&i->documentation, s);
+                                if (r < 0)
+                                        return r;
 
                                 dbus_message_iter_next(&sub);
                         }
@@ -2805,7 +3200,7 @@ static int print_property(const char *name, DBusMessageIter *iter) {
         /* This is a low-level property printer, see
          * print_status_info() for the nicer output */
 
-        if (arg_property && !strv_find(arg_property, name))
+        if (arg_properties && !strv_find(arg_properties, name))
                 return 0;
 
         switch (dbus_message_iter_get_arg_type(iter)) {
@@ -2874,6 +3269,7 @@ static int print_property(const char *name, DBusMessageIter *iter) {
                         DBusMessageIter sub, sub2;
 
                         dbus_message_iter_recurse(iter, &sub);
+
                         while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRUCT) {
                                 const char *type, *path;
 
@@ -2882,6 +3278,24 @@ static int print_property(const char *name, DBusMessageIter *iter) {
                                 if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &type, true) >= 0 &&
                                     bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &path, false) >= 0)
                                         printf("%s=%s\n", type, path);
+
+                                dbus_message_iter_next(&sub);
+                        }
+
+                        return 0;
+
+                } else if (dbus_message_iter_get_element_type(iter) == DBUS_TYPE_STRUCT && streq(name, "Listen")) {
+                        DBusMessageIter sub, sub2;
+
+                        dbus_message_iter_recurse(iter, &sub);
+                        while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRUCT) {
+                                const char *type, *path;
+
+                                dbus_message_iter_recurse(&sub, &sub2);
+
+                                if (bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &type, true) >= 0 &&
+                                    bus_iter_get_basic_and_next(&sub2, DBUS_TYPE_STRING, &path, false) >= 0)
+                                        printf("Listen%s=%s\n", type, path);
 
                                 dbus_message_iter_next(&sub);
                         }
@@ -2905,8 +3319,8 @@ static int print_property(const char *name, DBusMessageIter *iter) {
 
                                         printf("%s={ value=%s ; next_elapse=%s }\n",
                                                base,
-                                               format_timespan(timespan1, sizeof(timespan1), value),
-                                               format_timespan(timespan2, sizeof(timespan2), next_elapse));
+                                               format_timespan(timespan1, sizeof(timespan1), value, 0),
+                                               format_timespan(timespan2, sizeof(timespan2), next_elapse, 0));
                                 }
 
                                 dbus_message_iter_next(&sub);
@@ -2943,12 +3357,11 @@ static int print_property(const char *name, DBusMessageIter *iter) {
 
                         dbus_message_iter_recurse(iter, &sub);
                         while (dbus_message_iter_get_arg_type(&sub) == DBUS_TYPE_STRUCT) {
-                                ExecStatusInfo info;
+                                ExecStatusInfo info = {};
 
-                                zero(info);
                                 if (exec_status_info_deserialize(&sub, &info) >= 0) {
                                         char timestamp1[FORMAT_TIMESTAMP_MAX], timestamp2[FORMAT_TIMESTAMP_MAX];
-                                        char _cleanup_free_ *t;
+                                        _cleanup_free_ char *t;
 
                                         t = strv_join(info.argv, " ");
 
@@ -2992,13 +3405,11 @@ static int show_one(const char *verb, DBusConnection *bus, const char *path, boo
         const char *interface = "";
         int r;
         DBusMessageIter iter, sub, sub2, sub3;
-        UnitStatusInfo info;
+        UnitStatusInfo info = {};
         ExecStatusInfo *p;
 
         assert(path);
         assert(new_line);
-
-        zero(info);
 
         r = bus_method_call_with_reply(
                         bus,
@@ -3063,6 +3474,8 @@ static int show_one(const char *verb, DBusConnection *bus, const char *path, boo
         }
 
         strv_free(info.documentation);
+        strv_free(info.dropin_paths);
+        strv_free(info.listen);
 
         if (!streq_ptr(info.active_state, "active") &&
             !streq_ptr(info.active_state, "reloading") &&
@@ -3081,7 +3494,7 @@ static int show_one(const char *verb, DBusConnection *bus, const char *path, boo
 static int show_one_by_pid(const char *verb, DBusConnection *bus, uint32_t pid, bool *new_line) {
         _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         const char *path = NULL;
-        DBusError _cleanup_dbus_error_free_ error;
+        _cleanup_dbus_error_free_ DBusError error;
         int r;
 
         dbus_error_init(&error);
@@ -3121,8 +3534,10 @@ static int show_all(const char* verb, DBusConnection *bus, bool show_properties,
         if (r < 0)
                 return r;
 
+        qsort(unit_infos, c, sizeof(struct unit_info), compare_unit_info);
+
         for (u = unit_infos; u < unit_infos + c; u++) {
-                char _cleanup_free_ *p = NULL;
+                _cleanup_free_ char *p = NULL;
 
                 if (!output_show_unit(u))
                         continue;
@@ -3574,7 +3989,7 @@ static int enable_sysv_units(char **args) {
 #if defined(HAVE_SYSV_COMPAT) && defined(HAVE_CHKCONFIG)
         const char *verb = args[0];
         unsigned f = 1, t = 1;
-        LookupPaths paths;
+        LookupPaths paths = {};
 
         if (arg_scope != UNIT_FILE_SYSTEM)
                 return 0;
@@ -3587,7 +4002,6 @@ static int enable_sysv_units(char **args) {
         /* Processes all SysV units, and reshuffles the array so that
          * afterwards only the native units remain */
 
-        zero(paths);
         r = lookup_paths_init(&paths, SYSTEMD_SYSTEM, false, NULL, NULL, NULL);
         if (r < 0)
                 return r;
@@ -3595,11 +4009,11 @@ static int enable_sysv_units(char **args) {
         r = 0;
         for (f = 1; args[f]; f++) {
                 const char *name;
-                char *p;
+                _cleanup_free_ char *p = NULL, *q = NULL;
                 bool found_native = false, found_sysv;
                 unsigned c = 1;
                 const char *argv[6] = { "/sbin/chkconfig", NULL, NULL, NULL, NULL };
-                char **k, *l, *q = NULL;
+                char **k, *l;
                 int j;
                 pid_t pid;
                 siginfo_t status;
@@ -3613,8 +4027,6 @@ static int enable_sysv_units(char **args) {
                         continue;
 
                 STRV_FOREACH(k, paths.unit_path) {
-                        p = NULL;
-
                         if (!isempty(arg_root))
                                 asprintf(&p, "%s/%s/%s", arg_root, *k, name);
                         else
@@ -3627,6 +4039,7 @@ static int enable_sysv_units(char **args) {
 
                         found_native = access(p, F_OK) >= 0;
                         free(p);
+                        p = NULL;
 
                         if (found_native)
                                 break;
@@ -3635,7 +4048,6 @@ static int enable_sysv_units(char **args) {
                 if (found_native)
                         continue;
 
-                p = NULL;
                 if (!isempty(arg_root))
                         asprintf(&p, "%s/" SYSTEM_SYSVINIT_PATH "/%s", arg_root, name);
                 else
@@ -3648,10 +4060,8 @@ static int enable_sysv_units(char **args) {
                 p[strlen(p) - sizeof(".service") + 1] = 0;
                 found_sysv = access(p, F_OK) >= 0;
 
-                if (!found_sysv) {
-                        free(p);
+                if (!found_sysv)
                         continue;
-                }
 
                 /* Mark this entry, so that we don't try enabling it as native unit */
                 args[f] = (char*) "";
@@ -3669,8 +4079,6 @@ static int enable_sysv_units(char **args) {
 
                 l = strv_join((char**)argv, " ");
                 if (!l) {
-                        free(q);
-                        free(p);
                         r = log_oom();
                         goto finish;
                 }
@@ -3681,8 +4089,6 @@ static int enable_sysv_units(char **args) {
                 pid = fork();
                 if (pid < 0) {
                         log_error("Failed to fork: %m");
-                        free(p);
-                        free(q);
                         r = -errno;
                         goto finish;
                 } else if (pid == 0) {
@@ -3691,9 +4097,6 @@ static int enable_sysv_units(char **args) {
                         execv(argv[0], (char**) argv);
                         _exit(EXIT_FAILURE);
                 }
-
-                free(p);
-                free(q);
 
                 j = wait_for_terminate(pid, &status);
                 if (j < 0) {
@@ -3778,10 +4181,10 @@ static int enable_unit(DBusConnection *bus, char **args) {
         UnitFileChange *changes = NULL;
         unsigned n_changes = 0, i;
         int carries_install_info = -1;
-        DBusMessage _cleanup_dbus_message_unref_ *m = NULL, *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *m = NULL, *reply = NULL;
         int r;
-        DBusError _cleanup_dbus_error_free_ error;
-        char _cleanup_strv_free_ **mangled_names = NULL;
+        _cleanup_dbus_error_free_ DBusError error;
+        _cleanup_strv_free_ char **mangled_names = NULL;
 
         dbus_error_init(&error);
 
@@ -3977,9 +4380,9 @@ finish:
 }
 
 static int unit_is_enabled(DBusConnection *bus, char **args) {
-        DBusError _cleanup_dbus_error_free_ error;
+        _cleanup_dbus_error_free_ DBusError error;
         int r;
-        DBusMessage _cleanup_dbus_message_unref_ *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         bool enabled;
         char **name;
         char *n;
@@ -4074,11 +4477,15 @@ static int systemctl_help(void) {
                "     --version        Show package version\n"
                "  -t --type=TYPE      List only units of a particular type\n"
                "  -p --property=NAME  Show only properties by this name\n"
-               "  -a --all            Show all units/properties, including dead/empty ones\n"
+               "  -a --all            Show all loaded units/properties, including dead/empty\n"
+               "                      ones. To list all units installed on the system, use\n"
+               "                      the 'list-unit-files' command instead.\n"
                "     --failed         Show only failed units\n"
                "     --full           Don't ellipsize unit names on output\n"
                "     --fail           When queueing a new job, fail if conflicting jobs are\n"
                "                      pending\n"
+               "     --irreversible   Create jobs which cannot be implicitly cancelled\n"
+               "     --show-types     When showing sockets, explicitly show their type\n"
                "     --ignore-dependencies\n"
                "                      When queueing a new job, ignore all its dependencies\n"
                "  -i --ignore-inhibitors\n"
@@ -4251,16 +4658,21 @@ static int runlevel_help(void) {
 
 static int help_types(void) {
         int i;
+        const char *t;
 
         puts("Available unit types:");
-        for(i = UNIT_SERVICE; i < _UNIT_TYPE_MAX; i++)
-                if (unit_type_table[i])
-                        puts(unit_type_table[i]);
+        for(i = 0; i < _UNIT_TYPE_MAX; i++) {
+                t = unit_type_to_string(i);
+                if (t)
+                        puts(t);
+        }
 
         puts("\nAvailable unit load states: ");
-        for(i = UNIT_STUB; i < _UNIT_LOAD_STATE_MAX; i++)
-                if (unit_type_table[i])
-                        puts(unit_load_state_table[i]);
+        for(i = 0; i < _UNIT_LOAD_STATE_MAX; i++) {
+                t = unit_load_state_to_string(i);
+                if (t)
+                        puts(t);
+        }
 
         return 0;
 }
@@ -4269,6 +4681,7 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
 
         enum {
                 ARG_FAIL = 0x100,
+                ARG_SHOW_TYPES,
                 ARG_IRREVERSIBLE,
                 ARG_IGNORE_DEPENDENCIES,
                 ARG_VERSION,
@@ -4295,6 +4708,7 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                 { "type",      required_argument, NULL, 't'           },
                 { "property",  required_argument, NULL, 'p'           },
                 { "all",       no_argument,       NULL, 'a'           },
+                { "show-types", no_argument,      NULL, ARG_SHOW_TYPES },
                 { "failed",    no_argument,       NULL, ARG_FAILED    },
                 { "full",      no_argument,       NULL, ARG_FULL      },
                 { "fail",      no_argument,       NULL, ARG_FAIL      },
@@ -4341,45 +4755,67 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
                         puts(SYSTEMD_FEATURES);
                         return 0;
 
-                case 't':
-                        if (streq(optarg, "help")) {
-                                help_types();
-                                return 0;
-                        }
-
-                        if (unit_type_from_string(optarg) >= 0) {
-                                arg_type = optarg;
-                                break;
-                        }
-                        if (unit_load_state_from_string(optarg) >= 0) {
-                                arg_load_state = optarg;
-                                break;
-                        }
-                        log_error("Unkown unit type or load state '%s'.",
-                                  optarg);
-                        log_info("Use -t help to see a list of allowed values.");
-                        return -EINVAL;
-                case 'p': {
+                case 't': {
                         char *word, *state;
                         size_t size;
+
+                        FOREACH_WORD_SEPARATOR(word, size, optarg, ",", state) {
+                                _cleanup_free_ char *type;
+
+                                type = strndup(word, size);
+                                if (!type)
+                                        return -ENOMEM;
+
+                                if (streq(type, "help")) {
+                                        help_types();
+                                        return 0;
+                                }
+
+                                if (unit_type_from_string(type) >= 0) {
+                                        if (strv_push(&arg_types, type))
+                                                return log_oom();
+                                        type = NULL;
+                                        continue;
+                                }
+
+                                if (unit_load_state_from_string(optarg) >= 0) {
+                                        if (strv_push(&arg_load_states, type))
+                                                return log_oom();
+                                        type = NULL;
+                                        continue;
+                                }
+
+                                log_error("Unknown unit type or load state '%s'.", type);
+                                log_info("Use -t help to see a list of allowed values.");
+                                return -EINVAL;
+                        }
+
+                        break;
+                }
+
+                case 'p': {
                         /* Make sure that if the empty property list
                            was specified, we won't show any properties. */
-                        const char *source = isempty(optarg) ? " " : optarg;
+                        if (isempty(optarg) && !arg_properties) {
+                                arg_properties = strv_new(NULL, NULL);
+                                if (!arg_properties)
+                                        return log_oom();
+                        } else {
+                                char *word, *state;
+                                size_t size;
 
-                        FOREACH_WORD_SEPARATOR(word, size, source, ",", state) {
-                                char _cleanup_free_ *prop;
-                                char **tmp;
+                                FOREACH_WORD_SEPARATOR(word, size, optarg, ",", state) {
+                                        char *prop;
 
-                                prop = strndup(word, size);
-                                if (!prop)
-                                        return -ENOMEM;
+                                        prop = strndup(word, size);
+                                        if (!prop)
+                                                return log_oom();
 
-                                tmp = strv_append(arg_property, prop);
-                                if (!tmp)
-                                        return -ENOMEM;
-
-                                strv_free(arg_property);
-                                arg_property = tmp;
+                                        if (strv_push(&arg_properties, prop)) {
+                                                free(prop);
+                                                return log_oom();
+                                        }
+                                }
                         }
 
                         /* If the user asked for a particular
@@ -4392,6 +4828,10 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
 
                 case 'a':
                         arg_all = true;
+                        break;
+
+                case ARG_SHOW_TYPES:
+                        arg_show_types = true;
                         break;
 
                 case ARG_FAIL:
@@ -4631,23 +5071,22 @@ static int parse_time_spec(const char *t, usec_t *_u) {
         } else {
                 char *e = NULL;
                 long hour, minute;
-                struct tm tm;
+                struct tm tm = {};
                 time_t s;
                 usec_t n;
 
                 errno = 0;
                 hour = strtol(t, &e, 10);
-                if (errno != 0 || *e != ':' || hour < 0 || hour > 23)
+                if (errno > 0 || *e != ':' || hour < 0 || hour > 23)
                         return -EINVAL;
 
                 minute = strtol(e+1, &e, 10);
-                if (errno != 0 || *e != 0 || minute < 0 || minute > 59)
+                if (errno > 0 || *e != 0 || minute < 0 || minute > 59)
                         return -EINVAL;
 
                 n = now(CLOCK_REALTIME);
                 s = (time_t) (n / USEC_PER_SEC);
 
-                zero(tm);
                 assert_se(localtime_r(&s, &tm));
 
                 tm.tm_hour = (int) hour;
@@ -4926,7 +5365,7 @@ static int parse_argv(int argc, char *argv[]) {
                                  * request to it. For now we simply
                                  * guess that it is Upstart. */
 
-                                execv("/lib/upstart/telinit", argv);
+                                execv(TELINIT, argv);
 
                                 log_error("Couldn't find an alternative telinit implementation to spawn.");
                                 return -EIO;
@@ -4961,8 +5400,8 @@ static int action_to_runlevel(void) {
 }
 
 static int talk_upstart(void) {
-        DBusMessage _cleanup_dbus_message_unref_ *m = NULL, *reply = NULL;
-        DBusError _cleanup_dbus_error_free_ error;
+        _cleanup_dbus_message_unref_ DBusMessage *m = NULL, *reply = NULL;
+        _cleanup_dbus_error_free_ DBusError error;
         int previous, rl, r;
         char
                 env1_buf[] = "RUNLEVEL=X",
@@ -5049,21 +5488,22 @@ finish:
 }
 
 static int talk_initctl(void) {
-        struct init_request request;
-        int r, fd;
+        struct init_request request = {};
+        int r;
+        _cleanup_close_ int fd = -1;
         char rl;
 
-        if (!(rl = action_to_runlevel()))
+        rl = action_to_runlevel();
+        if (!rl)
                 return 0;
 
-        zero(request);
         request.magic = INIT_MAGIC;
         request.sleeptime = 0;
         request.cmd = INIT_CMD_RUNLVL;
         request.runlevel = rl;
 
-        if ((fd = open(INIT_FIFO, O_WRONLY|O_NDELAY|O_CLOEXEC|O_NOCTTY)) < 0) {
-
+        fd = open(INIT_FIFO, O_WRONLY|O_NDELAY|O_CLOEXEC|O_NOCTTY);
+        if (fd < 0) {
                 if (errno == ENOENT)
                         return 0;
 
@@ -5073,11 +5513,9 @@ static int talk_initctl(void) {
 
         errno = 0;
         r = loop_write(fd, &request, sizeof(request), false) != sizeof(request);
-        close_nointr_nofail(fd);
-
-        if (r < 0) {
+        if (r) {
                 log_error("Failed to write to "INIT_FIFO": %m");
-                return errno ? -errno : -EIO;
+                return errno > 0 ? -errno : -EIO;
         }
 
         return 1;
@@ -5097,6 +5535,7 @@ static int systemctl_main(DBusConnection *bus, int argc, char *argv[], DBusError
         } verbs[] = {
                 { "list-units",            LESS,  1, list_units        },
                 { "list-unit-files",       EQUAL, 1, list_unit_files   },
+                { "list-sockets",          LESS,  1, list_sockets      },
                 { "list-jobs",             EQUAL, 1, list_jobs         },
                 { "clear-jobs",            EQUAL, 1, daemon_reload     },
                 { "load",                  MORE,  2, load_unit         },
@@ -5254,42 +5693,39 @@ static int systemctl_main(DBusConnection *bus, int argc, char *argv[], DBusError
 }
 
 static int send_shutdownd(usec_t t, char mode, bool dry_run, bool warn, const char *message) {
-        int _cleanup_close_ fd;
-        struct msghdr msghdr;
-        struct iovec iovec[2];
-        union sockaddr_union sockaddr;
-        struct sd_shutdown_command c;
+        _cleanup_close_ int fd;
+        struct sd_shutdown_command c = {
+                .usec = t,
+                .mode = mode,
+                .dry_run = dry_run,
+                .warn_wall = warn,
+        };
+        union sockaddr_union sockaddr = {
+                .un.sun_family = AF_UNIX,
+                .un.sun_path = "/run/systemd/shutdownd",
+        };
+        struct iovec iovec[2] = {
+                {.iov_base = (char*) &c,
+                 .iov_len = offsetof(struct sd_shutdown_command, wall_message),
+                }
+        };
+        struct msghdr msghdr = {
+                .msg_name = &sockaddr,
+                .msg_namelen = offsetof(struct sockaddr_un, sun_path)
+                               + sizeof("/run/systemd/shutdownd") - 1,
+                .msg_iov = iovec,
+                .msg_iovlen = 1,
+        };
 
         fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0);
         if (fd < 0)
                 return -errno;
 
-        zero(c);
-        c.usec = t;
-        c.mode = mode;
-        c.dry_run = dry_run;
-        c.warn_wall = warn;
-
-        zero(sockaddr);
-        sockaddr.sa.sa_family = AF_UNIX;
-        strncpy(sockaddr.un.sun_path, "/run/systemd/shutdownd", sizeof(sockaddr.un.sun_path));
-
-        zero(msghdr);
-        msghdr.msg_name = &sockaddr;
-        msghdr.msg_namelen = offsetof(struct sockaddr_un, sun_path) + sizeof("/run/systemd/shutdownd") - 1;
-
-        zero(iovec);
-        iovec[0].iov_base = (char*) &c;
-        iovec[0].iov_len = offsetof(struct sd_shutdown_command, wall_message);
-
-        if (isempty(message))
-                msghdr.msg_iovlen = 1;
-        else {
+        if (!isempty(message)) {
                 iovec[1].iov_base = (char*) message;
                 iovec[1].iov_len = strlen(message);
-                msghdr.msg_iovlen = 2;
+                msghdr.msg_iovlen++;
         }
-        msghdr.msg_iov = iovec;
 
         if (sendmsg(fd, &msghdr, MSG_NOSIGNAL) < 0)
                 return -errno;
@@ -5399,7 +5835,7 @@ static int halt_main(DBusConnection *bus) {
         }
 
         if (arg_when > 0) {
-                char _cleanup_free_ *m;
+                _cleanup_free_ char *m;
 
                 m = strv_join(arg_wall, " ");
                 r = send_shutdownd(arg_when,
@@ -5462,7 +5898,7 @@ static int runlevel_main(void) {
 int main(int argc, char*argv[]) {
         int r, retval = EXIT_FAILURE;
         DBusConnection *bus = NULL;
-        DBusError _cleanup_dbus_error_free_ error;
+        _cleanup_dbus_error_free_ DBusError error;
 
         dbus_error_init(&error);
 
@@ -5567,7 +6003,9 @@ finish:
 
         dbus_shutdown();
 
-        strv_free(arg_property);
+        strv_free(arg_types);
+        strv_free(arg_load_states);
+        strv_free(arg_properties);
 
         pager_close();
         ask_password_agent_close();

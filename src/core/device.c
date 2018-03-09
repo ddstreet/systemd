@@ -312,6 +312,7 @@ fail:
 static int device_process_new_device(Manager *m, struct udev_device *dev, bool update_state) {
         const char *sysfs, *dn;
         struct udev_list_entry *item = NULL, *first = NULL;
+        int r;
 
         assert(m);
 
@@ -319,7 +320,9 @@ static int device_process_new_device(Manager *m, struct udev_device *dev, bool u
                 return -ENOMEM;
 
         /* Add the main unit named after the sysfs path */
-        device_update_unit(m, dev, sysfs, true);
+        r = device_update_unit(m, dev, sysfs, true);
+        if (r < 0)
+                return r;
 
         /* Add an additional unit for the device node */
         if ((dn = udev_device_get_devnode(dev)))
@@ -477,7 +480,6 @@ static void device_shutdown(Manager *m) {
 }
 
 static int device_enumerate(Manager *m) {
-        struct epoll_event ev;
         int r;
         struct udev_enumerate *e = NULL;
         struct udev_list_entry *item = NULL, *first = NULL;
@@ -485,6 +487,8 @@ static int device_enumerate(Manager *m) {
         assert(m);
 
         if (!m->udev) {
+                struct epoll_event ev;
+
                 if (!(m->udev = udev_new()))
                         return -ENOMEM;
 

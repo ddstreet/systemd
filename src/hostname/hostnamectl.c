@@ -152,7 +152,7 @@ static int show_status(DBusConnection *bus, char **args, unsigned n) {
         const char *interface = "";
         int r;
         DBusMessageIter iter, sub, sub2, sub3;
-        StatusInfo info;
+        StatusInfo info = {};
 
         assert(args);
 
@@ -176,7 +176,6 @@ static int show_status(DBusConnection *bus, char **args, unsigned n) {
                 return -EIO;
         }
 
-        zero(info);
         dbus_message_iter_recurse(&iter, &sub);
 
         while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
@@ -247,6 +246,26 @@ static int set_hostname(DBusConnection *bus, char **args, unsigned n) {
         polkit_agent_open_if_enabled();
 
         if (arg_set_pretty) {
+                const char *p;
+
+                /* If the passed hostname is already valid, then
+                 * assume the user doesn't know anything about pretty
+                 * hostnames, so let's unset the pretty hostname, and
+                 * just set the passed hostname as static/dynamic
+                 * hostname. */
+
+                if (hostname_is_valid(hostname))
+                        p = "";
+                else {
+                        p = hostname;
+
+                        h = strdup(hostname);
+                        if (!h)
+                                return log_oom();
+
+                        hostname = hostname_simplify(h);
+                }
+
                 r = bus_method_call_with_reply(
                                 bus,
                                 "org.freedesktop.hostname1",
@@ -255,17 +274,14 @@ static int set_hostname(DBusConnection *bus, char **args, unsigned n) {
                                 "SetPrettyHostname",
                                 &reply,
                                 NULL,
-                                DBUS_TYPE_STRING, &hostname,
+                                DBUS_TYPE_STRING, &p,
                                 DBUS_TYPE_BOOLEAN, &interactive,
                                 DBUS_TYPE_INVALID);
                 if (r < 0)
                         return r;
 
-                h = strdup(hostname);
-                if (!h)
-                        return log_oom();
-
-                hostname = hostname_simplify(h);
+                dbus_message_unref(reply);
+                reply = NULL;
         }
 
         if (arg_set_static) {
@@ -283,6 +299,9 @@ static int set_hostname(DBusConnection *bus, char **args, unsigned n) {
 
                 if (r < 0)
                         return r;
+
+                dbus_message_unref(reply);
+                reply = NULL;
         }
 
         if (arg_set_transient) {

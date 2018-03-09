@@ -34,6 +34,8 @@
 #include "log.h"
 #include "path-util.h"
 #include "pager.h"
+#include "macro.h"
+#include "journal-internal.h"
 
 static enum {
         ACTION_NONE,
@@ -42,7 +44,6 @@ static enum {
         ACTION_GDB,
 } arg_action = ACTION_LIST;
 
-static Set *matches = NULL;
 static FILE* output = NULL;
 static char* field = NULL;
 
@@ -103,7 +104,7 @@ static int add_match(Set *set, const char *match) {
         unsigned pid;
         const char* prefix;
         char *pattern = NULL;
-        char _cleanup_free_ *p = NULL;
+        _cleanup_free_ char *p = NULL;
 
         if (strchr(match, '='))
                 prefix = "";
@@ -139,7 +140,7 @@ fail:
         return r;
 }
 
-static int parse_argv(int argc, char *argv[]) {
+static int parse_argv(int argc, char *argv[], Set *matches) {
         enum {
                 ARG_VERSION = 0x100,
                 ARG_NO_PAGER,
@@ -268,7 +269,7 @@ static int retrieve(const void *data,
 }
 
 static void print_field(FILE* file, sd_journal *j) {
-        const char _cleanup_free_ *value = NULL;
+        _cleanup_free_ const char *value = NULL;
         const void *d;
         size_t l;
 
@@ -281,7 +282,7 @@ static void print_field(FILE* file, sd_journal *j) {
 }
 
 static int print_entry(FILE* file, sd_journal *j, int had_legend) {
-        const char _cleanup_free_
+        _cleanup_free_ const char
                 *pid = NULL, *uid = NULL, *gid = NULL,
                 *sgnl = NULL, *exe = NULL;
         const void *d;
@@ -519,10 +520,11 @@ finish:
 }
 
 int main(int argc, char *argv[]) {
-        sd_journal *j = NULL;
+        _cleanup_journal_close_ sd_journal*j = NULL;
         const char* match;
         Iterator it;
         int r = 0;
+        _cleanup_set_free_free_ Set *matches = NULL;
 
         setlocale(LC_ALL, "");
         log_parse_environment();
@@ -534,7 +536,7 @@ int main(int argc, char *argv[]) {
                 goto end;
         }
 
-        r = parse_argv(argc, argv);
+        r = parse_argv(argc, argv, matches);
         if (r < 0)
                 goto end;
 
@@ -578,11 +580,6 @@ int main(int argc, char *argv[]) {
         }
 
 end:
-        if (j)
-                sd_journal_close(j);
-
-        set_free_free(matches);
-
         pager_close();
 
         if (output)

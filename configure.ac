@@ -20,7 +20,7 @@
 AC_PREREQ([2.64])
 
 AC_INIT([systemd],
-        [198],
+        [202],
         [http://bugs.freedesktop.org/enter_bug.cgi?product=systemd],
         [systemd],
         [http://www.freedesktop.org/wiki/Software/systemd])
@@ -86,9 +86,9 @@ GOBJECT_INTROSPECTION_CHECK([1.31.1])
    AM_CONDITIONAL([HAVE_INTROSPECTION], [false])
    enable_introspection=no])
 
-AC_PATH_TOOL(OBJCOPY, objcopy)
-AC_PATH_TOOL(STRINGS, strings)
-AC_PATH_TOOL(GPERF, gperf)
+AC_CHECK_TOOL(OBJCOPY, objcopy)
+AC_CHECK_TOOL(STRINGS, strings)
+AC_CHECK_TOOL(GPERF, gperf)
 if test -z "$GPERF" ; then
         AC_MSG_ERROR([*** gperf not found])
 fi
@@ -135,7 +135,7 @@ CC_CHECK_FLAGS_APPEND([with_cflags], [CFLAGS], [\
         --param=ssp-buffer-size=4])
 AC_SUBST([OUR_CFLAGS], $with_cflags)
 
-AS_CASE([$CFLAGS], [*-O[[12345\ ]]*], [
+AS_CASE([$CFLAGS], [*-O[[12345g\ ]]*], [
         CC_CHECK_FLAGS_APPEND([with_cppflags], [CPPFLAGS], [\
                -Wp,-D_FORTIFY_SOURCE=2])], [
         python_extra_cflags=-Wp,-U_FORTIFY_SOURCE
@@ -275,11 +275,11 @@ if test "x$enable_selinux" != "xno"; then
 fi
 AM_CONDITIONAL(HAVE_SELINUX, [test "$have_selinux" = "yes"])
 if test "x${have_selinux}" != xno ; then
-        sushell=/sbin/sushell
+        SUSHELL=/sbin/sushell
 else
-        sushell=/bin/sh
+        SUSHELL=/bin/sh
 fi
-AC_SUBST(sushell)
+AC_SUBST(SUSHELL)
 
 # ------------------------------------------------------------------------------
 have_xz=no
@@ -683,6 +683,18 @@ AC_DEFINE_UNQUOTED(KBD_SETFONT, ["$KBD_SETFONT"], [Path of setfont])
 AC_SUBST(KBD_LOADKEYS)
 AC_SUBST(KBD_SETFONT)
 
+AC_ARG_WITH(telinit,
+        AS_HELP_STRING([--with-telinit=PATH],
+                [Path to telinit]),
+        [TELINIT="$withval"],
+        [TELINIT="/lib/upstart/telinit"])
+
+AC_DEFINE_UNQUOTED(TELINIT, ["$TELINIT"], [Path to telinit])
+
+AC_SUBST(TELINIT)
+
+AC_CHECK_HEADERS_ONCE([valgrind/memcheck.h])
+
 # ------------------------------------------------------------------------------
 have_myhostname=no
 AC_ARG_ENABLE(myhostname, AS_HELP_STRING([--disable-myhostname], [disable nss-myhostname support]))
@@ -705,8 +717,8 @@ AM_CONDITIONAL(HAVE_MYHOSTNAME, [test "$have_myhostname" = "yes"])
 # ------------------------------------------------------------------------------
 AC_ARG_WITH(firmware-path,
        AS_HELP_STRING([--with-firmware-path=DIR[[[:DIR[...]]]]],
-          [Firmware search path (default=ROOTPREFIX/lib/firmware/updates:ROOTPREFIX/lib/firmware)]),
-       [], [with_firmware_path="$rootprefix/lib/firmware/updates:$rootprefix/lib/firmware"])
+          [Firmware search path (default="")]),
+       [], [with_firmware_path=""])
 OLD_IFS=$IFS
 IFS=:
 for i in $with_firmware_path; do
@@ -717,14 +729,17 @@ for i in $with_firmware_path; do
        fi
 done
 IFS=$OLD_IFS
-AC_SUBST([FIRMWARE_PATH], [$FIRMWARE_PATH])
+AC_SUBST(FIRMWARE_PATH)
+AS_IF([test "x${FIRMWARE_PATH}" != "x"], [ AC_DEFINE(HAVE_FIRMWARE, 1, [Define if FIRMWARE is available]) ])
+AM_CONDITIONAL(ENABLE_FIRMWARE, [test "x${FIRMWARE_PATH}" != "x"])
 
 # ------------------------------------------------------------------------------
 AC_ARG_ENABLE([gudev],
        AS_HELP_STRING([--disable-gudev], [disable Gobject libudev support @<:@default=enabled@:>@]),
        [], [enable_gudev=yes])
-AS_IF([test "x$enable_gudev" = "xyes"], [ PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.22.0 gobject-2.0 >= 2.22.0]) ])
+AS_IF([test "x$enable_gudev" = "xyes"], [ PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.22.0 gobject-2.0 >= 2.22.0 gio-2.0]) ])
 AM_CONDITIONAL([ENABLE_GUDEV], [test "x$enable_gudev" = "xyes"])
+AS_IF([test "x$enable_gudev" = "xyes"], [ AC_DEFINE(HAVE_GLIB, 1, [Define if glib is available]) ])
 
 # ------------------------------------------------------------------------------
 AC_ARG_ENABLE([keymap],
@@ -740,6 +755,15 @@ AS_IF([test "x$enable_keymap" = "xyes"], [
        AC_SUBST([INCLUDE_PREFIX], [$(echo '#include <linux/input.h>' | eval $ac_cpp -E - | sed -n '/linux\/input.h/ {s:.*"\(.*\)/linux/input.h".*:\1:; p; q}')])
 ])
 AM_CONDITIONAL([ENABLE_KEYMAP], [test "x$enable_keymap" = "xyes"])
+
+# ------------------------------------------------------------------------------
+DEBUGTTY=/dev/tty9
+AC_ARG_WITH([debugshelltty],
+        [AS_HELP_STRING([--with-debugshelltty=PATH],
+                [Specify the tty device for debug shell])],
+        [DEBUGTTY="$withval"],
+        [])
+AC_SUBST(DEBUGTTY)
 
 # ------------------------------------------------------------------------------
 have_manpages=no
@@ -856,6 +880,11 @@ AS_IF([test "x$0" != "x./configure"], [
         AC_SUBST([INTLTOOL_UPDATE], [/bin/true])
 ])
 
+AC_ARG_ENABLE(tests,
+       [AC_HELP_STRING([--disable-tests], [disable tests])],
+       enable_tests=$enableval, enable_tests=yes)
+AM_CONDITIONAL(ENABLE_TESTS, [test x$enable_tests = xyes])
+
 AC_SUBST([dbuspolicydir], [$with_dbuspolicydir])
 AC_SUBST([dbussessionservicedir], [$with_dbussessionservicedir])
 AC_SUBST([dbussystemservicedir], [$with_dbussystemservicedir])
@@ -939,7 +968,7 @@ AC_MSG_RESULT([
         Extra stop script:       ${RC_LOCAL_SCRIPT_PATH_STOP}
 
         CFLAGS:                  ${OUR_CFLAGS} ${CFLAGS}
-        CPPLAGS:                 ${OUR_CPPFLAGS} ${CPPFLAGS}
+        CPPFLAGS:                ${OUR_CPPFLAGS} ${CPPFLAGS}
         LDFLAGS:                 ${OUR_LDFLAGS} ${LDFLAGS}
         PYTHON_CFLAGS:           ${PYTHON_CFLAGS}
         PYTHON_LIBS:             ${PYTHON_LIBS}

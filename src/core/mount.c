@@ -25,6 +25,7 @@
 #include <sys/epoll.h>
 #include <signal.h>
 
+#include "manager.h"
 #include "unit.h"
 #include "mount.h"
 #include "load-fragment.h"
@@ -126,7 +127,7 @@ static void mount_done(Unit *u) {
         mount_parameters_done(&m->parameters_proc_self_mountinfo);
         mount_parameters_done(&m->parameters_fragment);
 
-        exec_context_done(&m->exec_context);
+        exec_context_done(&m->exec_context, manager_is_reloading_or_reexecuting(u->manager));
         exec_command_done_array(m->exec_command, _MOUNT_EXEC_COMMAND_MAX);
         m->control_command = NULL;
 
@@ -292,7 +293,7 @@ static int mount_add_requires_mounts_links(Mount *m) {
 }
 
 static char* mount_test_option(const char *haystack, const char *needle) {
-        struct mntent me;
+        struct mntent me = { .mnt_opts = (char*) haystack };
 
         assert(needle);
 
@@ -301,9 +302,6 @@ static char* mount_test_option(const char *haystack, const char *needle) {
 
         if (!haystack)
                 return NULL;
-
-        zero(me);
-        me.mnt_opts = (char*) haystack;
 
         return hasmntopt(&me, needle);
 }
@@ -438,30 +436,48 @@ static int mount_add_quota_links(Mount *m) {
 }
 
 static int mount_add_default_dependencies(Mount *m) {
-        int r;
+        const char *after, *after2, *online;
         MountParameters *p;
-        const char *after;
+        int r;
 
         assert(m);
 
         if (UNIT(m)->manager->running_as != SYSTEMD_SYSTEM)
                 return 0;
 
-        p = get_mount_parameters_fragment(m);
+        p = get_mount_parameters(m);
+
         if (!p)
                 return 0;
 
         if (path_equal(m->where, "/"))
                 return 0;
 
-        if (mount_is_network(p))
+        if (mount_is_network(p)) {
                 after = SPECIAL_REMOTE_FS_PRE_TARGET;
-        else
+                after2 = SPECIAL_NETWORK_TARGET;
+                online = SPECIAL_NETWORK_ONLINE_TARGET;
+        } else {
                 after = SPECIAL_LOCAL_FS_PRE_TARGET;
+                after2 = NULL;
+                online = NULL;
+        }
 
-        r = unit_add_two_dependencies_by_name(UNIT(m), UNIT_WANTS, UNIT_AFTER, after, NULL, true);
+        r = unit_add_dependency_by_name(UNIT(m), UNIT_AFTER, after, NULL, true);
         if (r < 0)
                 return r;
+
+        if (after2) {
+                r = unit_add_dependency_by_name(UNIT(m), UNIT_AFTER, after2, NULL, true);
+                if (r < 0)
+                        return r;
+        }
+
+        if (online) {
+                r = unit_add_two_dependencies_by_name(UNIT(m), UNIT_WANTS, UNIT_AFTER, online, NULL, true);
+                if (r < 0)
+                        return r;
+        }
 
         r = unit_add_two_dependencies_by_name(UNIT(m), UNIT_BEFORE, UNIT_CONFLICTS, SPECIAL_UMOUNT_TARGET, NULL, true);
         if (r < 0)
@@ -501,7 +517,7 @@ static int mount_fix_timeouts(Mount *m) {
         if (!t)
                 return -ENOMEM;
 
-        r = parse_usec(t, &u);
+        r = parse_sec(t, &u);
         free(t);
 
         if (r < 0) {
@@ -869,6 +885,7 @@ static void mount_enter_dead(Mount *m, MountResult f) {
         if (f != MOUNT_SUCCESS)
                 m->result = f;
 
+        exec_context_tmp_dirs_done(&m->exec_context);
         mount_set_state(m, m->result != MOUNT_SUCCESS ? MOUNT_FAILED : MOUNT_DEAD);
 }
 
@@ -1162,6 +1179,8 @@ static int mount_serialize(Unit *u, FILE *f, FDSet *fds) {
         if (m->control_command_id >= 0)
                 unit_serialize_item(u, f, "control-command", mount_exec_command_to_string(m->control_command_id));
 
+        exec_context_serialize(&m->exec_context, UNIT(m), f);
+
         return 0;
 }
 
@@ -1218,7 +1237,22 @@ static int mount_deserialize_item(Unit *u, const char *key, const char *value, F
                         m->control_command_id = id;
                         m->control_command = m->exec_command + id;
                 }
+        } else if (streq(key, "tmp-dir")) {
+                char *t;
 
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                m->exec_context.tmp_dir = t;
+        } else if (streq(key, "var-tmp-dir")) {
+                char *t;
+
+                t = strdup(value);
+                if (!t)
+                        return log_oom();
+
+                m->exec_context.var_tmp_dir = t;
         } else
                 log_debug_unit(UNIT(m)->id,
                                "Unknown serialization key '%s'", key);
@@ -1500,6 +1534,14 @@ static int mount_add_one(
                         goto fail;
                 }
 
+                r = unit_add_dependency_by_name(u, UNIT_BEFORE, SPECIAL_LOCAL_FS_TARGET, NULL, true);
+                if (r < 0)
+                        goto fail;
+
+                r = unit_add_dependency_by_name(u, UNIT_CONFLICTS, SPECIAL_UMOUNT_TARGET, NULL, true);
+                if (r < 0)
+                        goto fail;
+
                 unit_add_to_load_queue(u);
         } else {
                 delete = false;
@@ -1661,25 +1703,27 @@ static void mount_shutdown(Manager *m) {
 
 static int mount_enumerate(Manager *m) {
         int r;
-        struct epoll_event ev;
         assert(m);
 
         if (!m->proc_self_mountinfo) {
-                if (!(m->proc_self_mountinfo = fopen("/proc/self/mountinfo", "re")))
+                struct epoll_event ev = {
+                        .events = EPOLLPRI,
+                        .data.ptr = &m->mount_watch,
+                };
+
+                m->proc_self_mountinfo = fopen("/proc/self/mountinfo", "re");
+                if (!m->proc_self_mountinfo)
                         return -errno;
 
                 m->mount_watch.type = WATCH_MOUNT;
                 m->mount_watch.fd = fileno(m->proc_self_mountinfo);
 
-                zero(ev);
-                ev.events = EPOLLPRI;
-                ev.data.ptr = &m->mount_watch;
-
                 if (epoll_ctl(m->epoll_fd, EPOLL_CTL_ADD, m->mount_watch.fd, &ev) < 0)
                         return -errno;
         }
 
-        if ((r = mount_load_proc_self_mountinfo(m, false)) < 0)
+        r = mount_load_proc_self_mountinfo(m, false);
+        if (r < 0)
                 goto fail;
 
         return 0;
@@ -1780,53 +1824,7 @@ static void mount_reset_failed(Unit *u) {
 }
 
 static int mount_kill(Unit *u, KillWho who, int signo, DBusError *error) {
-        Mount *m = MOUNT(u);
-        int r = 0;
-        Set *pid_set = NULL;
-
-        assert(m);
-
-        if (who == KILL_MAIN) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "Mount units have no main processes");
-                return -ESRCH;
-        }
-
-        if (m->control_pid <= 0 && who == KILL_CONTROL) {
-                dbus_set_error(error, BUS_ERROR_NO_SUCH_PROCESS, "No control process to kill");
-                return -ESRCH;
-        }
-
-        if (who == KILL_CONTROL || who == KILL_ALL)
-                if (m->control_pid > 0)
-                        if (kill(m->control_pid, signo) < 0)
-                                r = -errno;
-
-        if (who == KILL_ALL) {
-                int q;
-
-                pid_set = set_new(trivial_hash_func, trivial_compare_func);
-                if (!pid_set)
-                        return -ENOMEM;
-
-                /* Exclude the control pid from being killed via the cgroup */
-                if (m->control_pid > 0) {
-                        q = set_put(pid_set, LONG_TO_PTR(m->control_pid));
-                        if (q < 0) {
-                                r = q;
-                                goto finish;
-                        }
-                }
-
-                q = cgroup_bonding_kill_list(UNIT(m)->cgroup_bondings, signo, false, false, pid_set, NULL);
-                if (q < 0 && q != -EAGAIN && q != -ESRCH && q != -ENOENT)
-                        r = q;
-        }
-
-finish:
-        if (pid_set)
-                set_free(pid_set);
-
-        return r;
+        return unit_kill_common(u, who, signo, -1, MOUNT(u)->control_pid, error);
 }
 
 static const char* const mount_state_table[_MOUNT_STATE_MAX] = {

@@ -45,15 +45,36 @@
 #define _weakref_(x) __attribute__((weakref(#x)))
 #define _introspect_(x) __attribute__((section("introspect." x)))
 #define _alignas_(x) __attribute__((aligned(__alignof(x))))
+#define _cleanup_(x) __attribute__((cleanup(x)))
+
+/* automake test harness */
+#define EXIT_TEST_SKIP 77
 
 #define XSTRINGIFY(x) #x
 #define STRINGIFY(x) XSTRINGIFY(x)
 
 /* Rounds up */
-#define ALIGN(l) ALIGN_TO((l), sizeof(void*))
+
+#define ALIGN4(l) (((l) + 3) & ~3)
+#define ALIGN8(l) (((l) + 7) & ~7)
+
+#if __SIZEOF_POINTER__ == 8
+#define ALIGN(l) ALIGN8(l)
+#elif __SIZEOF_POINTER__ == 4
+#define ALIGN(l) ALIGN4(l)
+#else
+#error "Wut? Pointers are neither 4 nor 8 bytes long?"
+#endif
+
+#define ALIGN_PTR(p) ((void*) ALIGN((unsigned long) p))
+#define ALIGN4_PTR(p) ((void*) ALIGN4((unsigned long) p))
+#define ALIGN8_PTR(p) ((void*) ALIGN8((unsigned long) p))
+
 static inline size_t ALIGN_TO(size_t l, size_t ali) {
         return ((l + ali - 1) & ~(ali - 1));
 }
+
+#define ALIGN_TO_PTR(p, ali) ((void*) ALIGN_TO((unsigned long) p))
 
 #define ELEMENTSOF(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -64,34 +85,35 @@ static inline size_t ALIGN_TO(size_t l, size_t ali) {
  * @member: the name of the member within the struct.
  *
  */
-#define container_of(ptr, type, member) ({ \
-        const typeof( ((type *)0)->member ) *__mptr = (ptr); \
-        (type *)( (char *)__mptr - offsetof(type,member) );})
-
-#ifndef MAX
-#define MAX(a,b)                                \
-        __extension__ ({                        \
-                        typeof(a) _a = (a);     \
-                        typeof(b) _b = (b);     \
-                        _a > _b ? _a : _b;      \
+#define container_of(ptr, type, member)                                 \
+        __extension__ ({                                                \
+                        const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+                        (type *)( (char *)__mptr - offsetof(type,member) ); \
                 })
-#endif
 
-#define MAX3(a,b,c)                             \
-        MAX(MAX(a,b),c)
+#undef MAX
+#define MAX(a,b)                                 \
+        __extension__ ({                         \
+                        typeof(a) _a = (a);      \
+                        typeof(b) _b = (b);      \
+                        _a > _b ? _a : _b;       \
+                })
 
-#ifndef MIN
+#define MAX3(x,y,z)                              \
+        __extension__ ({                         \
+                        typeof(x) _c = MAX(x,y); \
+                        MAX(_c, z);              \
+                })
+
+#undef MIN
 #define MIN(a,b)                                \
         __extension__ ({                        \
                         typeof(a) _a = (a);     \
                         typeof(b) _b = (b);     \
                         _a < _b ? _a : _b;      \
                 })
-#endif
 
-#define MIN3(a,b,c)                             \
-        MIN(MIN(a,b),c)
-
+#ifndef CLAMP
 #define CLAMP(x, low, high)                                             \
         __extension__ ({                                                \
                         typeof(x) _x = (x);                             \
@@ -99,6 +121,7 @@ static inline size_t ALIGN_TO(size_t l, size_t ali) {
                         typeof(high) _high = (high);                    \
                         ((_x > _high) ? _high : ((_x < _low) ? _low : _x)); \
                 })
+#endif
 
 #define assert_se(expr)                                                 \
         do {                                                            \
@@ -156,6 +179,8 @@ static inline size_t ALIGN_TO(size_t l, size_t ali) {
 #define memzero(x,l) (memset((x), 0, (l)))
 #define zero(x) (memzero(&(x), sizeof(x)))
 
+#define CHAR_TO_STR(x) ((char[2]) { x, 0 })
+
 #define char_array_0(x) x[sizeof(x)-1] = 0;
 
 #define IOVEC_SET_STRING(i, s)                  \
@@ -193,16 +218,6 @@ static inline size_t IOVEC_INCREMENT(struct iovec *i, unsigned n, size_t k) {
 
         return k;
 }
-
-#define _cleanup_free_ __attribute__((cleanup(freep)))
-#define _cleanup_fclose_ __attribute__((cleanup(fclosep)))
-#define _cleanup_pclose_ __attribute__((cleanup(pclosep)))
-#define _cleanup_close_ __attribute__((cleanup(closep)))
-#define _cleanup_closedir_ __attribute__((cleanup(closedirp)))
-#define _cleanup_umask_ __attribute__((cleanup(umaskp)))
-#define _cleanup_set_free_ __attribute__((cleanup(set_freep)))
-#define _cleanup_set_free_free_ __attribute__((cleanup(set_free_freep)))
-#define _cleanup_strv_free_ __attribute__((cleanup(strv_freep)))
 
 #define VA_FORMAT_ADVANCE(format, ap)                                   \
 do {                                                                    \
@@ -248,5 +263,15 @@ do {                                                                    \
                 }                                                       \
         }                                                               \
 } while(false)
+
+/* Returns the number of chars needed to format variables of the
+ * specified type as a decimal string. Adds in extra space for a
+ * negative '-' prefix. */
+
+#define DECIMAL_STR_MAX(type)                                           \
+        (1+(sizeof(type) <= 1 ? 3 :                                     \
+            sizeof(type) <= 2 ? 5 :                                     \
+            sizeof(type) <= 4 ? 10 :                                    \
+            sizeof(type) <= 8 ? 20 : sizeof(int[-2*(sizeof(type) > 8)])))
 
 #include "log.h"

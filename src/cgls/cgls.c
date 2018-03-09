@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
                 }
 
         } else {
-                char _cleanup_free_ *p;
+                _cleanup_free_ char *p;
 
                 p = get_current_dir_name();
                 if (!p) {
@@ -170,20 +170,15 @@ int main(int argc, char *argv[]) {
                         r = show_cgroup_by_path(p, NULL, 0,
                                                 arg_kernel_threads, output_flags);
                 } else {
-                        char _cleanup_free_ *root = NULL;
-                        const char *t = NULL;
+                        _cleanup_free_ char *root = NULL;
 
-                        r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 1, &root);
-                        if (r < 0)
-                                t = "/";
-                        else {
-                                if (endswith(root, "/system"))
-                                        root[strlen(root)-7] = 0;
-
-                                t = root[0] ? root : "/";
+                        r = cg_get_root_path(&root);
+                        if (r < 0) {
+                                log_error("Failed to get root path: %s", strerror(-r));
+                                goto finish;
                         }
 
-                        r = show_cgroup(SYSTEMD_CGROUP_CONTROLLER, t, NULL, 0,
+                        r = show_cgroup(SYSTEMD_CGROUP_CONTROLLER, root, NULL, 0,
                                         arg_kernel_threads, output_flags);
                 }
         }

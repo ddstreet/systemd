@@ -90,6 +90,8 @@ typedef struct TZ {
 } TZ;
 
 static TZ tz = {
+        .zone = NULL,
+        .local_rtc = false,
         .can_ntp = -1,
         .use_ntp = -1,
 };
@@ -216,7 +218,7 @@ static int write_data_timezone(void) {
 
 static int write_data_local_rtc(void) {
         int r;
-        char *s, *w;
+        _cleanup_free_ char *s = NULL, *w = NULL;
 
         r = read_full_file("/etc/adjtime", &s, NULL);
         if (r < 0) {
@@ -234,55 +236,42 @@ static int write_data_local_rtc(void) {
                 size_t a, b;
 
                 p = strchr(s, '\n');
-                if (!p) {
-                        free(s);
+                if (!p)
                         return -EIO;
-                }
 
                 p = strchr(p+1, '\n');
-                if (!p) {
-                        free(s);
+                if (!p)
                         return -EIO;
-                }
 
                 p++;
                 e = strchr(p, '\n');
-                if (!e) {
-                        free(s);
+                if (!e)
                         return -EIO;
-                }
 
                 a = p - s;
                 b = strlen(e);
 
                 w = new(char, a + (tz.local_rtc ? 5 : 3) + b + 1);
-                if (!w) {
-                        free(s);
+                if (!w)
                         return -ENOMEM;
-                }
 
                 *(char*) mempcpy(stpcpy(mempcpy(w, s, a), tz.local_rtc ? "LOCAL" : "UTC"), e, b) = 0;
 
                 if (streq(w, NULL_ADJTIME_UTC)) {
-                        free(w);
-
-                        if (unlink("/etc/adjtime") < 0) {
+                        if (unlink("/etc/adjtime") < 0)
                                 if (errno != ENOENT)
                                         return -errno;
-                        }
 
                         return 0;
                 }
         }
         label_init("/etc");
-        r = write_one_line_file_atomic_label("/etc/adjtime", w);
-        free(w);
-
-        return r;
+        return write_string_file_atomic_label("/etc/adjtime", w);
 }
 
 static char** get_ntp_services(void) {
-        char **r = NULL, **files, **i;
+        _cleanup_strv_free_ char **r = NULL, **files;
+        char **i;
         int k;
 
         k = conf_files_list(&files, ".list", NULL,
@@ -295,14 +284,14 @@ static char** get_ntp_services(void) {
                 return NULL;
 
         STRV_FOREACH(i, files) {
-                FILE *f;
+                _cleanup_fclose_ FILE *f;
 
                 f = fopen(*i, "re");
                 if (!f)
                         continue;
 
                 for (;;) {
-                        char line[PATH_MAX], *l, **q;
+                        char line[PATH_MAX], *l;
 
                         if (!fgets(line, sizeof(line), f)) {
 
@@ -316,22 +305,17 @@ static char** get_ntp_services(void) {
                         if (l[0] == 0 || l[0] == '#')
                                 continue;
 
-                        q = strv_append(r, l);
-                        if (!q) {
+                        if (strv_extend(&r, l) < 0) {
                                 log_oom();
-                                break;
+                                return NULL;
                         }
-
-                        strv_free(r);
-                        r = q;
                 }
-
-                fclose(f);
         }
 
-        strv_free(files);
+        i = r;
+        r = NULL; /* avoid cleanup */
 
-        return strv_uniq(r);
+        return strv_uniq(i);
 }
 
 static int read_ntp(DBusConnection *bus) {
@@ -367,8 +351,6 @@ static int read_ntp(DBusConnection *bus) {
                         goto finish;
                 }
 
-                if (reply)
-                        dbus_message_unref(reply);
                 reply = dbus_connection_send_with_reply_and_block(bus, m, -1, &error);
                 if (!reply) {
                         if (streq(error.name, "org.freedesktop.DBus.Error.FileNotFound")) {
@@ -450,8 +432,6 @@ static int start_ntp(DBusConnection *bus, DBusError *error) {
                         goto finish;
                 }
 
-                if (reply)
-                        dbus_message_unref(reply);
                 reply = dbus_connection_send_with_reply_and_block(bus, m, -1, error);
                 if (!reply) {
                         if (streq(error->name, "org.freedesktop.DBus.Error.FileNotFound") ||
@@ -540,8 +520,6 @@ static int enable_ntp(DBusConnection *bus, DBusError *error) {
                         }
                 }
 
-                if (reply)
-                        dbus_message_unref(reply);
                 reply = dbus_connection_send_with_reply_and_block(bus, m, -1, error);
                 if (!reply) {
                         if (streq(error->name, "org.freedesktop.DBus.Error.FileNotFound")) {
@@ -816,14 +794,23 @@ static DBusHandlerResult timedate_message_handler(
                         struct timespec ts;
                         struct tm* tm;
 
+                        if (relative) {
+                                usec_t n, x;
+
+                                n = now(CLOCK_REALTIME);
+                                x = n + utc;
+
+                                if ((utc > 0 && x < n) ||
+                                    (utc < 0 && x > n))
+                                        return bus_send_error_reply(connection, message, NULL, -EOVERFLOW);
+
+                                timespec_store(&ts, x);
+                        } else
+                                timespec_store(&ts, (usec_t) utc);
+
                         r = verify_polkit(connection, message, "org.freedesktop.timedate1.set-time", interactive, NULL, &error);
                         if (r < 0)
                                 return bus_send_error_reply(connection, message, &error, r);
-
-                        if (relative)
-                                timespec_store(&ts, now(CLOCK_REALTIME) + utc);
-                        else
-                                timespec_store(&ts, utc);
 
                         /* Set system clock */
                         if (clock_settime(CLOCK_REALTIME, &ts) < 0) {
@@ -889,7 +876,7 @@ static DBusHandlerResult timedate_message_handler(
         if (!(reply = dbus_message_new_method_return(message)))
                 goto oom;
 
-        if (!dbus_connection_send(connection, reply, NULL))
+        if (!bus_maybe_send_reply(connection, message, reply))
                 goto oom;
 
         dbus_message_unref(reply);

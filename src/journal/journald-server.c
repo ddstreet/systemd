@@ -24,6 +24,7 @@
 #include <linux/sockios.h>
 #include <sys/statvfs.h>
 #include <sys/mman.h>
+#include <sys/timerfd.h>
 
 #include <libudev.h>
 #include <systemd/sd-journal.h>
@@ -67,6 +68,7 @@
 
 #define USER_JOURNALS_MAX 1024
 
+#define DEFAULT_SYNC_INTERVAL_USEC (5*USEC_PER_MINUTE)
 #define DEFAULT_RATE_LIMIT_INTERVAL (10*USEC_PER_SEC)
 #define DEFAULT_RATE_LIMIT_BURST 200
 
@@ -93,13 +95,13 @@ DEFINE_CONFIG_PARSE_ENUM(config_parse_split_mode, split_mode, SplitMode, "Failed
 
 static uint64_t available_space(Server *s) {
         char ids[33];
-        char _cleanup_free_ *p = NULL;
+        _cleanup_free_ char *p = NULL;
         const char *f;
         sd_id128_t machine;
         struct statvfs ss;
         uint64_t sum = 0, avail = 0, ss_avail = 0;
         int r;
-        DIR _cleanup_closedir_ *d = NULL;
+        _cleanup_closedir_ DIR *d = NULL;
         usec_t ts;
         JournalMetrics *m;
 
@@ -344,6 +346,33 @@ void server_rotate(Server *s) {
         }
 }
 
+void server_sync(Server *s) {
+        JournalFile *f;
+        void *k;
+        Iterator i;
+        int r;
+
+        static const struct itimerspec sync_timer_disable = {};
+
+        if (s->system_journal) {
+                r = journal_file_set_offline(s->system_journal);
+                if (r < 0)
+                        log_error("Failed to sync system journal: %s", strerror(-r));
+        }
+
+        HASHMAP_FOREACH_KEY(f, k, s->user_journals, i) {
+                r = journal_file_set_offline(f);
+                if (r < 0)
+                        log_error("Failed to sync user journal: %s", strerror(-r));
+        }
+
+        r = timerfd_settime(s->sync_timer_fd, 0, &sync_timer_disable, NULL);
+        if (r < 0)
+                log_error("Failed to disable max timer: %m");
+
+        s->sync_scheduled = false;
+}
+
 void server_vacuum(Server *s) {
         char *p;
         char ids[33];
@@ -389,36 +418,6 @@ void server_vacuum(Server *s) {
         }
 
         s->cached_available_space_timestamp = 0;
-}
-
-static char *shortened_cgroup_path(pid_t pid) {
-        int r;
-        char _cleanup_free_ *process_path = NULL, *init_path = NULL;
-        char *path;
-
-        assert(pid > 0);
-
-        r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, pid, &process_path);
-        if (r < 0)
-                return NULL;
-
-        r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 1, &init_path);
-        if (r < 0)
-                return NULL;
-
-        if (endswith(init_path, "/system"))
-                init_path[strlen(init_path) - 7] = 0;
-        else if (streq(init_path, "/"))
-                init_path[0] = 0;
-
-        if (startswith(process_path, init_path)) {
-                path = strdup(process_path + strlen(init_path));
-        } else {
-                path = process_path;
-                process_path = NULL;
-        }
-
-        return path;
 }
 
 bool shall_try_append_again(JournalFile *f, int r) {
@@ -475,8 +474,10 @@ static void write_to_journal(Server *s, uid_t uid, struct iovec *iovec, unsigned
         }
 
         r = journal_file_append_entry(f, NULL, iovec, n, &s->seqnum, NULL, NULL);
-        if (r >= 0)
+        if (r >= 0) {
+                server_schedule_sync(s);
                 return;
+        }
 
         if (vacuumed || !shall_try_append_again(f, r)) {
                 log_error("Failed to write entry, ignoring: %s", strerror(-r));
@@ -504,14 +505,21 @@ static void dispatch_message_real(
                 const char *label, size_t label_len,
                 const char *unit_id) {
 
-        char _cleanup_free_ *pid = NULL, *uid = NULL, *gid = NULL,
-                *source_time = NULL, *boot_id = NULL, *machine_id = NULL,
-                *comm = NULL, *cmdline = NULL, *hostname = NULL,
-                *audit_session = NULL, *audit_loginuid = NULL,
+        char pid[sizeof("_PID=") + DECIMAL_STR_MAX(ucred->pid)],
+                uid[sizeof("_UID=") + DECIMAL_STR_MAX(ucred->uid)],
+                gid[sizeof("_GID=") + DECIMAL_STR_MAX(ucred->gid)],
+                source_time[sizeof("_SOURCE_REALTIME_TIMESTAMP=") + DECIMAL_STR_MAX(usec_t)],
+                boot_id[sizeof("_BOOT_ID=") + 32] = "_BOOT_ID=",
+                machine_id[sizeof("_MACHINE_ID=") + 32] = "_MACHINE_ID=";
+
+        _cleanup_free_ char *comm = NULL, *cmdline = NULL, *hostname = NULL,
                 *exe = NULL, *cgroup = NULL, *session = NULL,
                 *owner_uid = NULL, *unit = NULL, *selinux_context = NULL;
 
-        char idbuf[33];
+#ifdef HAVE_AUDIT
+        _cleanup_free_ char *audit_session = NULL, *audit_loginuid = NULL;
+#endif
+
         sd_id128_t id;
         int r;
         char *t;
@@ -524,19 +532,24 @@ static void dispatch_message_real(
         assert(n + N_IOVEC_META_FIELDS <= m);
 
         if (ucred) {
+#ifdef HAVE_AUDIT
                 uint32_t audit;
                 uid_t loginuid;
+#endif
 
                 realuid = ucred->uid;
 
-                if (asprintf(&pid, "_PID=%lu", (unsigned long) ucred->pid) >= 0)
-                        IOVEC_SET_STRING(iovec[n++], pid);
+                snprintf(pid, sizeof(pid) - 1, "_PID=%lu", (unsigned long) ucred->pid);
+                char_array_0(pid);
+                IOVEC_SET_STRING(iovec[n++], pid);
 
-                if (asprintf(&uid, "_UID=%lu", (unsigned long) ucred->uid) >= 0)
-                        IOVEC_SET_STRING(iovec[n++], uid);
+                snprintf(uid, sizeof(uid) - 1, "_UID=%lu", (unsigned long) ucred->uid);
+                char_array_0(uid);
+                IOVEC_SET_STRING(iovec[n++], uid);
 
-                if (asprintf(&gid, "_GID=%lu", (unsigned long) ucred->gid) >= 0)
-                        IOVEC_SET_STRING(iovec[n++], gid);
+                snprintf(gid, sizeof(gid) - 1, "_GID=%lu", (unsigned long) ucred->gid);
+                char_array_0(gid);
+                IOVEC_SET_STRING(iovec[n++], gid);
 
                 r = get_process_comm(ucred->pid, &t);
                 if (r >= 0) {
@@ -565,6 +578,7 @@ static void dispatch_message_real(
                                 IOVEC_SET_STRING(iovec[n++], cmdline);
                 }
 
+#ifdef HAVE_AUDIT
                 r = audit_session_from_pid(ucred->pid, &audit);
                 if (r >= 0)
                         if (asprintf(&audit_session, "_AUDIT_SESSION=%lu", (unsigned long) audit) >= 0)
@@ -574,9 +588,10 @@ static void dispatch_message_real(
                 if (r >= 0)
                         if (asprintf(&audit_loginuid, "_AUDIT_LOGINUID=%lu", (unsigned long) loginuid) >= 0)
                                 IOVEC_SET_STRING(iovec[n++], audit_loginuid);
+#endif
 
-                t = shortened_cgroup_path(ucred->pid);
-                if (t) {
+                r = cg_pid_get_path(NULL, ucred->pid, &t);
+                if (r >= 0) {
                         cgroup = strappend("_SYSTEMD_CGROUP=", t);
                         free(t);
 
@@ -585,7 +600,8 @@ static void dispatch_message_real(
                 }
 
 #ifdef HAVE_LOGIND
-                if (sd_pid_get_session(ucred->pid, &t) >= 0) {
+                r = cg_pid_get_session(ucred->pid, &t);
+                if (r >= 0) {
                         session = strappend("_SYSTEMD_SESSION=", t);
                         free(t);
 
@@ -593,7 +609,7 @@ static void dispatch_message_real(
                                 IOVEC_SET_STRING(iovec[n++], session);
                 }
 
-                if (sd_pid_get_owner_uid(ucred->uid, &owner) >= 0) {
+                if (sd_pid_get_owner_uid(ucred->pid, &owner) >= 0) {
                         owner_valid = true;
                         if (asprintf(&owner_uid, "_SYSTEMD_OWNER_UID=%lu", (unsigned long) owner) >= 0)
                                 IOVEC_SET_STRING(iovec[n++], owner_uid);
@@ -637,23 +653,26 @@ static void dispatch_message_real(
         }
 
         if (tv) {
-                if (asprintf(&source_time, "_SOURCE_REALTIME_TIMESTAMP=%llu",
-                             (unsigned long long) timeval_load(tv)) >= 0)
-                        IOVEC_SET_STRING(iovec[n++], source_time);
+                snprintf(source_time, sizeof(source_time) - 1, "_SOURCE_REALTIME_TIMESTAMP=%llu",
+                         (unsigned long long) timeval_load(tv));
+                char_array_0(source_time);
+                IOVEC_SET_STRING(iovec[n++], source_time);
         }
 
         /* Note that strictly speaking storing the boot id here is
          * redundant since the entry includes this in-line
          * anyway. However, we need this indexed, too. */
         r = sd_id128_get_boot(&id);
-        if (r >= 0)
-                if (asprintf(&boot_id, "_BOOT_ID=%s", sd_id128_to_string(id, idbuf)) >= 0)
-                        IOVEC_SET_STRING(iovec[n++], boot_id);
+        if (r >= 0) {
+                sd_id128_to_string(id, boot_id + sizeof("_BOOT_ID=") - 1);
+                IOVEC_SET_STRING(iovec[n++], boot_id);
+        }
 
         r = sd_id128_get_machine(&id);
-        if (r >= 0)
-                if (asprintf(&machine_id, "_MACHINE_ID=%s", sd_id128_to_string(id, idbuf)) >= 0)
-                        IOVEC_SET_STRING(iovec[n++], machine_id);
+        if (r >= 0) {
+                sd_id128_to_string(id, machine_id + sizeof("_MACHINE_ID=") - 1);
+                IOVEC_SET_STRING(iovec[n++], machine_id);
+        }
 
         t = gethostname_malloc();
         if (t) {
@@ -688,7 +707,7 @@ void server_driver_message(Server *s, sd_id128_t message_id, const char *format,
         struct iovec iovec[N_IOVEC_META_FIELDS + 4];
         int n = 0;
         va_list ap;
-        struct ucred ucred;
+        struct ucred ucred = {};
 
         assert(s);
         assert(format);
@@ -709,7 +728,6 @@ void server_driver_message(Server *s, sd_id128_t message_id, const char *format,
                 IOVEC_SET_STRING(iovec[n++], mid);
         }
 
-        zero(ucred);
         ucred.pid = getpid();
         ucred.uid = getuid();
         ucred.gid = getgid();
@@ -726,8 +744,8 @@ void server_dispatch_message(
                 const char *unit_id,
                 int priority) {
 
-        int rl;
-        char _cleanup_free_ *path = NULL;
+        int rl, r;
+        _cleanup_free_ char *path = NULL;
         char *c;
 
         assert(s);
@@ -742,8 +760,8 @@ void server_dispatch_message(
         if (!ucred)
                 goto finish;
 
-        path = shortened_cgroup_path(ucred->pid);
-        if (!path)
+        r = cg_pid_get_path_shifted(ucred->pid, NULL, &path);
+        if (r < 0)
                 goto finish;
 
         /* example: /user/lennart/3/foobar
@@ -960,8 +978,7 @@ finish:
         if (r >= 0)
                 rm_rf("/run/log/journal", false, true, false);
 
-        if (j)
-                sd_journal_close(j);
+        sd_journal_close(j);
 
         return r;
 }
@@ -991,11 +1008,10 @@ int process_event(Server *s, struct epoll_event *ev) {
                         return -errno;
                 }
 
-                log_info("Received SIG%s", signal_to_string(sfsi.ssi_signo));
-
                 if (sfsi.ssi_signo == SIGUSR1) {
                         touch("/run/systemd/journal/flushed");
                         server_flush_to_var(s);
+                        server_sync(s);
                         return 1;
                 }
 
@@ -1005,7 +1021,22 @@ int process_event(Server *s, struct epoll_event *ev) {
                         return 1;
                 }
 
+                log_info("Received SIG%s", signal_to_string(sfsi.ssi_signo));
+
                 return 0;
+
+        } else if (ev->data.fd == s->sync_timer_fd) {
+                int r;
+                uint64_t t;
+
+                log_debug("Got sync request from epoll.");
+
+                r = read(ev->data.fd, (void *)&t, sizeof(t));
+                if (r < 0)
+                        return 0;
+
+                server_sync(s);
+                return 1;
 
         } else if (ev->data.fd == s->dev_kmsg_fd) {
                 int r;
@@ -1216,7 +1247,7 @@ static int open_signalfd(Server *s) {
 }
 
 static int server_parse_proc_cmdline(Server *s) {
-        char _cleanup_free_ *line = NULL;
+        _cleanup_free_ char *line = NULL;
         char *w, *state;
         int r;
         size_t l;
@@ -1231,7 +1262,7 @@ static int server_parse_proc_cmdline(Server *s) {
         }
 
         FOREACH_WORD_QUOTED(w, l, line, state) {
-                char _cleanup_free_ *word;
+                _cleanup_free_ char *word;
 
                 word = strndup(w, l);
                 if (!word)
@@ -1264,7 +1295,7 @@ static int server_parse_proc_cmdline(Server *s) {
 
 static int server_parse_config_file(Server *s) {
         static const char *fn = "/etc/systemd/journald.conf";
-        FILE _cleanup_fclose_ *f = NULL;
+        _cleanup_fclose_ FILE *f = NULL;
         int r;
 
         assert(s);
@@ -1278,12 +1309,59 @@ static int server_parse_config_file(Server *s) {
                 return -errno;
         }
 
-        r = config_parse(fn, f, "Journal\0", config_item_perf_lookup,
+        r = config_parse(NULL, fn, f, "Journal\0", config_item_perf_lookup,
                          (void*) journald_gperf_lookup, false, s);
         if (r < 0)
                 log_warning("Failed to parse configuration file: %s", strerror(-r));
 
         return r;
+}
+
+static int server_open_sync_timer(Server *s) {
+        int r;
+        struct epoll_event ev;
+
+        assert(s);
+
+        s->sync_timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC);
+        if (s->sync_timer_fd < 0)
+                return -errno;
+
+        zero(ev);
+        ev.events = EPOLLIN;
+        ev.data.fd = s->sync_timer_fd;
+
+        r = epoll_ctl(s->epoll_fd, EPOLL_CTL_ADD, s->sync_timer_fd, &ev);
+        if (r < 0) {
+                log_error("Failed to add idle timer fd to epoll object: %m");
+                return -errno;
+        }
+
+        return 0;
+}
+
+int server_schedule_sync(Server *s) {
+        int r;
+
+        assert(s);
+
+        if (s->sync_scheduled)
+                return 0;
+
+        if (s->sync_interval_usec) {
+                struct itimerspec sync_timer_enable = {
+                        .it_value.tv_sec = s->sync_interval_usec / USEC_PER_SEC,
+                        .it_value.tv_nsec = s->sync_interval_usec % MSEC_PER_SEC,
+                };
+
+                r = timerfd_settime(s->sync_timer_fd, 0, &sync_timer_enable, NULL);
+                if (r < 0)
+                        return -errno;
+        }
+
+        s->sync_scheduled = true;
+
+        return 0;
 }
 
 int server_init(Server *s) {
@@ -1292,9 +1370,13 @@ int server_init(Server *s) {
         assert(s);
 
         zero(*s);
-        s->syslog_fd = s->native_fd = s->stdout_fd = s->signal_fd = s->epoll_fd = s->dev_kmsg_fd = -1;
+        s->sync_timer_fd = s->syslog_fd = s->native_fd = s->stdout_fd =
+            s->signal_fd = s->epoll_fd = s->dev_kmsg_fd = -1;
         s->compress = true;
         s->seal = true;
+
+        s->sync_interval_usec = DEFAULT_SYNC_INTERVAL_USEC;
+        s->sync_scheduled = false;
 
         s->rate_limit_interval = DEFAULT_RATE_LIMIT_INTERVAL;
         s->rate_limit_burst = DEFAULT_RATE_LIMIT_BURST;
@@ -1395,6 +1477,10 @@ int server_init(Server *s) {
         if (r < 0)
                 return r;
 
+        r = server_open_sync_timer(s);
+        if (r < 0)
+                return r;
+
         r = open_signalfd(s);
         if (r < 0)
                 return r;
@@ -1466,6 +1552,9 @@ void server_done(Server *s) {
 
         if (s->dev_kmsg_fd >= 0)
                 close_nointr_nofail(s->dev_kmsg_fd);
+
+        if (s->sync_timer_fd >= 0)
+                close_nointr_nofail(s->sync_timer_fd);
 
         if (s->rate_limit)
                 journal_rate_limit_free(s->rate_limit);

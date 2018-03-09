@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="logind.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>logind.conf — Login manager configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/systemd/logind.conf</code></p></div><div class="refsect1"><a name="idp2752000"></a><h2>Description</h2><p>This file configures various parameters of the systemd login manager <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp3366992"></a><h2>Options</h2><p>All options are configured in the
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="logind.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>logind.conf — Login manager configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/systemd/logind.conf</code></p></div><div class="refsect1"><a name="idp166928"></a><h2>Description</h2><p>This file configures various parameters of the systemd login manager <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp168960"></a><h2>Options</h2><p>All options are configured in the
                 <code class="literal">[Login]</code> section:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">NAutoVTs=</code></span></dt><dd><p>Takes a positive
                                 integer. Configures how many virtual
                                 terminals (VTs) to allocate by default
@@ -77,7 +77,7 @@
                                 will execute the action after all
                                 sessions reported that they are idle,
                                 and no idle inhibitor lock is active,
-                                and subsquently the time configured
+                                and subsequently the time configured
                                 with <code class="varname">IdleActionSec=</code>
                                 (see below) has passed.</p></dd><dt><span class="term"><code class="varname">IdleActionSec=</code></span></dt><dd><p>Configures the delay
                                 after which the action configured in
@@ -197,7 +197,7 @@
                 <a href="pam_systemd.html"><span class="citerefentry"><span class="refentrytitle">pam_systemd</span>(8)</span></a>. The
                 latter kills processes of a session as soon as it
                 ends, the former kills processes as soon as the last
-                session of the user ends.</p></div><div class="refsect1"><a name="idp4710944"></a><h2>See Also</h2><p>
+                session of the user ends.</p></div><div class="refsect1"><a name="idp5055440"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>,
                           <a href="loginctl.html"><span class="citerefentry"><span class="refentrytitle">loginctl</span>(1)</span></a>,

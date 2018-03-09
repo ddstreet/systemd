@@ -2,10 +2,10 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd.exec"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.exec — Execution environment configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.exec"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.exec — Execution environment configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
                 <code class="filename"><em class="replaceable"><code>socket</code></em>.socket</code>,
                 <code class="filename"><em class="replaceable"><code>mount</code></em>.mount</code>,
-                <code class="filename"><em class="replaceable"><code>swap</code></em>.swap</code></p></div><div class="refsect1"><a name="idp3967248"></a><h2>Description</h2><p>Unit configuration files for services, sockets,
+                <code class="filename"><em class="replaceable"><code>swap</code></em>.swap</code></p></div><div class="refsect1"><a name="idp3915200"></a><h2>Description</h2><p>Unit configuration files for services, sockets,
                 mount points and swap devices share a subset of
                 configuration options which define the execution
                 environment of spawned processes.</p><p>This man page lists the configuration options
@@ -22,7 +22,7 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket], [Mount], or [Swap] sections, depending on the unit
-                type.</p></div><div class="refsect1"><a name="idp3973728"></a><h2>Options</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                type.</p></div><div class="refsect1"><a name="idp3921680"></a><h2>Options</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed processes. If
                                 not set defaults to the root directory
@@ -475,29 +475,38 @@
                                 for details. Takes a whitespace
                                 separated list of capability names as
                                 read by
-                                <a href="cap_from_name.html"><span class="citerefentry"><span class="refentrytitle">cap_from_name</span>(3)</span></a>.
+                                <a href="cap_from_name.html"><span class="citerefentry"><span class="refentrytitle">cap_from_name</span>(3)</span></a>,
+                                e.g. <code class="literal">CAP_SYS_ADMIN
+                                CAP_DAC_OVERRIDE
+                                CAP_SYS_PTRACE</code>.
                                 Capabilities listed will be included
                                 in the bounding set, all others are
                                 removed. If the list of capabilities
-                                is prefixed with ~ all but the listed
-                                capabilities will be included, the
-                                effect of the assignment
-                                inverted. Note that this option also
-                                effects the respective capabilities in
-                                the effective, permitted and
-                                inheritable capability sets, on top of
-                                what <code class="varname">Capabilities=</code>
+                                is prefixed with <code class="literal">~</code>
+                                all but the listed capabilities will
+                                be included, the effect of the
+                                assignment inverted. Note that this
+                                option also affects the respective
+                                capabilities in the effective,
+                                permitted and inheritable capability
+                                sets, on top of what
+                                <code class="varname">Capabilities=</code>
                                 does. If this option is not used the
                                 capability bounding set is not
                                 modified on process execution, hence
                                 no limits on the capabilities of the
                                 process are enforced. This option may
                                 appear more than once in which case
-                                the bounding sets are merged. If the empty
-                                string is assigned to this option the
-                                bounding set is reset, and all prior
-                                settings have no
-                                effect.</p></dd><dt><span class="term"><code class="varname">SecureBits=</code></span></dt><dd><p>Controls the secure
+                                the bounding sets are merged. If the
+                                empty string is assigned to this
+                                option the bounding set is reset to
+                                the empty capability set, and all
+                                prior settings have no effect. If set
+                                to <code class="literal">~</code> (without any
+                                further argument) the bounding set is
+                                reset to the full set of available
+                                capabilities, also undoing any
+                                previous settings.</p></dd><dt><span class="term"><code class="varname">SecureBits=</code></span></dt><dd><p>Controls the secure
                                 bits set for the executed process. See
                                 <a href="capabilities.html"><span class="citerefentry"><span class="refentrytitle">capabilities</span>(7)</span></a>
                                 for details. Takes a list of strings:
@@ -554,8 +563,11 @@
                                 in specific paths in specific kernel
                                 controller hierarchies. It is not
                                 recommended to manipulate the service
-                                control group path in the systemd
-                                named hierarchy. For details about
+                                control group path in the private
+                                systemd named hierarchy
+                                (i.e. <code class="literal">name=systemd</code>),
+                                and doing this might result in
+                                undefined behaviour. For details about
                                 control groups see <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/cgroups.txt" target="_top">cgroups.txt</a>.</p><p>This option may appear more than
                                 once, in which case the list of
                                 control group assignments is
@@ -770,7 +782,9 @@
                                 processes via
                                 <code class="filename">/tmp</code> or
                                 <code class="filename">/var/tmp</code>
-                                impossible. Defaults to
+                                impossible. All temporary data created
+                                by service will be removed after service
+                                is stopped. Defaults to
                                 false.</p></dd><dt><span class="term"><code class="varname">PrivateNetwork=</code></span></dt><dd><p>Takes a boolean
                                 argument. If true sets up a new
                                 network namespace for the executed
@@ -854,7 +868,7 @@
                                 merged. If the empty string is
                                 assigned the filter is reset, all
                                 prior assignments will have no
-                                effect.</p></dd></dl></div></div><div class="refsect1"><a name="idp5240288"></a><h2>See Also</h2><p>
+                                effect.</p></dd></dl></div></div><div class="refsect1"><a name="idp5194384"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                           <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(8)</span></a>,

@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="crypttab"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>crypttab — Configuration for encrypted block devices</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/crypttab</code></p></div><div class="refsect1"><a name="idp3098496"></a><h2>Description</h2><p>The <code class="filename">/etc/crypttab</code> file
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="crypttab"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>crypttab — Configuration for encrypted block devices</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/crypttab</code></p></div><div class="refsect1"><a name="idp86816"></a><h2>Description</h2><p>The <code class="filename">/etc/crypttab</code> file
                 describes encrypted block devices that are set up
                 during system boot.</p><p>Empty lines and lines starting with the #
                 character are ignored.  Each of the remaining lines
@@ -71,9 +71,10 @@
                                 mode.</p></dd><dt><span class="term"><code class="varname">timeout=</code></span></dt><dd><p>Specify the timeout
                                 for querying for a password. If no
                                 unit is specified seconds is used.
-                                Supported units are s, ms,
-                                us, min, h, d. A timeout of 0 waits
-                                indefinitely.</p></dd><dt><span class="term"><code class="varname">noauto</code></span></dt><dd><p> This device will not
+                                Supported units are s, ms, us, min, h,
+                                d. A timeout of 0 waits indefinitely
+                                (which is the
+                                default).</p></dd><dt><span class="term"><code class="varname">noauto</code></span></dt><dd><p> This device will not
                                 be automatically unlocked on
                                 boot. </p></dd><dt><span class="term"><code class="varname">nofail</code></span></dt><dd><p>The system will not
                                 wait for the device to show up and be
@@ -103,10 +104,10 @@
                                 correctly. </p></dd></dl></div><p>At early boot and when the system manager
                 configuration is reloaded this file is translated into
                 native systemd units
-                by <a href="systemd-cryptsetup-generator.html"><span class="citerefentry"><span class="refentrytitle">systemd-cryptsetup-generator</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idm39968"></a><h2>Example</h2><div class="example"><a name="idm39296"></a><p class="title"><b>Example 1. /etc/crypttab example</b></p><div class="example-contents"><p>Set up two encrypted block devices with
+                by <a href="systemd-cryptsetup-generator.html"><span class="citerefentry"><span class="refentrytitle">systemd-cryptsetup-generator</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp65680"></a><h2>Example</h2><div class="example"><a name="idp66352"></a><p class="title"><b>Example 1. /etc/crypttab example</b></p><div class="example-contents"><p>Set up two encrypted block devices with
                         LUKS: one normal one for storage, and another
                         one for usage as swap device.</p><pre class="programlisting">luks-2505567a-9e27-4efe-a4d5-15ad146c258b UUID=2505567a-9e27-4efe-a4d5-15ad146c258b - timeout=0
-swap /dev/sda7 /dev/urandom swap</pre></div></div><br class="example-break"></div><div class="refsect1"><a name="idm37008"></a><h2>See Also</h2><p>
+swap /dev/sda7 /dev/urandom swap</pre></div></div><br class="example-break"></div><div class="refsect1"><a name="idp68640"></a><h2>See Also</h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="systemd-cryptsetup@.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-cryptsetup@.service</span>(8)</span></a>,
                         <a href="systemd-cryptsetup-generator.html"><span class="citerefentry"><span class="refentrytitle">systemd-cryptsetup-generator</span>(8)</span></a>,

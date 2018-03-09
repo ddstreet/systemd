@@ -2,9 +2,9 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="journald.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>journald.conf — Journal service configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/systemd/journald.conf</code></p></div><div class="refsect1"><a name="idp3907952"></a><h2>Description</h2><p>This files configures various parameters of the
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="journald.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>journald.conf — Journal service configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/systemd/journald.conf</code></p></div><div class="refsect1"><a name="idp3911376"></a><h2>Description</h2><p>This files configures various parameters of the
                 systemd journal service
-                <a href="systemd-journald.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-journald.service</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp3910080"></a><h2>Options</h2><p>All options are configured in the
+                <a href="systemd-journald.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-journald.service</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp3913552"></a><h2>Options</h2><p>All options are configured in the
                 <code class="literal">[Journal]</code> section:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">Storage=</code></span></dt><dd><p>Controls where to
                                 store journal data. One of
                                 <code class="literal">volatile</code>,
@@ -92,7 +92,7 @@
                                 messages is generated. This rate
                                 limiting is applied per-service, so
                                 that two services which log do not
-                                interfere with each others'
+                                interfere with each other's
                                 limits. Defaults to 200 messages in
                                 10s. The time specification for
                                 <code class="varname">RateLimitInterval=</code>
@@ -205,7 +205,10 @@
                                 time values which may be suffixed with
                                 the units year, month, week, day, h, m
                                 to override the default time unit of
-                                seconds. </p></dd><dt><span class="term"><code class="varname">ForwardToSyslog=</code>, </span><span class="term"><code class="varname">ForwardToKMsg=</code>, </span><span class="term"><code class="varname">ForwardToConsole=</code></span></dt><dd><p>Control whether log
+                                seconds. </p></dd><dt><span class="term"><code class="varname">SyncIntervalSec=</code></span></dt><dd><p>The timeout before syncing journal
+                                data to disk. After syncing journal files have
+                                OFFLINE state. Default timeout is 5 minutes.
+                                </p></dd><dt><span class="term"><code class="varname">ForwardToSyslog=</code>, </span><span class="term"><code class="varname">ForwardToKMsg=</code>, </span><span class="term"><code class="varname">ForwardToConsole=</code></span></dt><dd><p>Control whether log
                                 messages received by the journal
                                 daemon shall be forwarded to a
                                 traditional syslog daemon, to the
@@ -253,7 +256,7 @@
                                 to use if
                                 <code class="varname">ForwardToConsole=yes</code>
                                 is used. Defaults to
-                                <code class="filename">/dev/console</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp5011232"></a><h2>See Also</h2><p>
+                                <code class="filename">/dev/console</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp5014912"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemd-journald.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-journald.service</span>(8)</span></a>,
                           <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>,

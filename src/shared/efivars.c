@@ -34,6 +34,36 @@ bool is_efi_boot(void) {
         return access("/sys/firmware/efi", F_OK) >= 0;
 }
 
+static int read_flag(const char *varname) {
+        int r;
+        void *v;
+        size_t s;
+        uint8_t b;
+
+        r = efi_get_variable(EFI_VENDOR_GLOBAL, varname, NULL, &v, &s);
+        if (r < 0)
+                return r;
+
+        if (s != 1) {
+                r = -EINVAL;
+                goto finish;
+        }
+
+        b = *(uint8_t *)v;
+        r = b > 0;
+finish:
+        free(v);
+        return r;
+}
+
+int is_efi_secure_boot(void) {
+        return read_flag("SecureBoot");
+}
+
+int is_efi_secure_boot_setup_mode(void) {
+        return read_flag("SetupMode");
+}
+
 int efi_get_variable(
                 sd_id128_t vendor,
                 const char *name,
@@ -81,7 +111,7 @@ int efi_get_variable(
         n = read(fd, r, (size_t) st.st_size - 4);
         if (n < 0) {
                 free(r);
-                return (int) -n;
+                return -errno;
         }
         if (n != (ssize_t) st.st_size - 4) {
                 free(r);
@@ -201,10 +231,12 @@ int efi_get_boot_option(
         if (title_size > l - offsetof(struct boot_option, title))
                 return -EINVAL;
 
-        s = utf16_to_utf8(header->title, title_size);
-        if (!s) {
-                err = -ENOMEM;
-                goto err;
+        if (title) {
+                s = utf16_to_utf8(header->title, title_size);
+                if (!s) {
+                        err = -ENOMEM;
+                        goto err;
+                }
         }
 
         if (header->path_len > 0) {
@@ -240,12 +272,13 @@ int efi_get_boot_option(
                                 if (dpath->drive.signature_type != 0x02)
                                         continue;
 
-                                efi_guid_to_id128(dpath->drive.signature, &p_uuid);
+                                if (part_uuid)
+                                        efi_guid_to_id128(dpath->drive.signature, &p_uuid);
                                 continue;
                         }
 
                         /* Sub-Type 4 – File Path */
-                        if (dpath->sub_type == 0x04) {
+                        if (dpath->sub_type == 0x04 && !p && path) {
                                 p = utf16_to_utf8(dpath->path, dpath->length-4);
                                 continue;
                         }

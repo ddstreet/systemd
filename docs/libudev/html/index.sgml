@@ -53,6 +53,7 @@
 <ANCHOR id="udev-device-get-devnum" href="libudev/libudev-udev-device.html#udev-device-get-devnum">
 <ANCHOR id="udev-device-get-action" href="libudev/libudev-udev-device.html#udev-device-get-action">
 <ANCHOR id="udev-device-get-sysattr-value" href="libudev/libudev-udev-device.html#udev-device-get-sysattr-value">
+<ANCHOR id="udev-device-set-sysattr-value" href="libudev/libudev-udev-device.html#udev-device-set-sysattr-value">
 <ANCHOR id="udev-device-get-sysattr-list-entry" href="libudev/libudev-udev-device.html#udev-device-get-sysattr-list-entry">
 <ANCHOR id="udev-device-get-seqnum" href="libudev/libudev-udev-device.html#udev-device-get-seqnum">
 <ANCHOR id="udev-device-get-usec-since-initialized" href="libudev/libudev-udev-device.html#udev-device-get-usec-since-initialized">

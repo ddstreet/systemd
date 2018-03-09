@@ -314,7 +314,7 @@ static int bus_unit_append_cgroups(DBusMessageIter *i, const char *property, voi
                 return -ENOMEM;
 
         LIST_FOREACH(by_unit, cgb, u->cgroup_bondings) {
-                char _cleanup_free_ *t = NULL;
+                _cleanup_free_ char *t = NULL;
                 bool success;
 
                 t = cgroup_bonding_to_string(cgb);
@@ -341,7 +341,7 @@ static int bus_unit_append_cgroup_attrs(DBusMessageIter *i, const char *property
                 return -ENOMEM;
 
         LIST_FOREACH(by_unit, a, u->cgroup_attributes) {
-                char _cleanup_free_ *v = NULL;
+                _cleanup_free_ char *v = NULL;
                 bool success;
 
                 if (a->semantics && a->semantics->map_write)
@@ -582,7 +582,7 @@ static DBusHandlerResult bus_unit_message_dispatch(Unit *u, DBusConnection *conn
         }
 
         if (reply)
-                if (!dbus_connection_send(connection, reply, NULL))
+                if (!bus_maybe_send_reply(connection, message, reply))
                         goto oom;
 
         return DBUS_HANDLER_RESULT_HANDLED;
@@ -673,7 +673,7 @@ static DBusHandlerResult bus_unit_message_handler(DBusConnection *connection, DB
 
                         free(introspection);
 
-                        if (!dbus_connection_send(connection, reply, NULL))
+                        if (!bus_maybe_send_reply(connection, message, reply))
                                 goto oom;
 
                         return DBUS_HANDLER_RESULT_HANDLED;
@@ -886,7 +886,7 @@ DBusHandlerResult bus_unit_queue_job(
                             DBUS_TYPE_INVALID))
                 goto oom;
 
-        if (!dbus_connection_send(connection, reply, NULL))
+        if (!bus_maybe_send_reply(connection, message, reply))
                 goto oom;
 
         return DBUS_HANDLER_RESULT_HANDLED;
@@ -1034,7 +1034,7 @@ int bus_unit_cgroup_unset(Unit *u, DBusMessageIter *iter) {
         unit_remove_drop_in(u, runtime, controller);
 
         /* Try to migrate the old group away */
-        if (cg_get_by_pid(controller, 0, &target) >= 0)
+        if (cg_pid_get_path(controller, 0, &target) >= 0)
                 cgroup_bonding_migrate_to(u->cgroup_bondings, target, false);
 
         cgroup_bonding_free(b, true);
@@ -1284,6 +1284,7 @@ const BusProperty bus_unit_properties[] = {
         { "SubState",             bus_unit_append_sub_state,          "s", 0 },
         { "FragmentPath",         bus_property_append_string,         "s", offsetof(Unit, fragment_path),                              true },
         { "SourcePath",           bus_property_append_string,         "s", offsetof(Unit, source_path),                                true },
+        { "DropInPaths",          bus_property_append_strv,          "as", offsetof(Unit, dropin_paths),                               true },
         { "UnitFileState",        bus_unit_append_file_state,         "s", 0 },
         { "InactiveExitTimestamp",bus_property_append_usec,           "t", offsetof(Unit, inactive_exit_timestamp.realtime)   },
         { "InactiveExitTimestampMonotonic", bus_property_append_usec, "t", offsetof(Unit, inactive_exit_timestamp.monotonic)  },

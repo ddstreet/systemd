@@ -54,28 +54,7 @@
     sources is provided by the library libudev.</para>
   </refsect1>
 
-  <refsect1><title>Configuration</title>
-    <para>udev configuration files are placed in <filename>/etc/udev</filename>
-    and <filename>/usr/lib/udev</filename>. All empty lines or lines beginning with
-    '#' are ignored.</para>
-
-    <refsect2><title>Configuration file</title>
-      <para>udev expects its main configuration file at <filename>/etc/udev/udev.conf</filename>.
-      It consists of a set of variables allowing the user to override default udev values.
-      The following variables can be set:</para>
-      <variablelist>
-        <varlistentry>
-          <term><varname>udev_log</varname></term>
-          <listitem>
-            <para>The logging priority. Valid values are the numerical syslog priorities
-            or their textual representations: <option>err</option>, <option>info</option>
-            and <option>debug</option>.</para>
-          </listitem>
-        </varlistentry>
-      </variablelist>
-    </refsect2>
-
-    <refsect2><title>Rules files</title>
+  <refsect1><title>Rules files</title>
       <para>The udev rules are read from the files located in the
       system rules directory <filename>/usr/lib/udev/rules.d</filename>,
       the volatile runtime directory <filename>/run/udev/rules.d</filename>
@@ -94,9 +73,10 @@
       extensions are ignored.</para>
 
       <para>Every line in the rules file contains at least one key-value pair.
+      Except for empty lines or lines beginning with '#', which are ignored.
       There are two kinds of keys: match and assignment.
-      If all match keys are matching against its value, the rule gets applied and the
-      assignment keys get the specified value assigned.</para>
+      If all match keys match against their values, the rule gets applied and the
+      assignment keys get the specified values assigned.</para>
 
       <para>A matching rule may rename a network interface, add symlinks
       pointing to the device node, or run a specified program as part of
@@ -392,14 +372,31 @@
         </varlistentry>
 
         <varlistentry>
-          <term><option>RUN</option></term>
+          <term><option>RUN{<replaceable>type</replaceable>}</option></term>
           <listitem>
-            <para>Add a program to the list of programs to be executed for a specific
-            device.</para>
-            <para>If no absolute path is given, the program is expected to live in
-            /usr/lib/udev, otherwise the absolute path must be specified. The program
-            name and following arguments are separated by spaces. Single quotes can
-            be used to specify arguments with spaces.</para>
+            <para>Add a program to the list of programs to be executed after processing all the
+            rules for a specific event, depending on <literal>type</literal>:</para>
+            <variablelist>
+              <varlistentry>
+                <term><literal>program</literal></term>
+                <listitem>
+                  <para>Execute an external program specified as the assigned
+                  value. If no absolute path is given, the program is expected to live in
+                  /usr/lib/udev, otherwise the absolute path must be specified.</para>
+                  <para>This is the default if no <replaceable>type</replaceable> is
+                  specified.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term><literal>builtin</literal></term>
+                <listitem>
+                  <para>As <option>program</option>, but use one of the built-in programs rather
+                  than an external one.</para>
+                </listitem>
+              </varlistentry>
+            </variablelist>
+            <para>The program name and following arguments are separated by spaces.
+            Single quotes can be used to specify arguments with spaces.</para>
             <para>This can only be used for very short-running foreground tasks. Running an
             event process for a long period of time may block all further events for
             this or a dependent device.</para>
@@ -439,6 +436,13 @@
                 </listitem>
               </varlistentry>
               <varlistentry>
+                <term><literal>builtin</literal></term>
+                <listitem>
+                  <para>As <option>program</option>, but use one of the built-in programs rather
+                  than an external one.</para>
+                </listitem>
+              </varlistentry>
+             <varlistentry>
                 <term><literal>file</literal></term>
                 <listitem>
                   <para>Import a text file specified as the assigned value, the content
@@ -690,7 +694,6 @@
           </listitem>
         </varlistentry>
       </variablelist>
-    </refsect2>
   </refsect1>
 
   <refsect1>

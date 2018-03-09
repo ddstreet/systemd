@@ -258,12 +258,11 @@ const char *bus_error_message(const DBusError *error) {
         return error->message;
 }
 
-const char *bus_error_message_or_strerror(const DBusError *error, int err) {
-
+const char *bus_error(const DBusError *error, int err) {
         if (error && dbus_error_is_set(error))
                 return bus_error_message(error);
 
-        return strerror(err);
+        return strerror(err < 0 ? -err : err);
 }
 
 DBusHandlerResult bus_default_message_handler(
@@ -717,9 +716,14 @@ dbus_bool_t bus_maybe_send_reply (DBusConnection   *c,
                                   DBusMessage *message,
                                   DBusMessage *reply)
 {
-        if (dbus_message_get_no_reply (message))
+        /* Some parts of systemd "reply" to signals, which of course
+         * have the no-reply flag set.  We will be defensive here and
+         * still send out a reply if we're passed a signal.
+         */
+        if (dbus_message_get_type(message) == DBUS_MESSAGE_TYPE_METHOD_CALL &&
+            dbus_message_get_no_reply(message))
                 return TRUE;
-        return dbus_connection_send (c, reply, NULL);
+        return dbus_connection_send(c, reply, NULL);
 }
 
 DBusHandlerResult bus_send_error_reply(DBusConnection *c, DBusMessage *message, DBusError *berror, int error) {
@@ -1092,7 +1096,7 @@ int generic_print_property(const char *name, DBusMessageIter *iter, bool all) {
                 } else if (strstr(name, "USec")) {
                         char timespan[FORMAT_TIMESPAN_MAX];
 
-                        printf("%s=%s\n", name, format_timespan(timespan, sizeof(timespan), u));
+                        printf("%s=%s\n", name, format_timespan(timespan, sizeof(timespan), u, 0));
                 } else
                         printf("%s=%llu\n", name, (unsigned long long) u);
 

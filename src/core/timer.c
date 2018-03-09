@@ -26,7 +26,7 @@
 #include "timer.h"
 #include "dbus-timer.h"
 #include "special.h"
-#include "bus-errors.h"
+#include "dbus-common.h"
 
 static const UnitActiveState state_translation_table[_TIMER_STATE_MAX] = {
         [TIMER_DEAD] = UNIT_INACTIVE,
@@ -96,11 +96,11 @@ static int timer_add_default_dependencies(Timer *t) {
 
         assert(t);
 
-        if (UNIT(t)->manager->running_as == SYSTEMD_SYSTEM) {
-                r = unit_add_dependency_by_name(UNIT(t), UNIT_BEFORE, SPECIAL_BASIC_TARGET, NULL, true);
-                if (r < 0)
-                        return r;
+        r = unit_add_dependency_by_name(UNIT(t), UNIT_BEFORE, SPECIAL_TIMERS_TARGET, NULL, true);
+        if (r < 0)
+                return r;
 
+        if (UNIT(t)->manager->running_as == SYSTEMD_SYSTEM) {
                 r = unit_add_two_dependencies_by_name(UNIT(t), UNIT_AFTER, UNIT_REQUIRES, SPECIAL_SYSINIT_TARGET, NULL, true);
                 if (r < 0)
                         return r;
@@ -177,7 +177,7 @@ static void timer_dump(Unit *u, FILE *f, const char *prefix) {
                                 "%s%s: %s\n",
                                 prefix,
                                 timer_base_to_string(v->base),
-                                strna(format_timespan(timespan1, sizeof(timespan1), v->value)));
+                                strna(format_timespan(timespan1, sizeof(timespan1), v->value, 0)));
                 }
         }
 }
@@ -328,9 +328,9 @@ static void timer_enter_waiting(Timer *t, bool initial) {
         if (found_monotonic) {
                 char buf[FORMAT_TIMESPAN_MAX];
                 log_debug_unit(UNIT(t)->id,
-                               "%s: Monotonic timer elapses in %s the next time.",
+                               "%s: Monotonic timer elapses in %s.",
                                UNIT(t)->id,
-                               format_timespan(buf, sizeof(buf), t->next_elapse_monotonic > ts.monotonic ? t->next_elapse_monotonic - ts.monotonic : 0));
+                               format_timespan(buf, sizeof(buf), t->next_elapse_monotonic > ts.monotonic ? t->next_elapse_monotonic - ts.monotonic : 0, 0));
 
                 r = unit_watch_timer(UNIT(t), CLOCK_MONOTONIC, false, t->next_elapse_monotonic, &t->monotonic_watch);
                 if (r < 0)
@@ -341,7 +341,7 @@ static void timer_enter_waiting(Timer *t, bool initial) {
         if (found_realtime) {
                 char buf[FORMAT_TIMESTAMP_MAX];
                 log_debug_unit(UNIT(t)->id,
-                               "%s: Realtime timer elapses at %s the next time.",
+                               "%s: Realtime timer elapses at %s.",
                                UNIT(t)->id,
                                format_timestamp(buf, sizeof(buf), t->next_elapse_realtime));
 
@@ -555,8 +555,8 @@ static void timer_time_change(Unit *u) {
         if (t->state != TIMER_WAITING)
                 return;
 
-        log_info_unit(u->id,
-                      "%s: time change, recalculating next elapse.", u->id);
+        log_debug_unit(u->id,
+                       "%s: time change, recalculating next elapse.", u->id);
         timer_enter_waiting(t, false);
 }
 

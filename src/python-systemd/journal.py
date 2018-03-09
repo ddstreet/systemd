@@ -23,7 +23,6 @@ from __future__ import division
 
 import sys as _sys
 import datetime as _datetime
-import functools as _functools
 import uuid as _uuid
 import traceback as _traceback
 import os as _os
@@ -34,7 +33,8 @@ from syslog import (LOG_EMERG, LOG_ALERT, LOG_CRIT, LOG_ERR,
                     LOG_WARNING, LOG_NOTICE, LOG_INFO, LOG_DEBUG)
 from ._journal import sendv, stream_fd
 from ._reader import (_Reader, NOP, APPEND, INVALIDATE,
-                      LOCAL_ONLY, RUNTIME_ONLY, SYSTEM_ONLY)
+                      LOCAL_ONLY, RUNTIME_ONLY, SYSTEM_ONLY,
+                      _get_catalog)
 from . import id128 as _id128
 
 if _sys.version_info >= (3,):
@@ -50,10 +50,10 @@ def _convert_source_monotonic(s):
     return _datetime.timedelta(microseconds=int(s))
 
 def _convert_realtime(t):
-    return _datetime.datetime.fromtimestamp(t / 1E6)
+    return _datetime.datetime.fromtimestamp(t / 1000000)
 
 def _convert_timestamp(s):
-    return _datetime.datetime.fromtimestamp(int(s) / 1E6)
+    return _datetime.datetime.fromtimestamp(int(s) / 1000000)
 
 if _sys.version_info >= (3,):
     def _convert_uuid(s):
@@ -136,6 +136,9 @@ class Reader(_Reader):
         the conversion fails with a ValueError, unconverted bytes
         object will be returned. (Note that ValueEror is a superclass
         of UnicodeDecodeError).
+
+        Reader implements the context manager protocol: the journal
+        will be closed when exiting the block.
         """
         super(Reader, self).__init__(flags, path)
         if _sys.version_info >= (3,3):
@@ -173,6 +176,25 @@ class Reader(_Reader):
                 result[key] = self._convert_field(key, value)
         return result
 
+    def __iter__(self):
+        """Part of iterator protocol.
+        Returns self.
+        """
+        return self
+
+    if _sys.version_info >= (3,):
+        def __next__(self):
+            """Part of iterator protocol.
+            Returns self.get_next().
+            """
+            return self.get_next()
+    else:
+        def next(self):
+            """Part of iterator protocol.
+            Returns self.get_next().
+            """
+            return self.get_next()
+
     def add_match(self, *args, **kwargs):
         """Add one or more matches to the filter journal log entries.
         All matches of different field are combined in a logical AND,
@@ -187,15 +209,35 @@ class Reader(_Reader):
             super(Reader, self).add_match(arg)
 
     def get_next(self, skip=1):
-        """Return the next log entry as a dictionary of fields.
+        """Return the next log entry as a mapping type, currently
+        a standard dictionary of fields.
 
         Optional skip value will return the `skip`\-th log entry.
 
         Entries will be processed with converters specified during
         Reader creation.
         """
-        return self._convert_entry(
-            super(Reader, self).get_next(skip))
+        if super(Reader, self)._next(skip):
+            entry = super(Reader, self)._get_all()
+            if entry:
+                entry['__REALTIME_TIMESTAMP'] =  self._get_realtime()
+                entry['__MONOTONIC_TIMESTAMP']  = self._get_monotonic()
+                entry['__CURSOR']  = self._get_cursor()
+                return self._convert_entry(entry)
+        return dict()
+
+    def get_previous(self, skip=1):
+        """Return the previous log entry as a mapping type,
+        currently a standard dictionary of fields.
+
+        Optional skip value will return the -`skip`\-th log entry.
+
+        Entries will be processed with converters specified during
+        Reader creation.
+
+        Equivilent to get_next(-skip).
+        """
+        return self.get_next(-skip)
 
     def query_unique(self, field):
         """Return unique values appearing in the journal for given `field`.
@@ -208,6 +250,17 @@ class Reader(_Reader):
         return set(self._convert_field(field, value)
             for value in super(Reader, self).query_unique(field))
 
+    def wait(self, timeout=None):
+        """Wait for a change in the journal. `timeout` is the maximum
+        time in seconds to wait, or None, to wait forever.
+
+        Returns one of NOP (no change), APPEND (new entries have been
+        added to the end of the journal), or INVALIDATE (journal files
+        have been added or removed).
+        """
+        us = -1 if timeout is None else int(timeout * 1000000)
+        return super(Reader, self).wait(us)
+
     def seek_realtime(self, realtime):
         """Seek to a matching journal entry nearest to `realtime` time.
 
@@ -215,8 +268,8 @@ class Reader(_Reader):
         or datetime.datetime instance.
         """
         if isinstance(realtime, _datetime.datetime):
-            realtime = float(realtime.strftime("%s.%f"))
-        return super(Reader, self).seek_realtime(realtime)
+            realtime = float(realtime.strftime("%s.%f")) * 1000000
+        return super(Reader, self).seek_realtime(int(realtime))
 
     def seek_monotonic(self, monotonic, bootid=None):
         """Seek to a matching journal entry nearest to `monotonic` time.
@@ -228,6 +281,7 @@ class Reader(_Reader):
         """
         if isinstance(monotonic, _datetime.timedelta):
             monotonic = monotonic.totalseconds()
+        monotonic = int(monotonic * 1000000)
         if isinstance(bootid, _uuid.UUID):
             bootid = bootid.get_hex()
         return super(Reader, self).seek_monotonic(monotonic, bootid)
@@ -279,6 +333,11 @@ class Reader(_Reader):
             machineid = getattr(machineid, 'hex', machineid)
         self.add_match(_MACHINE_ID=machineid)
 
+
+def get_catalog(mid):
+    if isinstance(mid, _uuid.UUID):
+        mid = mid.get_hex()
+    return _get_catalog(mid)
 
 def _make_line(field, value):
         if isinstance(value, bytes):

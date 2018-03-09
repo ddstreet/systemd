@@ -290,8 +290,8 @@
         "  <property name=\"DefaultControllers\" type=\"as\" access=\"read\"/>\n" \
         "  <property name=\"DefaultStandardOutput\" type=\"s\" access=\"read\"/>\n" \
         "  <property name=\"DefaultStandardError\" type=\"s\" access=\"read\"/>\n" \
-        "  <property name=\"RuntimeWatchdogUSec\" type=\"s\" access=\"readwrite\"/>\n" \
-        "  <property name=\"ShutdownWatchdogUSec\" type=\"s\" access=\"readwrite\"/>\n" \
+        "  <property name=\"RuntimeWatchdogUSec\" type=\"t\" access=\"readwrite\"/>\n" \
+        "  <property name=\"ShutdownWatchdogUSec\" type=\"t\" access=\"readwrite\"/>\n" \
         "  <property name=\"Virtualization\" type=\"s\" access=\"read\"/>\n"
 
 #define BUS_MANAGER_INTERFACE_END                                       \
@@ -1481,7 +1481,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
         } else if (dbus_message_is_method_call(message, "org.freedesktop.systemd1.Manager", "SwitchRoot")) {
                 const char *switch_root, *switch_root_init;
                 char *u, *v;
-                int k;
+                bool good;
 
                 SELINUX_ACCESS_CHECK(connection, message, "reboot");
 
@@ -1506,19 +1506,18 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
 
                 /* Safety check */
                 if (isempty(switch_root_init))
-                        k = access(switch_root, F_OK);
+                        good = path_is_os_tree(switch_root);
                 else {
-                        char *p;
+                        _cleanup_free_ char *p = NULL;
 
                         p = strjoin(switch_root, "/", switch_root_init, NULL);
                         if (!p)
                                 goto oom;
 
-                        k = access(p, X_OK);
-                        free(p);
+                        good = access(p, X_OK) >= 0;
                 }
-                if (k < 0)
-                        return bus_send_error_reply(connection, message, NULL, -errno);
+                if (!good)
+                        return bus_send_error_reply(connection, message, NULL, -EINVAL);
 
                 u = strdup(switch_root);
                 if (!u)
@@ -1894,7 +1893,7 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
         }
 
         if (reply)
-                if (!dbus_connection_send(connection, reply, NULL))
+                if (!bus_maybe_send_reply(connection, message, reply))
                         goto oom;
 
         return DBUS_HANDLER_RESULT_HANDLED;

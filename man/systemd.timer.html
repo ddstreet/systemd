@@ -2,7 +2,7 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemd.timer"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.timer — Timer unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>timer</code></em>.timer</code></p></div><div class="refsect1"><a name="idp3959520"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.timer"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.timer — Timer unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>timer</code></em>.timer</code></p></div><div class="refsect1"><a name="idp2918832"></a><h2>Description</h2><p>A unit configuration file whose name ends in
                 <code class="filename">.timer</code> encodes information about
                 a timer controlled and supervised by systemd, for
                 timer-based activation.</p><p>This man page lists the configuration options
@@ -28,7 +28,7 @@
                 that timer units are stopped cleanly prior to system
                 shutdown. Only timer units involved with early boot or
                 late system shutdown should disable this
-                option.</p></div><div class="refsect1"><a name="idp3968928"></a><h2>Options</h2><p>Timer files must include a [Timer] section,
+                option.</p></div><div class="refsect1"><a name="idp4007872"></a><h2>Options</h2><p>Timer files must include a [Timer] section,
                 which carries information about the timer it
                 defines. The options specific to the [Timer] section
                 of timer units are the following:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">OnActiveSec=</code>, </span><span class="term"><code class="varname">OnBootSec=</code>, </span><span class="term"><code class="varname">OnStartupSec=</code>, </span><span class="term"><code class="varname">OnUnitActiveSec=</code>, </span><span class="term"><code class="varname">OnUnitInactiveSec=</code></span></dt><dd><p>Defines monotonic timers
@@ -98,7 +98,7 @@
                                 that the unit name that is activated
                                 and the unit name of the timer unit
                                 are named identically, except for the
-                                suffix.</p></dd></dl></div></div><div class="refsect1"><a name="idm39984"></a><h2>See Also</h2><p>
+                                suffix.</p></dd></dl></div></div><div class="refsect1"><a name="idp67136"></a><h2>See Also</h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                           <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,

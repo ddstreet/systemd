@@ -30,6 +30,7 @@
 #include "journal-def.h"
 #include "list.h"
 #include "hashmap.h"
+#include "set.h"
 #include "journal-file.h"
 
 typedef struct Match Match;
@@ -112,7 +113,7 @@ struct sd_journal {
 
         int inotify_fd;
 
-        Match *level0, *level1;
+        Match *level0, *level1, *level2;
 
         unsigned current_invalidate_counter, last_invalidate_counter;
 
@@ -123,7 +124,17 @@ struct sd_journal {
         bool on_network;
 
         size_t data_threshold;
+
+        Set *errors;
+
+        usec_t last_process_usec;
 };
 
 char *journal_make_match_string(sd_journal *j);
 void journal_print_header(sd_journal *j);
+
+static inline void journal_closep(sd_journal **j) {
+        sd_journal_close(*j);
+}
+
+#define _cleanup_journal_close_ _cleanup_(journal_closep)

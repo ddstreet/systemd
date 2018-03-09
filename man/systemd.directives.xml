@@ -1,4 +1,4 @@
-<refentry conditional="HAVE_PYTHON" id="systemd.directives">
+<refentry id="systemd.directives" conditional="HAVE_PYTHON">
 
         <refentryinfo>
                 <title>systemd.directives</title>
@@ -8,7 +8,7 @@
                         <author>
                                 <contrib>Developer</contrib>
                                 <firstname>Zbigniew</firstname>
-                                <surname>J&#281;drzejewski-Szmek</surname>
+                                <surname>Jędrzejewski-Szmek</surname>
                                 <email>zbyszek@in.waw.pl</email>
                         </author>
                 </authorgroup>
@@ -487,11 +487,15 @@
 
 <varlistentry><term><varname>luks.crypttab=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cryptsetup-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><varname>luks.key=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cryptsetup-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><varname>luks.uuid=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cryptsetup-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>luks=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cryptsetup-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>modules-load=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-modules-load.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><varname>net.ifnames=</varname></term><listitem><para><citerefentry><refentrytitle>systemd-udevd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>plymouth.enable=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -502,6 +506,8 @@
 <varlistentry><term><varname>rd.fstab=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-fstab-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>rd.luks.crypttab=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cryptsetup-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><varname>rd.luks.key=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cryptsetup-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>rd.luks.uuid=</varname></term><listitem><para><citerefentry><refentrytitle>kernel-command-line</refentrytitle><manvolnum>7</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cryptsetup-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -727,7 +733,7 @@
 
 <varlistentry><term><option>RESULT</option></term><listitem><para><citerefentry><refentrytitle>udev</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><option>RUN</option></term><listitem><para><citerefentry><refentrytitle>udev</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term><option>RUN{<replaceable>type</replaceable>}</option></term><listitem><para><citerefentry><refentrytitle>udev</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>SUBSYSTEM</option></term><listitem><para><citerefentry><refentrytitle>udev</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -921,9 +927,9 @@
                 <para>Directives for configuring the behaviour of the
                 systemd process.</para>
 
-                <variablelist id="systemd-directives"><varlistentry><term><varname>CPUAffinity=</varname></term><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+                <variablelist id="systemd-directives"><varlistentry><term/><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><varname>CapabilityBoundingSet=</varname></term><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term/><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>CrashChVT=</varname></term><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -985,7 +991,7 @@
 
 <varlistentry><term><varname>ShutdownWatchdogSec=</varname></term><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><varname>TimerSlackNSec=</varname></term><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term/><listitem><para><citerefentry><refentrytitle>systemd-system.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
 </variablelist>
         </refsect1>
@@ -1101,11 +1107,15 @@
 
 <varlistentry><term><option>--dry-run</option></term><listitem><para><citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><option>--dump-catalog</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><option>--dump-configuration-items</option></term><listitem><para><citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--dump-core</option></term><listitem><para><citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--entropy</option></term><listitem><para><citerefentry><refentrytitle>systemd-bootchart</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><option>--environment=</option></term><listitem><para><citerefentry><refentrytitle>systemd-activate</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--exec-delay=</option></term><listitem><para><citerefentry><refentrytitle>systemd-udevd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1125,11 +1135,15 @@
 
 <varlistentry><term><option>--field=</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-coredumpctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><option>--file-size-max=</option></term><listitem><para><citerefentry><refentrytitle>systemd-readahead-replay.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><option>--follow</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--force</option></term><listitem><para><citerefentry><refentrytitle>halt</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--freq</option></term><listitem><para><citerefentry><refentrytitle>systemd-bootchart</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><option>--from-pattern=</option></term><listitem><para><citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--full</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgls</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1139,7 +1153,7 @@
 
 <varlistentry><term><option>--header</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><option>--help</option></term><listitem><para><citerefentry><refentrytitle>halt</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>hostnamectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>localectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>runlevel</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>shutdown</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-activate</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-ask-password</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cat</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgls</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgtop</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-coredumpctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-delta</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-detect-virt</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-inhibit</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-journal-gatewayd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-machine-id-setup</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-notify</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-tmpfiles</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-tty-ask-password-agent</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-udevd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>telinit</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>timedatectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term><option>--help</option></term><listitem><para><citerefentry><refentrytitle>halt</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>hostnamectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>localectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>runlevel</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>shutdown</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-activate</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-ask-password</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cat</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgls</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgtop</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-coredumpctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-delta</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-detect-virt</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-inhibit</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-journal-gatewayd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-machine-id-setup</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-notify</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-readahead-replay.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-tmpfiles</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-tty-ask-password-agent</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-udevd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>telinit</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>timedatectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--host</option></term><listitem><para><citerefentry><refentrytitle>hostnamectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>localectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>timedatectl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1188,6 +1202,10 @@
 <varlistentry><term><option>--log-priority=</option></term><listitem><para><citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--log-target=</option></term><listitem><para><citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><option>--machine=</option></term><listitem><para><citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><option>--max-files=</option></term><listitem><para><citerefentry><refentrytitle>systemd-readahead-replay.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--merge</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1285,7 +1303,7 @@
 
 <varlistentry><term><option>--root</option></term><listitem><para><citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><option>--root=</option></term><listitem><para><citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term><option>--root=</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--runtime</option></term><listitem><para><citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1302,6 +1320,8 @@
 <varlistentry><term><option>--setup-keys</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--show-status=</option></term><listitem><para><citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><option>--show-types</option></term><listitem><para><citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--signal=</option></term><listitem><para><citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1333,7 +1353,9 @@
 
 <varlistentry><term><option>--this-boot</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><option>--timeout=</option></term><listitem><para><citerefentry><refentrytitle>systemd-ask-password</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term><option>--timeout=</option></term><listitem><para><citerefentry><refentrytitle>systemd-ask-password</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-readahead-replay.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><option>--to-pattern=</option></term><listitem><para><citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>--transient</option></term><listitem><para><citerefentry><refentrytitle>hostnamectl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1383,9 +1405,13 @@
 
 <varlistentry><term><option>-D</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><option>-E</option></term><listitem><para><citerefentry><refentrytitle>systemd-activate</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><option>-F</option></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-bootchart</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-coredumpctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>-H</option></term><listitem><para><citerefentry><refentrytitle>hostnamectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>localectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>shutdown</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>timedatectl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><option>-M</option></term><listitem><para><citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>-P</option></term><listitem><para><citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>shutdown</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1401,7 +1427,7 @@
 
 <varlistentry><term><option>-f</option></term><listitem><para><citerefentry><refentrytitle>halt</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-bootchart</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><option>-h</option></term><listitem><para><citerefentry><refentrytitle>hostnamectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>localectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>shutdown</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-activate</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-ask-password</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cat</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgls</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgtop</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-coredumpctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-delta</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-detect-virt</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-inhibit</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-journal-gatewayd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-machine-id-setup</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-notify</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-tty-ask-password-agent</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>timedatectl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term><option>-h</option></term><listitem><para><citerefentry><refentrytitle>hostnamectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>localectl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>shutdown</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-activate</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-ask-password</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cat</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgls</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgtop</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-coredumpctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-delta</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-detect-virt</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-inhibit</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-journal-gatewayd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-machine-id-setup</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-notify</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-nspawn</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-readahead-replay.service</refentrytitle><manvolnum>8</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-tty-ask-password-agent</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>timedatectl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><option>-i</option></term><listitem><para><citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-bootchart</refentrytitle><manvolnum>1</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd-cgtop</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1449,6 +1475,8 @@
                 <variablelist id="miscellaneous"><varlistentry><term><varname>ANSI_COLOR=</varname></term><listitem><para><citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>BUG_REPORT_URL=</varname></term><listitem><para><citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><varname>BUILD_ID=</varname></term><listitem><para><citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>CHASSIS=</varname></term><listitem><para><citerefentry><refentrytitle>machine-info</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1560,13 +1588,15 @@
 
 <varlistentry><term><varname>SuspendKeyIgnoreInhibited=</varname></term><listitem><para><citerefentry><refentrytitle>logind.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><varname>SyncIntervalSec=</varname></term><listitem><para><citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><varname>SystemKeepFree=</varname></term><listitem><para><citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>SystemMaxFileSize=</varname></term><listitem><para><citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>SystemMaxUse=</varname></term><listitem><para><citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><varname>TTYPath=</varname></term><listitem><para><citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term/><listitem><para><citerefentry><refentrytitle>journald.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>VERSION=</varname></term><listitem><para><citerefentry><refentrytitle>os-release</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1604,9 +1634,9 @@
 
 <varlistentry><term><varname>redirected</varname></term><listitem><para><citerefentry><refentrytitle>systemd-delta</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><varname>s</varname></term><listitem><para><citerefentry><refentrytitle>tmpfiles.d</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term/><listitem><para><citerefentry><refentrytitle>tmpfiles.d</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><varname>udev_log</varname></term><listitem><para><citerefentry><refentrytitle>udev</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term><varname>udev_log</varname></term><listitem><para><citerefentry><refentrytitle>systemd-udevd.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><varname>unchanged</varname></term><listitem><para><citerefentry><refentrytitle>systemd-delta</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1731,7 +1761,7 @@
 
 <varlistentry><term><filename>/usr/lib/systemd/systemd-random-seed</filename></term><listitem><para><citerefentry><refentrytitle>systemd-random-seed-load.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
-<varlistentry><term><filename>/usr/lib/systemd/systemd-readahead</filename></term><listitem><para><citerefentry><refentrytitle>systemd-readahead-replay.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
+<varlistentry><term><command>/usr/lib/systemd/systemd-readahead/systemd-readahead</command></term><listitem><para><citerefentry><refentrytitle>systemd-readahead-replay.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><filename>/usr/lib/systemd/systemd-remount-fs</filename></term><listitem><para><citerefentry><refentrytitle>systemd-remount-fs.service</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -1801,6 +1831,10 @@
 
 <varlistentry><term><command>init</command></term><listitem><para><citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><filename>initrd-fs.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><filename>initrd-root-fs.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><command>journalctl</command></term><listitem><para><citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><filename>kbrequest.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
@@ -1821,6 +1855,8 @@
 
 <varlistentry><term><filename>multi-user.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><filename>network-online.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><filename>network.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><filename>nss-lookup.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
@@ -1832,6 +1868,8 @@
 <varlistentry><term><filename>pam_systemd.so</filename></term><listitem><para><citerefentry><refentrytitle>pam_systemd</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><filename><replaceable>path</replaceable>.path</filename></term><listitem><para><citerefentry><refentrytitle>systemd.path</refentrytitle><manvolnum>5</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
+
+<varlistentry><term><filename>paths.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><command>pkg-config</command></term><listitem><para><citerefentry><refentrytitle>sd-daemon</refentrytitle><manvolnum>3</manvolnum></citerefentry>, <citerefentry><refentrytitle>sd-id128</refentrytitle><manvolnum>3</manvolnum></citerefentry>, <citerefentry><refentrytitle>sd-journal</refentrytitle><manvolnum>3</manvolnum></citerefentry>, <citerefentry><refentrytitle>sd-login</refentrytitle><manvolnum>3</manvolnum></citerefentry></para></listitem></varlistentry>
 
@@ -2031,6 +2069,8 @@
 
 <varlistentry><term><filename><replaceable>timer</replaceable>.timer</filename></term><listitem><para><citerefentry><refentrytitle>systemd.timer</refentrytitle><manvolnum>5</manvolnum></citerefentry>, <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry></para></listitem></varlistentry>
 
+<varlistentry><term><filename>timers.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
+
 <varlistentry><term><command>udevadm</command></term><listitem><para><citerefentry><refentrytitle>udevadm</refentrytitle><manvolnum>8</manvolnum></citerefentry></para></listitem></varlistentry>
 
 <varlistentry><term><filename>umount.target</filename></term><listitem><para><citerefentry><refentrytitle>systemd.special</refentrytitle><manvolnum>7</manvolnum></citerefentry></para></listitem></varlistentry>
@@ -2040,7 +2080,7 @@
 
         <refsect1>
                 <title>Colophon</title>
-                <para id="colophon">This index contains 954 entries in 12 sections,
+                <para id="colophon">This index contains 974 entries in 12 sections,
 referring to 99 individual manual pages.
 </para>
         </refsect1>

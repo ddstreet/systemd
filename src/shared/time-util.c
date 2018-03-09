@@ -225,7 +225,7 @@ char *format_timestamp_relative(char *buf, size_t l, usec_t t) {
         return buf;
 }
 
-char *format_timespan(char *buf, size_t l, usec_t t) {
+char *format_timespan(char *buf, size_t l, usec_t t, usec_t accuracy) {
         static const struct {
                 const char *suffix;
                 usec_t usec;
@@ -243,6 +243,7 @@ char *format_timespan(char *buf, size_t l, usec_t t) {
 
         unsigned i;
         char *p = buf;
+        bool something = false;
 
         assert(buf);
         assert(l > 0);
@@ -250,17 +251,25 @@ char *format_timespan(char *buf, size_t l, usec_t t) {
         if (t == (usec_t) -1)
                 return NULL;
 
-        if (t == 0) {
+        if (t <= 0) {
                 snprintf(p, l, "0");
                 p[l-1] = 0;
                 return p;
         }
 
-        /* The result of this function can be parsed with parse_usec */
+        /* The result of this function can be parsed with parse_sec */
 
         for (i = 0; i < ELEMENTSOF(table); i++) {
                 int k;
                 size_t n;
+                bool done = false;
+                usec_t a, b;
+
+                if (t <= 0)
+                        break;
+
+                if (t < accuracy && something)
+                        break;
 
                 if (t < table[i].usec)
                         continue;
@@ -268,13 +277,54 @@ char *format_timespan(char *buf, size_t l, usec_t t) {
                 if (l <= 1)
                         break;
 
-                k = snprintf(p, l, "%s%llu%s", p > buf ? " " : "", (unsigned long long) (t / table[i].usec), table[i].suffix);
+                a = t / table[i].usec;
+                b = t % table[i].usec;
+
+                /* Let's see if we should shows this in dot notation */
+                if (t < USEC_PER_MINUTE && b > 0) {
+                        usec_t cc;
+                        int j;
+
+                        j = 0;
+                        for (cc = table[i].usec; cc > 1; cc /= 10)
+                                j++;
+
+                        for (cc = accuracy; cc > 1; cc /= 10) {
+                                b /= 10;
+                                j--;
+                        }
+
+                        if (j > 0) {
+                                k = snprintf(p, l,
+                                             "%s%llu.%0*llu%s",
+                                             p > buf ? " " : "",
+                                             (unsigned long long) a,
+                                             j,
+                                             (unsigned long long) b,
+                                             table[i].suffix);
+
+                                t = 0;
+                                done = true;
+                        }
+                }
+
+                /* No? Then let's show it normally */
+                if (!done) {
+                        k = snprintf(p, l,
+                                     "%s%llu%s",
+                                     p > buf ? " " : "",
+                                     (unsigned long long) a,
+                                     table[i].suffix);
+
+                        t = b;
+                }
+
                 n = MIN((size_t) k, l);
 
                 l -= n;
                 p += n;
 
-                t %= table[i].usec;
+                something = true;
         }
 
         *p = 0;
@@ -382,14 +432,14 @@ int parse_timestamp(const char *t, usec_t *usec) {
 
         } else if (t[0] == '+') {
 
-                r = parse_usec(t+1, &plus);
+                r = parse_sec(t+1, &plus);
                 if (r < 0)
                         return r;
 
                 goto finish;
         } else if (t[0] == '-') {
 
-                r = parse_usec(t+1, &minus);
+                r = parse_sec(t+1, &minus);
                 if (r < 0)
                         return r;
 
@@ -402,7 +452,7 @@ int parse_timestamp(const char *t, usec_t *usec) {
                 if (!z)
                         return -ENOMEM;
 
-                r = parse_usec(z, &minus);
+                r = parse_sec(z, &minus);
                 if (r < 0)
                         return r;
 
@@ -497,7 +547,7 @@ finish:
         return 0;
 }
 
-int parse_usec(const char *t, usec_t *usec) {
+int parse_sec(const char *t, usec_t *usec) {
         static const struct {
                 const char *suffix;
                 usec_t usec;
@@ -534,41 +584,74 @@ int parse_usec(const char *t, usec_t *usec) {
 
         const char *p;
         usec_t r = 0;
+        bool something = false;
 
         assert(t);
         assert(usec);
 
         p = t;
-        do {
-                long long l;
+        for (;;) {
+                long long l, z = 0;
                 char *e;
-                unsigned i;
+                unsigned i, n = 0;
+
+                p += strspn(p, WHITESPACE);
+
+                if (*p == 0) {
+                        if (!something)
+                                return -EINVAL;
+
+                        break;
+                }
 
                 errno = 0;
                 l = strtoll(p, &e, 10);
 
-                if (errno != 0)
+                if (errno > 0)
                         return -errno;
 
                 if (l < 0)
                         return -ERANGE;
 
-                if (e == p)
+                if (*e == '.') {
+                        char *b = e + 1;
+
+                        errno = 0;
+                        z = strtoll(b, &e, 10);
+                        if (errno > 0)
+                                return -errno;
+
+                        if (z < 0)
+                                return -ERANGE;
+
+                        if (e == b)
+                                return -EINVAL;
+
+                        n = e - b;
+
+                } else if (e == p)
                         return -EINVAL;
 
                 e += strspn(e, WHITESPACE);
 
                 for (i = 0; i < ELEMENTSOF(table); i++)
                         if (startswith(e, table[i].suffix)) {
-                                r += (usec_t) l * table[i].usec;
+                                usec_t k = (usec_t) z * table[i].usec;
+
+                                for (; n > 0; n--)
+                                        k /= 10;
+
+                                r += (usec_t) l * table[i].usec + k;
                                 p = e + strlen(table[i].suffix);
+
+                                something = true;
                                 break;
                         }
 
                 if (i >= ELEMENTSOF(table))
                         return -EINVAL;
 
-        } while (*p != 0);
+        }
 
         *usec = r;
 
@@ -614,41 +697,74 @@ int parse_nsec(const char *t, nsec_t *nsec) {
 
         const char *p;
         nsec_t r = 0;
+        bool something = false;
 
         assert(t);
         assert(nsec);
 
         p = t;
-        do {
-                long long l;
+        for (;;) {
+                long long l, z = 0;
                 char *e;
-                unsigned i;
+                unsigned i, n = 0;
+
+                p += strspn(p, WHITESPACE);
+
+                if (*p == 0) {
+                        if (!something)
+                                return -EINVAL;
+
+                        break;
+                }
 
                 errno = 0;
                 l = strtoll(p, &e, 10);
 
-                if (errno != 0)
+                if (errno > 0)
                         return -errno;
 
                 if (l < 0)
                         return -ERANGE;
 
-                if (e == p)
+                if (*e == '.') {
+                        char *b = e + 1;
+
+                        errno = 0;
+                        z = strtoll(b, &e, 10);
+                        if (errno > 0)
+                                return -errno;
+
+                        if (z < 0)
+                                return -ERANGE;
+
+                        if (e == b)
+                                return -EINVAL;
+
+                        n = e - b;
+
+                } else if (e == p)
                         return -EINVAL;
 
                 e += strspn(e, WHITESPACE);
 
                 for (i = 0; i < ELEMENTSOF(table); i++)
                         if (startswith(e, table[i].suffix)) {
-                                r += (nsec_t) l * table[i].nsec;
+                                nsec_t k = (nsec_t) z * table[i].nsec;
+
+                                for (; n > 0; n--)
+                                        k /= 10;
+
+                                r += (nsec_t) l * table[i].nsec + k;
                                 p = e + strlen(table[i].suffix);
+
+                                something = true;
                                 break;
                         }
 
                 if (i >= ELEMENTSOF(table))
                         return -EINVAL;
 
-        } while (*p != 0);
+        }
 
         *nsec = r;
 

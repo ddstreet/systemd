@@ -43,6 +43,7 @@
 #include "log.h"
 #include "util.h"
 #include "macro.h"
+#include "missing.h"
 #include "mkdir.h"
 #include "path-util.h"
 #include "strv.h"
@@ -134,7 +135,7 @@ static struct Item* find_glob(Hashmap *h, const char *match) {
 }
 
 static void load_unix_sockets(void) {
-        FILE _cleanup_fclose_ *f = NULL;
+        _cleanup_fclose_ FILE *f = NULL;
         char line[LINE_MAX];
 
         if (unix_sockets)
@@ -213,6 +214,42 @@ static bool unix_socket_alive(const char *fn) {
         return true;
 }
 
+static int dir_is_mount_point(DIR *d, const char *subdir) {
+        struct file_handle *h;
+        int mount_id_parent, mount_id;
+        int r_p, r;
+
+        h = alloca(MAX_HANDLE_SZ);
+
+        h->handle_bytes = MAX_HANDLE_SZ;
+        r_p = name_to_handle_at(dirfd(d), ".", h, &mount_id_parent, 0);
+        if (r_p < 0)
+                r_p = -errno;
+
+        h->handle_bytes = MAX_HANDLE_SZ;
+        r = name_to_handle_at(dirfd(d), subdir, h, &mount_id, 0);
+        if (r < 0)
+                r = -errno;
+
+        /* got no handle; make no assumptions, return error */
+        if (r_p < 0 && r < 0)
+                return r_p;
+
+        /* got both handles; if they differ, it is a mount point */
+        if (r_p >= 0 && r >= 0)
+                return mount_id_parent != mount_id;
+
+        /* got only one handle; assume different mount points if one
+         * of both queries was not supported by the filesystem */
+        if (r_p == -ENOSYS || r_p == -ENOTSUP || r == -ENOSYS || r == -ENOTSUP)
+                return true;
+
+        /* return error */
+        if (r_p < 0)
+                return r_p;
+        return r;
+}
+
 static int dir_cleanup(
                 Item *i,
                 const char *p,
@@ -232,7 +269,7 @@ static int dir_cleanup(
         while ((dent = readdir(d))) {
                 struct stat s;
                 usec_t age;
-                char _cleanup_free_ *sub_path = NULL;
+                _cleanup_free_ char *sub_path = NULL;
 
                 if (streq(dent->d_name, ".") ||
                     streq(dent->d_name, ".."))
@@ -250,6 +287,12 @@ static int dir_cleanup(
 
                 /* Stay on the same filesystem */
                 if (s.st_dev != rootdev)
+                        continue;
+
+                /* Try to detect bind mounts of the same filesystem instance; they
+                 * do not differ in device major/minors. This type of query is not
+                 * supported on all kernels or filesystem types though. */
+                if (S_ISDIR(s.st_mode) && dir_is_mount_point(d, dent->d_name) > 0)
                         continue;
 
                 /* Do not delete read-only files owned by root */
@@ -278,7 +321,7 @@ static int dir_cleanup(
                         if (maxdepth <= 0)
                                 log_warning("Reached max depth on %s.", sub_path);
                         else {
-                                DIR _cleanup_closedir_ *sub_dir;
+                                _cleanup_closedir_ DIR *sub_dir;
                                 int q;
 
                                 sub_dir = xopendirat(dirfd(d), dent->d_name, O_NOFOLLOW|O_NOATIME);
@@ -411,18 +454,17 @@ static int item_set_perms(Item *i, const char *path) {
 static int write_one_file(Item *i, const char *path) {
         int r, e, fd, flags;
         struct stat st;
-        mode_t u;
 
         flags = i->type == CREATE_FILE ? O_CREAT|O_APPEND :
                 i->type == TRUNCATE_FILE ? O_CREAT|O_TRUNC : 0;
 
-        u = umask(0);
-        label_context_set(path, S_IFREG);
-        fd = open(path, flags|O_NDELAY|O_CLOEXEC|O_WRONLY|O_NOCTTY|O_NOFOLLOW, i->mode);
-        e = errno;
-        label_context_clear();
-        umask(u);
-        errno = e;
+        RUN_WITH_UMASK(0) {
+                label_context_set(path, S_IFREG);
+                fd = open(path, flags|O_NDELAY|O_CLOEXEC|O_WRONLY|O_NOCTTY|O_NOFOLLOW, i->mode);
+                e = errno;
+                label_context_clear();
+                errno = e;
+        }
 
         if (fd < 0) {
                 if (i->type == WRITE_FILE && errno == ENOENT)
@@ -473,7 +515,7 @@ static int write_one_file(Item *i, const char *path) {
 }
 
 static int recursive_relabel_children(Item *i, const char *path) {
-        DIR _cleanup_closedir_ *d;
+        _cleanup_closedir_ DIR *d;
         int ret = 0;
 
         /* This returns the first error we run into, but nevertheless
@@ -488,7 +530,7 @@ static int recursive_relabel_children(Item *i, const char *path) {
                 union dirent_storage buf;
                 bool is_dir;
                 int r;
-                char _cleanup_free_ *entry_path = NULL;
+                _cleanup_free_ char *entry_path = NULL;
 
                 r = readdir_r(d, &buf.de, &de);
                 if (r != 0) {
@@ -559,34 +601,31 @@ static int recursive_relabel(Item *i, const char *path) {
 
 static int glob_item(Item *i, int (*action)(Item *, const char *)) {
         int r = 0, k;
-        glob_t g;
+        _cleanup_globfree_ glob_t g = {};
         char **fn;
 
-        zero(g);
-
         errno = 0;
-        if ((k = glob(i->path, GLOB_NOSORT|GLOB_BRACE, NULL, &g)) != 0) {
-
+        k = glob(i->path, GLOB_NOSORT|GLOB_BRACE, NULL, &g);
+        if (k != 0)
                 if (k != GLOB_NOMATCH) {
-                        if (errno != 0)
+                        if (errno > 0)
                                 errno = EIO;
 
                         log_error("glob(%s) failed: %m", i->path);
                         return -errno;
                 }
+
+        STRV_FOREACH(fn, g.gl_pathv) {
+                k = action(i, *fn);
+                if (k < 0)
+                        r = k;
         }
 
-        STRV_FOREACH(fn, g.gl_pathv)
-                if ((k = action(i, *fn)) < 0)
-                        r = k;
-
-        globfree(&g);
         return r;
 }
 
 static int create_item(Item *i) {
         int r, e;
-        mode_t u;
         struct stat st;
 
         assert(i);
@@ -615,10 +654,10 @@ static int create_item(Item *i) {
         case TRUNCATE_DIRECTORY:
         case CREATE_DIRECTORY:
 
-                u = umask(0);
-                mkdir_parents_label(i->path, 0755);
-                r = mkdir(i->path, i->mode);
-                umask(u);
+                RUN_WITH_UMASK(0000) {
+                        mkdir_parents_label(i->path, 0755);
+                        r = mkdir(i->path, i->mode);
+                }
 
                 if (r < 0 && errno != EEXIST) {
                         log_error("Failed to create directory %s: %m", i->path);
@@ -643,9 +682,9 @@ static int create_item(Item *i) {
 
         case CREATE_FIFO:
 
-                u = umask(0);
-                r = mkfifo(i->path, i->mode);
-                umask(u);
+                RUN_WITH_UMASK(0000) {
+                        r = mkfifo(i->path, i->mode);
+                }
 
                 if (r < 0 && errno != EEXIST) {
                         log_error("Failed to create fifo %s: %m", i->path);
@@ -704,7 +743,7 @@ static int create_item(Item *i) {
 
                 if (have_effective_cap(CAP_MKNOD) == 0) {
                         /* In a container we lack CAP_MKNOD. We
-                        shouldnt attempt to create the device node in
+                        shouldn't attempt to create the device node in
                         that case to avoid noise, and we don't support
                         virtualized devices in containers anyway. */
 
@@ -714,13 +753,13 @@ static int create_item(Item *i) {
 
                 file_type = (i->type == CREATE_BLOCK_DEVICE ? S_IFBLK : S_IFCHR);
 
-                u = umask(0);
-                label_context_set(i->path, file_type);
-                r = mknod(i->path, i->mode | file_type, i->major_minor);
-                e = errno;
-                label_context_clear();
-                umask(u);
-                errno = e;
+                RUN_WITH_UMASK(0000) {
+                        label_context_set(i->path, file_type);
+                        r = mknod(i->path, i->mode | file_type, i->major_minor);
+                        e = errno;
+                        label_context_clear();
+                        errno = e;
+                }
 
                 if (r < 0 && errno != EEXIST) {
                         log_error("Failed to create device node %s: %m", i->path);
@@ -840,7 +879,7 @@ static int remove_item(Item *i) {
 }
 
 static int clean_item_instance(Item *i, const char* instance) {
-        DIR _cleanup_closedir_ *d = NULL;
+        _cleanup_closedir_ DIR *d = NULL;
         struct stat s, ps;
         bool mountpoint;
         int r;
@@ -978,8 +1017,9 @@ static bool item_equal(Item *a, Item *b) {
 }
 
 static int parse_line(const char *fname, unsigned line, const char *buffer) {
-        Item *i, *existing;
-        char _cleanup_free_
+        _cleanup_free_ Item *i = NULL;
+        Item *existing;
+        _cleanup_free_ char
                 *mode = NULL, *user = NULL, *group = NULL, *age = NULL;
         char type;
         Hashmap *h;
@@ -1004,8 +1044,7 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
                    &n);
         if (r < 2) {
                 log_error("[%s:%u] Syntax error.", fname, line);
-                r = -EIO;
-                goto finish;
+                return -EIO;
         }
 
         if (n >= 0)  {
@@ -1035,16 +1074,14 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
         case CREATE_SYMLINK:
                 if (!i->argument) {
                         log_error("[%s:%u] Symlink file requires argument.", fname, line);
-                        r = -EBADMSG;
-                        goto finish;
+                        return -EBADMSG;
                 }
                 break;
 
         case WRITE_FILE:
                 if (!i->argument) {
                         log_error("[%s:%u] Write file requires argument.", fname, line);
-                        r = -EBADMSG;
-                        goto finish;
+                        return -EBADMSG;
                 }
                 break;
 
@@ -1054,14 +1091,12 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
 
                 if (!i->argument) {
                         log_error("[%s:%u] Device file requires argument.", fname, line);
-                        r = -EBADMSG;
-                        goto finish;
+                        return -EBADMSG;
                 }
 
                 if (sscanf(i->argument, "%u:%u", &major, &minor) != 2) {
                         log_error("[%s:%u] Can't parse device file major/minor '%s'.", fname, line, i->argument);
-                        r = -EBADMSG;
-                        goto finish;
+                        return -EBADMSG;
                 }
 
                 i->major_minor = makedev(major, minor);
@@ -1070,24 +1105,20 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
 
         default:
                 log_error("[%s:%u] Unknown file type '%c'.", fname, line, type);
-                r = -EBADMSG;
-                goto finish;
+                return -EBADMSG;
         }
 
         i->type = type;
 
         if (!path_is_absolute(i->path)) {
                 log_error("[%s:%u] Path '%s' not absolute.", fname, line, i->path);
-                r = -EBADMSG;
-                goto finish;
+                return -EBADMSG;
         }
 
         path_kill_slashes(i->path);
 
-        if (arg_prefix && !path_startswith(i->path, arg_prefix)) {
-                r = 0;
-                goto finish;
-        }
+        if (arg_prefix && !path_startswith(i->path, arg_prefix))
+                return 0;
 
         if (user && !streq(user, "-")) {
                 const char *u = user;
@@ -1095,7 +1126,7 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
                 r = get_user_creds(&u, &i->uid, NULL, NULL, NULL);
                 if (r < 0) {
                         log_error("[%s:%u] Unknown user '%s'.", fname, line, user);
-                        goto finish;
+                        return r;
                 }
 
                 i->uid_set = true;
@@ -1107,7 +1138,7 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
                 r = get_group_creds(&g, &i->gid);
                 if (r < 0) {
                         log_error("[%s:%u] Unknown group '%s'.", fname, line, group);
-                        goto finish;
+                        return r;
                 }
 
                 i->gid_set = true;
@@ -1118,8 +1149,7 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
 
                 if (sscanf(mode, "%o", &m) != 1) {
                         log_error("[%s:%u] Invalid mode '%s'.", fname, line, mode);
-                        r = -ENOENT;
-                        goto finish;
+                        return -ENOENT;
                 }
 
                 i->mode = m;
@@ -1137,10 +1167,9 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
                         a++;
                 }
 
-                if (parse_usec(a, &i->age) < 0) {
+                if (parse_sec(a, &i->age) < 0) {
                         log_error("[%s:%u] Invalid age '%s'.", fname, line, age);
-                        r = -EBADMSG;
-                        goto finish;
+                        return -EBADMSG;
                 }
 
                 i->age_set = true;
@@ -1155,24 +1184,18 @@ static int parse_line(const char *fname, unsigned line, const char *buffer) {
                 if (!item_equal(existing, i))
                         log_warning("Two or more conflicting lines for %s configured, ignoring.", i->path);
 
-                r = 0;
-                goto finish;
+                return 0;
         }
 
         r = hashmap_put(h, i->path, i);
         if (r < 0) {
                 log_error("Failed to insert item %s: %s", i->path, strerror(-r));
-                goto finish;
+                return r;
         }
 
-        i = NULL;
-        r = 0;
+        i = NULL; /* avoid cleanup */
 
-finish:
-        if (i)
-                item_free(i);
-
-        return r;
+        return 0;
 }
 
 static int help(void) {

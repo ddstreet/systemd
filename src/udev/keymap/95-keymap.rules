@@ -86,6 +86,8 @@ ENV{DMI_VENDOR}=="LENOVO*", ATTR{[dmi/id]product_version}=="*IdeaPad*", RUN+="ke
 ENV{DMI_VENDOR}=="LENOVO*", ATTR{[dmi/id]product_name}=="S10-*", RUN+="keymap $name lenovo-ideapad"
 ENV{DMI_VENDOR}=="LENOVO", ATTR{[dmi/id]product_version}=="*IdeaPad Y550*", RUN+="keymap $name 0x95 media 0xA3 play"
 ENV{DMI_VENDOR}=="LENOVO", ATTR{[dmi/id]product_version}=="*Lenovo V480*", RUN+="keymap $name 0xf1 f21"
+# 0xf1 is touchpad toggle, 0xCE is microphone mute in Lenovo U300s
+ENV{DMI_VENDOR}=="LENOVO", ATTR{[dmi/id]product_version}=="*IdeaPad U300s*", RUN+="keymap $name 0xf1 f21 0xCE f20"
 
 ENV{DMI_VENDOR}=="Hewlett-Packard*", RUN+="keymap $name hewlett-packard"
 ENV{DMI_VENDOR}=="Hewlett-Packard*", ATTR{[dmi/id]product_name}=="*[tT][aA][bB][lL][eE][tT]*", RUN+="keymap $name hewlett-packard-tablet"
@@ -98,6 +100,7 @@ ENV{DMI_VENDOR}=="Hewlett-Packard", ATTR{[dmi/id]product_name}=="Presario 2100*"
 ENV{DMI_VENDOR}=="Hewlett-Packard", ATTR{[dmi/id]product_name}=="HP G62 Notebook PC", RUN+="keymap $name 0xB2 www"
 ENV{DMI_VENDOR}=="Hewlett-Packard", ATTR{[dmi/id]product_name}=="HP ProBook*", RUN+="keymap $name 0xF8 rfkill 0xB2 www"
 ENV{DMI_VENDOR}=="Hewlett-Packard", ATTR{[dmi/id]product_name}=="HP EliteBook 8440p", RUN+="keymap $name hewlett-packard_elitebook-8440p"
+ENV{DMI_VENDOR}=="Hewlett-Packard", ATTR{[dmi/id]product_name}=="HP EliteBook 8460p", RUN+="keymap $name hewlett-packard_elitebook-8460p"
 ENV{DMI_VENDOR}=="Hewlett-Packard", ATTR{[dmi/id]product_name}=="HDX9494NR", RUN+="keymap $name hewlett-packard-hdx9494nr"
 # HP Pavillion dv6315ea has empty DMI_VENDOR
 ATTR{[dmi/id]board_vendor}=="Quanta", ATTR{[dmi/id]board_name}=="30B7", ATTR{[dmi/id]board_version}=="65.2B", RUN+="keymap $name 0x88 media" # "quick play
@@ -140,6 +143,9 @@ ENV{DMI_VENDOR}=="MICRO-STAR*|Micro-Star*", RUN+="keymap $name micro-star"
 # plus some extra synthesized ones on atkbd as an echo of actually changing the
 # brightness; so ignore those atkbd ones, to avoid loops
 ENV{DMI_VENDOR}=="MICRO-STAR*", ATTR{[dmi/id]product_name}=="*U-100*|*U100*|*N033", RUN+="keymap $name 0xF7 reserved 0xF8 reserved"
+
+# MSI Wind U90/U100 generates separate touchpad on/off keycodes so ignore touchpad toggle keycode
+ENV{DMI_VENDOR}=="MICRO-STAR*", ATTR{[dmi/id]product_name}=="U90/U100", RUN+="keymap $name 0xE4 reserved"
 
 ENV{DMI_VENDOR}=="INVENTEC", ATTR{[dmi/id]product_name}=="SYMPHONY 6.0/7.0", RUN+="keymap $name inventec-symphony_6.0_7.0"
 

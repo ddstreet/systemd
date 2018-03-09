@@ -61,7 +61,7 @@ static int bus_seat_append_active(DBusMessageIter *i, const char *property, void
         DBusMessageIter sub;
         Seat *s = data;
         const char *id, *path;
-        char *p = NULL;
+        _cleanup_free_ char *p = NULL;
 
         assert(i);
         assert(property);
@@ -82,12 +82,8 @@ static int bus_seat_append_active(DBusMessageIter *i, const char *property, void
         }
 
         if (!dbus_message_iter_append_basic(&sub, DBUS_TYPE_STRING, &id) ||
-            !dbus_message_iter_append_basic(&sub, DBUS_TYPE_OBJECT_PATH, &path)) {
-                free(p);
+            !dbus_message_iter_append_basic(&sub, DBUS_TYPE_OBJECT_PATH, &path))
                 return -ENOMEM;
-        }
-
-        free(p);
 
         if (!dbus_message_iter_close_container(i, &sub))
                 return -ENOMEM;
@@ -108,7 +104,7 @@ static int bus_seat_append_sessions(DBusMessageIter *i, const char *property, vo
                 return -ENOMEM;
 
         LIST_FOREACH(sessions_by_seat, session, s->sessions) {
-                char *p;
+                _cleanup_free_ char *p = NULL;
 
                 if (!dbus_message_iter_open_container(&sub, DBUS_TYPE_STRUCT, NULL, &sub2))
                         return -ENOMEM;
@@ -118,12 +114,8 @@ static int bus_seat_append_sessions(DBusMessageIter *i, const char *property, vo
                         return -ENOMEM;
 
                 if (!dbus_message_iter_append_basic(&sub2, DBUS_TYPE_STRING, &session->id) ||
-                    !dbus_message_iter_append_basic(&sub2, DBUS_TYPE_OBJECT_PATH, &p)) {
-                        free(p);
+                    !dbus_message_iter_append_basic(&sub2, DBUS_TYPE_OBJECT_PATH, &p))
                         return -ENOMEM;
-                }
-
-                free(p);
 
                 if (!dbus_message_iter_close_container(&sub, &sub2))
                         return -ENOMEM;
@@ -260,7 +252,7 @@ static DBusHandlerResult seat_message_dispatch(
                 DBusMessage *message) {
 
         DBusError error;
-        DBusMessage *reply = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *reply = NULL;
         int r;
 
         assert(s);
@@ -310,18 +302,13 @@ static DBusHandlerResult seat_message_dispatch(
         }
 
         if (reply) {
-                if (!dbus_connection_send(connection, reply, NULL))
+                if (!bus_maybe_send_reply(connection, message, reply))
                         goto oom;
-
-                dbus_message_unref(reply);
         }
 
         return DBUS_HANDLER_RESULT_HANDLED;
 
 oom:
-        if (reply)
-                dbus_message_unref(reply);
-
         dbus_error_free(&error);
 
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
@@ -361,7 +348,7 @@ const DBusObjectPathVTable bus_seat_vtable = {
 };
 
 char *seat_bus_path(Seat *s) {
-        char *t, *r;
+        _cleanup_free_ char *t;
 
         assert(s);
 
@@ -369,53 +356,41 @@ char *seat_bus_path(Seat *s) {
         if (!t)
                 return NULL;
 
-        r = strappend("/org/freedesktop/login1/seat/", t);
-        free(t);
-
-        return r;
+        return strappend("/org/freedesktop/login1/seat/", t);
 }
 
 int seat_send_signal(Seat *s, bool new_seat) {
-        DBusMessage *m;
-        int r = -ENOMEM;
-        char *p = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *m = NULL;
+        _cleanup_free_ char *p = NULL;
 
         assert(s);
 
         m = dbus_message_new_signal("/org/freedesktop/login1",
                                     "org.freedesktop.login1.Manager",
                                     new_seat ? "SeatNew" : "SeatRemoved");
-
         if (!m)
                 return -ENOMEM;
 
         p = seat_bus_path(s);
         if (!p)
-                goto finish;
+                return -ENOMEM;
 
         if (!dbus_message_append_args(
                             m,
                             DBUS_TYPE_STRING, &s->id,
                             DBUS_TYPE_OBJECT_PATH, &p,
                             DBUS_TYPE_INVALID))
-                goto finish;
+                return -ENOMEM;
 
         if (!dbus_connection_send(s->manager->bus, m, NULL))
-                goto finish;
+                return -ENOMEM;
 
-        r = 0;
-
-finish:
-        dbus_message_unref(m);
-        free(p);
-
-        return r;
+        return 0;
 }
 
 int seat_send_changed(Seat *s, const char *properties) {
-        DBusMessage *m;
-        int r = -ENOMEM;
-        char *p = NULL;
+        _cleanup_dbus_message_unref_ DBusMessage *m = NULL;
+        _cleanup_free_ char *p = NULL;
 
         assert(s);
 
@@ -428,17 +403,10 @@ int seat_send_changed(Seat *s, const char *properties) {
 
         m = bus_properties_changed_new(p, "org.freedesktop.login1.Seat", properties);
         if (!m)
-                goto finish;
+                return -ENOMEM;
 
         if (!dbus_connection_send(s->manager->bus, m, NULL))
-                goto finish;
+                return -ENOMEM;
 
-        r = 0;
-
-finish:
-        if (m)
-                dbus_message_unref(m);
-        free(p);
-
-        return r;
+        return 0;
 }

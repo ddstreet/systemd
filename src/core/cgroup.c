@@ -40,7 +40,7 @@ int cgroup_bonding_realize(CGroupBonding *b) {
         assert(b->path);
         assert(b->controller);
 
-        r = cg_create(b->controller, b->path);
+        r = cg_create(b->controller, b->path, NULL);
         if (r < 0) {
                 log_warning("Failed to create cgroup %s:%s: %s", b->controller, b->path, strerror(-r));
                 return r;
@@ -111,7 +111,7 @@ void cgroup_bonding_trim_list(CGroupBonding *first, bool delete_root) {
 }
 
 int cgroup_bonding_install(CGroupBonding *b, pid_t pid, const char *cgroup_suffix) {
-        char *p = NULL;
+        _cleanup_free_ char *p = NULL;
         const char *path;
         int r;
 
@@ -128,8 +128,6 @@ int cgroup_bonding_install(CGroupBonding *b, pid_t pid, const char *cgroup_suffi
                 path = b->path;
 
         r = cg_create_and_attach(b->controller, path, pid);
-        free(p);
-
         if (r < 0)
                 return r;
 
@@ -321,9 +319,10 @@ int cgroup_bonding_is_empty_list(CGroupBonding *first) {
 }
 
 int manager_setup_cgroup(Manager *m) {
-        char *current = NULL, *path = NULL;
+        _cleanup_free_ char *current = NULL, *path = NULL;
+        char suffix_buffer[sizeof("/systemd-") + DECIMAL_STR_MAX(pid_t)];
+        const char *suffix;
         int r;
-        char suffix[32];
 
         assert(m);
 
@@ -334,17 +333,17 @@ int manager_setup_cgroup(Manager *m) {
         }
 
         /* 1. Determine hierarchy */
-        r = cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, 0, &current);
+        r = cg_pid_get_path(SYSTEMD_CGROUP_CONTROLLER, 0, &current);
         if (r < 0) {
                 log_error("Cannot determine cgroup we are running in: %s", strerror(-r));
-                goto finish;
+                return r;
         }
 
         if (m->running_as == SYSTEMD_SYSTEM)
-                strcpy(suffix, "/system");
+                suffix = "/system";
         else {
-                snprintf(suffix, sizeof(suffix), "/systemd-%lu", (unsigned long) getpid());
-                char_array_0(suffix);
+                sprintf(suffix_buffer, "/systemd-%lu", (unsigned long) getpid());
+                suffix = suffix_buffer;
         }
 
         free(m->cgroup_hierarchy);
@@ -352,39 +351,42 @@ int manager_setup_cgroup(Manager *m) {
                 /* We probably got reexecuted and can continue to use our root cgroup */
                 m->cgroup_hierarchy = current;
                 current = NULL;
-
         } else {
                 /* We need a new root cgroup */
-                m->cgroup_hierarchy = NULL;
-                if (asprintf(&m->cgroup_hierarchy, "%s%s", streq(current, "/") ? "" : current, suffix) < 0) {
-                        r = log_oom();
-                        goto finish;
-                }
+                if (streq(current, "/"))
+                        m->cgroup_hierarchy = strdup(suffix);
+                else
+                        m->cgroup_hierarchy = strappend(current, suffix);
+
+                if (!m->cgroup_hierarchy)
+                        return log_oom();
         }
 
         /* 2. Show data */
         r = cg_get_path(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, NULL, &path);
         if (r < 0) {
                 log_error("Cannot find cgroup mount point: %s", strerror(-r));
-                goto finish;
+                return r;
         }
 
         log_debug("Using cgroup controller " SYSTEMD_CGROUP_CONTROLLER ". File system hierarchy is at %s.", path);
 
         /* 3. Install agent */
-        r = cg_install_release_agent(SYSTEMD_CGROUP_CONTROLLER, SYSTEMD_CGROUP_AGENT_PATH);
-        if (r < 0)
-                log_warning("Failed to install release agent, ignoring: %s", strerror(-r));
-        else if (r > 0)
-                log_debug("Installed release agent.");
-        else
-                log_debug("Release agent already installed.");
+        if (m->running_as == SYSTEMD_SYSTEM) {
+                r = cg_install_release_agent(SYSTEMD_CGROUP_CONTROLLER, SYSTEMD_CGROUP_AGENT_PATH);
+                if (r < 0)
+                        log_warning("Failed to install release agent, ignoring: %s", strerror(-r));
+                else if (r > 0)
+                        log_debug("Installed release agent.");
+                else
+                        log_debug("Release agent already installed.");
+        }
 
         /* 4. Realize the group */
         r = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, 0);
         if (r < 0) {
                 log_error("Failed to create root cgroup hierarchy: %s", strerror(-r));
-                goto finish;
+                return r;
         }
 
         /* 5. And pin it, so that it cannot be unmounted */
@@ -394,19 +396,21 @@ int manager_setup_cgroup(Manager *m) {
         m->pin_cgroupfs_fd = open(path, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY|O_NONBLOCK);
         if (r < 0) {
                 log_error("Failed to open pin file: %m");
-                r = -errno;
-                goto finish;
+                return -errno;
         }
 
-        log_debug("Created root group.");
-
+        /* 6. Remove non-existing controllers from the default controllers list */
         cg_shorten_controllers(m->default_controllers);
 
-finish:
-        free(current);
-        free(path);
+        /* 7. Let's create the user and machine hierarchies
+         * right-away, so that people can inotify on them, if they
+         * wish, without this being racy. */
+        if (m->running_as == SYSTEMD_SYSTEM) {
+                cg_create(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, "../user");
+                cg_create(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_hierarchy, "../machine");
+        }
 
-        return r;
+        return 0;
 }
 
 void manager_shutdown_cgroup(Manager *m, bool delete) {
@@ -438,7 +442,7 @@ int cgroup_bonding_get(Manager *m, const char *cgroup, CGroupBonding **bonding) 
                 return 1;
         }
 
-        p = strdup(cgroup);
+        p = strdupa(cgroup);
         if (!p)
                 return -ENOMEM;
 
@@ -446,8 +450,7 @@ int cgroup_bonding_get(Manager *m, const char *cgroup, CGroupBonding **bonding) 
                 char *e;
 
                 e = strrchr(p, '/');
-                if (!e || e == p) {
-                        free(p);
+                if (e == p || !e) {
                         *bonding = NULL;
                         return 0;
                 }
@@ -456,7 +459,6 @@ int cgroup_bonding_get(Manager *m, const char *cgroup, CGroupBonding **bonding) 
 
                 b = hashmap_get(m->cgroup_bondings, p);
                 if (b) {
-                        free(p);
                         *bonding = b;
                         return 1;
                 }
@@ -511,7 +513,7 @@ Unit* cgroup_unit_by_pid(Manager *m, pid_t pid) {
         if (pid <= 1)
                 return NULL;
 
-        if (cg_get_by_pid(SYSTEMD_CGROUP_CONTROLLER, pid, &group) < 0)
+        if (cg_pid_get_path(SYSTEMD_CGROUP_CONTROLLER, pid, &group) < 0)
                 return NULL;
 
         l = hashmap_get(m->cgroup_bondings, group);

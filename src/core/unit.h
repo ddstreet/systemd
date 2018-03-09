@@ -138,8 +138,10 @@ struct Unit {
 
         char *fragment_path; /* if loaded from a config file this is the primary path to it */
         char *source_path; /* if converted, the source file */
+        char **dropin_paths;
         usec_t fragment_mtime;
         usec_t source_mtime;
+        usec_t dropin_mtime;
 
         /* If there is something to do with this unit, then this is the installed job for it */
         Job *job;
@@ -486,6 +488,7 @@ int unit_stop(Unit *u);
 int unit_reload(Unit *u);
 
 int unit_kill(Unit *u, KillWho w, int signo, DBusError *error);
+int unit_kill_common(Unit *u, KillWho who, int signo, pid_t main_pid, pid_t control_pid, DBusError *error);
 
 void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success);
 
@@ -565,6 +568,8 @@ UnitActiveState unit_active_state_from_string(const char *s);
 
 const char *unit_dependency_to_string(UnitDependency i);
 UnitDependency unit_dependency_from_string(const char *s);
+
+/* Macros which append UNIT= or USER_UNIT= to the message */
 
 #define log_full_unit(level, unit, ...) log_meta_object(level, __FILE__, __LINE__, __func__, getpid() == 1 ? "UNIT=" : "USER_UNIT=", unit, __VA_ARGS__)
 #define log_debug_unit(unit, ...)       log_full_unit(LOG_DEBUG, unit, __VA_ARGS__)

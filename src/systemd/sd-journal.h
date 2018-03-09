@@ -106,6 +106,7 @@ void sd_journal_restart_data(sd_journal *j);
 
 int sd_journal_add_match(sd_journal *j, const void *data, size_t size);
 int sd_journal_add_disjunction(sd_journal *j);
+int sd_journal_add_conjunction(sd_journal *j);
 void sd_journal_flush_matches(sd_journal *j);
 
 int sd_journal_seek_head(sd_journal *j);
@@ -127,9 +128,11 @@ int sd_journal_enumerate_unique(sd_journal *j, const void **data, size_t *l);
 void sd_journal_restart_unique(sd_journal *j);
 
 int sd_journal_get_fd(sd_journal *j);
-int sd_journal_reliable_fd(sd_journal *j);
+int sd_journal_get_events(sd_journal *j);
+int sd_journal_get_timeout(sd_journal *j, uint64_t *timeout_usec);
 int sd_journal_process(sd_journal *j);
 int sd_journal_wait(sd_journal *j, uint64_t timeout_usec);
+int sd_journal_reliable_fd(sd_journal *j);
 
 int sd_journal_get_catalog(sd_journal *j, char **text);
 int sd_journal_get_catalog_for_message_id(sd_id128_t id, char **ret);

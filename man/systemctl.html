@@ -2,19 +2,20 @@
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><hr><div class="refentry"><a name="systemctl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl</code>  [OPTIONS...]  COMMAND  [NAME...]</p></div></div><div class="refsect1"><a name="idp3911248"></a><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemctl"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and service manager</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl</code>  [OPTIONS...]  COMMAND  [NAME...]</p></div></div><div class="refsect1"><a name="idp124480"></a><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
     introspect and control the state of the
     <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>
-    system and service manager.</p></div><div class="refsect1"><a name="idp3913840"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
-        text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version string and exits.</p></dd><dt><span class="term"><code class="option">-t</code>, </span><span class="term"><code class="option">--type=</code></span></dt><dd><p>The argument should be a unit type name such as
-          <code class="option">service</code> and <code class="option">socket</code>, or a
-          unit load state such as <code class="option">loaded</code> and
-          <code class="option">masked</code>.
-          </p><p>If the argument is a unit type, when listing units,
-          limit display to certain unit types. If not specified units
-          of all types will be shown.</p><p>If the argument is a unit load state, when listing
-          units, limit display to certain unit types. If not specified
-          units of in all load states will be shown.</p><p>As a special case, if the argument is
+    system and service manager.</p></div><div class="refsect1"><a name="idp126992"></a><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="option">-h</code>, </span><span class="term"><code class="option">--help</code></span></dt><dd><p>Prints a short help
+        text and exits.</p></dd><dt><span class="term"><code class="option">--version</code></span></dt><dd><p>Prints a short version string and exits.</p></dd><dt><span class="term"><code class="option">-t</code>, </span><span class="term"><code class="option">--type=</code></span></dt><dd><p>The argument should be a comma separated list of unit
+          types such as <code class="option">service</code> and
+          <code class="option">socket</code>, or unit load states such as
+          <code class="option">loaded</code> and <code class="option">masked</code>
+          (types and states can be mixed).</p><p>If one of the arguments is a unit type, when listing
+          units, limit display to certain unit types. Otherwise units
+          of all types will be shown.</p><p>If one of the arguments is a unit load state, when
+          listing units, limit display to certain unit
+          types. Otherwise units of in all load states will be
+          shown.</p><p>As a special case, if one of the arguments is
           <code class="option">help</code>, a list of allowed values will be
           printed and the program will exit.</p></dd><dt><span class="term"><code class="option">-p</code>, </span><span class="term"><code class="option">--property=</code></span></dt><dd><p>When showing unit/job/manager properties with the
           <span class="command"><strong>show</strong></span> command, limit display to certain
@@ -22,10 +23,11 @@
           set properties are shown. The argument should be a
           comma-seperated list of property names, such as
           <code class="literal">MainPID</code>. If specified more than once all
-          properties with the specified names are shown.</p></dd><dt><span class="term"><code class="option">-a</code>, </span><span class="term"><code class="option">--all</code></span></dt><dd><p>When listing units, show all units, regardless of
-          their state, including inactive units. When showing
+          properties with the specified names are shown.</p></dd><dt><span class="term"><code class="option">-a</code>, </span><span class="term"><code class="option">--all</code></span></dt><dd><p>When listing units, show all loaded units, regardless
+          of their state, including inactive units. When showing
           unit/job/manager properties, show all properties regardless
-          whether they are set or not.</p></dd><dt><span class="term"><code class="option">--failed</code></span></dt><dd><p>When listing units, show only failed units. Do not
+          whether they are set or not.</p><p>To list all units installed on the system, use the
+          <span class="command"><strong>list-unit-files</strong></span> command instead.</p></dd><dt><span class="term"><code class="option">--failed</code></span></dt><dd><p>When listing units, show only failed units. Do not
           confuse with <code class="option">--fail</code>.</p></dd><dt><span class="term"><code class="option">--full</code></span></dt><dd><p>Do not ellipsize unit names, cgroup members, and
           truncate unit descriptions in the output of
           <span class="command"><strong>list-units</strong></span> and
@@ -33,7 +35,7 @@
           unfinished job, fail the command. If this is not specified
           the requested operation will replace the pending job, if
           necessary. Do not confuse with
-          <code class="option">--failed</code>.</p></dd><dt><span class="term"><code class="option">--irreversible</code></span></dt><dd><p>Mark this transaction's jobs as irreversible. This prevents
+          <code class="option">--failed</code>.</p></dd><dt><span class="term"><code class="option">--show-types</code></span></dt><dd><p>When showing sockets, show the type of the socket.</p></dd><dt><span class="term"><code class="option">--irreversible</code></span></dt><dd><p>Mark this transaction's jobs as irreversible. This prevents
           future conflicting transactions from replacing these jobs.
           The jobs can still be cancelled using the <span class="command"><strong>cancel</strong></span>
           command.</p></dd><dt><span class="term"><code class="option">--ignore-dependencies</code></span></dt><dd><p>When enqueuing a new job ignore all its dependencies
@@ -130,8 +132,22 @@
           formatting of the journal entries that are shown. For the
           available choices see
           <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>.
-          Defaults to <code class="literal">short</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp5032336"></a><h2>Commands</h2><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="command"><strong>list-units</strong></span></span></dt><dd><p>List known units (subject to limitations specified
-          with <code class="option">-t</code>).</p><p>This is the default command.</p></dd><dt><span class="term"><span class="command"><strong>start <em class="replaceable"><code>NAME</code></em>...</strong></span></span></dt><dd><p>Start (activate) one or more units specified on the
+          Defaults to <code class="literal">short</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp4746912"></a><h2>Commands</h2><p>The following commands are understood:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><span class="command"><strong>list-units</strong></span></span></dt><dd><p>List known units (subject to limitations specified
+          with <code class="option">-t</code>).</p><p>This is the default command.</p></dd><dt><span class="term"><span class="command"><strong>list-sockets</strong></span></span></dt><dd><p>List socket units ordered by the listening address. Produces output
+          similar to
+          </p><pre class="programlisting">
+LISTEN           UNIT                        ACTIVATES
+/dev/initctl     systemd-initctl.socket      systemd-initctl.service
+...
+[::]:22          sshd.socket                 sshd.service
+kobject-uevent 1 systemd-udevd-kernel.socket systemd-udevd.service
+
+5 sockets listed.
+          </pre><p>
+          Note: because the addresses might contains spaces, this output
+          is not suitable for programatic consumption.
+          </p><p>See also the options <code class="option">--show-types</code>,
+          <code class="option">--all</code>, and <code class="option">--failed</code>.</p></dd><dt><span class="term"><span class="command"><strong>start <em class="replaceable"><code>NAME</code></em>...</strong></span></span></dt><dd><p>Start (activate) one or more units specified on the
           command line.</p></dd><dt><span class="term"><span class="command"><strong>stop <em class="replaceable"><code>NAME</code></em>...</strong></span></span></dt><dd><p>Stop (deactivate) one or more units specified on the
           command line.</p></dd><dt><span class="term"><span class="command"><strong>reload <em class="replaceable"><code>NAME</code></em>...</strong></span></span></dt><dd><p>Asks all units listed on the command line to reload
           their configuration. Note that this will reload the
@@ -246,7 +262,7 @@
         unit name, plus a control group specification in the syntax
         <em class="replaceable"><code>CONTROLLER</code></em>:<em class="replaceable"><code>PATH</code></em>
         or <em class="replaceable"><code>CONTROLLER</code></em>. In the latter syntax
-        (where the path is ommitted) the default unit control group
+        (where the path is omitted) the default unit control group
         path is implied. Examples: <code class="literal">cpu</code> or
         <code class="literal">cpu:/foo/bar</code>. If a unit is removed from a
         control group hierarchy all its processes will be moved to the
@@ -469,12 +485,12 @@
           equal to the empty string the state of the initrd's system
           manager process is passed to the main system manager, which
           allows later introspection of the state of the services
-          involved in the initrd boot.</p></dd></dl></div></div><div class="refsect1"><a name="idp5244000"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
-    code otherwise.</p></div><div class="refsect1"><a name="idp5245232"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when <code class="option">--no-pager</code> is not
+          involved in the initrd boot.</p></dd></dl></div></div><div class="refsect1"><a name="idp4954624"></a><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+    code otherwise.</p></div><div class="refsect1"><a name="idp4955856"></a><h2>Environment</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">$SYSTEMD_PAGER</code></span></dt><dd><p>Pager to use when <code class="option">--no-pager</code> is not
           given; overrides <code class="varname">$PAGER</code>.  Setting this to
           an empty string or the value <code class="literal">cat</code> is
           equivalent to passing
-          <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp5250144"></a><h2>See Also</h2><p>
+          <code class="option">--no-pager</code>.</p></dd></dl></div></div><div class="refsect1"><a name="idp4960768"></a><h2>See Also</h2><p>
       <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
       <a href="systemadm.html"><span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span></a>,
       <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>,
