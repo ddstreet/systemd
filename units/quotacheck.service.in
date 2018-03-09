@@ -8,7 +8,7 @@
 [Unit]
 Description=File System Quota Check
 DefaultDependencies=no
-After=systemd-readahead-collect.service systemd-readahead-replay.service
+After=systemd-readahead-collect.service systemd-readahead-replay.service remount-rootfs.service
 Before=local-fs.target shutdown.target
 ConditionPathExists=/sbin/quotacheck
 
@@ -18,6 +18,3 @@ RemainAfterExit=yes
 ExecStart=@rootlibexecdir@/systemd-quotacheck
 StandardOutput=syslog
 TimeoutSec=0
-
-[Install]
-WantedBy=local-fs.target

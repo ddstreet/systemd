@@ -2,12 +2,12 @@
 .\"     Title: systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD" "1" "03/08/2011" "systemd" "systemd"
+.TH "SYSTEMD" "1" "04/21/2011" "systemd" "systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -174,7 +174,7 @@ for details)\&. Takes one of
 \fBsyslog\fR,
 \fBsyslog+console\fR,
 \fBkmsg\fR,
-\fBkmsg\-console\fR\&. If the argument is omitted it defaults to
+\fBkmsg+console\fR\&. If the argument is omitted it defaults to
 \fBinherit\fR\&.
 .RE
 .SH "CONCEPTS"
@@ -698,33 +698,33 @@ command line arguments described above\&.
 .RE
 .SH "SOCKETS AND FIFOS"
 .PP
-@/org/freedesktop/systemd1/notify
+/run/systemd/notify
 .RS 4
-Daemon status notification socket\&. This is an AF_UNIX datagram socket in the Linux abstract namespace, and is used to implement the daemon notification logic as implemented by
+Daemon status notification socket\&. This is an AF_UNIX datagram socket and is used to implement the daemon notification logic as implemented by
 \fBsd_notify\fR(3)\&.
 .RE
 .PP
-@/org/freedesktop/systemd1/logger
+/run/systemd/logger
 .RS 4
 Used internally by the
 systemd\-logger\&.service
 unit to connect STDOUT and/or STDERR of spawned processes to
 \fBsyslog\fR(3)
-or the kernel log buffer\&. This is an AF_UNIX stream socket in the Linux abstract namespace\&.
+or the kernel log buffer\&. This is an AF_UNIX stream socket\&.
 .RE
 .PP
-@/org/freedesktop/systemd1/shutdown
+/run/systemd/shutdownd
 .RS 4
 Used internally by the
 \fBshutdown\fR(8)
-tool to implement delayed shutdowns\&. This is an AF_UNIX datagram socket in the Linux abstract namespace\&.
+tool to implement delayed shutdowns\&. This is an AF_UNIX datagram socket\&.
 .RE
 .PP
-@/org/freedesktop/systemd1/private
+/run/systemd/private
 .RS 4
 Used internally as communication channel between
 \fBsystemctl\fR(1)
-and the systemd process\&. This is an AF_UNIX stream socket in the Linux abstract namespace\&. This interface is private to systemd and should not be used in external projects\&.
+and the systemd process\&. This is an AF_UNIX stream socket\&. This interface is private to systemd and should not be used in external projects\&.
 .RE
 .PP
 /dev/initctl

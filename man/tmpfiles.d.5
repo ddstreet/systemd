@@ -2,12 +2,12 @@
 .\"     Title: tmpfiles.d
 .\"    Author: Brandon Philips <brandon@ifup.org>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: tmpfiles.d
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "TMPFILES\&.D" "5" "03/08/2011" "systemd" "tmpfiles.d"
+.TH "TMPFILES\&.D" "5" "04/21/2011" "systemd" "tmpfiles.d"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -38,7 +38,7 @@ tmpfiles.d \- Configuration for creation, deletion and cleaning of volatile and 
 uses the configuration files in
 /etc/tmpfiles\&.d/
 to describe the creation, cleaning and removal of volatile and temporary files and directories which usually reside in directories such as
-/var/run
+/run
 or
 /tmp\&. Each configuration file is named in the style of
 /etc/tmpfiles\&.d/<program>\&.conf\&.
@@ -51,7 +51,7 @@ The configuration format is one line per path containing action, mode, ownership
 .\}
 .nf
 Type Path          Mode UID  GID  Age
-d    /var/run/user 0755 root root 10d
+d    /run/user 0755 root root 10d
 .fi
 .if n \{\
 .RE

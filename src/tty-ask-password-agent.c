@@ -251,17 +251,16 @@ static int parse_password(const char *filename, char **wall) {
         bool accept_cached = false;
 
         const ConfigItem items[] = {
-                { "Socket",       config_parse_string,   &socket_name,   "Ask" },
-                { "NotAfter",     config_parse_uint64,   &not_after,     "Ask" },
-                { "Message",      config_parse_string,   &message,       "Ask" },
-                { "PID",          config_parse_unsigned, &pid,           "Ask" },
-                { "AcceptCached", config_parse_bool,     &accept_cached, "Ask" },
-                { NULL, NULL, NULL, NULL }
+                { "Socket",       config_parse_string,   0, &socket_name,   "Ask" },
+                { "NotAfter",     config_parse_uint64,   0, &not_after,     "Ask" },
+                { "Message",      config_parse_string,   0, &message,       "Ask" },
+                { "PID",          config_parse_unsigned, 0, &pid,           "Ask" },
+                { "AcceptCached", config_parse_bool,     0, &accept_cached, "Ask" },
+                { NULL, NULL, 0, NULL, NULL }
         };
 
         FILE *f;
         int r;
-        usec_t n;
 
         assert(filename);
 
@@ -279,14 +278,22 @@ static int parse_password(const char *filename, char **wall) {
                 goto finish;
         }
 
-        if (!socket_name || not_after <= 0) {
+        if (!socket_name) {
                 log_error("Invalid password file %s", filename);
                 r = -EBADMSG;
                 goto finish;
         }
 
-        n = now(CLOCK_MONOTONIC);
-        if (n > not_after) {
+        if (not_after > 0) {
+                if (now(CLOCK_MONOTONIC) > not_after) {
+                        r = 0;
+                        goto finish;
+                }
+        }
+
+        if (pid > 0 &&
+            kill(pid, 0) < 0 &&
+            errno == ESRCH) {
                 r = 0;
                 goto finish;
         }
@@ -369,10 +376,15 @@ static int parse_password(const char *filename, char **wall) {
                                 release_terminal();
                         }
 
-                        asprintf(&packet, "+%s", password);
-                        free(password);
+                        packet_length = 1+strlen(password)+1;
+                        if (!(packet = new(char, packet_length)))
+                                r = -ENOMEM;
+                        else {
+                                packet[0] = '+';
+                                strcpy(packet+1, password);
+                        }
 
-                        packet_length = strlen(packet);
+                        free(password);
                 }
 
                 if (r == -ETIME || r == -ENOENT) {
@@ -382,14 +394,7 @@ static int parse_password(const char *filename, char **wall) {
                 }
 
                 if (r < 0) {
-
                         log_error("Failed to query password: %s", strerror(-r));
-                        goto finish;
-                }
-
-                if (!packet) {
-                        log_error("Out of memory");
-                        r = -ENOMEM;
                         goto finish;
                 }
 
@@ -431,7 +436,7 @@ static int wall_tty_block(void) {
         if ((r = get_ctty_devnr(&devnr)) < 0)
                 return -r;
 
-        if (asprintf(&p, "/dev/.systemd/ask-password-block/%u:%u", major(devnr), minor(devnr)) < 0)
+        if (asprintf(&p, "/run/systemd/ask-password-block/%u:%u", major(devnr), minor(devnr)) < 0)
                 return -ENOMEM;
 
         mkdir_parents(p, 0700);
@@ -475,7 +480,7 @@ static bool wall_tty_match(const char *path) {
          * advantage that the block will automatically go away if the
          * process dies. */
 
-        if (asprintf(&p, "/dev/.systemd/ask-password-block/%u:%u", major(st.st_rdev), minor(st.st_rdev)) < 0)
+        if (asprintf(&p, "/run/systemd/ask-password-block/%u:%u", major(st.st_rdev), minor(st.st_rdev)) < 0)
                 return true;
 
         fd = open(p, O_WRONLY|O_CLOEXEC|O_NONBLOCK|O_NOCTTY);
@@ -494,7 +499,7 @@ static int show_passwords(void) {
         struct dirent *de;
         int r = 0;
 
-        if (!(d = opendir("/dev/.systemd/ask-password"))) {
+        if (!(d = opendir("/run/systemd/ask-password"))) {
                 if (errno == ENOENT)
                         return 0;
 
@@ -519,7 +524,7 @@ static int show_passwords(void) {
                 if (!startswith(de->d_name, "ask."))
                         continue;
 
-                if (!(p = strappend("/dev/.systemd/ask-password/", de->d_name))) {
+                if (!(p = strappend("/run/systemd/ask-password/", de->d_name))) {
                         log_error("Out of memory");
                         r = -ENOMEM;
                         goto finish;
@@ -558,14 +563,14 @@ static int watch_passwords(void) {
 
         tty_block_fd = wall_tty_block();
 
-        mkdir_p("/dev/.systemd/ask-password", 0755);
+        mkdir_p("/run/systemd/ask-password", 0755);
 
         if ((notify = inotify_init1(IN_CLOEXEC)) < 0) {
                 r = -errno;
                 goto finish;
         }
 
-        if (inotify_add_watch(notify, "/dev/.systemd/ask-password", IN_CLOSE_WRITE|IN_MOVED_TO) < 0) {
+        if (inotify_add_watch(notify, "/run/systemd/ask-password", IN_CLOSE_WRITE|IN_MOVED_TO) < 0) {
                 r = -errno;
                 goto finish;
         }

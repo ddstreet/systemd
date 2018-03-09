@@ -2,12 +2,12 @@
 .\"     Title: systemd.unit
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: systemd.unit
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "SYSTEMD\&.UNIT" "5" "03/08/2011" "systemd" "systemd.unit"
+.TH "SYSTEMD\&.UNIT" "5" "04/21/2011" "systemd" "systemd.unit"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -97,7 +97,11 @@ directory of a service is with the
 \fBenable\fR
 command of the
 \fBsystemctl\fR(1)
-tool which reads information from the [Install] section of unit files\&. (See below\&.)
+tool which reads information from the [Install] section of unit files\&. (See below\&.) A similar functionality exists for
+\fIRequires=\fR
+type dependencies as well, the directory suffix is
+\&.requires/
+in this case\&.
 .PP
 Note that while systemd offers a flexible dependency system between units it is recommended to use this functionality only sparsely and instead rely on techniques such as bus\-based or socket\-based activation which makes dependencies implicit, which both results in a simpler and more flexible system\&.
 .PP
@@ -132,13 +136,6 @@ The unit file format is covered by the
 .SH "OPTIONS"
 .PP
 Unit file may include a [Unit] section, which carries generic information about the unit that is not dependent on the type of unit:
-.PP
-\fINames=\fR
-.RS 4
-Additional names for this unit\&. The names listed here must have the same suffix (i\&.e\&. type) as the unit file name\&. This option may be specified more than once, in which case all listed names are used\&. Note that this option is different from the
-\fIAlias=\fR
-option from the [Install] section mentioned below\&. See below for details\&.
-.RE
 .PP
 \fIDescription=\fR
 .RS 4
@@ -246,6 +243,25 @@ or
 Lists one or more units that are activated when this unit enters the \*(Aqfailed\*(Aq state\&.
 .RE
 .PP
+\fIOnFailureIsolate=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+the unit listed in
+\fIOnFailure=\fR
+will be enqueued in isolation mode, i\&.e\&. all units that are not its dependency will be stopped\&. If this is set only a single unit may be listed in
+\fIOnFailure=\fR\&. Defaults to
+\fBfalse\fR\&.
+.RE
+.PP
+\fIIgnoreOnIsolate=\fR
+.RS 4
+Takes a boolean argument\&. If
+\fBtrue\fR
+this unit will not be stopped when isolating another unit\&. Defaults to
+\fBfalse\fR\&.
+.RE
+.PP
 \fIStopWhenUnneeded=\fR
 .RS 4
 Takes a boolean argument\&. If
@@ -289,17 +305,21 @@ When clients are waiting for a job of this unit to complete, time out after the 
 in service units) as the job timeout has no effect on the unit itself, only on the job that might be pending for it\&. Or in other words: unit\-specific timeouts are useful to abort unit state changes, and revert them\&. The job timeout set with this option however is useful to abort only the job waiting for the unit state to change\&.
 .RE
 .PP
-\fIConditionPathExists=\fR, \fIConditionDirectoryNotEmpty=\fR, \fIConditionKernelCommandLine=\fR, \fIConditionVirtualization=\fR, \fIConditionNull=\fR
+\fIConditionPathExists=\fR, \fIConditionPathIsDirectory=\fR, \fIConditionDirectoryNotEmpty=\fR, \fIConditionKernelCommandLine=\fR, \fIConditionVirtualization=\fR, \fIConditionSecurity=\fR, \fIConditionNull=\fR
 .RS 4
 Before starting a unit verify that the specified condition is true\&. With
 \fIConditionPathExists=\fR
 a file existance condition can be checked before a unit is started\&. If the specified absolute path name does not exist startup of a unit will not actually happen, however the unit is still useful for ordering purposes in this case\&. The condition is checked at the time the queued start job is to be executed\&. If the absolute path name passed to
 \fIConditionPathExists=\fR
 is prefixed with an exclamation mark (!), the test is negated, and the unit only started if the path does not exist\&.
+\fIConditionPathIsDirectory=\fR
+is similar to
+\fIConditionPathExists=\fR
+but verifies whether a certain path exists and is a directory\&.
 \fIConditionDirectoryNotEmpty=\fR
 is similar to
 \fIConditionPathExists=\fR
-but verifies whether a certain path is exists and is a non\-empty directory\&. Similarly
+but verifies whether a certain path exists and is a non\-empty directory\&. Similarly
 \fIConditionKernelCommandLine=\fR
 may be used to check whether a specific kernel command line option is set (or if prefixed with the exclamation mark unset)\&. The argument must either be a single word, or an assignment (i\&.e\&. two words, separated by the equality sign)\&. In the former case the kernel command line is searched for the word appearing as is, or as left hand side of an assignment\&. In the latter case the exact assignment is looked for with right and left hand side matching\&.
 \fIConditionVirtualization=\fR
@@ -310,12 +330,23 @@ may be used to check whether the system is executed in a virtualized environment
 \fImicrosoft\fR,
 \fIoracle\fR,
 \fIxen\fR,
+\fIpidns\fR,
 \fIopenvz\fR
-to test against a specific implementation\&. The test may be negated by prepending an exclamation mark\&. Finally,
+to test against a specific implementation\&. The test may be negated by prepending an exclamation mark\&.
+\fIConditionSecurity=\fR
+may be used to check whether the given security module is enabled on the system\&. Currently the only recognized value is
+\fIselinux\fR\&. The test may be negated by prepending an exclamation mark\&. Finally,
 \fIConditionNull=\fR
 may be used to add a constant condition check value to the unit\&. It takes a boolean argument\&. If set to
 \fIfalse\fR
 the condition will always fail, otherwise succeed\&. If multiple conditions are specified the unit will be executed if all of them apply (i\&.e\&. a logical AND is applied)\&. Condition checks can be prefixed with a pipe symbol (|) in which case a condition becomes a triggering condition\&. If at least one triggering condition is defined for a unit then the unit will be executed if at least one of the triggering conditions apply and all of the non\-triggering conditions\&. If you prefix an argument with the pipe symbol and an exclamation mark the pipe symbol must be passed first, the exclamation second\&.
+.RE
+.PP
+\fINames=\fR
+.RS 4
+Additional names for this unit\&. The names listed here must have the same suffix (i\&.e\&. type) as the unit file name\&. This option may be specified more than once, in which case all listed names are used\&. Note that this option is different from the
+\fIAlias=\fR
+option from the [Install] section mentioned below\&. See below for details\&. Note that in almost all cases this option is not what you want\&. A symlink alias in the file system is generally preferable since it can be used as lookup key\&. If a unit with a symlinked alias name is not loaded and needs to be it is easily found via the symlink\&. However, if a unit with an alias name configured with this setting is not loaded it will not be discovered\&. This settings\*(Aq only use is in conjunction with service instances\&.
 .RE
 .PP
 Unit file may include a [Install] section, which carries installation information for the unit\&. This section is not interpreted by

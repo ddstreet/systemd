@@ -212,7 +212,7 @@
                                 a time span value such as "5min
                                 20s". Pass 0 to disable the timeout
                                 logic. Defaults to
-                                60s.</para></listitem>
+                                3min.</para></listitem>
                         </varlistentry>
 
                         <varlistentry>
@@ -221,7 +221,6 @@
                                 processes of this mount shall be
                                 killed. One of
                                 <option>control-group</option>,
-                                <option>process-group</option>,
                                 <option>process</option>,
                                 <option>none</option>.</para>
 

@@ -54,8 +54,9 @@ static const MountPoint mount_table[] = {
         { "devtmpfs", "/dev",                   "devtmpfs", "mode=755",          MS_NOSUID,                    true },
         { "tmpfs",    "/dev/shm",               "tmpfs",    "mode=1777",         MS_NOSUID|MS_NODEV,           true },
         { "devpts",   "/dev/pts",               "devpts",   "mode=620,gid=" STRINGIFY(TTY_GID), MS_NOSUID|MS_NOEXEC, false },
-        { "tmpfs",    "/sys/fs/cgroup",         "tmpfs",    "mode=755",          MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
-        { "cgroup",   "/sys/fs/cgroup/systemd", "cgroup",   "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+        { "tmpfs",    "/run",                   "tmpfs",    "mode=755",          MS_NOSUID|MS_NOEXEC|MS_NODEV, true },
+        { "tmpfs",    "/sys/fs/cgroup",         "tmpfs",    "mode=755",          MS_NOSUID|MS_NOEXEC|MS_NODEV, false },
+        { "cgroup",   "/sys/fs/cgroup/systemd", "cgroup",   "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV, false },
 };
 
 /* These are API file systems that might be mounted by other software,
@@ -63,9 +64,7 @@ static const MountPoint mount_table[] = {
 
 static const char * const ignore_paths[] = {
         "/selinux",
-        "/proc/bus/usb",
-        "/var/lib/nfs/rpc_pipefs",
-        "/proc/fs/nfsd"
+        "/proc/bus/usb"
 };
 
 bool mount_point_is_api(const char *path) {
@@ -96,6 +95,9 @@ static int mount_one(const MountPoint *p) {
 
         assert(p);
 
+        /* Relabel first, just in case */
+        label_fix(p->where, true);
+
         if ((r = path_is_mount_point(p->where)) < 0)
                 return r;
 
@@ -121,6 +123,7 @@ static int mount_one(const MountPoint *p) {
                 return p->fatal ? -errno : 0;
         }
 
+        /* Relabel again, since we now mounted something fresh here */
         label_fix(p->where, false);
 
         return 0;
@@ -129,7 +132,7 @@ static int mount_one(const MountPoint *p) {
 static int mount_cgroup_controllers(void) {
         int r;
         FILE *f;
-        char buf [256];
+        char buf[LINE_MAX];
 
         /* Mount all available cgroup controllers that are built into the kernel. */
 
@@ -227,8 +230,7 @@ int mount_setup(void) {
                 "/proc/self/fd\0"    "/dev/fd\0"
                 "/proc/self/fd/0\0"  "/dev/stdin\0"
                 "/proc/self/fd/1\0"  "/dev/stdout\0"
-                "/proc/self/fd/2\0"  "/dev/stderr\0"
-                "\0";
+                "/proc/self/fd/2\0"  "/dev/stderr\0";
 
         int r;
         unsigned i;
@@ -238,19 +240,23 @@ int mount_setup(void) {
                 if ((r = mount_one(mount_table+i)) < 0)
                         return r;
 
-        /* Nodes in devtmpfs need to be manually updated for the
-         * appropriate labels, after mounting. The other virtual API
-         * file systems do not need. */
-
-        if (unlink("/dev/.systemd/relabel-devtmpfs") >= 0)
+        /* Nodes in devtmpfs and /run need to be manually updated for
+         * the appropriate labels, after mounting. The other virtual
+         * API file systems like /sys and /proc do not need that, they
+         * use the same label for all their files. */
+        if (unlink("/dev/.systemd-relabel-run-dev") >= 0) {
                 nftw("/dev", nftw_cb, 64, FTW_MOUNT|FTW_PHYS);
+                nftw("/run", nftw_cb, 64, FTW_MOUNT|FTW_PHYS);
+        }
 
         /* Create a few default symlinks, which are normally created
-         * bei udevd, but some scripts might need them before we start
+         * by udevd, but some scripts might need them before we start
          * udevd. */
-
         NULSTR_FOREACH_PAIR(j, k, symlinks)
                 symlink_and_label(j, k);
+
+        /* Create a few directories we always want around */
+        mkdir("/run/systemd", 0755);
 
         return mount_cgroup_controllers();
 }

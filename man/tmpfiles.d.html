@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>tmpfiles.d</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="tmpfiles.d"><a id="tmpfiles.d"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>tmpfiles.d — Configuration for creation, deletion and
-                cleaning of volatile and temporary files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/tmpfiles.d/*.conf</code></p></div><div class="refsect1" title="Description"><a id="id556918"/><h2>Description</h2><p><span class="command"><strong>systemd-tmpfiles</strong></span> uses the
+                cleaning of volatile and temporary files</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><p><code class="filename">/etc/tmpfiles.d/*.conf</code></p></div><div class="refsect1" title="Description"><a id="id539455"/><h2>Description</h2><p><span class="command"><strong>systemd-tmpfiles</strong></span> uses the
 		configuration files in
 		<code class="filename">/etc/tmpfiles.d/</code> to describe the
 		creation, cleaning and removal of volatile and
 		temporary files and directories which usually reside
-		in directories such as <code class="filename">/var/run</code>
+		in directories such as <code class="filename">/run</code>
 		or <code class="filename">/tmp</code>. Each configuration file
 		is named in the style of
-		<code class="filename">/etc/tmpfiles.d/&lt;program&gt;.conf</code>.</p></div><div class="refsect1" title="Configuration Format"><a id="id556958"/><h2>Configuration Format</h2><p>The configuration format is one line per path
+		<code class="filename">/etc/tmpfiles.d/&lt;program&gt;.conf</code>.</p></div><div class="refsect1" title="Configuration Format"><a id="id539495"/><h2>Configuration Format</h2><p>The configuration format is one line per path
 		containing action, mode, ownership and age
 		fields:</p><pre class="programlisting">Type Path          Mode UID  GID  Age
-d    /var/run/user 0755 root root 10d</pre><div class="refsect2" title="Type"><a id="id556974"/><h3>Type</h3><div class="variablelist"><dl><dt><span class="term"><code class="varname">f</code></span></dt><dd><p>Create a file if it doesn't exist yet</p></dd><dt><span class="term"><code class="varname">F</code></span></dt><dd><p>Create or truncate a file</p></dd><dt><span class="term"><code class="varname">d</code></span></dt><dd><p>Create a directory if it doesn't exist yet</p></dd><dt><span class="term"><code class="varname">D</code></span></dt><dd><p>Create or empty a directory</p></dd><dt><span class="term"><code class="varname">x</code></span></dt><dd><p>Ignore a path
+d    /run/user 0755 root root 10d</pre><div class="refsect2" title="Type"><a id="id539510"/><h3>Type</h3><div class="variablelist"><dl><dt><span class="term"><code class="varname">f</code></span></dt><dd><p>Create a file if it doesn't exist yet</p></dd><dt><span class="term"><code class="varname">F</code></span></dt><dd><p>Create or truncate a file</p></dd><dt><span class="term"><code class="varname">d</code></span></dt><dd><p>Create a directory if it doesn't exist yet</p></dd><dt><span class="term"><code class="varname">D</code></span></dt><dd><p>Create or empty a directory</p></dd><dt><span class="term"><code class="varname">x</code></span></dt><dd><p>Ignore a path
                                         during cleaning. Use this type
                                         to exclude paths from clean-up
                                         as controlled with the Age
@@ -36,23 +36,23 @@ d    /var/run/user 0755 root root 10d</pre><div class="refsect2" title="Type"><a
                                         directory). Lines of this type
                                         accept shell-style globs in
                                         place of normal path
-                                        names.</p></dd></dl></div></div><div class="refsect2" title="Mode"><a id="id524447"/><h3>Mode</h3><p>The file access mode to use when
+                                        names.</p></dd></dl></div></div><div class="refsect2" title="Mode"><a id="id506979"/><h3>Mode</h3><p>The file access mode to use when
                         creating this file or directory. If omitted or
                         when set to - the default is used: 0755 for
                         directories, 0644 for files. This parameter is
-                        ignored for x, r, R lines.</p></div><div class="refsect2" title="UID, GID"><a id="id524459"/><h3>UID, GID</h3><p>The user and group to use for this file
+                        ignored for x, r, R lines.</p></div><div class="refsect2" title="UID, GID"><a id="id506992"/><h3>UID, GID</h3><p>The user and group to use for this file
                         or directory. This may either be a numeric
                         user/group ID or a user or group name. If
                         omitted or when set to - the default 0 (root)
                         is used. . These parameters are ignored for x,
-                        r, R lines.</p></div><div class="refsect2" title="Age"><a id="id524472"/><h3>Age</h3><p>The date field, when set, is used to
+                        r, R lines.</p></div><div class="refsect2" title="Age"><a id="id507004"/><h3>Age</h3><p>The date field, when set, is used to
                         decide what files to delete when cleaning. If
                         a file or directory is older than the current
                         time minus the age field it is deleted. The
                         field format is a series of integers each
                         followed by one of the following
-                        postfixes for the respective time units:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">s</code>, </span><span class="term"><code class="varname">min</code>, </span><span class="term"><code class="varname">h</code>, </span><span class="term"><code class="varname">d</code>, </span><span class="term"><code class="varname">w</code>, </span><span class="term"><code class="varname">ms</code>, </span><span class="term"><code class="varname">m</code>, </span><span class="term"><code class="varname">us</code></span></dt><dd/></dl></div><p>If multiple integers and units are specified the time values are summed up.</p><p>The age field only applies to lines starting with d, D and x. If omitted or set to - no automatic clean-up is done.</p></div></div><div class="refsect1" title="Example"><a id="id524797"/><h2>Example</h2><div class="example"><a id="id524803"/><p class="title"><strong>Example 1. /etc/tmpfiles.d/screen.conf example</strong></p><div class="example-contents"><p><span class="command"><strong>screen</strong></span> needs two directories created at boot with specific modes and ownership.</p><pre class="programlisting">d /var/run/screens 1777 root root 10d
-d /var/run/uscreens 0755 root root 10d12h</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id524505"/><h2>See Also</h2><p>
+                        postfixes for the respective time units:</p><div class="variablelist"><dl><dt><span class="term"><code class="varname">s</code>, </span><span class="term"><code class="varname">min</code>, </span><span class="term"><code class="varname">h</code>, </span><span class="term"><code class="varname">d</code>, </span><span class="term"><code class="varname">w</code>, </span><span class="term"><code class="varname">ms</code>, </span><span class="term"><code class="varname">m</code>, </span><span class="term"><code class="varname">us</code></span></dt><dd/></dl></div><p>If multiple integers and units are specified the time values are summed up.</p><p>The age field only applies to lines starting with d, D and x. If omitted or set to - no automatic clean-up is done.</p></div></div><div class="refsect1" title="Example"><a id="id507064"/><h2>Example</h2><div class="example"><a id="id507069"/><p class="title"><strong>Example 1. /etc/tmpfiles.d/screen.conf example</strong></p><div class="example-contents"><p><span class="command"><strong>screen</strong></span> needs two directories created at boot with specific modes and ownership.</p><pre class="programlisting">d /var/run/screens 1777 root root 10d
+d /var/run/uscreens 0755 root root 10d12h</pre></div></div><br class="example-break"/></div><div class="refsect1" title="See Also"><a id="id507302"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">systemd-tmpfiles</span>(8)</span>
                 </p></div></div></body></html>

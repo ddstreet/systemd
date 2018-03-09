@@ -24,6 +24,7 @@
 #include <sys/file.h>
 #include <pwd.h>
 #include <endian.h>
+#include <sys/capability.h>
 
 #include <security/pam_modules.h>
 #include <security/_pam_macros.h>
@@ -198,8 +199,10 @@ static int open_file_and_lock(const char *fn) {
          * as the filesystems in question should be local, and only
          * locally accessible, and most likely even tmpfs. */
 
-        if (flock(fd, LOCK_EX) < 0)
+        if (flock(fd, LOCK_EX) < 0) {
+                close_nointr_nofail(fd);
                 return -errno;
+        }
 
         return fd;
 }
@@ -218,18 +221,19 @@ static uint64_t get_session_id(int *mode) {
 
         /* First attempt: let's use the session ID of the audit
          * system, if it is available. */
-        if (read_one_line_file("/proc/self/sessionid", &s) >= 0) {
-                uint32_t u;
-                int r;
+        if (have_effective_cap(CAP_AUDIT_CONTROL) > 0)
+                if (read_one_line_file("/proc/self/sessionid", &s) >= 0) {
+                        uint32_t u;
+                        int r;
 
-                r = safe_atou32(s, &u);
-                free(s);
+                        r = safe_atou32(s, &u);
+                        free(s);
 
-                if (r >= 0 && u != (uint32_t) -1 && u > 0) {
-                        *mode = SESSION_ID_AUDIT;
-                        return (uint64_t) u;
+                        if (r >= 0 && u != (uint32_t) -1 && u > 0) {
+                                *mode = SESSION_ID_AUDIT;
+                                return (uint64_t) u;
+                        }
                 }
-        }
 
         /* Second attempt, use our own counter. */
         if ((fd = open_file_and_lock(RUNTIME_DIR "/user/.pam-systemd-session")) >= 0) {
@@ -237,11 +241,10 @@ static uint64_t get_session_id(int *mode) {
                 ssize_t r;
 
                 /* We do a bit of endianess swapping here, just to be
-                 * sure. /var should be machine specific anyway, and
-                 * /var/run even mounted from tmpfs, so this
-                 * byteswapping should really not be necessary. But
-                 * then again, you never know, so let's avoid any
-                 * risk. */
+                 * sure. /run should be machine specific anyway, and
+                 * even mounted from tmpfs, so this byteswapping
+                 * should really not be necessary. But then again, you
+                 * never know, so let's avoid any risk. */
 
                 if (loop_read(fd, &counter, sizeof(counter), false) != sizeof(counter))
                         counter = 1;
@@ -271,6 +274,7 @@ static uint64_t get_session_id(int *mode) {
         /* Last attempt, pick a random value */
         return (uint64_t) random_ull();
 }
+
 static int get_user_data(
                 pam_handle_t *handle,
                 const char **ret_username,
@@ -286,15 +290,24 @@ static int get_user_data(
         assert(ret_username);
         assert(ret_pw);
 
-        if (read_one_line_file("/proc/self/loginuid", &s) >= 0) {
-                uint32_t u;
+        if (have_effective_cap(CAP_AUDIT_CONTROL) > 0) {
+                /* Only use audit login uid if we are executed with
+                 * sufficient capabilities so that pam_loginuid could
+                 * do its job. If we are lacking the CAP_AUDIT_CONTROL
+                 * capabality we most likely are being run in a
+                 * container and /proc/self/loginuid is useless since
+                 * it probably contains a uid of the host system. */
 
-                r = safe_atou32(s, &u);
-                free(s);
+                if (read_one_line_file("/proc/self/loginuid", &s) >= 0) {
+                        uint32_t u;
 
-                if (r >= 0 && u != (uint32_t) -1 && u > 0) {
-                        have_loginuid = true;
-                        pw = pam_modutil_getpwuid(handle, u);
+                        r = safe_atou32(s, &u);
+                        free(s);
+
+                        if (r >= 0 && u != (uint32_t) -1 && u > 0) {
+                                have_loginuid = true;
+                                pw = pam_modutil_getpwuid(handle, u);
+                        }
                 }
         }
 
@@ -394,6 +407,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
         int lock_fd = -1;
         bool create_session = true;
         char **controllers = NULL, **reset_controllers = NULL, **c;
+        char *cgroup_user_tree = NULL;
 
         assert(handle);
 
@@ -413,6 +427,12 @@ _public_ PAM_EXTERN int pam_sm_open_session(
         if ((r = get_user_data(handle, &username, &pw)) != PAM_SUCCESS)
                 goto finish;
 
+        if ((r = cg_get_user_path(&cgroup_user_tree)) < 0) {
+                pam_syslog(handle, LOG_ERR, "Failed to determine user cgroup tree: %s", strerror(-r));
+                r = PAM_SYSTEM_ERR;
+                goto finish;
+        }
+
         if (safe_mkdir(RUNTIME_DIR "/user", 0755, 0, 0) < 0) {
                 pam_syslog(handle, LOG_ERR, "Failed to create runtime directory: %m");
                 r = PAM_SYSTEM_ERR;
@@ -425,7 +445,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                 goto finish;
         }
 
-        /* Create /var/run/$USER */
+        /* Create /run/user/$USER */
         free(buf);
         if (asprintf(&buf, RUNTIME_DIR "/user/%s", username) < 0) {
                 r = PAM_BUF_ERR;
@@ -476,9 +496,9 @@ _public_ PAM_EXTERN int pam_sm_open_session(
                         }
                 }
 
-                r = asprintf(&buf, "/user/%s/%s", username, id);
+                r = asprintf(&buf, "%s/%s/%s", cgroup_user_tree, username, id);
         } else
-                r = asprintf(&buf, "/user/%s/master", username);
+                r = asprintf(&buf, "%s/%s/master", cgroup_user_tree, username);
 
         if (r < 0) {
                 r = PAM_BUF_ERR;
@@ -508,6 +528,8 @@ finish:
 
         strv_free(controllers);
         strv_free(reset_controllers);
+
+        free(cgroup_user_tree);
 
         return r;
 }
@@ -600,6 +622,7 @@ _public_ PAM_EXTERN int pam_sm_close_session(
         struct passwd *pw;
         const void *created = NULL;
         char **controllers = NULL, **c, **kill_only_users = NULL, **kill_exclude_users = NULL;
+        char *cgroup_user_tree = NULL;
 
         assert(handle);
 
@@ -617,6 +640,12 @@ _public_ PAM_EXTERN int pam_sm_close_session(
         if ((r = get_user_data(handle, &username, &pw)) != PAM_SUCCESS)
                 goto finish;
 
+        if ((r = cg_get_user_path(&cgroup_user_tree)) < 0) {
+                pam_syslog(handle, LOG_ERR, "Failed to determine user cgroup tree: %s", strerror(-r));
+                r = PAM_SYSTEM_ERR;
+                goto finish;
+        }
+
         if ((lock_fd = open_file_and_lock(RUNTIME_DIR "/user/.pam-systemd-lock")) < 0) {
                 pam_syslog(handle, LOG_ERR, "Failed to lock runtime directory: %m");
                 r = PAM_SYSTEM_ERR;
@@ -624,14 +653,14 @@ _public_ PAM_EXTERN int pam_sm_close_session(
         }
 
         /* We are probably still in some session/user dir. Move ourselves out of the way as first step */
-        if ((r = cg_attach(SYSTEMD_CGROUP_CONTROLLER, "/user", 0)) < 0)
+        if ((r = cg_attach(SYSTEMD_CGROUP_CONTROLLER, cgroup_user_tree, 0)) < 0)
                 pam_syslog(handle, LOG_ERR, "Failed to move us away: %s", strerror(-r));
 
         STRV_FOREACH(c, controllers)
-                if ((r = cg_attach(*c, "/user", 0)) < 0)
+                if ((r = cg_attach(*c, cgroup_user_tree, 0)) < 0)
                         pam_syslog(handle, LOG_ERR, "Failed to move us away in %s hierarchy: %s", *c, strerror(-r));
 
-        if (asprintf(&user_path, "/user/%s", username) < 0) {
+        if (asprintf(&user_path, "%s/%s", cgroup_user_tree, username) < 0) {
                 r = PAM_BUF_ERR;
                 goto finish;
         }
@@ -640,8 +669,8 @@ _public_ PAM_EXTERN int pam_sm_close_session(
 
         if ((id = pam_getenv(handle, "XDG_SESSION_ID")) && created) {
 
-                if (asprintf(&session_path, "/user/%s/%s", username, id) < 0 ||
-                    asprintf(&nosession_path, "/user/%s/master", username) < 0) {
+                if (asprintf(&session_path, "%s/%s/%s", cgroup_user_tree, username, id) < 0 ||
+                    asprintf(&nosession_path, "%s/%s/master", cgroup_user_tree, username) < 0) {
                         r = PAM_BUF_ERR;
                         goto finish;
                 }
@@ -726,6 +755,8 @@ finish:
         strv_free(controllers);
         strv_free(kill_exclude_users);
         strv_free(kill_only_users);
+
+        free(cgroup_user_tree);
 
         return r;
 }

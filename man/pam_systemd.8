@@ -2,12 +2,12 @@
 .\"     Title: pam_systemd
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: pam_systemd
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "PAM_SYSTEMD" "8" "03/08/2011" "systemd" "pam_systemd"
+.TH "PAM_SYSTEMD" "8" "04/21/2011" "systemd" "pam_systemd"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -48,7 +48,7 @@ On login, this module ensures the following:
 .IP "  1." 4.2
 .\}
 If it does not exist yet, the user runtime directory
-/var/run/user/$USER
+/run/user/$USER
 is created and its ownership changed to the user that is logging in\&.
 .RE
 .sp
@@ -254,7 +254,6 @@ If the options are omitted they default to
 \fBcreate\-session=1\fR,
 \fBkill\-session=0\fR,
 \fBkill\-user=0\fR,
-\fBkeep\-root=1\fR,
 \fBreset\-controllers=cpu\fR,
 \fBkill\-only\-users=\fR,
 \fBkill\-exclude\-users=root\fR\&.

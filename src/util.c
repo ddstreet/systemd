@@ -50,6 +50,7 @@
 #include <linux/kd.h>
 #include <dlfcn.h>
 #include <sys/wait.h>
+#include <sys/capability.h>
 
 #include "macro.h"
 #include "util.h"
@@ -60,6 +61,20 @@
 #include "label.h"
 #include "exit-status.h"
 #include "hashmap.h"
+
+size_t page_size(void) {
+        static __thread size_t pgsz = 0;
+        long r;
+
+        if (pgsz)
+                return pgsz;
+
+        assert_se((r = sysconf(_SC_PAGESIZE)) > 0);
+
+        pgsz = (size_t) r;
+
+        return pgsz;
+}
 
 bool streq_ptr(const char *a, const char *b) {
 
@@ -438,14 +453,14 @@ char **split_path_and_make_absolute(const char *p) {
 int get_parent_of_pid(pid_t pid, pid_t *_ppid) {
         int r;
         FILE *f;
-        char fn[132], line[256], *p;
+        char fn[PATH_MAX], line[LINE_MAX], *p;
         long unsigned ppid;
 
-        assert(pid >= 0);
+        assert(pid > 0);
         assert(_ppid);
 
         assert_se(snprintf(fn, sizeof(fn)-1, "/proc/%lu/stat", (unsigned long) pid) < (int) (sizeof(fn)-1));
-        fn[sizeof(fn)-1] = 0;
+        char_array_0(fn);
 
         if (!(f = fopen(fn, "r")))
                 return -errno;
@@ -481,6 +496,64 @@ int get_parent_of_pid(pid_t pid, pid_t *_ppid) {
         return 0;
 }
 
+int get_starttime_of_pid(pid_t pid, unsigned long long *st) {
+        int r;
+        FILE *f;
+        char fn[PATH_MAX], line[LINE_MAX], *p;
+
+        assert(pid > 0);
+        assert(st);
+
+        assert_se(snprintf(fn, sizeof(fn)-1, "/proc/%lu/stat", (unsigned long) pid) < (int) (sizeof(fn)-1));
+        char_array_0(fn);
+
+        if (!(f = fopen(fn, "r")))
+                return -errno;
+
+        if (!(fgets(line, sizeof(line), f))) {
+                r = -errno;
+                fclose(f);
+                return r;
+        }
+
+        fclose(f);
+
+        /* Let's skip the pid and comm fields. The latter is enclosed
+         * in () but does not escape any () in its value, so let's
+         * skip over it manually */
+
+        if (!(p = strrchr(line, ')')))
+                return -EIO;
+
+        p++;
+
+        if (sscanf(p, " "
+                   "%*c "  /* state */
+                   "%*d "  /* ppid */
+                   "%*d "  /* pgrp */
+                   "%*d "  /* session */
+                   "%*d "  /* tty_nr */
+                   "%*d "  /* tpgid */
+                   "%*u "  /* flags */
+                   "%*u "  /* minflt */
+                   "%*u "  /* cminflt */
+                   "%*u "  /* majflt */
+                   "%*u "  /* cmajflt */
+                   "%*u "  /* utime */
+                   "%*u "  /* stime */
+                   "%*d "  /* cutime */
+                   "%*d "  /* cstime */
+                   "%*d "  /* priority */
+                   "%*d "  /* nice */
+                   "%*d "  /* num_threads */
+                   "%*d "  /* itrealvalue */
+                   "%llu "  /* starttime */,
+                   st) != 1)
+                return -EIO;
+
+        return 0;
+}
+
 int write_one_line_file(const char *fn, const char *line) {
         FILE *f;
         int r;
@@ -499,7 +572,16 @@ int write_one_line_file(const char *fn, const char *line) {
         if (!endswith(line, "\n"))
                 fputc('\n', f);
 
-        r = 0;
+        fflush(f);
+
+        if (ferror(f)) {
+                if (errno != 0)
+                        r = -errno;
+                else
+                        r = -EIO;
+        } else
+                r = 0;
+
 finish:
         fclose(f);
         return r;
@@ -525,6 +607,8 @@ int read_one_line_file(const char *fn, char **line) {
                 r = -ENOMEM;
                 goto finish;
         }
+
+        truncate_nl(c);
 
         *line = c;
         r = 0;
@@ -750,6 +834,29 @@ finish:
         return r;
 }
 
+int write_env_file(const char *fname, char **l) {
+
+        char **i;
+        FILE *f;
+        int r;
+
+        f = fopen(fname, "we");
+        if (!f)
+                return -errno;
+
+        STRV_FOREACH(i, l) {
+                fputs(*i, f);
+                fputc('\n', f);
+        }
+
+        fflush(f);
+
+        r = ferror(f) ? -errno : 0;
+        fclose(f);
+
+        return r;
+}
+
 char *truncate_nl(char *s) {
         assert(s);
 
@@ -773,7 +880,6 @@ int get_process_name(pid_t pid, char **name) {
         if (r < 0)
                 return r;
 
-        truncate_nl(*name);
         return 0;
 }
 
@@ -1815,8 +1921,9 @@ int close_all_fds(const int except[], unsigned n_except) {
                 if (ignore_file(de->d_name))
                         continue;
 
-                if ((r = safe_atoi(de->d_name, &fd)) < 0)
-                        goto finish;
+                if (safe_atoi(de->d_name, &fd) < 0)
+                        /* Let's better ignore this, just in case */
+                        continue;
 
                 if (fd < 3)
                         continue;
@@ -1839,16 +1946,13 @@ int close_all_fds(const int except[], unsigned n_except) {
                                 continue;
                 }
 
-                if ((r = close_nointr(fd)) < 0) {
+                if (close_nointr(fd) < 0) {
                         /* Valgrind has its own FD and doesn't want to have it closed */
-                        if (errno != EBADF)
-                                goto finish;
+                        if (errno != EBADF && r == 0)
+                                r = -errno;
                 }
         }
 
-        r = 0;
-
-finish:
         closedir(d);
         return r;
 }
@@ -2042,7 +2146,7 @@ int chvt(int vt) {
 int read_one_char(FILE *f, char *ret, bool *need_nl) {
         struct termios old_termios, new_termios;
         char c;
-        char line[1024];
+        char line[LINE_MAX];
 
         assert(f);
         assert(ret);
@@ -2250,7 +2354,7 @@ int flush_fd(int fd) {
         pollfd.events = POLLIN;
 
         for (;;) {
-                char buf[1024];
+                char buf[LINE_MAX];
                 ssize_t l;
                 int r;
 
@@ -2867,7 +2971,7 @@ int getttyname_harder(int fd, char **r) {
 
         if (streq(s, "tty")) {
                 free(s);
-                return get_ctty(r);
+                return get_ctty(r, NULL);
         }
 
         *r = s;
@@ -2876,7 +2980,7 @@ int getttyname_harder(int fd, char **r) {
 
 int get_ctty_devnr(dev_t *d) {
         int k;
-        char line[256], *p;
+        char line[LINE_MAX], *p;
         unsigned long ttynr;
         FILE *f;
 
@@ -2909,9 +3013,9 @@ int get_ctty_devnr(dev_t *d) {
         return 0;
 }
 
-int get_ctty(char **r) {
+int get_ctty(char **r, dev_t *_devnr) {
         int k;
-        char fn[128], *s, *b, *p;
+        char fn[PATH_MAX], *s, *b, *p;
         dev_t devnr;
 
         assert(r);
@@ -2927,6 +3031,18 @@ int get_ctty(char **r) {
                 if (k != -ENOENT)
                         return k;
 
+                /* This is an ugly hack */
+                if (major(devnr) == 136) {
+                        if (asprintf(&b, "pts/%lu", (unsigned long) minor(devnr)) < 0)
+                                return -ENOMEM;
+
+                        *r = b;
+                        if (_devnr)
+                                *_devnr = devnr;
+
+                        return 0;
+                }
+
                 /* Probably something like the ptys which have no
                  * symlink in /dev/char. Let's return something
                  * vaguely useful. */
@@ -2935,6 +3051,9 @@ int get_ctty(char **r) {
                         return -ENOMEM;
 
                 *r = b;
+                if (_devnr)
+                        *_devnr = devnr;
+
                 return 0;
         }
 
@@ -2952,6 +3071,9 @@ int get_ctty(char **r) {
                 return -ENOMEM;
 
         *r = b;
+        if (_devnr)
+                *_devnr = devnr;
+
         return 0;
 }
 
@@ -3159,8 +3281,7 @@ void status_welcome(void) {
 
                         if (r != -ENOENT)
                                 log_warning("Failed to read /etc/system-release: %s", strerror(-r));
-                } else
-                        truncate_nl(pretty_name);
+                }
         }
 
         if (!ansi_color && pretty_name) {
@@ -3181,8 +3302,7 @@ void status_welcome(void) {
 
                         if (r != -ENOENT)
                                 log_warning("Failed to read /etc/SuSE-release: %s", strerror(-r));
-                } else
-                        truncate_nl(pretty_name);
+                }
         }
 
         if (!ansi_color)
@@ -3195,8 +3315,7 @@ void status_welcome(void) {
 
                         if (r != -ENOENT)
                                 log_warning("Failed to read /etc/gentoo-release: %s", strerror(-r));
-                } else
-                        truncate_nl(pretty_name);
+                }
         }
 
         if (!ansi_color)
@@ -3209,8 +3328,7 @@ void status_welcome(void) {
 
                         if (r != -ENOENT)
                                 log_warning("Failed to read /etc/altlinux-release: %s", strerror(-r));
-                } else
-                        truncate_nl(pretty_name);
+                }
         }
 
         if (!ansi_color)
@@ -3227,7 +3345,6 @@ void status_welcome(void) {
                         if (r != -ENOENT)
                                 log_warning("Failed to read /etc/debian_version: %s", strerror(-r));
                 } else {
-                        truncate_nl(version);
                         pretty_name = strappend("Debian ", version);
                         free(version);
 
@@ -3277,7 +3394,18 @@ void status_welcome(void) {
                         free(s);
                 }
         }
+#elif defined(TARGET_MEEGO)
 
+        if (!pretty_name) {
+                if ((r = read_one_line_file("/etc/meego-release", &pretty_name)) < 0) {
+
+                        if (r != -ENOENT)
+                                log_warning("Failed to read /etc/meego-release: %s", strerror(-r));
+                }
+        }
+
+       if (!ansi_color)
+               const_color = "1;35"; /* Bright Magenta for MeeGo */
 #endif
 
         if (!pretty_name && !const_pretty)
@@ -3508,7 +3636,7 @@ int touch(const char *path) {
 
         assert(path);
 
-        if ((fd = open(path, O_WRONLY|O_CREAT|O_CLOEXEC|O_NOCTTY, 0666)) < 0)
+        if ((fd = open(path, O_WRONLY|O_CREAT|O_CLOEXEC|O_NOCTTY, 0644)) < 0)
                 return -errno;
 
         close_nointr_nofail(fd);
@@ -3552,7 +3680,6 @@ char *normalize_env_assignment(const char *s) {
         free(p);
 
         if (!value) {
-                free(p);
                 free(name);
                 return NULL;
         }
@@ -3600,7 +3727,7 @@ int wait_for_terminate_and_warn(const char *name, pid_t pid) {
         if (status.si_code == CLD_EXITED) {
                 if (status.si_status != 0) {
                         log_warning("%s failed with error code %i.", name, status.si_status);
-                        return -EPROTO;
+                        return status.si_status;
                 }
 
                 log_debug("%s succeeded.", name);
@@ -3619,6 +3746,10 @@ int wait_for_terminate_and_warn(const char *name, pid_t pid) {
 }
 
 void freeze(void) {
+
+        /* Make sure nobody waits for us on a socket anymore */
+        close_all_fds(NULL, 0);
+
         sync();
 
         for (;;)
@@ -3783,8 +3914,6 @@ const char *default_term_for_tty(const char *tty) {
          * TERM */
         if (streq(tty, "console"))
                 if (read_one_line_file("/sys/class/tty/console/active", &active) >= 0) {
-                        truncate_nl(active);
-
                         /* If multiple log outputs are configured the
                          * last one is what /dev/console points to */
                         if ((tty = strrchr(active, ' ')))
@@ -3820,8 +3949,7 @@ int detect_vm(const char **id) {
                 "Microsoft Corporation\0" "microsoft\0"
                 "innotek GmbH\0"          "oracle\0"
                 "Xen\0"                   "xen\0"
-                "Bochs\0"                 "bochs\0"
-                "\0";
+                "Bochs\0"                 "bochs\0";
 
         static const char cpuid_vendor_table[] =
                 "XenVMMXenVMM\0"          "xen\0"
@@ -3829,8 +3957,7 @@ int detect_vm(const char **id) {
                 /* http://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=1009458 */
                 "VMwareVMware\0"          "vmware\0"
                 /* http://msdn.microsoft.com/en-us/library/ff542428.aspx */
-                "Microsoft Hv\0"          "microsoft\0"
-                "\0";
+                "Microsoft Hv\0"          "microsoft\0";
 
         uint32_t eax, ecx;
         union {
@@ -3927,20 +4054,21 @@ int detect_vm(const char **id) {
         return 0;
 }
 
-/* Returns a short identifier for the various VM/container implementations */
-int detect_virtualization(const char **id) {
-        int r;
+int detect_container(const char **id) {
+        FILE *f;
 
-        /* Unfortunately most of these operations require root access
+        /* Unfortunately many of these operations require root access
          * in one way or another */
+
         if (geteuid() != 0)
                 return -EPERM;
 
-        if ((r = running_in_chroot()) > 0) {
+        if (running_in_chroot() > 0) {
+
                 if (id)
                         *id = "chroot";
 
-                return r;
+                return 1;
         }
 
         /* /proc/vz exists in container and outside of the container,
@@ -3954,7 +4082,68 @@ int detect_virtualization(const char **id) {
                 return 1;
         }
 
-        return detect_vm(id);
+        if ((f = fopen("/proc/self/cgroup", "r"))) {
+
+                for (;;) {
+                        char line[LINE_MAX], *p;
+
+                        if (!fgets(line, sizeof(line), f))
+                                break;
+
+                        if (!(p = strchr(strstrip(line), ':')))
+                                continue;
+
+                        if (strncmp(p, ":ns:", 4))
+                                continue;
+
+                        if (!streq(p, ":ns:/")) {
+                                fclose(f);
+
+                                if (id)
+                                        *id = "pidns";
+
+                                return 1;
+                        }
+                }
+
+                fclose(f);
+        }
+
+        return 0;
+}
+
+/* Returns a short identifier for the various VM/container implementations */
+int detect_virtualization(const char **id) {
+        static __thread const char *cached_id = NULL;
+        const char *_id;
+        int r;
+
+        if (cached_id) {
+
+                if (cached_id == (const char*) -1)
+                        return 0;
+
+                if (id)
+                        *id = cached_id;
+
+                return 1;
+        }
+
+        if ((r = detect_container(&_id)) != 0)
+                goto finish;
+
+        r = detect_vm(&_id);
+
+finish:
+        if (r > 0) {
+                cached_id = _id;
+
+                if (id)
+                        *id = _id;
+        } else if (r == 0)
+                cached_id = (const char*) -1;
+
+        return r;
 }
 
 void execute_directory(const char *directory, DIR *d, char *argv[]) {
@@ -4081,6 +4270,129 @@ int kill_and_sigcont(pid_t pid, int sig) {
         return r;
 }
 
+bool nulstr_contains(const char*nulstr, const char *needle) {
+        const char *i;
+
+        if (!nulstr)
+                return false;
+
+        NULSTR_FOREACH(i, nulstr)
+                if (streq(i, needle))
+                        return true;
+
+        return false;
+}
+
+bool plymouth_running(void) {
+        return access("/run/plymouth/pid", F_OK) >= 0;
+}
+
+void parse_syslog_priority(char **p, int *priority) {
+        int a = 0, b = 0, c = 0;
+        int k;
+
+        assert(p);
+        assert(*p);
+        assert(priority);
+
+        if ((*p)[0] != '<')
+                return;
+
+        if (!strchr(*p, '>'))
+                return;
+
+        if ((*p)[2] == '>') {
+                c = undecchar((*p)[1]);
+                k = 3;
+        } else if ((*p)[3] == '>') {
+                b = undecchar((*p)[1]);
+                c = undecchar((*p)[2]);
+                k = 4;
+        } else if ((*p)[4] == '>') {
+                a = undecchar((*p)[1]);
+                b = undecchar((*p)[2]);
+                c = undecchar((*p)[3]);
+                k = 5;
+        } else
+                return;
+
+        if (a < 0 || b < 0 || c < 0)
+                return;
+
+        *priority = a*100+b*10+c;
+        *p += k;
+}
+
+int have_effective_cap(int value) {
+        cap_t cap;
+        cap_flag_value_t fv;
+        int r;
+
+        if (!(cap = cap_get_proc()))
+                return -errno;
+
+        if (cap_get_flag(cap, value, CAP_EFFECTIVE, &fv) < 0)
+                r = -errno;
+        else
+                r = fv == CAP_SET;
+
+        cap_free(cap);
+        return r;
+}
+
+char* strshorten(char *s, size_t l) {
+        assert(s);
+
+        if (l < strlen(s))
+                s[l] = 0;
+
+        return s;
+}
+
+static bool hostname_valid_char(char c) {
+        return
+                (c >= 'a' && c <= 'z') ||
+                (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') ||
+                c == '-' ||
+                c == '_' ||
+                c == '.';
+}
+
+bool hostname_is_valid(const char *s) {
+        const char *p;
+
+        if (isempty(s))
+                return false;
+
+        for (p = s; *p; p++)
+                if (!hostname_valid_char(*p))
+                        return false;
+
+        if (p-s > HOST_NAME_MAX)
+                return false;
+
+        return true;
+}
+
+char* hostname_cleanup(char *s) {
+        char *p, *d;
+
+        for (p = s, d = s; *p; p++)
+                if ((*p >= 'a' && *p <= 'z') ||
+                    (*p >= 'A' && *p <= 'Z') ||
+                    (*p >= '0' && *p <= '9') ||
+                    *p == '-' ||
+                    *p == '_' ||
+                    *p == '.')
+                        *(d++) = *p;
+
+        *d = 0;
+
+        strshorten(s, HOST_NAME_MAX);
+        return s;
+}
+
 static const char *const ioprio_class_table[] = {
         [IOPRIO_CLASS_NONE] = "none",
         [IOPRIO_CLASS_RT] = "realtime",
@@ -4101,7 +4413,7 @@ static const char *const sigchld_code_table[] = {
 
 DEFINE_STRING_TABLE_LOOKUP(sigchld_code, int);
 
-static const char *const log_facility_table[LOG_NFACILITIES] = {
+static const char *const log_facility_unshifted_table[LOG_NFACILITIES] = {
         [LOG_FAC(LOG_KERN)] = "kern",
         [LOG_FAC(LOG_USER)] = "user",
         [LOG_FAC(LOG_MAIL)] = "mail",
@@ -4124,7 +4436,7 @@ static const char *const log_facility_table[LOG_NFACILITIES] = {
         [LOG_FAC(LOG_LOCAL7)] = "local7"
 };
 
-DEFINE_STRING_TABLE_LOOKUP(log_facility, int);
+DEFINE_STRING_TABLE_LOOKUP(log_facility_unshifted, int);
 
 static const char *const log_level_table[] = {
         [LOG_EMERG] = "emerg",

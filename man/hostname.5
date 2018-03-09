@@ -2,12 +2,12 @@
 .\"     Title: hostname
 .\"    Author: Lennart Poettering <lennart@poettering.net>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/08/2011
+.\"      Date: 04/21/2011
 .\"    Manual: /etc/hostname
 .\"    Source: systemd
 .\"  Language: English
 .\"
-.TH "HOSTNAME" "5" "03/08/2011" "systemd" "/etc/hostname"
+.TH "HOSTNAME" "5" "04/21/2011" "systemd" "/etc/hostname"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,7 +28,7 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-hostname \- local host name configuration file
+hostname \- Local host name configuration file
 .SH "SYNOPSIS"
 .PP
 /etc/hostname
@@ -38,7 +38,7 @@ The
 /etc/hostname
 file configures the name of the local system that is set during boot, with the
 \fBsethostname\fR(2)
-system call\&. It should contain a single newline\-terminated host name string\&. The host name may be a free\-form string up to 64 characters in length, however it is recommended that it consists only of 7bit ASCII characters and no spaces or dots, and limit itself to the format allowed for DNS domain name labels, even though this is not a requirement\&.
+system call\&. It should contain a single newline\-terminated host name string\&. The host name may be a free\-form string up to 64 characters in length, however it is recommended that it consists only of 7bit ASCII lower\-case characters and no spaces or dots, and limits itself to the format allowed for DNS domain name labels, even though this is not a strict requirement\&.
 .PP
 Depending on the operating system other configuration files might be checked for configuration of the host name as well, however only as fallback\&.
 .SH "HISTORY"
@@ -51,7 +51,10 @@ originates from Debian GNU/Linux\&.
 
 \fBsystemd\fR(1),
 \fBsethostname\fR(2),
-\fBhostname\fR(1)
+\fBhostname\fR(1),
+\fBhostname\fR(5),
+\fBmachine-id\fR(5),
+\fBmachine-info\fR(5)
 .SH "AUTHOR"
 .PP
 \fBLennart Poettering\fR <\&lennart@poettering\&.net\&>

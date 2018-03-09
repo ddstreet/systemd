@@ -1,0 +1,135 @@
+'\" t
+.\"     Title: systemd-nspawn
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 04/21/2011
+.\"    Manual: systemd-nspawn
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\-NSPAWN" "1" "04/21/2011" "systemd" "systemd-nspawn"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd-nspawn \- Spawn a namespace container for debugging, testing and building
+.SH "SYNOPSIS"
+.HP \w'\fBsystemd\-nspawn\ \fR\fB[OPTIONS...]\fR\fB\ \fR\fB[COMMAND]\fR\fB\ \fR\fB[ARGS...]\fR\ 'u
+\fBsystemd\-nspawn \fR\fB[OPTIONS...]\fR\fB \fR\fB[COMMAND]\fR\fB \fR\fB[ARGS...]\fR
+.SH "DESCRIPTION"
+.PP
+\fBsystemd\-nspawn\fR
+may be used to run a command or OS in a light\-weight namespace container\&. In many ways it is similar to
+\fBchroot\fR(1), but more powerful since it fully virtualizes the file system hierachy, as well as the process tree, the various IPC subsystems and the host and domain name\&.
+.PP
+\fBsystemd\-nspawn\fR
+limits access to various kernel interfaces in the container to read\-only, such as
+/sys,
+/proc/sys
+or
+/selinux\&. Network interfaces and the system clock may not be changed from within the container\&. Device nodes may not be created\&. The host system cannot be rebooted and kernel modules may not be loaded from within the container\&.
+.PP
+Note that even though these security precautions are taken
+\fBsystemd\-nspawn\fR
+is not suitable for secure container setups\&. Many of the security features may be circumvented and are hence primarily useful to avoid accidental changes to the host system from the container\&. The intended use of this program is debugging and testing as well as building of packages, distributions and software involved with boot and systems management\&.
+.PP
+In contrast to
+\fBchroot\fR(1)
+\fBsystemd\-nspawn\fR
+may be used to boot full Linux\-based operating systems in a container\&.
+.PP
+Use a tool like
+\fBdebootstrap\fR(8)
+or
+\fBmock\fR(1)
+to set up an OS directory tree suitable as file system hierarchy for
+\fBsystemd\-nspawn\fR
+containers\&.
+.PP
+Note that
+\fBsystemd\-nspawn\fR
+will mount file systems private to the container to
+/dev,
+/run
+and similar\&. These will not be visible outside of the container, and their contents will be lost when the container exits\&.
+.PP
+Note that running two
+\fBsystemd\-nspawn\fR
+containers from the same directory tree will not make processes in them see each other\&. The PID namespace seperation of the two containers is complete and the containers will share very few runtime objects except for the underlying file system\&.
+.SH "OPTIONS"
+.PP
+If no arguments are passed the container is set up and a shell started in it, otherwise the passed command and arguments are executed in it\&. The following options are understood:
+.PP
+\fB\-\-help\fR
+.RS 4
+Prints a short help text and exits\&.
+.RE
+.PP
+\fB\-\-directory=\fR, \fB\-\-D\fR
+.RS 4
+Directory to use as file system root for the namespace container\&. If omitted the current directory will be used\&.
+.RE
+.SH "EXAMPLE 1"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# debootstrap \-\-arch=amd64 unstable debian\-tree/
+# systemd\-nspawn \-D debian\-tree/
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+This installs a minimal Debian unstable distribution into the directory
+debian\-tree/
+and then spawns a shell in a namespace container in it\&.
+.SH "EXAMPLE 2"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# mock \-\-init
+# systemd\-nspawn \-D /var/lib/mock/fedora\-rawhide\-x86_64/root/ /bin/systemd systemd\&.log_level=debug
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+This installs a minimal Fedora distribution into a subdirectory of
+/var/lib/mock/
+and then boots an OS in a namespace container in it, with systemd as init system, configured for debug logging\&.
+.SH "EXIT STATUS"
+.PP
+The exit code of the program executed in the container is returned\&.
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBchroot\fR(1),
+\fBdebootstrap\fR(8)
+\fBmock\fR(1)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

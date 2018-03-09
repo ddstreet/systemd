@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sd_booted</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sd_booted"><a id="sd_booted"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sd_booted — Test whether the system is running the systemd init system.</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-daemon.h"</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_booted</strong>(</code></td><td>void<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a id="id373637"/><h2>Description</h2><p><code class="function">sd_booted()</code> checks whether
-                the system was booted up using the systemd init system.</p></div><div class="refsect1" title="Return Value"><a id="id373652"/><h2>Return Value</h2><p>On failure, this call returns a negative
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sd_booted</title><meta name="generator" content="DocBook XSL Stylesheets V1.76.1"/></head><body><div class="refentry" title="sd_booted"><a id="sd_booted"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sd_booted — Test whether the system is running the systemd init system.</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-daemon.h"</pre><table border="0" summary="Function synopsis" cellspacing="0" cellpadding="0" class="funcprototype-table"><tr><td><code class="funcdef">int <strong>fsfuncsd_booted</strong>(</code></td><td>void<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1" title="Description"><a id="id501993"/><h2>Description</h2><p><code class="function">sd_booted()</code> checks whether
+                the system was booted up using the systemd init system.</p></div><div class="refsect1" title="Return Value"><a id="id502007"/><h2>Return Value</h2><p>On failure, this call returns a negative
                 errno-style error code. If the system was booted up
                 with systemd as init system, this call returns a
-                positive return value, zero otherwise.</p></div><div class="refsect1" title="Notes"><a id="id373664"/><h2>Notes</h2><p>This function is provided by the reference
+                positive return value, zero otherwise.</p></div><div class="refsect1" title="Notes"><a id="id502019"/><h2>Notes</h2><p>This function is provided by the reference
                 implementation of APIs for new-style daemons and
                 distributed with the systemd package. The algorithm it
                 implements is simple, and can easily be reimplemented
@@ -27,7 +27,7 @@
                 more details about the reference implementation see
                 <span class="citerefentry"><span class="refentrytitle">sd_daemon</span>(7)</span></p><p>If -DDISABLE_SYSTEMD is set during compilation
                 this function will always return 0 and otherwise
-                become a NOP.</p></div><div class="refsect1" title="See Also"><a id="id341114"/><h2>See Also</h2><p>
+                become a NOP.</p></div><div class="refsect1" title="See Also"><a id="id469461"/><h2>See Also</h2><p>
                         <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
                         <span class="citerefentry"><span class="refentrytitle">sd_daemon</span>(7)</span>
                 </p></div></div></body></html>

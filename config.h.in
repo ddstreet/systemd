@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Whether on mips arch */
+#undef ARCH_MIPS
+
 /* Canonical host string. */
 #undef CANONICAL_HOST
 
@@ -100,9 +103,6 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Syslog service name */
-#undef SPECIAL_SYSLOG_SERVICE
-
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
@@ -126,6 +126,9 @@
 
 /* Target is Mandriva */
 #undef TARGET_MANDRIVA
+
+/* Target is MeeGo */
+#undef TARGET_MEEGO
 
 /* Target is Slackware */
 #undef TARGET_SLACKWARE

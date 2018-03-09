@@ -8,4 +8,10 @@
 # See systemd.special(7) for details
 
 [Unit]
-Description=RTC Set
+Description=Hostname Service
+
+[Service]
+ExecStart=@rootlibexecdir@/systemd-hostnamed
+Type=dbus
+BusName=org.freedesktop.hostname1
+CapabilityBoundingSet=CAP_SYS_ADMIN
