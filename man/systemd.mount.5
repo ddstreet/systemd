@@ -1,0 +1,153 @@
+'\" t
+.\"     Title: systemd.mount
+.\"    Author: Lennart Poettering <lennart@poettering.net>
+.\" Generator: DocBook XSL Stylesheets v1.75.2 <http://docbook.sf.net/>
+.\"      Date: 08/25/2010
+.\"    Manual: systemd.mount
+.\"    Source: systemd
+.\"  Language: English
+.\"
+.TH "SYSTEMD\&.MOUNT" "5" "08/25/2010" "systemd" "systemd.mount"
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+systemd.mount \- systemd mount configuration files
+.SH "SYNOPSIS"
+.PP
+systemd\&.mount
+.SH "DESCRIPTION"
+.PP
+A unit configuration file whose name ends in
+\&.mount
+encodes information about a file system mount point controlled and supervised by systemd\&.
+.PP
+This man page lists the configuration options specific to this unit type\&. See
+\fBsystemd.unit\fR(5)
+for the common options of all unit configuration files\&. The common configuration items are configured in the generic [Unit] and [Install] sections\&. The mount specific configuration options are configured in the [Mount] section\&.
+.PP
+Additional options are listed in
+\fBsystemd.exec\fR(5), which define the execution environment the
+\fBmount\fR(8)
+binary is executed in\&.
+.PP
+Mount units must be named after the mount point directories they control\&. Example: the mount point
+/home/lennart
+must be configured in a unit file
+home\-lennart\&.mount\&. For details about the escaping logic used to convert a file system path to a unit name see
+\fBsystemd.unit\fR(5)\&.
+.PP
+Optionally, a mount unit may be accompanied by an automount unit, to allow on\-demand or parallelized mounting\&. See
+\fBsystemd.automount\fR(5)\&.
+.PP
+If an mount point is beneath another mount point in the file system hierarchy, a dependency between both units is created automatically\&.
+.PP
+Mount points created at runtime independent on unit files or
+/etc/fstab
+will be monitored by systemd and appear like any other mount unit in systemd\&.
+.SH "FSTAB"
+.PP
+Mount units may either be configured via unit files, or via
+/etc/fstab
+(see
+\fBfstab\fR(5)
+for details)\&.
+.PP
+When reading
+/etc/fstab
+a few special mount options are understood by systemd which influence how dependencies are created for mount points from
+/etc/fstab\&. If
+\fBcomment=systemd\&.mount\fR
+is specified as mount option, then systemd will create a dependency of type
+\fBWants\fR
+from either
+local\-fs\&.target
+or
+remote\-fs\&.target, depending whether the file system is local or remote\&. If
+\fBcomment=systemd\&.automount\fR
+is set, an automount unit will be created for the file system\&. See
+\fBsystemd.automount\fR(5)
+for details\&.
+.PP
+If a mount point is configured in both
+/etc/fstab
+and a unit file, the configuration in the latter takes precedence\&.
+.SH "OPTIONS"
+.PP
+Mount files must include a [Mount] section, which carries information about the file system mount points it supervises\&. A number of options that may be used in this section are shared with other unit types\&. These options are documented in
+\fBsystemd.exec\fR(5)\&. The options specific to the [Mount] section of mount units are the following:
+.PP
+\fIWhat=\fR
+.RS 4
+Takes an absolute path of a device node, file or other resource to mount\&. See
+\fBmount\fR(8)
+for details\&. If this refers to a device node, a dependency on the respective device unit is automatically created\&. (See
+\fBsystemd.device\fR(5)
+for more information\&.) This option is mandatory\&.
+.RE
+.PP
+\fIWhere=\fR
+.RS 4
+Takes an absolute path of a directory of the mount point\&. If the mount point is not existing at time of mounting, it is created\&. This string must be reflected in the unit file name\&. (See above\&.) This option is mandatory\&.
+.RE
+.PP
+\fIType=\fR
+.RS 4
+Takes a string for the filesystem type\&. See
+\fBmount\fR(8)
+for details\&. This setting is optional\&.
+.RE
+.PP
+\fIOptions=\fR
+.RS 4
+Mount options to use when mounting\&. This takes a comma seperated list of options\&. This setting is optional\&.
+.RE
+.PP
+\fIDirectoryMode=\fR
+.RS 4
+Directories of mount points (and any parent directories) are automatically created if needed\&. This option specifies the file system access mode used when creating these directories\&. Takes an access mode in octal notation\&. Defaults to 0755\&.
+.RE
+.PP
+\fITimeoutSec=\fR
+.RS 4
+Configures the time to wait for the mount command to finish\&. If a command does not exit within the configured time the mount will be considered failed and be shut down again\&. All commands still running will be terminated forcibly via SIGTERM, and after another delay of this time with SIGKILL\&. (See
+\fBKillMode=\fR
+below\&.) Takes a unit\-less value in seconds, or a time span value such as "5min 20s"\&. Pass 0 to disable the timeout logic\&. Defaults to 60s\&.
+.RE
+.PP
+\fIKillMode=\fR
+.RS 4
+Specifies how processes of this mount shall be killed\&. One of
+\fBcontrol\-group\fR,
+\fBprocess\-group\fR,
+\fBprocess\fR,
+\fBnone\fR\&.
+.sp
+This option is mostly equivalent to the
+\fBKillMode=\fR
+option of service files\&. See
+\fBsystemd.service\fR(5)
+for details\&.
+.RE
+.SH "SEE ALSO"
+.PP
+
+\fBsystemd\fR(1),
+\fBsystemctl\fR(8),
+\fBsystemd.unit\fR(5),
+\fBsystemd.exec\fR(5),
+\fBsystemd.device\fR(5),
+\fBmount\fR(8)
+.SH "AUTHOR"
+.PP
+\fBLennart Poettering\fR <\&lennart@poettering\&.net\&>
+.RS 4
+Developer
+.RE

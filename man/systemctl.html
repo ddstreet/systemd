@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>systemctl</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="systemctl"><a id="systemctl"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>systemctl — Control the systemd system and session manager</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="cmdsynopsis"><p><code class="command">systemctl [OPTIONS...]  {COMMAND}  [NAME...]</code> </p></div></div><div class="refsect1" title="Description"><a id="id3031598"/><h2>Description</h2><p><span class="command"><strong>systemctl</strong></span> may be used to
+                introspect and control the state of the
+                <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
+                system and session manager.</p></div><div class="refsect1" title="Options"><a id="id2990913"/><h2>Options</h2><p>The following options are understood:</p><div class="variablelist"><dl><dt><span class="term"><code class="option">--help</code>, </span><span class="term"><code class="option">-h</code></span></dt><dd><p>Prints a short help
+                                text and exits.</p></dd><dt><span class="term"><code class="option">--type=</code>, </span><span class="term"><code class="option">-t</code></span></dt><dd><p>When listing units,
+                                limit display to certain unit
+                                types. If not specified units of all
+                                types will be shown. The argument
+                                should be a unit type name such as
+                                <code class="option">service</code>,
+                                <code class="option">socket</code> and
+                                similar.</p></dd><dt><span class="term"><code class="option">--property=</code>, </span><span class="term"><code class="option">-p</code></span></dt><dd><p>When showing
+                                unit/job/manager information, limit
+                                display to certain properties as
+                                specified as argument. If not
+                                specified all set properties are
+                                shown. The argument should be a
+                                property name, such as
+                                <code class="literal">MainPID</code>. If
+                                specified more than once all
+                                properties with the specified names
+                                are shown.</p></dd><dt><span class="term"><code class="option">--all</code>, </span><span class="term"><code class="option">-a</code></span></dt><dd><p>When listing units,
+                                show all units, regardless of their
+                                state, including inactive units. When
+                                showing unit/job/manager information,
+                                show all properties regardless whether
+                                they are set or not.</p></dd><dt><span class="term"><code class="option">--full</code></span></dt><dd><p>Do not ellipsize unit
+                                names in the output of
+                                <span class="command"><strong>list-units</strong></span> and
+                                <span class="command"><strong>list-jobs</strong></span>.</p></dd><dt><span class="term"><code class="option">--fail</code></span></dt><dd><p>If the requested
+                                operation conflicts with a pending
+                                unfinished job, fail the command. If
+                                this is not specified the requested
+                                operation will replace the pending job,
+                                if necessary.</p></dd><dt><span class="term"><code class="option">--quiet</code>, </span><span class="term"><code class="option">-q</code></span></dt><dd><p>Suppress output to
+                                STDOUT in
+                                <span class="command"><strong>snapshot</strong></span>,
+                                <span class="command"><strong>check</strong></span>,
+                                <span class="command"><strong>enable</strong></span> and
+                                <span class="command"><strong>disable</strong></span>.</p></dd><dt><span class="term"><code class="option">--no-block</code></span></dt><dd><p>Do not synchronously wait for
+				the requested operation to finish. If this is
+				not specified the job will be verified,
+				enqueued and <span class="command"><strong>systemctl</strong></span> will
+				wait until it is completed. By passing this
+				argument it is only verified and
+				enqueued.</p></dd><dt><span class="term"><code class="option">--system</code></span></dt><dd><p>Talk to the systemd
+                                system manager. (Default)</p></dd><dt><span class="term"><code class="option">--session</code></span></dt><dd><p>Talk to the systemd
+                                session manager of the calling user.</p></dd><dt><span class="term"><code class="option">--order</code>, </span><span class="term"><code class="option">--require</code></span></dt><dd><p>When used in
+                                conjunction with the
+                                <span class="command"><strong>dot</strong></span> command (see
+                                below), selects which dependencies are
+                                shown in the dependency graph. If
+                                <code class="option">--order</code> is passed
+                                only dependencies of type
+                                <code class="varname">After=</code> or
+                                <code class="varname">Before=</code> are
+                                shown. If <code class="option">--require</code>
+                                is passed only dependencies of type
+                                <code class="varname">Requires=</code>,
+                                <code class="varname">RequiresOverridable=</code>,
+                                <code class="varname">Requisite=</code>,
+                                <code class="varname">RequisiteOverridable=</code>,
+                                <code class="varname">Wants=</code> and
+                                <code class="varname">Conflicts=</code> are
+                                shown. If neither is passed, shows
+                                dependencies of all these
+                                types.</p></dd><dt><span class="term"><code class="option">--no-wall</code></span></dt><dd><p>Don't send wall
+                                message before
+                                halt, power-off, reboot.</p></dd><dt><span class="term"><code class="option">--global</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>enable</strong></span> and
+                                <span class="command"><strong>disable</strong></span>, operate on the
+                                global session configuŕation
+                                directory, thus enabling or disabling
+                                a unit file globally for all future
+                                sessions of all users.</p></dd><dt><span class="term"><code class="option">--no-reload</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>enable</strong></span> and
+                                <span class="command"><strong>disable</strong></span>, do not
+                                implicitly reload daemon configuration
+                                after executing the
+                                changes.</p></dd><dt><span class="term"><code class="option">--force</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>enable</strong></span>, override any
+                                existing conflicting
+                                symlinks.</p></dd><dt><span class="term"><code class="option">--defaults</code></span></dt><dd><p>When used with
+                                <span class="command"><strong>disable</strong></span>, ensures
+                                that only the symlinks created by
+                                <span class="command"><strong>enable</strong></span> are removed,
+                                not all symlinks pointing to the unit
+                                file that shall be
+                                disabled.</p></dd></dl></div><p>The following commands are understood:</p><div class="variablelist"><dl><dt><span class="term"><span class="command"><strong>list-units</strong></span></span></dt><dd><p>List known units.</p></dd><dt><span class="term"><span class="command"><strong>start [NAME...]</strong></span></span></dt><dd><p>Start (activate) one
+                                or more units specified on the command
+                                line.</p></dd><dt><span class="term"><span class="command"><strong>stop [NAME...]</strong></span></span></dt><dd><p>Stop (deactivate) one
+                                or more units specified on the command
+                                line.</p></dd><dt><span class="term"><span class="command"><strong>reload [NAME...]</strong></span></span></dt><dd><p>Asks all units listed
+                                on the command line to reload their
+                                configuration. Note that this will
+                                reload the service-specific
+                                configuration, not the unit
+                                configuration file of systemd. If you
+                                want systemd to reload the
+                                configuration file of a unit use the
+                                <span class="command"><strong>daemon-reload</strong></span>
+                                command. In other words: for the
+                                example case of Apache, this will
+                                reload Apache's
+                                <code class="filename">httpd.conf</code> in the
+                                web server, not the
+                                <code class="filename">apache.service</code>
+                                systemd unit file. </p><p>This command should not be
+                                confused with the
+                                <span class="command"><strong>daemon-reload</strong></span> or
+                                <span class="command"><strong>load</strong></span>
+                                commands.</p></dd><dt><span class="term"><span class="command"><strong>restart [NAME...]</strong></span></span></dt><dd><p>Restart one or more
+                                units specified on the command
+                                line. If the units are not running yet
+                                they will be
+                                started.</p></dd><dt><span class="term"><span class="command"><strong>try-restart [NAME...]</strong></span></span></dt><dd><p>Restart one or more
+                                units specified on the command
+                                line. If the units are not running yet
+                                the operation will
+                                fail.</p></dd><dt><span class="term"><span class="command"><strong>reload-or-restart [NAME...]</strong></span>, </span><span class="term"><span class="command"><strong>reload-or-try-restart [NAME...]</strong></span></span></dt><dd><p>Reload one or more
+                                units if they support it. If not,
+                                restart them instead. Note that for
+                                compatibility with SysV and Red Hat
+                                init scripts
+                                <span class="command"><strong>force-reload</strong></span> and
+                                <span class="command"><strong>condrestart</strong></span> may be
+                                used as equivalent commands to
+                                <span class="command"><strong>reload-or-try-restart</strong></span>.</p></dd><dt><span class="term"><span class="command"><strong>isolate [NAME]</strong></span></span></dt><dd><p>Start the unit
+                                specified on the command line and its
+                                dependencies and stop all
+                                others.</p></dd><dt><span class="term"><span class="command"><strong>is-active [NAME...]</strong></span></span></dt><dd><p>Check whether any of
+                                the specified units is active
+                                (i.e. running). Returns an exit code
+                                0 if at least one is active, non-zero
+                                otherwise. Unless
+                                <code class="option">--quiet</code> is specified
+                                this will also print the current unit
+                                state to STDOUT.</p></dd><dt><span class="term"><span class="command"><strong>status [NAME...|PID...]</strong></span></span></dt><dd><p>Show terse runtime
+                                status information about one or more
+                                units. This function is intended to
+                                generate human-readable output. If you
+                                are looking for computer-parsable
+                                output, use <span class="command"><strong>show</strong></span>
+                                instead. If a PID is passed
+                                information about the unit the process
+                                of the PID belongs to is
+                                shown.</p></dd><dt><span class="term"><span class="command"><strong>show [NAME...|JOB...]</strong></span></span></dt><dd><p>Show properties of one
+                                or more units, jobs or the manager
+                                itself. If no argument is specified
+                                properties of the manager will be
+                                shown. If a unit name is specified
+                                properties of the unit is shown, and
+                                if a job id is specified properties of
+                                the job is shown. By default, empty
+                                properties are suppressed. Use
+                                <code class="option">--all</code> to show those
+                                too. To select specific properties to
+                                show use
+                                <code class="option">--property=</code>. This
+                                command is intended to be used
+                                whenever computer-parsable output is
+                                required. Use
+                                <span class="command"><strong>status</strong></span> if you are
+                                looking for formatted human-readable
+                                output.</p></dd><dt><span class="term"><span class="command"><strong>reset-maintenance [NAME...]</strong></span></span></dt><dd><p>Reset maintenance
+                                state of the specified units, or if no
+                                unit name is passed of all units. When
+                                a unit fails in some way (i.e. process
+                                exiting with non-zero error code,
+                                terminating abnormally or timing out)
+                                it will automatically enter
+                                maintenance state and its exit codes
+                                and status is recorded for
+                                introspection by the administrator
+                                until the service is restarted or
+                                reset with this
+                                command.</p></dd><dt><span class="term"><span class="command"><strong>enable [NAME...]</strong></span></span></dt><dd><p>Enable one or more
+                                unit files, as specified on the
+                                command line. This will create a
+                                number of symlinks as encoded in the
+                                <code class="literal">[Install]</code> sections
+                                of the unit files. After the symlinks
+                                have been created the systemd
+                                configuration is reloaded (in a way
+                                that is equivalent to
+                                <span class="command"><strong>daemon-reload</strong></span>) to
+                                ensure the changes are taken into
+                                account immediately. Note that this
+                                does not have the effect that any of
+                                the units enabled are also started at
+                                the same time. If this is desired a
+                                seperate <span class="command"><strong>start</strong></span>
+                                command must be invoked for the
+                                unit.</p><p>This command will
+                                print the actions executed. This
+                                output may be suppressed by passing
+                                <code class="option">--quiet</code>.</p><p>Note that this operation creates
+                                only the suggested symlinks for the
+                                units. While this command is the
+                                recommended way to manipulate the unit
+                                configuration directory, the
+                                administrator is free to make
+                                additional changes manually, by
+                                placing or removing symlinks in the
+                                directory. This is particular useful
+                                to create configurations that deviate
+                                from the suggested default
+                                installation. In this case the
+                                administrator must make sure to invoke
+                                <span class="command"><strong>daemon-reload</strong></span>
+                                manually as necessary, to ensure his
+                                changes are taken into account.</p><p>Enabling units should not be
+                                confused with starting (activating)
+                                units, as done by the
+                                <span class="command"><strong>start</strong></span>
+                                command. Enabling and starting units
+                                is orthogonal: units may be enabled
+                                without being started and started
+                                without being enabled. Enabling simply
+                                hooks the unit into various suggested
+                                places (for example, so that the unit
+                                is automatically started on boot or
+                                when a particular kind of hardware is
+                                plugged in). Starting actually spawns
+                                the daemon process (in case of service
+                                units), or binds the socket (in case
+                                of socket units), and so
+                                on.</p><p>Depending on whether
+                                <code class="option">--system</code>,
+                                <code class="option">--session</code> or
+                                <code class="option">--global</code> is specified
+                                this enables the unit for the system,
+                                for sessions of the calling user only
+                                or for all future session of all
+                                users. Note that in the latter case no
+                                systemd daemon configuration is
+                                reloaded.</p></dd><dt><span class="term"><span class="command"><strong>disable [NAME...]</strong></span></span></dt><dd><p>Disables one or more
+                                units. This removes all symlinks to
+                                the specified unit files from the unit
+                                configuration directory, and hence
+                                undoes the changes made by
+                                <span class="command"><strong>enable</strong></span>. Note
+                                however that this by default removes
+                                all symlinks to the unit files
+                                (i.e. including manual additions), not
+                                just those actually created by
+                                <span class="command"><strong>enable</strong></span>. If only the
+                                symlinks that are suggested by default
+                                shall be removed, pass
+                                <code class="option">--defaults</code>. This
+                                implicitly reloads the systemd daemon
+                                configuration after completing the
+                                disabling of the units. Note that this
+                                command does not implicitly stop the
+                                units that is being disabled. If this
+                                is desired an additional
+                                <span class="command"><strong>stop</strong></span>command should
+                                be executed afterwards.</p><p>This command will print the
+                                actions executed. This output may be
+                                suppressed by passing
+                                <code class="option">--quiet</code>.</p></dd><dt><span class="term"><span class="command"><strong>is-enabled [NAME...]</strong></span></span></dt><dd><p>Checks whether any of
+                                the specified unit files is enabled
+                                (as with
+                                <span class="command"><strong>enable</strong></span>). Returns an
+                                exit code of 0 if at least one is
+                                enabled, non-zero
+                                otherwise.</p></dd><dt><span class="term"><span class="command"><strong>load [NAME...]</strong></span></span></dt><dd><p>Load one or more units
+                                specified on the command line. This
+                                will simply load their configuration
+                                from disk, but not start them. To
+                                start them you need to use the
+                                <span class="command"><strong>start</strong></span> command which
+                                will implicitly load a unit that has
+                                not been loaded yet. Note that systemd
+                                garbage collects loaded units that are
+                                not active or referenced by an active
+                                unit. This means that units loaded
+                                this way will usually not stay loaded
+                                for long. Also note that this command
+                                cannot be used to reload unit
+                                configuration. Use the
+                                <span class="command"><strong>daemon-reload</strong></span>
+                                command for that. All in all, this
+                                command is of little use except for
+                                debugging.</p><p>This command should not be
+                                confused with the
+                                <span class="command"><strong>daemon-reload</strong></span> or
+                                <span class="command"><strong>reload</strong></span>
+                                commands.</p></dd><dt><span class="term"><span class="command"><strong>list-jobs</strong></span></span></dt><dd><p>List jobs that are in progress.</p></dd><dt><span class="term"><span class="command"><strong>cancel [JOB...]</strong></span></span></dt><dd><p>Cancel one or more
+                                jobs specified on the command line by
+                                their numeric job
+                                IDs. If not job id is specified cancels all jobs that are pending.</p></dd><dt><span class="term"><span class="command"><strong>monitor</strong></span></span></dt><dd><p>Monitor unit/job
+                                changes. This is mostly useful for
+                                debugging purposes and prints a line
+                                each time systemd loads or unloads a
+                                unit configuration file, or a unit
+                                property changes.</p></dd><dt><span class="term"><span class="command"><strong>dump</strong></span></span></dt><dd><p>Dump server
+                                status. This will output a (usually
+                                very long) human readable manager
+                                status dump. Its format is subject to
+                                change without notice and should not
+                                be parsed by
+                                applications.</p></dd><dt><span class="term"><span class="command"><strong>dot</strong></span></span></dt><dd><p>Generate textual
+                                dependency graph description in dot
+                                format for further processing with the
+                                GraphViz
+                                <span class="citerefentry"><span class="refentrytitle">dot</span>(1)</span>
+                                tool. Use a command line like
+                                <span class="command"><strong>systemctl dot | dot -Tsvg &gt;
+                                systemd.svg</strong></span> to generate a
+                                graphical dependency tree. Unless
+                                <code class="option">--order</code> or
+                                <code class="option">--require</code> is passed
+                                the generated graph will show both
+                                ordering and requirement
+                                dependencies.</p></dd><dt><span class="term"><span class="command"><strong>snapshot [NAME]</strong></span></span></dt><dd><p>Create a snapshot. If
+                                a snapshot name is specified, the new
+                                snapshot will be named after it. If
+                                none is specified an automatic
+                                snapshot name is generated. In either
+                                case, the snapshot name used is
+                                printed to STDOUT, unless
+                                <code class="option">--quiet</code> is
+                                specified.</p><p>A snapshot refers to a saved
+                                state of the systemd manager. It is
+                                implemented itself as unit that is
+                                generated dynamically with this
+                                command and has dependencies on all
+                                units active at the time. At a later
+                                time the user may return to this state
+                                by using the
+                                <span class="command"><strong>isolate</strong></span> command on
+                                the snapshot unit.</p></dd><dt><span class="term"><span class="command"><strong>delete [NAME...]</strong></span></span></dt><dd><p>Remove a snapshot
+                                previously created with
+                                <span class="command"><strong>snapshot</strong></span>.</p></dd><dt><span class="term"><span class="command"><strong>daemon-reload</strong></span></span></dt><dd><p>Reload systemd manager
+                                configuration. This will reload all
+                                unit files and recreate the entire
+                                dependency tree. While the daemon is
+                                reloaded, all sockets systemd listens
+                                on on behalf of user configuration will
+                                stay accessible.</p><p>This
+                                command should not be confused with
+                                the <span class="command"><strong>load</strong></span> or
+                                <span class="command"><strong>reload</strong></span>
+                                commands.</p></dd><dt><span class="term"><span class="command"><strong>daemon-reexec</strong></span></span></dt><dd><p>Reexecute the systemd
+                                manager. This will serialize the
+                                manager state, reexecute the process
+                                and deserialize the state again. This
+                                command is of little use except for
+                                debugging and package
+                                upgrades. Sometimes it might be
+                                helpful as a heavy-weight
+                                <span class="command"><strong>daemon-reload</strong></span>. While
+                                the daemon is reexecuted all sockets
+                                systemd listens on on behalf of user
+                                configuration will stay
+                                accessible.</p></dd><dt><span class="term"><span class="command"><strong>daemon-exit</strong></span></span></dt><dd><p>Ask the systemd
+                                manager to quit. This is only
+                                supported for session managers
+                                (i.e. in conjunction with the
+                                <code class="option">--session</code> option) and
+                                will fail otherwise.</p></dd><dt><span class="term"><span class="command"><strong>show-environment</strong></span></span></dt><dd><p>Dump the systemd
+                                manager environment block. The
+                                environment block will be dumped in
+                                straight-forward form suitable for
+                                sourcing into a shell script. This
+                                environment block will be passed to
+                                all processes the manager
+                                spawns.</p></dd><dt><span class="term"><span class="command"><strong>set-environment [NAME=VALUE...]</strong></span></span></dt><dd><p>Set one or more
+                                systemd manager environment variables,
+                                as specified on the command
+                                line.</p></dd><dt><span class="term"><span class="command"><strong>unset-environment [NAME...]</strong></span></span></dt><dd><p>Unset one or more
+                                systemd manager environment
+                                variables. If only a variable name is
+                                specified it will be removed
+                                regardless of its value. If a variable
+                                and a value are specified the variable
+                                is only removed if it has the
+                                specified value.</p></dd><dt><span class="term"><span class="command"><strong>halt</strong></span></span></dt><dd><p>Shut down and halt the
+                                system. This is mostly equivalent to
+                                <span class="command"><strong>start halt.target</strong></span>
+                                but also prints a wall message to all
+                                users.</p></dd><dt><span class="term"><span class="command"><strong>poweroff</strong></span></span></dt><dd><p>Shut down and
+                                power-off the system. This is mostly
+                                equivalent to <span class="command"><strong>start
+                                poweroff.target</strong></span> but also
+                                prints a wall message to all
+                                users.</p></dd><dt><span class="term"><span class="command"><strong>reboot</strong></span></span></dt><dd><p>Shut down and
+                                reboot the system. This is mostly
+                                equivalent to <span class="command"><strong>start
+                                reboot.target</strong></span> but also
+                                prints a wall message to all
+                                users.</p></dd><dt><span class="term"><span class="command"><strong>default</strong></span></span></dt><dd><p>Enter default
+                                mode. This is mostly equivalent to
+                                <span class="command"><strong>start
+                                default.target</strong></span>.</p></dd><dt><span class="term"><span class="command"><strong>rescue</strong></span></span></dt><dd><p>Enter rescue
+                                mode. This is mostly equivalent to
+                                <span class="command"><strong>isolate
+                                rescue.target</strong></span> but also
+                                prints a wall message to all
+                                users.</p></dd><dt><span class="term"><span class="command"><strong>emergency</strong></span></span></dt><dd><p>Enter emergency
+                                mode. This is mostly equivalent to
+                                <span class="command"><strong>isolate
+                                emergency.target</strong></span> but also
+                                prints a wall message to all
+                                users.</p></dd></dl></div></div><div class="refsect1" title="Exit status"><a id="id3041758"/><h2>Exit status</h2><p>On success 0 is returned, a non-zero failure
+                code otherwise.</p></div><div class="refsect1" title="See Also"><a id="id3041769"/><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemadm</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">wall</span>(1)</span>
+                </p></div></div></body></html>

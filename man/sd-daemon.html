@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>sd-daemon</title><meta name="generator" content="DocBook XSL Stylesheets V1.75.2"/></head><body><div class="refentry" title="sd-daemon"><a id="sd-daemon"/><div class="titlepage"/><div class="refnamediv"><h2>Name</h2><p>sd-daemon — Reference implementation of APIs for
+                new-style daemons</p></div><div class="refsynopsisdiv" title="Synopsis"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include "sd-daemon.h"</pre></div></div><div class="refsect1" title="Description"><a id="id2926306"/><h2>Description</h2><p><code class="filename">sd-daemon.c</code> and
+                <code class="filename">sd-daemon.h</code> provide a reference
+                implementation of various APIs for new-style daemons,
+                as implemented by the
+                <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>
+                init system.</p><p>See
+                <span class="citerefentry"><span class="refentrytitle">sd_listen_fds</span>(3)</span>,
+                <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>,
+                <span class="citerefentry"><span class="refentrytitle">sd_booted</span>(3)</span>,
+                <span class="citerefentry"><span class="refentrytitle">sd_is_fifo</span>(3)</span>
+                for more information about the functions
+                implemented. In addition to these functions a couple
+                of logging prefixes are defined as macros:</p><pre class="programlisting">#define SD_EMERG   "&lt;0&gt;"  /* system is unusable */
+#define SD_ALERT   "&lt;1&gt;"  /* action must be taken immediately */
+#define SD_CRIT    "&lt;2&gt;"  /* critical conditions */
+#define SD_ERR     "&lt;3&gt;"  /* error conditions */
+#define SD_WARNING "&lt;4&gt;"  /* warning conditions */
+#define SD_NOTICE  "&lt;5&gt;"  /* normal but significant condition */
+#define SD_INFO    "&lt;6&gt;"  /* informational */
+#define SD_DEBUG   "&lt;7&gt;"  /* debug-level messages */</pre><p>These prefixes are intended to be used in
+                conjunction with STDERR-based logging as implemented
+                by systemd. If a systemd service definition file is
+                configured with <code class="varname">StandardError=syslog</code>
+                or <code class="varname">StandardError=kmsg</code> these
+                prefixes can be used to encode a log level in lines
+                printed. This is similar to the kernel
+                <code class="function">printk()</code>-style logging. See
+                <span class="citerefentry"><span class="refentrytitle">klogctl</span>(2)</span>
+                for more information.</p><p>The log levels are identical to
+                <span class="citerefentry"><span class="refentrytitle">syslog</span>(3)</span>'s
+                log level system. To use these prefixes simply prefix
+                every line with one of these strings. A line that is
+                not prefixed will be logged at the default log level
+                SD_INFO.</p><div class="example"><a id="id2885718"/><p class="title"><b>Example 1. Hello World</b></p><div class="example-contents"><p>A daemon may log with the log level
+                        NOTICE by issuing this call:</p><pre class="programlisting">fprintf(stderr, SD_NOTICE "Hello World!\n");</pre></div></div><br class="example-break"/></div><div class="refsect1" title="Notes"><a id="id2885737"/><h2>Notes</h2><p>These interfaces are provided by the reference
+                implementation of APIs for new-style daemons and
+                distributed with the systemd package. The algorithms
+                they implement are simple, and can easily be
+                reimplemented in daemons if it is important to support
+                this interface without using the reference
+                implementation. See the respective function man pages
+                for details.</p><p>In addition, for details about the algorithms
+                check the liberally licensed reference implementation
+                sources:
+                <a class="ulink" href="http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.c">http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.c</a>
+                resp. <a class="ulink" href="http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.h">http://cgit.freedesktop.org/systemd/tree/src/sd-daemon.h</a></p><p>These APIs are implemented in the reference
+                implementation's drop-in
+                <code class="filename">sd-daemon.c</code> and
+                <code class="filename">sd-daemon.h</code> files. It is
+                recommended that applications consuming these APIs copy
+                the implementation into their source tree, either
+                verbatim or in excerpts. These interfaces are
+                currently not available in a dynamic library.</p><p>The functions directly related to new-style
+                daemons become NOPs when -DDISABLE_SYSTEMD is set
+                during compilation. In addition, if
+                <code class="filename">sd-daemon.c</code> is compiled on
+                non-Linux systems they become NOPs.</p></div><div class="refsect1" title="See Also"><a id="id2885149"/><h2>See Also</h2><p>
+                        <span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_listen_fds</span>(3)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_booted</span>(3)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">sd_is_fifo</span>(3)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">daemon</span>(7)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd.service</span>(5)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span>,
+                        <span class="citerefentry"><span class="refentrytitle">fprintf</span>(3)</span>
+                </p></div></div></body></html>
