@@ -6,16 +6,8 @@
 #  (at your option) any later version.
 
 [Unit]
-Description=Lock Directory
-DefaultDependencies=no
-Requires=var-lock.mount
-After=var-lock.mount
-Before=local-fs.target
+Description=Daily Cleanup of Temporary Directories
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/bin/mkdir -p /var/lock/subsys
-
-[Install]
-WantedBy=local-fs.target
+[Timer]
+OnBootSec=1d
+OnUnitActiveSec=1d
