@@ -130,6 +130,10 @@ struct Socket {
         bool broadcast;
         bool pass_cred;
         bool pass_sec;
+
+        /* Only for INET6 sockets: issue IPV6_V6ONLY sockopt */
+        SocketAddressBindIPv6Only bind_ipv6_only;
+
         int priority;
         int mark;
         size_t receive_buffer;
@@ -141,9 +145,6 @@ struct Socket {
         char *tcp_congestion;
         long mq_maxmsg;
         long mq_msgsize;
-
-        /* Only for INET6 sockets: issue IPV6_V6ONLY sockopt */
-        SocketAddressBindIPv6Only bind_ipv6_only;
 
         char *smack;
         char *smack_ip_in;
@@ -167,13 +168,13 @@ void socket_free_ports(Socket *s);
 
 extern const UnitVTable socket_vtable;
 
-const char* socket_state_to_string(SocketState i);
-SocketState socket_state_from_string(const char *s);
+const char* socket_state_to_string(SocketState i) _const_;
+SocketState socket_state_from_string(const char *s) _pure_;
 
-const char* socket_exec_command_to_string(SocketExecCommand i);
-SocketExecCommand socket_exec_command_from_string(const char *s);
+const char* socket_exec_command_to_string(SocketExecCommand i) _const_;
+SocketExecCommand socket_exec_command_from_string(const char *s) _pure_;
 
-const char* socket_result_to_string(SocketResult i);
-SocketResult socket_result_from_string(const char *s);
+const char* socket_result_to_string(SocketResult i) _const_;
+SocketResult socket_result_from_string(const char *s) _pure_;
 
-const char* socket_port_type_to_string(SocketPort *p);
+const char* socket_port_type_to_string(SocketPort *p) _pure_;

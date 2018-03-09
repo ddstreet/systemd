@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>bootup</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>bootup</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="bootup"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>bootup — System bootup process</p></div><div class="refsect1"><a name="idp3908016"></a><h2>Description</h2><p>A number of different components are involved in
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="bootup"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>bootup — System bootup process</p></div><div class="refsect1"><a name="idm259799556448"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p>A number of different components are involved in
                 the system boot. Immediately after power-up, the
                 system BIOS will do minimal hardware initialization,
                 and hand control over to a boot loader stored on a
@@ -27,7 +44,7 @@
                 unmounts/detaches the root file system and the storage
                 it resides on. As last step the system is powered down.</p><p>Additional information about the system boot
                 process may be found in
-                <a href="boot.html"><span class="citerefentry"><span class="refentrytitle">boot</span>(7)</span></a>.</p></div><div class="refsect1"><a name="idp3914672"></a><h2>System Manager Bootup</h2><p>At boot, the system manager on the OS image is
+                <a href="boot.html"><span class="citerefentry"><span class="refentrytitle">boot</span>(7)</span></a>.</p></div><div class="refsect1"><a name="idm259795769488"></a><h2 id="System Manager Bootup">System Manager Bootup<a class="headerlink" title="Permalink to this headline" href="#System%20Manager%20Bootup">¶</a></h2><p>At boot, the system manager on the OS image is
                 responsible for initializing the required file
                 systems, services and drivers that are necessary for
                 operation of the system. On
@@ -106,7 +123,7 @@
                 option (see
                 <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>)
                 or by symlinking <code class="filename">default.target</code>
-                to them.</p></div><div class="refsect1"><a name="idp31936"></a><h2>Bootup in the Initial RAM Disk (initrd)</h2><p>The initial RAM disk implementation (initrd) can
+                to them.</p></div><div class="refsect1"><a name="idm259799649264"></a><h2 id="Bootup in the Initial RAM Disk (initrd)">Bootup in the Initial RAM Disk (initrd)<a class="headerlink" title="Permalink to this headline" href="#Bootup%20in%20the%20Initial%20RAM%20Disk%20(initrd)">¶</a></h2><p>The initial RAM disk implementation (initrd) can
                 be set up using systemd as well. In this case boot up
                 inside the initrd follows the following
                 structure.</p><p>The default target in the initrd is
@@ -184,7 +201,7 @@
                                    initrd-switch-root.service
                                                |
                                                v
-                                     Transition to Host OS</pre></div><div class="refsect1"><a name="idp56720"></a><h2>System Manager Shutdown</h2><p>System shutdown with systemd also consists of
+                                     Transition to Host OS</pre></div><div class="refsect1"><a name="idm259799624480"></a><h2 id="System Manager Shutdown">System Manager Shutdown<a class="headerlink" title="Permalink to this headline" href="#System%20Manager%20Shutdown">¶</a></h2><p>System shutdown with systemd also consists of
                 various target units with some minimal ordering
                 structure applied:</p><pre class="programlisting">                                  (conflicts with  (conflicts with
                                     all system     all file system
@@ -211,7 +228,7 @@
 systemd-reboot.service   systemd-poweroff.service   systemd-halt.service   systemd-kexec.service
            |                         |                        |                      |
            v                         v                        v                      v
-    <span class="emphasis"><em>reboot.target</em></span>             <span class="emphasis"><em>poweroff.target</em></span>            <span class="emphasis"><em>halt.target</em></span>           <span class="emphasis"><em>kexec.target</em></span></pre><p>Commonly used system shutdown targets are <span class="emphasis"><em>emphasized</em></span>.</p></div><div class="refsect1"><a name="idp64560"></a><h2>See Also</h2><p>
+    <span class="emphasis"><em>reboot.target</em></span>             <span class="emphasis"><em>poweroff.target</em></span>            <span class="emphasis"><em>halt.target</em></span>           <span class="emphasis"><em>kexec.target</em></span></pre><p>Commonly used system shutdown targets are <span class="emphasis"><em>emphasized</em></span>.</p></div><div class="refsect1"><a name="idm259799616688"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="boot.html"><span class="citerefentry"><span class="refentrytitle">boot</span>(7)</span></a>,
                         <a href="systemd.special.html"><span class="citerefentry"><span class="refentrytitle">systemd.special</span>(7)</span></a>,

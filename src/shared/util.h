@@ -21,6 +21,7 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+#include <alloca.h>
 #include <inttypes.h>
 #include <time.h>
 #include <sys/time.h>
@@ -37,6 +38,7 @@
 #include <sys/resource.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <locale.h>
 
 #include "macro.h"
 #include "time-util.h"
@@ -72,7 +74,7 @@ size_t page_size(void);
 #define strcaseeq(a,b) (strcasecmp((a),(b)) == 0)
 #define strncaseeq(a, b, n) (strncasecmp((a), (b), (n)) == 0)
 
-bool streq_ptr(const char *a, const char *b);
+bool streq_ptr(const char *a, const char *b) _pure_;
 
 #define new(t, n) ((t*) malloc_multiply(sizeof(t), (n)))
 
@@ -104,17 +106,17 @@ static inline bool isempty(const char *p) {
         return !p || !p[0];
 }
 
-char *endswith(const char *s, const char *postfix);
-char *startswith(const char *s, const char *prefix);
-char *startswith_no_case(const char *s, const char *prefix);
+char *endswith(const char *s, const char *postfix) _pure_;
+char *startswith(const char *s, const char *prefix) _pure_;
+char *startswith_no_case(const char *s, const char *prefix) _pure_;
 
-bool first_word(const char *s, const char *word);
+bool first_word(const char *s, const char *word) _pure_;
 
 int close_nointr(int fd);
 void close_nointr_nofail(int fd);
 void close_many(const int fds[], unsigned n_fd);
 
-int parse_boolean(const char *v);
+int parse_boolean(const char *v) _pure_;
 int parse_bytes(const char *t, off_t *bytes);
 int parse_pid(const char *s, pid_t* ret_pid);
 int parse_uid(const char *s, uid_t* ret_uid);
@@ -209,12 +211,12 @@ int get_process_exe(pid_t pid, char **name);
 int get_process_uid(pid_t pid, uid_t *uid);
 int get_process_gid(pid_t pid, gid_t *gid);
 
-char hexchar(int x);
-int unhexchar(char c);
-char octchar(int x);
-int unoctchar(char c);
-char decchar(int x);
-int undecchar(char c);
+char hexchar(int x) _const_;
+int unhexchar(char c) _const_;
+char octchar(int x) _const_;
+int unoctchar(char c) _const_;
+char decchar(int x) _const_;
+int undecchar(char c) _const_;
 
 char *cescape(const char *s);
 char *cunescape(const char *s);
@@ -228,12 +230,12 @@ char *bus_path_unescape(const char *s);
 
 char *ascii_strlower(char *path);
 
-bool dirent_is_file(const struct dirent *de);
-bool dirent_is_file_with_suffix(const struct dirent *de, const char *suffix);
+bool dirent_is_file(const struct dirent *de) _pure_;
+bool dirent_is_file_with_suffix(const struct dirent *de, const char *suffix) _pure_;
 
-bool ignore_file(const char *filename);
+bool ignore_file(const char *filename) _pure_;
 
-bool chars_intersect(const char *a, const char *b);
+bool chars_intersect(const char *a, const char *b) _pure_;
 
 int make_stdio(int fd);
 int make_null_stdio(void);
@@ -305,7 +307,7 @@ bool fstype_is_network(const char *fstype);
 int chvt(int vt);
 
 int read_one_char(FILE *f, char *ret, usec_t timeout, bool *need_nl);
-int ask(char *ret, const char *replies, const char *text, ...);
+int ask(char *ret, const char *replies, const char *text, ...) _printf_attr_(3, 4);
 
 int reset_terminal_fd(int fd, bool switch_to_text);
 int reset_terminal(const char *name);
@@ -359,8 +361,8 @@ int pipe_eof(int fd);
 
 cpu_set_t* cpu_set_malloc(unsigned *ncpus);
 
-int status_vprintf(const char *status, bool ellipse, bool ephemeral, const char *format, va_list ap);
-int status_printf(const char *status, bool ellipse, bool ephemeral, const char *format, ...);
+int status_vprintf(const char *status, bool ellipse, bool ephemeral, const char *format, va_list ap) _printf_attr_(4,0);
+int status_printf(const char *status, bool ellipse, bool ephemeral, const char *format, ...) _printf_attr_(4,5);
 int status_welcome(void);
 
 int fd_columns(int fd);
@@ -386,7 +388,7 @@ int wait_for_terminate_and_warn(const char *name, pid_t pid);
 
 _noreturn_ void freeze(void);
 
-bool null_or_empty(struct stat *st);
+bool null_or_empty(struct stat *st) _pure_;
 int null_or_empty_path(const char *fn);
 
 DIR *xopendirat(int dirfd, const char *name, int flags);
@@ -396,7 +398,7 @@ char *fstab_node_to_udev_node(const char *p);
 char *resolve_dev_console(char **active);
 bool tty_is_vc(const char *tty);
 bool tty_is_vc_resolve(const char *tty);
-bool tty_is_console(const char *tty);
+bool tty_is_console(const char *tty) _pure_;
 int vtnr_from_tty(const char *tty);
 const char *default_term_for_tty(const char *tty);
 
@@ -408,8 +410,8 @@ bool nulstr_contains(const char*nulstr, const char *needle);
 
 bool plymouth_running(void);
 
-bool hostname_is_valid(const char *s);
-char* hostname_cleanup(char *s);
+bool hostname_is_valid(const char *s) _pure_;
+char* hostname_cleanup(char *s, bool lowercase);
 
 char* strshorten(char *s, size_t l);
 
@@ -424,7 +426,7 @@ int symlink_atomic(const char *from, const char *to);
 
 int fchmod_umask(int fd, mode_t mode);
 
-bool display_is_local(const char *display);
+bool display_is_local(const char *display) _pure_;
 int socket_from_display(const char *display, char **path);
 
 int get_user_creds(const char **username, uid_t *uid, gid_t *gid, const char **home, const char **shell);
@@ -447,7 +449,7 @@ char *strjoin(const char *x, ...) _sentinel_;
 
 bool is_main_thread(void);
 
-bool in_charset(const char *s, const char* charset);
+bool in_charset(const char *s, const char* charset) _pure_;
 
 int block_get_whole_disk(dev_t d, dev_t *ret);
 
@@ -464,8 +466,8 @@ int strdup_or_null(const char *a, char **b);
 int ioprio_class_to_string_alloc(int i, char **s);
 int ioprio_class_from_string(const char *s);
 
-const char *sigchld_code_to_string(int i);
-int sigchld_code_from_string(const char *s);
+const char *sigchld_code_to_string(int i) _const_;
+int sigchld_code_from_string(const char *s) _pure_;
 
 int log_facility_unshifted_to_string_alloc(int i, char **s);
 int log_facility_unshifted_from_string(const char *s);
@@ -476,14 +478,14 @@ int log_level_from_string(const char *s);
 int sched_policy_to_string_alloc(int i, char **s);
 int sched_policy_from_string(const char *s);
 
-const char *rlimit_to_string(int i);
-int rlimit_from_string(const char *s);
+const char *rlimit_to_string(int i) _const_;
+int rlimit_from_string(const char *s) _pure_;
 
 int ip_tos_to_string_alloc(int i, char **s);
 int ip_tos_from_string(const char *s);
 
-const char *signal_to_string(int i);
-int signal_from_string(const char *s);
+const char *signal_to_string(int i) _const_;
+int signal_from_string(const char *s) _pure_;
 
 int signal_from_string_try_harder(const char *s);
 
@@ -492,13 +494,13 @@ extern char **saved_argv;
 
 bool kexec_loaded(void);
 
-int prot_from_flags(int flags);
+int prot_from_flags(int flags) _const_;
 
 char *format_bytes(char *buf, size_t l, off_t t);
 
 int fd_wait_for_event(int fd, int event, usec_t timeout);
 
-void* memdup(const void *p, size_t l) _malloc_;
+void* memdup(const void *p, size_t l) _alloc_(2);
 
 int is_kernel_thread(pid_t pid);
 
@@ -511,10 +513,7 @@ int setrlimit_closest(int resource, const struct rlimit *rlim);
 
 int getenv_for_pid(pid_t pid, const char *field, char **_value);
 
-int can_sleep(const char *type);
-int can_sleep_disk(const char *type);
-
-bool is_valid_documentation_url(const char *url);
+bool is_valid_documentation_url(const char *url) _pure_;
 
 bool in_initrd(void);
 
@@ -558,24 +557,24 @@ static inline void umaskp(mode_t *u) {
 #define _cleanup_umask_ _cleanup_(umaskp)
 #define _cleanup_globfree_ _cleanup_(globfree)
 
-_malloc_  static inline void *malloc_multiply(size_t a, size_t b) {
+_malloc_  _alloc_(1, 2) static inline void *malloc_multiply(size_t a, size_t b) {
         if (_unlikely_(b == 0 || a > ((size_t) -1) / b))
                 return NULL;
 
         return malloc(a * b);
 }
 
-_malloc_ static inline void *memdup_multiply(const void *p, size_t a, size_t b) {
+_alloc_(2, 3) static inline void *memdup_multiply(const void *p, size_t a, size_t b) {
         if (_unlikely_(b == 0 || a > ((size_t) -1) / b))
                 return NULL;
 
         return memdup(p, a * b);
 }
 
-bool filename_is_safe(const char *p);
-bool path_is_safe(const char *p);
-bool string_is_safe(const char *p);
-bool string_has_cc(const char *p);
+bool filename_is_safe(const char *p) _pure_;
+bool path_is_safe(const char *p) _pure_;
+bool string_is_safe(const char *p) _pure_;
+bool string_has_cc(const char *p) _pure_;
 
 void *xbsearch_r(const void *key, const void *base, size_t nmemb, size_t size,
                  int (*compar) (const void *, const void *, void *),
@@ -631,7 +630,7 @@ static inline void *mempset(void *s, int c, size_t n) {
 char *hexmem(const void *p, size_t l);
 void *unhexmem(const char *p, size_t l);
 
-char *strextend(char **x, ...);
+char *strextend(char **x, ...) _sentinel_;
 char *strrep(const char *s, unsigned n);
 
 void* greedy_realloc(void **p, size_t *allocated, size_t need);
@@ -642,19 +641,19 @@ static inline void _reset_errno_(int *saved_errno) {
         errno = *saved_errno;
 }
 
-#define PROTECT_ERRNO __attribute__((cleanup(_reset_errno_))) int _saved_errno_ = errno
+#define PROTECT_ERRNO _cleanup_(_reset_errno_) __attribute__((unused)) int _saved_errno_ = errno
 
-struct umask_struct {
+struct _umask_struct_ {
         mode_t mask;
         bool quit;
 };
 
-static inline void _reset_umask_(struct umask_struct *s) {
+static inline void _reset_umask_(struct _umask_struct_ *s) {
         umask(s->mask);
 };
 
 #define RUN_WITH_UMASK(mask)                                            \
-        for (__attribute__((cleanup(_reset_umask_))) struct umask_struct _saved_umask_ = { umask(mask), false }; \
+        for (_cleanup_(_reset_umask_) struct _umask_struct_ _saved_umask_ = { umask(mask), false }; \
              !_saved_umask_.quit ;                                      \
              _saved_umask_.quit = true)
 
@@ -696,3 +695,40 @@ int unlink_noerrno(const char *path);
                 strcpy(stpcpy(_c_, _a_), _b_);          \
                 _c_;                                    \
         })
+
+#define procfs_file_alloca(pid, field)                                  \
+        ({                                                              \
+                pid_t _pid_ = (pid);                                    \
+                char *_r_;                                              \
+                _r_ = alloca(sizeof("/proc/") -1 + DECIMAL_STR_MAX(pid_t) + 1 + sizeof(field)); \
+                sprintf(_r_, "/proc/%lu/" field, (unsigned long) _pid_); \
+                _r_;                                                    \
+        })
+
+struct _locale_struct_ {
+        locale_t saved_locale;
+        locale_t new_locale;
+        bool quit;
+};
+
+static inline void _reset_locale_(struct _locale_struct_ *s) {
+        PROTECT_ERRNO;
+        if (s->saved_locale != (locale_t) 0)
+                uselocale(s->saved_locale);
+        if (s->new_locale != (locale_t) 0)
+                freelocale(s->new_locale);
+}
+
+#define RUN_WITH_LOCALE(mask, loc) \
+        for (_cleanup_(_reset_locale_) struct _locale_struct_ _saved_locale_ = { (locale_t) 0, (locale_t) 0, false }; \
+             ({                                                         \
+                     if (!_saved_locale_.quit) {                        \
+                             PROTECT_ERRNO;                             \
+                             _saved_locale_.new_locale = newlocale((mask), (loc), (locale_t) 0); \
+                             if (_saved_locale_.new_locale != (locale_t) 0)     \
+                                     _saved_locale_.saved_locale = uselocale(_saved_locale_.new_locale); \
+                     }                                                  \
+                     !_saved_locale_.quit; }) ;                         \
+             _saved_locale_.quit = true)
+
+bool id128_is_valid(const char *s) _pure_;

@@ -87,6 +87,10 @@ static const MountPoint mount_table[] = {
           NULL,       MNT_FATAL|MNT_IN_CONTAINER },
         { "tmpfs",      "/sys/fs/cgroup",            "tmpfs",      "mode=755", MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME,
           NULL,       MNT_IN_CONTAINER },
+#ifdef HAVE_XATTR
+        { "cgroup",     "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd,xattr", MS_NOSUID|MS_NOEXEC|MS_NODEV,
+          NULL,       MNT_IN_CONTAINER },
+#endif
         { "cgroup",     "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV,
           NULL,       MNT_IN_CONTAINER },
         { "pstore",     "/sys/fs/pstore",            "pstore",     NULL, MS_NOSUID|MS_NOEXEC|MS_NODEV,
@@ -207,9 +211,9 @@ int mount_setup_early(void) {
 
 int mount_cgroup_controllers(char ***join_controllers) {
         int r;
-        FILE *f;
         char buf[LINE_MAX];
-        Set *controllers;
+        _cleanup_set_free_free_ Set *controllers = NULL;
+        _cleanup_fclose_ FILE *f;
 
         /* Mount all available cgroup controllers that are built into the kernel. */
 
@@ -220,10 +224,8 @@ int mount_cgroup_controllers(char ***join_controllers) {
         }
 
         controllers = set_new(string_hash_func, string_compare_func);
-        if (!controllers) {
-                r = log_oom();
-                goto finish;
-        }
+        if (!controllers)
+                return log_oom();
 
         /* Ignore the header line */
         (void) fgets(buf, sizeof(buf), f);
@@ -238,8 +240,7 @@ int mount_cgroup_controllers(char ***join_controllers) {
                                 break;
 
                         log_error("Failed to parse /proc/cgroups.");
-                        r = -EIO;
-                        goto finish;
+                        return -EIO;
                 }
 
                 if (!enabled) {
@@ -247,18 +248,22 @@ int mount_cgroup_controllers(char ***join_controllers) {
                         continue;
                 }
 
-                r = set_put(controllers, controller);
+                r = set_consume(controllers, controller);
                 if (r < 0) {
                         log_error("Failed to add controller to set.");
-                        free(controller);
-                        goto finish;
+                        return r;
                 }
         }
 
         for (;;) {
-                MountPoint p;
-                char *controller, *where, *options;
+                MountPoint p = {
+                        .what = "cgroup",
+                        .type = "cgroup",
+                        .flags = MS_NOSUID|MS_NOEXEC|MS_NODEV,
+                        .mode = MNT_IN_CONTAINER,
+                };
                 char ***k = NULL;
+                _cleanup_free_ char *options = NULL, *controller;
 
                 controller = set_steal_first(controllers);
                 if (!controller)
@@ -275,14 +280,13 @@ int mount_cgroup_controllers(char ***join_controllers) {
                         for (i = *k, j = *k; *i; i++) {
 
                                 if (!streq(*i, controller)) {
-                                        char *t;
+                                        char _cleanup_free_ *t;
 
                                         t = set_remove(controllers, *i);
                                         if (!t) {
                                                 free(*i);
                                                 continue;
                                         }
-                                        free(t);
                                 }
 
                                 *(j++) = *i;
@@ -291,77 +295,36 @@ int mount_cgroup_controllers(char ***join_controllers) {
                         *j = NULL;
 
                         options = strv_join(*k, ",");
-                        if (!options) {
-                                free(controller);
-                                r = log_oom();
-                                goto finish;
-                        }
-
+                        if (!options)
+                                return log_oom();
                 } else {
                         options = controller;
                         controller = NULL;
                 }
 
-                where = strappend("/sys/fs/cgroup/", options);
-                if (!where) {
-                        free(options);
-                        r = log_oom();
-                        goto finish;
-                }
-
-                zero(p);
-                p.what = "cgroup";
-                p.where = where;
-                p.type = "cgroup";
+                p.where = strappenda("/sys/fs/cgroup/", options);
                 p.options = options;
-                p.flags = MS_NOSUID|MS_NOEXEC|MS_NODEV;
-                p.mode = MNT_IN_CONTAINER;
 
                 r = mount_one(&p, true);
-                free(controller);
-                free(where);
-
-                if (r < 0) {
-                        free(options);
-                        goto finish;
-                }
+                if (r < 0)
+                        return r;
 
                 if (r > 0 && k && *k) {
                         char **i;
 
                         for (i = *k; *i; i++) {
-                                char *t;
-
-                                t = strappend("/sys/fs/cgroup/", *i);
-                                if (!t) {
-                                        r = log_oom();
-                                        free(options);
-                                        goto finish;
-                                }
+                                char *t = strappenda("/sys/fs/cgroup/", *i);
 
                                 r = symlink(options, t);
-                                free(t);
-
                                 if (r < 0 && errno != EEXIST) {
-                                        log_error("Failed to create symlink: %m");
-                                        r = -errno;
-                                        free(options);
-                                        goto finish;
+                                        log_error("Failed to create symlink %s: %m", t);
+                                        return -errno;
                                 }
                         }
                 }
-
-                free(options);
         }
 
-        r = 0;
-
-finish:
-        set_free_free(controllers);
-
-        fclose(f);
-
-        return r;
+        return 0;
 }
 
 static int nftw_cb(

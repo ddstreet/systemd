@@ -20,7 +20,7 @@
 AC_PREREQ([2.64])
 
 AC_INIT([systemd],
-        [202],
+        [204],
         [http://bugs.freedesktop.org/enter_bug.cgi?product=systemd],
         [systemd],
         [http://www.freedesktop.org/wiki/Software/systemd])
@@ -144,6 +144,7 @@ AC_SUBST([OUR_CPPFLAGS], $with_cppflags)
 
 CC_CHECK_FLAGS_APPEND([with_ldflags], [LDFLAGS], [\
         -Wl,--as-needed \
+        -Wl,--no-undefined \
         -Wl,--gc-sections \
         -Wl,-z,relro \
         -Wl,-z,now])
@@ -274,12 +275,22 @@ if test "x$enable_selinux" != "xno"; then
         fi
 fi
 AM_CONDITIONAL(HAVE_SELINUX, [test "$have_selinux" = "yes"])
-if test "x${have_selinux}" != xno ; then
-        SUSHELL=/sbin/sushell
-else
-        SUSHELL=/bin/sh
-fi
+
+AC_ARG_WITH(debug-shell,
+        AS_HELP_STRING([--with-debug-shell=PATH],
+                [Path to debug shell binary]),
+        [SUSHELL="$withval"],[
+        AS_IF([test "x${have_selinux}" != "xno"], [SUSHELL="/sbin/sushell"] , [SUSHELL="/bin/sh"])])
+
 AC_SUBST(SUSHELL)
+
+AC_ARG_WITH([debug-tty],
+        AS_HELP_STRING([--with-debug-tty=PATH],
+                [Specify the tty device for debug shell]),
+        [DEBUGTTY="$withval"],
+        [DEBUGTTY=/dev/tty9])
+
+AC_SUBST(DEBUGTTY)
 
 # ------------------------------------------------------------------------------
 have_xz=no
@@ -757,15 +768,6 @@ AS_IF([test "x$enable_keymap" = "xyes"], [
 AM_CONDITIONAL([ENABLE_KEYMAP], [test "x$enable_keymap" = "xyes"])
 
 # ------------------------------------------------------------------------------
-DEBUGTTY=/dev/tty9
-AC_ARG_WITH([debugshelltty],
-        [AS_HELP_STRING([--with-debugshelltty=PATH],
-                [Specify the tty device for debug shell])],
-        [DEBUGTTY="$withval"],
-        [])
-AC_SUBST(DEBUGTTY)
-
-# ------------------------------------------------------------------------------
 have_manpages=no
 AC_ARG_ENABLE(manpages, AS_HELP_STRING([--disable-manpages], [disable manpages]))
 AS_IF([test "x$enable_manpages" != xno], [
@@ -966,6 +968,7 @@ AC_MSG_RESULT([
         Bash completions dir:    ${with_bashcompletiondir}
         Extra start script:      ${RC_LOCAL_SCRIPT_PATH_START}
         Extra stop script:       ${RC_LOCAL_SCRIPT_PATH_STOP}
+        Debug shell:             ${SUSHELL} @ ${DEBUGTTY}
 
         CFLAGS:                  ${OUR_CFLAGS} ${CFLAGS}
         CPPFLAGS:                ${OUR_CPPFLAGS} ${CPPFLAGS}

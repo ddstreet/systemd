@@ -1,11 +1,28 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.exec</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.exec"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.exec — Execution environment configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="systemd.exec"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.exec — Execution environment configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code>,
                 <code class="filename"><em class="replaceable"><code>socket</code></em>.socket</code>,
                 <code class="filename"><em class="replaceable"><code>mount</code></em>.mount</code>,
-                <code class="filename"><em class="replaceable"><code>swap</code></em>.swap</code></p></div><div class="refsect1"><a name="idp3915200"></a><h2>Description</h2><p>Unit configuration files for services, sockets,
+                <code class="filename"><em class="replaceable"><code>swap</code></em>.swap</code></p></div><div class="refsect1"><a name="idm259787182016"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p>Unit configuration files for services, sockets,
                 mount points and swap devices share a subset of
                 configuration options which define the execution
                 environment of spawned processes.</p><p>This man page lists the configuration options
@@ -22,14 +39,14 @@
                 configuration files. The execution specific
                 configuration options are configured in the [Service],
                 [Socket], [Mount], or [Swap] sections, depending on the unit
-                type.</p></div><div class="refsect1"><a name="idp3921680"></a><h2>Options</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">WorkingDirectory=</code></span></dt><dd><p>Takes an absolute
+                type.</p></div><div class="refsect1"><a name="idm259787175536"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><div class="variablelist"><dl class="variablelist"><dt id="WorkingDirectory="><span class="term"><code class="varname">WorkingDirectory=</code></span><a class="headerlink" title="Permalink to this term" href="#WorkingDirectory=">¶</a></dt><dd><p>Takes an absolute
                                 directory path. Sets the working
                                 directory for executed processes. If
                                 not set defaults to the root directory
                                 when systemd is running as a system
                                 instance and the respective user's
                                 home directory if run as
-                                user.</p></dd><dt><span class="term"><code class="varname">RootDirectory=</code></span></dt><dd><p>Takes an absolute
+                                user.</p></dd><dt id="RootDirectory="><span class="term"><code class="varname">RootDirectory=</code></span><a class="headerlink" title="Permalink to this term" href="#RootDirectory=">¶</a></dt><dd><p>Takes an absolute
                                 directory path. Sets the root
                                 directory for executed processes, with
                                 the
@@ -38,12 +55,12 @@
                                 be ensured that the process and all
                                 its auxiliary files are available in
                                 the <code class="function">chroot()</code>
-                                jail.</p></dd><dt><span class="term"><code class="varname">User=</code>, </span><span class="term"><code class="varname">Group=</code></span></dt><dd><p>Sets the Unix user
+                                jail.</p></dd><dt id="User="><span class="term"><code class="varname">User=</code>, </span><span class="term"><code class="varname">Group=</code></span><a class="headerlink" title="Permalink to this term" href="#User=">¶</a></dt><dd><p>Sets the Unix user
                                 or group that the processes are executed
                                 as, respectively. Takes a single user or group
                                 name or ID as argument. If no group is
                                 set, the default group of the user is
-                                chosen.</p></dd><dt><span class="term"><code class="varname">SupplementaryGroups=</code></span></dt><dd><p>Sets the supplementary
+                                chosen.</p></dd><dt id="SupplementaryGroups="><span class="term"><code class="varname">SupplementaryGroups=</code></span><a class="headerlink" title="Permalink to this term" href="#SupplementaryGroups=">¶</a></dt><dd><p>Sets the supplementary
                                 Unix groups the processes are executed
                                 as. This takes a space separated list
                                 of group names or IDs. This option may
@@ -58,20 +75,20 @@
                                 the list of supplementary groups
                                 configured in the system group
                                 database for the
-                                user.</p></dd><dt><span class="term"><code class="varname">Nice=</code></span></dt><dd><p>Sets the default nice
+                                user.</p></dd><dt id="Nice="><span class="term"><code class="varname">Nice=</code></span><a class="headerlink" title="Permalink to this term" href="#Nice=">¶</a></dt><dd><p>Sets the default nice
                                 level (scheduling priority) for
                                 executed processes. Takes an integer
                                 between -20 (highest priority) and 19
                                 (lowest priority). See
                                 <a href="setpriority.html"><span class="citerefentry"><span class="refentrytitle">setpriority</span>(2)</span></a>
-                                for details.</p></dd><dt><span class="term"><code class="varname">OOMScoreAdjust=</code></span></dt><dd><p>Sets the adjustment
+                                for details.</p></dd><dt id="OOMScoreAdjust="><span class="term"><code class="varname">OOMScoreAdjust=</code></span><a class="headerlink" title="Permalink to this term" href="#OOMScoreAdjust=">¶</a></dt><dd><p>Sets the adjustment
                                 level for the Out-Of-Memory killer for
                                 executed processes. Takes an integer
                                 between -1000 (to disable OOM killing
                                 for this process) and 1000 (to make
                                 killing of this process under memory
                                 pressure very likely). See <a class="ulink" href="http://www.kernel.org/doc/Documentation/filesystems/proc.txt" target="_top">proc.txt</a>
-                                for details.</p></dd><dt><span class="term"><code class="varname">IOSchedulingClass=</code></span></dt><dd><p>Sets the IO scheduling
+                                for details.</p></dd><dt id="IOSchedulingClass="><span class="term"><code class="varname">IOSchedulingClass=</code></span><a class="headerlink" title="Permalink to this term" href="#IOSchedulingClass=">¶</a></dt><dd><p>Sets the IO scheduling
                                 class for executed processes. Takes an
                                 integer between 0 and 3 or one of the
                                 strings <code class="option">none</code>,
@@ -79,7 +96,7 @@
                                 <code class="option">best-effort</code> or
                                 <code class="option">idle</code>. See
                                 <a href="ioprio_set.html"><span class="citerefentry"><span class="refentrytitle">ioprio_set</span>(2)</span></a>
-                                for details.</p></dd><dt><span class="term"><code class="varname">IOSchedulingPriority=</code></span></dt><dd><p>Sets the IO scheduling
+                                for details.</p></dd><dt id="IOSchedulingPriority="><span class="term"><code class="varname">IOSchedulingPriority=</code></span><a class="headerlink" title="Permalink to this term" href="#IOSchedulingPriority=">¶</a></dt><dd><p>Sets the IO scheduling
                                 priority for executed processes. Takes
                                 an integer between 0 (highest
                                 priority) and 7 (lowest priority). The
@@ -87,7 +104,7 @@
                                 selected IO scheduling class (see
                                 above). See
                                 <a href="ioprio_set.html"><span class="citerefentry"><span class="refentrytitle">ioprio_set</span>(2)</span></a>
-                                for details.</p></dd><dt><span class="term"><code class="varname">CPUSchedulingPolicy=</code></span></dt><dd><p>Sets the CPU
+                                for details.</p></dd><dt id="CPUSchedulingPolicy="><span class="term"><code class="varname">CPUSchedulingPolicy=</code></span><a class="headerlink" title="Permalink to this term" href="#CPUSchedulingPolicy=">¶</a></dt><dd><p>Sets the CPU
                                 scheduling policy for executed
                                 processes. Takes one of
                                 <code class="option">other</code>,
@@ -96,7 +113,7 @@
                                 <code class="option">fifo</code> or
                                 <code class="option">rr</code>. See
                                 <a href="sched_setscheduler.html"><span class="citerefentry"><span class="refentrytitle">sched_setscheduler</span>(2)</span></a>
-                                for details.</p></dd><dt><span class="term"><code class="varname">CPUSchedulingPriority=</code></span></dt><dd><p>Sets the CPU
+                                for details.</p></dd><dt id="CPUSchedulingPriority="><span class="term"><code class="varname">CPUSchedulingPriority=</code></span><a class="headerlink" title="Permalink to this term" href="#CPUSchedulingPriority=">¶</a></dt><dd><p>Sets the CPU
                                 scheduling priority for executed
                                 processes. The available priority
                                 range depends on the selected CPU
@@ -106,14 +123,14 @@
                                 and 99 (highest priority) can be used.
                                 See <a href="sched_setscheduler.html"><span class="citerefentry"><span class="refentrytitle">sched_setscheduler</span>(2)</span></a>
                                 for details.
-                                </p></dd><dt><span class="term"><code class="varname">CPUSchedulingResetOnFork=</code></span></dt><dd><p>Takes a boolean
+                                </p></dd><dt id="CPUSchedulingResetOnFork="><span class="term"><code class="varname">CPUSchedulingResetOnFork=</code></span><a class="headerlink" title="Permalink to this term" href="#CPUSchedulingResetOnFork=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true elevated CPU
                                 scheduling priorities and policies
                                 will be reset when the executed
                                 processes fork, and can hence not leak
                                 into child processes. See
                                 <a href="sched_setscheduler.html"><span class="citerefentry"><span class="refentrytitle">sched_setscheduler</span>(2)</span></a>
-                                for details. Defaults to false.</p></dd><dt><span class="term"><code class="varname">CPUAffinity=</code></span></dt><dd><p>Controls the CPU
+                                for details. Defaults to false.</p></dd><dt id="CPUAffinity="><span class="term"><code class="varname">CPUAffinity=</code></span><a class="headerlink" title="Permalink to this term" href="#CPUAffinity=">¶</a></dt><dd><p>Controls the CPU
                                 affinity of the executed
                                 processes. Takes a space-separated
                                 list of CPU indexes. This option may
@@ -124,12 +141,12 @@
                                 assignments prior to this will have no
                                 effect. See
                                 <a href="sched_setaffinity.html"><span class="citerefentry"><span class="refentrytitle">sched_setaffinity</span>(2)</span></a>
-                                for details.</p></dd><dt><span class="term"><code class="varname">UMask=</code></span></dt><dd><p>Controls the file mode
+                                for details.</p></dd><dt id="UMask="><span class="term"><code class="varname">UMask=</code></span><a class="headerlink" title="Permalink to this term" href="#UMask=">¶</a></dt><dd><p>Controls the file mode
                                 creation mask. Takes an access mode in
                                 octal notation. See
                                 <a href="umask.html"><span class="citerefentry"><span class="refentrytitle">umask</span>(2)</span></a>
                                 for details. Defaults to
-                                0022.</p></dd><dt><span class="term"><code class="varname">Environment=</code></span></dt><dd><p>Sets environment
+                                0022.</p></dd><dt id="Environment="><span class="term"><code class="varname">Environment=</code></span><a class="headerlink" title="Permalink to this term" href="#Environment=">¶</a></dt><dd><p>Sets environment
                                 variables for executed
                                 processes. Takes a space-separated
                                 list of variable assignments. This
@@ -154,7 +171,7 @@
                                 </p><p>
                                 See
                                 <a href="environ.html"><span class="citerefentry"><span class="refentrytitle">environ</span>(7)</span></a>
-                                for details about environment variables.</p></dd><dt><span class="term"><code class="varname">EnvironmentFile=</code></span></dt><dd><p>Similar to
+                                for details about environment variables.</p></dd><dt id="EnvironmentFile="><span class="term"><code class="varname">EnvironmentFile=</code></span><a class="headerlink" title="Permalink to this term" href="#EnvironmentFile=">¶</a></dt><dd><p>Similar to
                                 <code class="varname">Environment=</code> but
                                 reads the environment variables from a
                                 text file. The text file should
@@ -188,7 +205,7 @@
                                 these files the files will be read in
                                 the order they are specified and the
                                 later setting will override the
-                                earlier setting.</p></dd><dt><span class="term"><code class="varname">StandardInput=</code></span></dt><dd><p>Controls where file
+                                earlier setting.</p></dd><dt id="StandardInput="><span class="term"><code class="varname">StandardInput=</code></span><a class="headerlink" title="Permalink to this term" href="#StandardInput=">¶</a></dt><dd><p>Controls where file
                                 descriptor 0 (STDIN) of the executed
                                 processes is connected to. Takes one
                                 of <code class="option">null</code>,
@@ -238,7 +255,7 @@
                                 traditional
                                 <a href="inetd.html"><span class="citerefentry"><span class="refentrytitle">inetd</span>(8)</span></a>
                                 daemon. This setting defaults to
-                                <code class="option">null</code>.</p></dd><dt><span class="term"><code class="varname">StandardOutput=</code></span></dt><dd><p>Controls where file
+                                <code class="option">null</code>.</p></dd><dt id="StandardOutput="><span class="term"><code class="varname">StandardOutput=</code></span><a class="headerlink" title="Permalink to this term" href="#StandardOutput=">¶</a></dt><dd><p>Controls where file
                                 descriptor 1 (STDOUT) of the executed
                                 processes is connected to. Takes one
                                 of <code class="option">inherit</code>,
@@ -298,7 +315,7 @@
                                 in
                                 <a href="systemd-system.conf.html"><span class="citerefentry"><span class="refentrytitle">systemd-system.conf</span>(5)</span></a>,
                                 which defaults to
-                                <code class="option">journal</code>.</p></dd><dt><span class="term"><code class="varname">StandardError=</code></span></dt><dd><p>Controls where file
+                                <code class="option">journal</code>.</p></dd><dt id="StandardError="><span class="term"><code class="varname">StandardError=</code></span><a class="headerlink" title="Permalink to this term" href="#StandardError=">¶</a></dt><dd><p>Controls where file
                                 descriptor 2 (STDERR) of the executed
                                 processes is connected to. The
                                 available options are identical to
@@ -313,21 +330,21 @@
                                 in
                                 <a href="systemd-system.conf.html"><span class="citerefentry"><span class="refentrytitle">systemd-system.conf</span>(5)</span></a>,
                                 which defaults to
-                                <code class="option">inherit</code>.</p></dd><dt><span class="term"><code class="varname">TTYPath=</code></span></dt><dd><p>Sets the terminal
+                                <code class="option">inherit</code>.</p></dd><dt id="TTYPath="><span class="term"><code class="varname">TTYPath=</code></span><a class="headerlink" title="Permalink to this term" href="#TTYPath=">¶</a></dt><dd><p>Sets the terminal
                                 device node to use if standard input,
                                 output or stderr are connected to a
                                 TTY (see above). Defaults to
-                                <code class="filename">/dev/console</code>.</p></dd><dt><span class="term"><code class="varname">TTYReset=</code></span></dt><dd><p>Reset the terminal
+                                <code class="filename">/dev/console</code>.</p></dd><dt id="TTYReset="><span class="term"><code class="varname">TTYReset=</code></span><a class="headerlink" title="Permalink to this term" href="#TTYReset=">¶</a></dt><dd><p>Reset the terminal
                                 device specified with
                                 <code class="varname">TTYPath=</code> before and
                                 after execution. Defaults to
-                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">TTYVHangup=</code></span></dt><dd><p>Disconnect all clients
+                                <code class="literal">no</code>.</p></dd><dt id="TTYVHangup="><span class="term"><code class="varname">TTYVHangup=</code></span><a class="headerlink" title="Permalink to this term" href="#TTYVHangup=">¶</a></dt><dd><p>Disconnect all clients
                                 which have opened the terminal device
                                 specified with
                                 <code class="varname">TTYPath=</code>
                                 before and after execution. Defaults
                                 to
-                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">TTYVTDisallocate=</code></span></dt><dd><p>If the terminal
+                                <code class="literal">no</code>.</p></dd><dt id="TTYVTDisallocate="><span class="term"><code class="varname">TTYVTDisallocate=</code></span><a class="headerlink" title="Permalink to this term" href="#TTYVTDisallocate=">¶</a></dt><dd><p>If the terminal
                                 device specified with
                                 <code class="varname">TTYPath=</code> is a
                                 virtual console terminal try to
@@ -335,7 +352,7 @@
                                 execution. This ensures that the
                                 screen and scrollback buffer is
                                 cleared. Defaults to
-                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">SyslogIdentifier=</code></span></dt><dd><p>Sets the process name
+                                <code class="literal">no</code>.</p></dd><dt id="SyslogIdentifier="><span class="term"><code class="varname">SyslogIdentifier=</code></span><a class="headerlink" title="Permalink to this term" href="#SyslogIdentifier=">¶</a></dt><dd><p>Sets the process name
                                 to prefix log lines sent to syslog or
                                 the kernel log buffer with. If not set
                                 defaults to the process name of the
@@ -344,7 +361,7 @@
                                 <code class="varname">StandardOutput=</code> or
                                 <code class="varname">StandardError=</code> are
                                 set to <code class="option">syslog</code> or
-                                <code class="option">kmsg</code>.</p></dd><dt><span class="term"><code class="varname">SyslogFacility=</code></span></dt><dd><p>Sets the syslog
+                                <code class="option">kmsg</code>.</p></dd><dt id="SyslogFacility="><span class="term"><code class="varname">SyslogFacility=</code></span><a class="headerlink" title="Permalink to this term" href="#SyslogFacility=">¶</a></dt><dd><p>Sets the syslog
                                 facility to use when logging to
                                 syslog. One of <code class="option">kern</code>,
                                 <code class="option">user</code>,
@@ -373,7 +390,7 @@
                                 <code class="varname">StandardError=</code> are
                                 set to <code class="option">syslog</code>.
                                 Defaults to
-                                <code class="option">daemon</code>.</p></dd><dt><span class="term"><code class="varname">SyslogLevel=</code></span></dt><dd><p>Default syslog level
+                                <code class="option">daemon</code>.</p></dd><dt id="SyslogLevel="><span class="term"><code class="varname">SyslogLevel=</code></span><a class="headerlink" title="Permalink to this term" href="#SyslogLevel=">¶</a></dt><dd><p>Default syslog level
                                 to use when logging to syslog or the
                                 kernel log buffer. One of
                                 <code class="option">emerg</code>,
@@ -402,7 +419,7 @@
                                 <a href="sd-daemon.html"><span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(3)</span></a>.
 
                                 Defaults to
-                                <code class="option">info</code>.</p></dd><dt><span class="term"><code class="varname">SyslogLevelPrefix=</code></span></dt><dd><p>Takes a boolean
+                                <code class="option">info</code>.</p></dd><dt id="SyslogLevelPrefix="><span class="term"><code class="varname">SyslogLevelPrefix=</code></span><a class="headerlink" title="Permalink to this term" href="#SyslogLevelPrefix=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true and
                                 <code class="varname">StandardOutput=</code> or
                                 <code class="varname">StandardError=</code> are
@@ -418,7 +435,7 @@
                                 logged lines are passed on as-is. For
                                 details about this prefixing see
                                 <a href="sd-daemon.html"><span class="citerefentry"><span class="refentrytitle">sd-daemon</span>(3)</span></a>.
-                                Defaults to true.</p></dd><dt><span class="term"><code class="varname">TimerSlackNSec=</code></span></dt><dd><p>Sets the timer slack
+                                Defaults to true.</p></dd><dt id="TimerSlackNSec="><span class="term"><code class="varname">TimerSlackNSec=</code></span><a class="headerlink" title="Permalink to this term" href="#TimerSlackNSec=">¶</a></dt><dd><p>Sets the timer slack
                                 in nanoseconds for the executed
                                 processes. The timer slack controls
                                 the accuracy of wake-ups triggered by
@@ -430,14 +447,14 @@
                                 integer value in nano-seconds if no
                                 unit is specified. The usual time
                                 units are understood
-                                too.</p></dd><dt><span class="term"><code class="varname">LimitCPU=</code>, </span><span class="term"><code class="varname">LimitFSIZE=</code>, </span><span class="term"><code class="varname">LimitDATA=</code>, </span><span class="term"><code class="varname">LimitSTACK=</code>, </span><span class="term"><code class="varname">LimitCORE=</code>, </span><span class="term"><code class="varname">LimitRSS=</code>, </span><span class="term"><code class="varname">LimitNOFILE=</code>, </span><span class="term"><code class="varname">LimitAS=</code>, </span><span class="term"><code class="varname">LimitNPROC=</code>, </span><span class="term"><code class="varname">LimitMEMLOCK=</code>, </span><span class="term"><code class="varname">LimitLOCKS=</code>, </span><span class="term"><code class="varname">LimitSIGPENDING=</code>, </span><span class="term"><code class="varname">LimitMSGQUEUE=</code>, </span><span class="term"><code class="varname">LimitNICE=</code>, </span><span class="term"><code class="varname">LimitRTPRIO=</code>, </span><span class="term"><code class="varname">LimitRTTIME=</code></span></dt><dd><p>These settings control
+                                too.</p></dd><dt id="LimitCPU="><span class="term"><code class="varname">LimitCPU=</code>, </span><span class="term"><code class="varname">LimitFSIZE=</code>, </span><span class="term"><code class="varname">LimitDATA=</code>, </span><span class="term"><code class="varname">LimitSTACK=</code>, </span><span class="term"><code class="varname">LimitCORE=</code>, </span><span class="term"><code class="varname">LimitRSS=</code>, </span><span class="term"><code class="varname">LimitNOFILE=</code>, </span><span class="term"><code class="varname">LimitAS=</code>, </span><span class="term"><code class="varname">LimitNPROC=</code>, </span><span class="term"><code class="varname">LimitMEMLOCK=</code>, </span><span class="term"><code class="varname">LimitLOCKS=</code>, </span><span class="term"><code class="varname">LimitSIGPENDING=</code>, </span><span class="term"><code class="varname">LimitMSGQUEUE=</code>, </span><span class="term"><code class="varname">LimitNICE=</code>, </span><span class="term"><code class="varname">LimitRTPRIO=</code>, </span><span class="term"><code class="varname">LimitRTTIME=</code></span><a class="headerlink" title="Permalink to this term" href="#LimitCPU=">¶</a></dt><dd><p>These settings control
                                 various resource limits for executed
                                 processes. See
                                 <a href="setrlimit.html"><span class="citerefentry"><span class="refentrytitle">setrlimit</span>(2)</span></a>
                                 for details. Use the string
                                 <code class="varname">infinity</code> to
                                 configure no limit on a specific
-                                resource.</p></dd><dt><span class="term"><code class="varname">PAMName=</code></span></dt><dd><p>Sets the PAM service
+                                resource.</p></dd><dt id="PAMName="><span class="term"><code class="varname">PAMName=</code></span><a class="headerlink" title="Permalink to this term" href="#PAMName=">¶</a></dt><dd><p>Sets the PAM service
                                 name to set up a session as. If set
                                 the executed process will be
                                 registered as a PAM session under the
@@ -447,7 +464,7 @@
                                 not set no PAM session will be opened
                                 for the executed processes. See
                                 <a href="pam.html"><span class="citerefentry"><span class="refentrytitle">pam</span>(8)</span></a>
-                                for details.</p></dd><dt><span class="term"><code class="varname">TCPWrapName=</code></span></dt><dd><p>If this is a
+                                for details.</p></dd><dt id="TCPWrapName="><span class="term"><code class="varname">TCPWrapName=</code></span><a class="headerlink" title="Permalink to this term" href="#TCPWrapName=">¶</a></dt><dd><p>If this is a
                                 socket-activated service this sets the
                                 tcpwrap service name to check the
                                 permission for the current connection
@@ -467,7 +484,7 @@
                                 only. Shell commands and commands
                                 described in
                                 <a href="hosts_options.html"><span class="citerefentry"><span class="refentrytitle">hosts_options</span>(5)</span></a>
-                                are not supported.</p></dd><dt><span class="term"><code class="varname">CapabilityBoundingSet=</code></span></dt><dd><p>Controls which
+                                are not supported.</p></dd><dt id="CapabilityBoundingSet="><span class="term"><code class="varname">CapabilityBoundingSet=</code></span><a class="headerlink" title="Permalink to this term" href="#CapabilityBoundingSet=">¶</a></dt><dd><p>Controls which
                                 capabilities to include in the
                                 capability bounding set for the
                                 executed process. See
@@ -506,7 +523,7 @@
                                 further argument) the bounding set is
                                 reset to the full set of available
                                 capabilities, also undoing any
-                                previous settings.</p></dd><dt><span class="term"><code class="varname">SecureBits=</code></span></dt><dd><p>Controls the secure
+                                previous settings.</p></dd><dt id="SecureBits="><span class="term"><code class="varname">SecureBits=</code></span><a class="headerlink" title="Permalink to this term" href="#SecureBits=">¶</a></dt><dd><p>Controls the secure
                                 bits set for the executed process. See
                                 <a href="capabilities.html"><span class="citerefentry"><span class="refentrytitle">capabilities</span>(7)</span></a>
                                 for details. Takes a list of strings:
@@ -520,7 +537,7 @@
                                 which case the secure bits are
                                 ORed. If the empty string is assigned
                                 to this option the bits are reset to
-                                0.</p></dd><dt><span class="term"><code class="varname">Capabilities=</code></span></dt><dd><p>Controls the
+                                0.</p></dd><dt id="Capabilities="><span class="term"><code class="varname">Capabilities=</code></span><a class="headerlink" title="Permalink to this term" href="#Capabilities=">¶</a></dt><dd><p>Controls the
                                 <a href="capabilities.html"><span class="citerefentry"><span class="refentrytitle">capabilities</span>(7)</span></a>
                                 set for the executed process. Take a
                                 capability string describing the
@@ -533,7 +550,7 @@
                                 that
                                 <code class="varname">CapabilityBoundingSet=</code>
                                 is probably the much more useful
-                                setting.</p></dd><dt><span class="term"><code class="varname">ControlGroup=</code></span></dt><dd><p>Controls the control
+                                setting.</p></dd><dt id="ControlGroup="><span class="term"><code class="varname">ControlGroup=</code></span><a class="headerlink" title="Permalink to this term" href="#ControlGroup=">¶</a></dt><dd><p>Controls the control
                                 groups the executed processes shall be
                                 made members of. Takes a
                                 space-separated list of cgroup
@@ -588,14 +605,14 @@
                                 but a unit's
                                 <code class="varname">ControlGroup=</code>
                                 setting for a specific controller
-                                takes precedence.</p></dd><dt><span class="term"><code class="varname">ControlGroupModify=</code></span></dt><dd><p>Takes a boolean
+                                takes precedence.</p></dd><dt id="ControlGroupModify="><span class="term"><code class="varname">ControlGroupModify=</code></span><a class="headerlink" title="Permalink to this term" href="#ControlGroupModify=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true, the control groups
                                 created for this unit will be owned by
                                 the user specified with
                                 <code class="varname">User=</code> (and the
                                 appropriate group), and he/she can create
                                 subgroups as well as add processes to
-                                the group.</p></dd><dt><span class="term"><code class="varname">ControlGroupPersistent=</code></span></dt><dd><p>Takes a boolean
+                                the group.</p></dd><dt id="ControlGroupPersistent="><span class="term"><code class="varname">ControlGroupPersistent=</code></span><a class="headerlink" title="Permalink to this term" href="#ControlGroupPersistent=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true, the control groups
                                 created for this unit will be marked
                                 to be persistent, i.e. systemd will
@@ -604,7 +621,7 @@
                                 that the control groups will be
                                 removed when the unit is stopped. For
                                 details about the semantics of this
-                                logic see <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/PaxControlGroups" target="_top">PaxControlGroups</a>.</p></dd><dt><span class="term"><code class="varname">ControlGroupAttribute=</code></span></dt><dd><p>Set a specific control
+                                logic see <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/PaxControlGroups" target="_top">PaxControlGroups</a>.</p></dd><dt id="ControlGroupAttribute="><span class="term"><code class="varname">ControlGroupAttribute=</code></span><a class="headerlink" title="Permalink to this term" href="#ControlGroupAttribute=">¶</a></dt><dd><p>Set a specific control
                                 group attribute for executed
                                 processes, and (if needed) add the
                                 executed processes to a cgroup in the
@@ -656,14 +673,14 @@
                                 <code class="varname">BlockIOWeight=</code>,
                                 <code class="varname">BlockIOReadBandwidth=</code>,
                                 <code class="varname">BlockIOWriteBandwidth=</code>.
-                                </p></dd><dt><span class="term"><code class="varname">CPUShares=</code></span></dt><dd><p>Assign the specified
+                                </p></dd><dt id="CPUShares="><span class="term"><code class="varname">CPUShares=</code></span><a class="headerlink" title="Permalink to this term" href="#CPUShares=">¶</a></dt><dd><p>Assign the specified
                                 overall CPU time shares to the
                                 processes executed. Takes an integer
                                 value. This controls the
                                 <code class="literal">cpu.shares</code> control
                                 group attribute, which defaults to
                                 1024. For details about this control
-                                group attribute see <a class="ulink" href="http://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt" target="_top">sched-design-CFS.txt</a>.</p></dd><dt><span class="term"><code class="varname">MemoryLimit=</code>, </span><span class="term"><code class="varname">MemorySoftLimit=</code></span></dt><dd><p>Limit the overall memory usage
+                                group attribute see <a class="ulink" href="http://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt" target="_top">sched-design-CFS.txt</a>.</p></dd><dt id="MemoryLimit="><span class="term"><code class="varname">MemoryLimit=</code>, </span><span class="term"><code class="varname">MemorySoftLimit=</code></span><a class="headerlink" title="Permalink to this term" href="#MemoryLimit=">¶</a></dt><dd><p>Limit the overall memory usage
                                 of the executed processes to a certain
                                 size. Takes a memory size in bytes. If
                                 the value is suffixed with K, M, G or
@@ -676,7 +693,7 @@
                                 <code class="literal">memory.soft_limit_in_bytes</code>
                                 control group attributes. For details
                                 about these control group attributes
-                                see <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/memory.txt" target="_top">memory.txt</a>.</p></dd><dt><span class="term"><code class="varname">DeviceAllow=</code>, </span><span class="term"><code class="varname">DeviceDeny=</code></span></dt><dd><p>Control access to
+                                see <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/memory.txt" target="_top">memory.txt</a>.</p></dd><dt id="DeviceAllow="><span class="term"><code class="varname">DeviceAllow=</code>, </span><span class="term"><code class="varname">DeviceDeny=</code></span><a class="headerlink" title="Permalink to this term" href="#DeviceAllow=">¶</a></dt><dd><p>Control access to
                                 specific device nodes by the executed processes. Takes two
                                 space separated strings: a device node
                                 path (such as
@@ -690,7 +707,7 @@
                                 <code class="literal">devices.deny</code>
                                 control group attributes. For details
                                 about these control group attributes
-                                see <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/devices.txt" target="_top">devices.txt</a>.</p></dd><dt><span class="term"><code class="varname">BlockIOWeight=</code></span></dt><dd><p>Set the default or
+                                see <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/devices.txt" target="_top">devices.txt</a>.</p></dd><dt id="BlockIOWeight="><span class="term"><code class="varname">BlockIOWeight=</code></span><a class="headerlink" title="Permalink to this term" href="#BlockIOWeight=">¶</a></dt><dd><p>Set the default or
                                 per-device overall block IO weight
                                 value for the executed
                                 processes. Takes either a single
@@ -712,7 +729,7 @@
                                 multiple times to set weights for
                                 multiple devices. For details about
                                 these control group attributes see
-                                <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt" target="_top">blkio-controller.txt</a>.</p></dd><dt><span class="term"><code class="varname">BlockIOReadBandwidth=</code>, </span><span class="term"><code class="varname">BlockIOWriteBandwidth=</code></span></dt><dd><p>Set the per-device
+                                <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt" target="_top">blkio-controller.txt</a>.</p></dd><dt id="BlockIOReadBandwidth="><span class="term"><code class="varname">BlockIOReadBandwidth=</code>, </span><span class="term"><code class="varname">BlockIOWriteBandwidth=</code></span><a class="headerlink" title="Permalink to this term" href="#BlockIOReadBandwidth=">¶</a></dt><dd><p>Set the per-device
                                 overall block IO bandwidth limit for
                                 the executed processes. Takes a space
                                 separated pair of a file path and a
@@ -736,7 +753,7 @@
                                 option multiple times to set bandwidth
                                 limits for multiple devices. For
                                 details about these control group
-                                attributes see <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt" target="_top">blkio-controller.txt</a>.</p></dd><dt><span class="term"><code class="varname">ReadWriteDirectories=</code>, </span><span class="term"><code class="varname">ReadOnlyDirectories=</code>, </span><span class="term"><code class="varname">InaccessibleDirectories=</code></span></dt><dd><p>Sets up a new
+                                attributes see <a class="ulink" href="http://www.kernel.org/doc/Documentation/cgroups/blkio-controller.txt" target="_top">blkio-controller.txt</a>.</p></dd><dt id="ReadWriteDirectories="><span class="term"><code class="varname">ReadWriteDirectories=</code>, </span><span class="term"><code class="varname">ReadOnlyDirectories=</code>, </span><span class="term"><code class="varname">InaccessibleDirectories=</code></span><a class="headerlink" title="Permalink to this term" href="#ReadWriteDirectories=">¶</a></dt><dd><p>Sets up a new
                                 file-system name space for executed
                                 processes. These options may be used
                                 to limit access a process might have
@@ -768,7 +785,7 @@
                                 the empty string is assigned to this
                                 option the specific list is reset, and
                                 all prior assignments have no
-                                effect.</p></dd><dt><span class="term"><code class="varname">PrivateTmp=</code></span></dt><dd><p>Takes a boolean
+                                effect.</p></dd><dt id="PrivateTmp="><span class="term"><code class="varname">PrivateTmp=</code></span><a class="headerlink" title="Permalink to this term" href="#PrivateTmp=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true sets up a new file
                                 system namespace for the executed
                                 processes and mounts private
@@ -785,7 +802,7 @@
                                 impossible. All temporary data created
                                 by service will be removed after service
                                 is stopped. Defaults to
-                                false.</p></dd><dt><span class="term"><code class="varname">PrivateNetwork=</code></span></dt><dd><p>Takes a boolean
+                                false.</p></dd><dt id="PrivateNetwork="><span class="term"><code class="varname">PrivateNetwork=</code></span><a class="headerlink" title="Permalink to this term" href="#PrivateNetwork=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true sets up a new
                                 network namespace for the executed
                                 processes and configures only the
@@ -796,7 +813,7 @@
                                 This is useful to securely turn off
                                 network access by the executed
                                 process. Defaults to
-                                false.</p></dd><dt><span class="term"><code class="varname">MountFlags=</code></span></dt><dd><p>Takes a mount
+                                false.</p></dd><dt id="MountFlags="><span class="term"><code class="varname">MountFlags=</code></span><a class="headerlink" title="Permalink to this term" href="#MountFlags=">¶</a></dt><dd><p>Takes a mount
                                 propagation flag:
                                 <code class="option">shared</code>,
                                 <code class="option">slave</code> or
@@ -807,7 +824,7 @@
                                 new mounts. See
                                 <a href="mount.html"><span class="citerefentry"><span class="refentrytitle">mount</span>(2)</span></a>
                                 for details. Default to
-                                <code class="option">shared</code>.</p></dd><dt><span class="term"><code class="varname">UtmpIdentifier=</code></span></dt><dd><p>Takes a four
+                                <code class="option">shared</code>.</p></dd><dt id="UtmpIdentifier="><span class="term"><code class="varname">UtmpIdentifier=</code></span><a class="headerlink" title="Permalink to this term" href="#UtmpIdentifier=">¶</a></dt><dd><p>Takes a four
                                 character identifier string for an
                                 utmp/wtmp entry for this service. This
                                 should only be set for services such
@@ -822,12 +839,12 @@
                                 string replacements. This setting is
                                 unset by default, i.e. no utmp/wtmp
                                 entries are created or cleaned up for
-                                this service.</p></dd><dt><span class="term"><code class="varname">IgnoreSIGPIPE=</code></span></dt><dd><p>Takes a boolean
+                                this service.</p></dd><dt id="IgnoreSIGPIPE="><span class="term"><code class="varname">IgnoreSIGPIPE=</code></span><a class="headerlink" title="Permalink to this term" href="#IgnoreSIGPIPE=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true causes SIGPIPE to be
                                 ignored in the executed
                                 process. Defaults to true, since
                                 SIGPIPE generally is useful only in
-                                shell pipelines.</p></dd><dt><span class="term"><code class="varname">NoNewPrivileges=</code></span></dt><dd><p>Takes a boolean
+                                shell pipelines.</p></dd><dt id="NoNewPrivileges="><span class="term"><code class="varname">NoNewPrivileges=</code></span><a class="headerlink" title="Permalink to this term" href="#NoNewPrivileges=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true ensures that the
                                 service process and all its children
                                 can never gain new privileges. This
@@ -837,7 +854,7 @@
                                 kind. This is the simplest, most
                                 effective way to ensure that a process
                                 and its children can never elevate
-                                privileges again.</p></dd><dt><span class="term"><code class="varname">SystemCallFilter=</code></span></dt><dd><p>Takes a space
+                                privileges again.</p></dd><dt id="SystemCallFilter="><span class="term"><code class="varname">SystemCallFilter=</code></span><a class="headerlink" title="Permalink to this term" href="#SystemCallFilter=">¶</a></dt><dd><p>Takes a space
                                 separated list of system call
                                 names. If this setting is used all
                                 system calls executed by the unit
@@ -868,7 +885,7 @@
                                 merged. If the empty string is
                                 assigned the filter is reset, all
                                 prior assignments will have no
-                                effect.</p></dd></dl></div></div><div class="refsect1"><a name="idp5194384"></a><h2>See Also</h2><p>
+                                effect.</p></dd></dl></div></div><div class="refsect1"><a name="idm259785902736"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                           <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(8)</span></a>,

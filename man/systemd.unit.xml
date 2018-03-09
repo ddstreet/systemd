@@ -197,7 +197,7 @@
                 <para>Some unit names reflect paths existing in the
                 file system name space. Example: a device unit
                 <filename>dev-sda.device</filename> refers to a device
-                with the device node <filename>/dev/sda</filename> in
+                with the device node <filename noindex='true'>/dev/sda</filename> in
                 the file system namespace. If this applies a special
                 way to escape the path name is used, so that the
                 result is usable as part of a file name. Basically,
@@ -245,7 +245,7 @@
         </refsect1>
 
         <refsect1>
-                <title>Unit load path</title>
+                <title>Unit Load Path</title>
 
                 <para>Unit files are loaded from a set of paths
                 determined during compilation, described in the two
@@ -254,7 +254,7 @@
                 lower in the hierarchy, thus allowing overrides.
                 </para>
 
-                <para>When systemd is running in session mode
+                <para>When systemd is running in user mode
                 (<option>--user</option>) and the variable
                 <varname>$SYSTEMD_UNIT_PATH</varname> is set, this
                 contents of this variable overrides the unit load
@@ -278,14 +278,11 @@
                     <tbody>
                       <row>
                         <entry><filename>/run/systemd/generator.early</filename></entry>
-                        <entry>Generated units</entry>
-                      </row>
-                      <row>
-                        <entry><filename>&SYSTEM_CONFIG_UNIT_PATH;</filename></entry>
-                        <entry morerows='1'>Local configuration</entry>
+                        <entry>Generated units (early)</entry>
                       </row>
                       <row>
                         <entry><filename>/etc/systemd/system</filename></entry>
+                        <entry>Local configuration</entry>
                       </row>
                       <row>
                         <entry><filename>/run/systemd/systemd</filename></entry>
@@ -293,26 +290,19 @@
                       </row>
                       <row>
                         <entry><filename>/run/systemd/generator</filename></entry>
-                        <entry>Generated units</entry>
+                        <entry>Generated units (middle)</entry>
                       </row>
                       <row>
                         <entry><filename>/usr/local/lib/systemd/system</filename></entry>
                         <entry>Units for local packages</entry>
                       </row>
                       <row>
-                        <entry><filename>&systemunitdir;</filename></entry>
-                        <entry>Systemd package configuration</entry>
-                      </row>
-                      <row>
                         <entry><filename>/usr/lib/systemd/system</filename></entry>
-                        <entry morerows='1'>Units for installed packages</entry>
-                      </row>
-                      <row>
-                        <entry><filename>/lib/systemd/system</filename></entry>
+                        <entry>Units for installed packages</entry>
                       </row>
                       <row>
                         <entry><filename>/run/systemd/generator.late</filename></entry>
-                        <entry>Generated units</entry>
+                        <entry>Generated units (late)</entry>
                       </row>
                     </tbody>
                   </tgroup>
@@ -335,14 +325,11 @@
                     <tbody>
                       <row>
                         <entry><filename>/tmp/systemd-generator.early.<replaceable>XXXXXX</replaceable></filename></entry>
-                        <entry>Generated units</entry>
-                      </row>
-                      <row>
-                        <entry><filename>&USER_CONFIG_UNIT_PATH;</filename></entry>
-                        <entry morerows='1'>Local configuration</entry>
+                        <entry>Generated units (early)</entry>
                       </row>
                       <row>
                         <entry><filename>/etc/systemd/user</filename></entry>
+                        <entry>Local configuration</entry>
                       </row>
                       <row>
                         <entry><filename>/run/systemd/user</filename></entry>
@@ -350,39 +337,23 @@
                       </row>
                       <row>
                         <entry><filename>/tmp/systemd-generator.<replaceable>XXXXXX</replaceable></filename></entry>
-                        <entry>Generated units</entry>
+                        <entry>Generated units (middle)</entry>
                       </row>
                       <row>
                         <entry><filename>/usr/local/lib/systemd/user</filename></entry>
-                        <entry morerows='1'>Units for local packages</entry>
-                      </row>
-                      <row>
-                        <entry><filename>/usr/local/share/systemd/user</filename></entry>
-                      </row>
-                      <row>
-                        <entry><filename>&userunitdir;</filename></entry>
-                        <entry>Systemd package configuration</entry>
+                        <entry>Units for local packages</entry>
                       </row>
                       <row>
                         <entry><filename>/usr/lib/systemd/user</filename></entry>
-                        <entry morerows='1'>Units for installed packages</entry>
-                      </row>
-                      <row>
-                        <entry><filename>/usr/share/systemd/user</filename></entry>
+                        <entry>Units for installed packages</entry>
                       </row>
                       <row>
                         <entry><filename>/tmp/systemd-generator.late.<replaceable>XXXXXX</replaceable></filename></entry>
-                        <entry>Generated units</entry>
+                        <entry>Generated units (late)</entry>
                       </row>
                     </tbody>
                   </tgroup>
                 </table>
-
-                <para>Note: the paths listed above are set at
-                compilation time and differ between distributions. The
-                "authoritative" list is printed by
-                <command>systemd</command> at during start and daemon
-                reconfiguration.</para>
 
                 <para>Additional units might be loaded into systemd
                 ("linked") from directories not on the unit load
@@ -1013,7 +984,9 @@
                                 may be used to check whether the given
                                 security module is enabled on the
                                 system.  Currently the only recognized
-                                value is <varname>selinux</varname>.
+                                values are <varname>selinux</varname>,
+                                <varname>apparmor</varname>, and
+                                <varname>smack</varname>.
                                 The test may be negated by prepending
                                 an exclamation
                                 mark.</para>
@@ -1160,13 +1133,14 @@
                                 <term><varname>Also=</varname></term>
 
                                 <listitem><para>Additional units to
-                                install when this unit is
-                                installed. If the user requests
-                                installation of a unit with this
-                                option configured,
+                                install/deinstall when this unit is
+                                installed/deinstalled. If the user
+                                requests installation/deinstallation
+                                of a unit with this option configured,
                                 <command>systemctl enable</command>
-                                will automatically install units
-                                listed in this option as
+                                and <command>systemctl
+                                disable</command> will automatically
+                                install/uninstall units listed in this option as
                                 well.</para></listitem>
                         </varlistentry>
                 </variablelist>
@@ -1233,7 +1207,7 @@
                       <row>
                         <entry><literal>%f</literal></entry>
                         <entry>Unescaped file name</entry>
-                        <entry>This is either the unescaped instance name (if applicable) with / prepended (if applicable), or the prefix name similarly prepended with /.</entry>
+                        <entry>This is either the unescaped instance name (if applicable) with <filename>/</filename> prepended (if applicable), or the prefix name similarly prepended with <filename>/</filename>.</entry>
                       </row>
                       <row>
                         <entry><literal>%c</literal></entry>
@@ -1242,13 +1216,13 @@
                       </row>
                       <row>
                         <entry><literal>%r</literal></entry>
-                        <entry>Root control group path of systemd</entry>
-                        <entry></entry>
+                        <entry>Root control group path where units are placed.</entry>
+                        <entry>For system instances this usually resolves to <filename>/system</filename>, except in containers, where the path might be prefixed with the container's root control group.</entry>
                       </row>
                       <row>
                         <entry><literal>%R</literal></entry>
-                        <entry>Parent directory of the root control group path of systemd</entry>
-                        <entry></entry>
+                        <entry>Parent directory of the control group path where units are placed.</entry>
+                        <entry>For system instances this usually resolves to <filename>/</filename>, except in containers, where this resolves to the container's root directory. This specifier is particularly useful in the <varname>ControlGroup=</varname> setting (see <citerefentry><refentrytitle>systemd.exec</refentrytitle><manvolnum>5</manvolnum></citerefentry>).</entry>
                       </row>
                       <row>
                         <entry><literal>%t</literal></entry>
@@ -1273,14 +1247,7 @@
                       <row>
                         <entry><literal>%s</literal></entry>
                         <entry>User shell</entry>
-                        <entry>This is the shell of the configured
-                        user of the unit, or (if none is set) the user
-                        running the systemd instance.  If the user is
-                        <literal>root</literal> (UID equal to 0), the
-                        shell configured in account database is
-                        ignored and <filename>/bin/sh</filename> is
-                        always used.
-                        </entry>
+                        <entry>This is the shell of the configured user of the unit, or (if none is set) the user running the systemd instance.  If the user is <literal>root</literal> (UID equal to 0), the shell configured in account database is ignored and <filename>/bin/sh</filename> is always used.</entry>
                       </row>
                       <row>
                         <entry><literal>%m</literal></entry>

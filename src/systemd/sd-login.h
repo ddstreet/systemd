@@ -150,11 +150,15 @@ int sd_get_sessions(char ***sessions);
  * users. If users is NULL only returns the number of users. */
 int sd_get_uids(uid_t **users);
 
+/* Get all running virtual machines/containers */
+int sd_get_machine_names(char ***machines);
+
 /* Monitor object */
 typedef struct sd_login_monitor sd_login_monitor;
 
 /* Create a new monitor. Category must be NULL, "seat", "session",
- * "uid" to get monitor events for the specific category (or all). */
+ * "uid", "machine" to get monitor events for the specific category
+ * (or all). */
 int sd_login_monitor_new(const char *category, sd_login_monitor** ret);
 
 /* Destroys the passed monitor. Returns NULL. */

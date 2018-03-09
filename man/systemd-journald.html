@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-journald.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd-journald.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd-journald.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-journald.service, systemd-journald.socket, systemd-journald — Journal service</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">systemd-journald.service</code></p><p><code class="filename">systemd-journald.socket</code></p><p><code class="filename">/usr/lib/systemd/systemd-journald</code></p></div><div class="refsect1"><a name="idp2969984"></a><h2>Description</h2><p><code class="filename">systemd-journald</code> is a
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="systemd-journald.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd-journald.service, systemd-journald.socket, systemd-journald — Journal service</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">systemd-journald.service</code></p><p><code class="filename">systemd-journald.socket</code></p><p><code class="filename">/usr/lib/systemd/systemd-journald</code></p></div><div class="refsect1"><a name="idm259777157632"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p><code class="filename">systemd-journald</code> is a
                 system service that collects and stores logging
                 data. It creates and maintains structured, indexed
                 journals based on logging information that is received
@@ -32,28 +49,28 @@
                 further.</p><p>See
                 <a href="journald.conf.html"><span class="citerefentry"><span class="refentrytitle">journald.conf</span>(5)</span></a>
                 for information about the configuration of this
-                service.</p></div><div class="refsect1"><a name="idp4809744"></a><h2>Signals</h2><div class="variablelist"><dl class="variablelist"><dt><span class="term">SIGUSR1</span></dt><dd><p>Request that journal
+                service.</p></div><div class="refsect1"><a name="idm259777146368"></a><h2 id="Signals">Signals<a class="headerlink" title="Permalink to this headline" href="#Signals">¶</a></h2><div class="variablelist"><dl class="variablelist"><dt id="SIGUSR1"><span class="term">SIGUSR1</span><a class="headerlink" title="Permalink to this term" href="#SIGUSR1">¶</a></dt><dd><p>Request that journal
                                 data from <code class="filename">/run/</code>
                                 is flushed to
                                 <code class="filename">/var/</code> in order to
                                 make it persistent (if this is
-                                enabled). This may be used after
+                                enabled). This must be used after
                                 <code class="filename">/var/</code> is mounted,
-                                but is generally not required since
-                                the first journal write when
-                                <code class="filename">/var/</code> becomes
-                                writable triggers the flushing
-                                anyway.</p></dd><dt><span class="term">SIGUSR2</span></dt><dd><p>Request immediate
+                                as otherwise log data from
+                                <code class="filename">/run</code> is never
+                                flushed to <code class="filename">/var</code>
+                                regardless of the
+                                configuration.</p></dd><dt id="SIGUSR2"><span class="term">SIGUSR2</span><a class="headerlink" title="Permalink to this term" href="#SIGUSR2">¶</a></dt><dd><p>Request immediate
                                 rotation of the journal
-                                files.</p></dd></dl></div></div><div class="refsect1"><a name="idp3248992"></a><h2>Kernel Command Line</h2><p>A few configuration parameters from
+                                files.</p></dd></dl></div></div><div class="refsect1"><a name="idm259780805344"></a><h2 id="Kernel Command Line">Kernel Command Line<a class="headerlink" title="Permalink to this headline" href="#Kernel%20Command%20Line">¶</a></h2><p>A few configuration parameters from
                 <code class="filename">journald.conf</code> may be overridden on
-                the kernel command line:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">systemd.journald.forward_to_syslog=</code>, </span><span class="term"><code class="varname">systemd.journald.forward_to_kmsg=</code>, </span><span class="term"><code class="varname">systemd.journald.forward_to_console=</code></span></dt><dd><p>Enables/disables
+                the kernel command line:</p><div class="variablelist"><dl class="variablelist"><dt id="systemd.journald.forward_to_syslog="><span class="term"><code class="varname">systemd.journald.forward_to_syslog=</code>, </span><span class="term"><code class="varname">systemd.journald.forward_to_kmsg=</code>, </span><span class="term"><code class="varname">systemd.journald.forward_to_console=</code></span><a class="headerlink" title="Permalink to this term" href="#systemd.journald.forward_to_syslog=">¶</a></dt><dd><p>Enables/disables
                                 forwarding of collected log messages
                                 to syslog, the kernel log buffer or
                                 the system console.
                                 </p><p>See
                                 <a href="journald.conf.html"><span class="citerefentry"><span class="refentrytitle">journald.conf</span>(5)</span></a>
-                                for information about these settings.</p></dd></dl></div></div><div class="refsect1"><a name="idp2460864"></a><h2>Access Control</h2><p>Journal files are by default owned and readable
+                                for information about these settings.</p></dd></dl></div></div><div class="refsect1"><a name="idm259780798608"></a><h2 id="Access Control">Access Control<a class="headerlink" title="Permalink to this headline" href="#Access%20Control">¶</a></h2><p>Journal files are by default owned and readable
                 by the <code class="literal">systemd-journal</code> system group
                 (but not writable). Adding a user to this group thus
                 enables her/him to read the journal files.</p><p>By default, each logged in user will get her/his
@@ -72,7 +89,7 @@
                 for existing journal files and for future journal
                 files created in the
                 <code class="filename">/var/log/journal/</code>
-                directory.</p></div><div class="refsect1"><a name="idp2340640"></a><h2>See Also</h2><p>
+                directory.</p></div><div class="refsect1"><a name="idm259780783648"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="journalctl.html"><span class="citerefentry"><span class="refentrytitle">journalctl</span>(1)</span></a>,
                         <a href="journald.conf.html"><span class="citerefentry"><span class="refentrytitle">journald.conf</span>(5)</span></a>,

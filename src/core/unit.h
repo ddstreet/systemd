@@ -352,7 +352,7 @@ struct UnitVTable {
         /* Called whenever a process of this unit sends us a message */
         void (*notify_message)(Unit *u, pid_t pid, char **tags);
 
-        /* Called whenever a name thus Unit registered for comes or
+        /* Called whenever a name this Unit registered for comes or
          * goes away. */
         void (*bus_name_owner_change)(Unit *u, const char *name, const char *old_owner, const char *new_owner);
 
@@ -367,6 +367,10 @@ struct UnitVTable {
 
         /* Return the set of units that are following each other */
         int (*following_set)(Unit *u, Set **s);
+
+        /* Invoked each time a unit this unit is triggering changes
+         * state or gains/loses a job */
+        void (*trigger_notify)(Unit *u, Unit *trigger);
 
         /* Called whenever CLOCK_REALTIME made a jump */
         void (*time_change)(Unit *u);
@@ -417,6 +421,8 @@ extern const UnitVTable * const unit_vtable[_UNIT_TYPE_MAX];
 /* For casting the various unit types into a unit */
 #define UNIT(u) (&(u)->meta)
 
+#define UNIT_TRIGGER(u) ((Unit*) set_first((u)->dependencies[UNIT_TRIGGERS]))
+
 DEFINE_CAST(SOCKET, Socket);
 DEFINE_CAST(TIMER, Timer);
 DEFINE_CAST(SERVICE, Service);
@@ -444,7 +450,6 @@ int unit_add_two_dependencies_by_name_inverse(Unit *u, UnitDependency d, UnitDep
 
 int unit_add_exec_dependencies(Unit *u, ExecContext *c);
 
-int unit_add_cgroup(Unit *u, CGroupBonding *b);
 int unit_add_cgroup_from_text(Unit *u, const char *name, bool overwrite, CGroupBonding **ret);
 int unit_add_default_cgroups(Unit *u);
 CGroupBonding* unit_get_default_cgroup(Unit *u);
@@ -463,13 +468,13 @@ void unit_add_to_gc_queue(Unit *u);
 int unit_merge(Unit *u, Unit *other);
 int unit_merge_by_name(Unit *u, const char *other);
 
-Unit *unit_follow_merge(Unit *u);
+Unit *unit_follow_merge(Unit *u) _pure_;
 
 int unit_load_fragment_and_dropin(Unit *u);
 int unit_load_fragment_and_dropin_optional(Unit *u);
 int unit_load(Unit *unit);
 
-const char *unit_description(Unit *u);
+const char *unit_description(Unit *u) _pure_;
 
 bool unit_has_name(Unit *u, const char *name);
 
@@ -479,9 +484,9 @@ const char* unit_sub_state_to_string(Unit *u);
 
 void unit_dump(Unit *u, FILE *f, const char *prefix);
 
-bool unit_can_reload(Unit *u);
-bool unit_can_start(Unit *u);
-bool unit_can_isolate(Unit *u);
+bool unit_can_reload(Unit *u) _pure_;
+bool unit_can_start(Unit *u) _pure_;
+bool unit_can_isolate(Unit *u) _pure_;
 
 int unit_start(Unit *u);
 int unit_stop(Unit *u);
@@ -513,7 +518,7 @@ char *unit_dbus_path(Unit *u);
 int unit_load_related_unit(Unit *u, const char *type, Unit **_found);
 int unit_get_related_unit(Unit *u, const char *type, Unit **_found);
 
-bool unit_can_serialize(Unit *u);
+bool unit_can_serialize(Unit *u) _pure_;
 int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs);
 void unit_serialize_item_format(Unit *u, FILE *f, const char *key, const char *value, ...) _printf_attr_(4,5);
 void unit_serialize_item(Unit *u, FILE *f, const char *key, const char *value);
@@ -523,7 +528,7 @@ int unit_add_node_link(Unit *u, const char *what, bool wants);
 
 int unit_coldplug(Unit *u);
 
-void unit_status_printf(Unit *u, const char *status, const char *unit_status_msg_format);
+void unit_status_printf(Unit *u, const char *status, const char *unit_status_msg_format) _printf_attr_(3, 0);
 
 bool unit_need_daemon_reload(Unit *u);
 
@@ -531,8 +536,9 @@ void unit_reset_failed(Unit *u);
 
 Unit *unit_following(Unit *u);
 
-bool unit_pending_inactive(Unit *u);
-bool unit_pending_active(Unit *u);
+bool unit_stop_pending(Unit *u) _pure_;
+bool unit_inactive_or_pending(Unit *u) _pure_;
+bool unit_active_or_pending(Unit *u);
 
 int unit_add_default_target_dependency(Unit *u, Unit *target);
 
@@ -540,7 +546,8 @@ char *unit_default_cgroup_path(Unit *u);
 
 int unit_following_set(Unit *u, Set **s);
 
-void unit_trigger_on_failure(Unit *u);
+void unit_start_on_failure(Unit *u);
+void unit_trigger_notify(Unit *u);
 
 bool unit_condition_test(Unit *u);
 
@@ -556,18 +563,18 @@ int unit_add_mount_links(Unit *u);
 
 int unit_exec_context_defaults(Unit *u, ExecContext *c);
 
-ExecContext *unit_get_exec_context(Unit *u);
+ExecContext *unit_get_exec_context(Unit *u) _pure_;
 
 int unit_write_drop_in(Unit *u, bool runtime, const char *name, const char *data);
 int unit_remove_drop_in(Unit *u, bool runtime, const char *name);
 
 int unit_kill_context(Unit *u, KillContext *c, bool sigkill, pid_t main_pid, pid_t control_pid, bool main_pid_alien);
 
-const char *unit_active_state_to_string(UnitActiveState i);
-UnitActiveState unit_active_state_from_string(const char *s);
+const char *unit_active_state_to_string(UnitActiveState i) _const_;
+UnitActiveState unit_active_state_from_string(const char *s) _pure_;
 
-const char *unit_dependency_to_string(UnitDependency i);
-UnitDependency unit_dependency_from_string(const char *s);
+const char *unit_dependency_to_string(UnitDependency i) _const_;
+UnitDependency unit_dependency_from_string(const char *s) _pure_;
 
 /* Macros which append UNIT= or USER_UNIT= to the message */
 

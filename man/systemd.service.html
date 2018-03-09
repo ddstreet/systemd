@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>systemd.service</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="systemd.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.service — Service unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code></p></div><div class="refsect1"><a name="idp3777728"></a><h2>Description</h2><p>A unit configuration file whose name ends in
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="systemd.service"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>systemd.service — Service unit configuration</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename"><em class="replaceable"><code>service</code></em>.service</code></p></div><div class="refsect1"><a name="idm259788122528"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p>A unit configuration file whose name ends in
                 <code class="filename">.service</code> encodes information
                 about a process controlled and supervised by
                 systemd.</p><p>This man page lists the configuration options
@@ -42,7 +59,7 @@
                 comprehensive but not 100%. For details about the
                 incompatibilities see the <a class="ulink" href="http://www.freedesktop.org/wiki/Software/systemd/Incompatibilities" target="_top">Incompatibilities
                 with SysV</a> document.
-                </p></div><div class="refsect1"><a name="idp4800992"></a><h2>Options</h2><p>Service files must include a
+                </p></div><div class="refsect1"><a name="idm259787988448"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><p>Service files must include a
                 <code class="literal">[Service]</code> section, which carries
                 information about the service and the process it
                 supervises. A number of options that may be used in
@@ -52,7 +69,7 @@
                 and
                 <a href="systemd.kill.html"><span class="citerefentry"><span class="refentrytitle">systemd.kill</span>(5)</span></a>. The
                 options specific to the <code class="literal">[Service]</code>
-                section of service units are the following:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">Type=</code></span></dt><dd><p>Configures the process
+                section of service units are the following:</p><div class="variablelist"><dl class="variablelist"><dt id="Type="><span class="term"><code class="varname">Type=</code></span><a class="headerlink" title="Permalink to this term" href="#Type=">¶</a></dt><dd><p>Configures the process
                                 start-up type for this service
                                 unit. One of <code class="option">simple</code>,
                                 <code class="option">forking</code>,
@@ -139,11 +156,11 @@
                                 dispatched. This may be used to avoid
                                 interleaving of output of shell
                                 services with the status output on the
-                                console.</p></dd><dt><span class="term"><code class="varname">RemainAfterExit=</code></span></dt><dd><p>Takes a boolean value
+                                console.</p></dd><dt id="RemainAfterExit="><span class="term"><code class="varname">RemainAfterExit=</code></span><a class="headerlink" title="Permalink to this term" href="#RemainAfterExit=">¶</a></dt><dd><p>Takes a boolean value
                                 that specifies whether the service
                                 shall be considered active even when
                                 all its processes exited. Defaults to
-                                <code class="option">no</code>.</p></dd><dt><span class="term"><code class="varname">GuessMainPID=</code></span></dt><dd><p>Takes a boolean value
+                                <code class="option">no</code>.</p></dd><dt id="GuessMainPID="><span class="term"><code class="varname">GuessMainPID=</code></span><a class="headerlink" title="Permalink to this term" href="#GuessMainPID=">¶</a></dt><dd><p>Takes a boolean value
                                 that specifies whether systemd should
                                 try to guess the main PID of a service
                                 if it cannot be determined
@@ -160,7 +177,7 @@
                                 failure detection and automatic
                                 restarting of a service will not work
                                 reliably. Defaults to
-                                <code class="option">yes</code>.</p></dd><dt><span class="term"><code class="varname">PIDFile=</code></span></dt><dd><p>Takes an absolute file
+                                <code class="option">yes</code>.</p></dd><dt id="PIDFile="><span class="term"><code class="varname">PIDFile=</code></span><a class="headerlink" title="Permalink to this term" href="#PIDFile=">¶</a></dt><dd><p>Takes an absolute file
                                 name pointing to the PID file of this
                                 daemon. Use of this option is
                                 recommended for services where
@@ -169,7 +186,7 @@
                                 read the PID of the main process of
                                 the daemon after start-up of the
                                 service. systemd will not write to the
-                                file configured here.</p></dd><dt><span class="term"><code class="varname">BusName=</code></span></dt><dd><p>Takes a D-Bus bus
+                                file configured here.</p></dd><dt id="BusName="><span class="term"><code class="varname">BusName=</code></span><a class="headerlink" title="Permalink to this term" href="#BusName=">¶</a></dt><dd><p>Takes a D-Bus bus
                                 name, that this service is reachable
                                 as. This option is mandatory for
                                 services where
@@ -177,7 +194,7 @@
                                 <code class="option">dbus</code>, but its use
                                 is otherwise recommended as well if
                                 the process takes a name on the D-Bus
-                                bus.</p></dd><dt><span class="term"><code class="varname">ExecStart=</code></span></dt><dd><p>Commands with their
+                                bus.</p></dd><dt id="ExecStart="><span class="term"><code class="varname">ExecStart=</code></span><a class="headerlink" title="Permalink to this term" href="#ExecStart=">¶</a></dt><dd><p>Commands with their
                                 arguments that are executed when this
                                 service is started. The first
                                 argument must be an absolute path
@@ -263,7 +280,7 @@
                                 environment variable
                                 <code class="varname">$MANAGERPID</code> is set
                                 to the PID of the systemd
-                                instance.</p></dd><dt><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span></dt><dd><p>Additional commands
+                                instance.</p></dd><dt id="ExecStartPre="><span class="term"><code class="varname">ExecStartPre=</code>, </span><span class="term"><code class="varname">ExecStartPost=</code></span><a class="headerlink" title="Permalink to this term" href="#ExecStartPre=">¶</a></dt><dd><p>Additional commands
                                 that are executed before or after
                                 the command in
                                 <code class="varname">ExecStart=</code>, respectively.
@@ -274,7 +291,7 @@
                                 after the other, serially.</p><p>If any of those commands (not
                                 prefixed with '<code class="literal">-</code>')
                                 fail, the rest are not executed and
-                                the unit is considered failed.</p></dd><dt><span class="term"><code class="varname">ExecReload=</code></span></dt><dd><p>Commands to execute to
+                                the unit is considered failed.</p></dd><dt id="ExecReload="><span class="term"><code class="varname">ExecReload=</code></span><a class="headerlink" title="Permalink to this term" href="#ExecReload=">¶</a></dt><dd><p>Commands to execute to
                                 trigger a configuration reload in the
                                 service. This argument takes multiple
                                 command lines, following the same
@@ -289,7 +306,7 @@
                                 <code class="varname">$MAINPID</code> is set to
                                 the main process of the daemon, and
                                 may be used for command lines like the
-                                following:</p><pre class="programlisting">/bin/kill -HUP $MAINPID</pre></dd><dt><span class="term"><code class="varname">ExecStop=</code></span></dt><dd><p>Commands to execute to
+                                following:</p><pre class="programlisting">/bin/kill -HUP $MAINPID</pre></dd><dt id="ExecStop="><span class="term"><code class="varname">ExecStop=</code></span><a class="headerlink" title="Permalink to this term" href="#ExecStop=">¶</a></dt><dd><p>Commands to execute to
                                 stop the service started via
                                 <code class="varname">ExecStart=</code>. This
                                 argument takes multiple command lines,
@@ -309,7 +326,7 @@
                                 and environment variable substitution
                                 is supported (including
                                 <code class="varname">$MAINPID</code>, see
-                                above).</p></dd><dt><span class="term"><code class="varname">ExecStopPost=</code></span></dt><dd><p>Additional commands
+                                above).</p></dd><dt id="ExecStopPost="><span class="term"><code class="varname">ExecStopPost=</code></span><a class="headerlink" title="Permalink to this term" href="#ExecStopPost=">¶</a></dt><dd><p>Additional commands
                                 that are executed after the service
                                 was stopped. This includes cases where
                                 the commands configured in
@@ -323,14 +340,14 @@
                                 of these settings is
                                 optional. Specifier and environment
                                 variable substitution is
-                                supported.</p></dd><dt><span class="term"><code class="varname">RestartSec=</code></span></dt><dd><p>Configures the time to
+                                supported.</p></dd><dt id="RestartSec="><span class="term"><code class="varname">RestartSec=</code></span><a class="headerlink" title="Permalink to this term" href="#RestartSec=">¶</a></dt><dd><p>Configures the time to
                                 sleep before restarting a service (as
                                 configured with
                                 <code class="varname">Restart=</code>). Takes a
                                 unit-less value in seconds, or a time
                                 span value such as "5min
                                 20s". Defaults to
-                                100ms.</p></dd><dt><span class="term"><code class="varname">TimeoutStartSec=</code></span></dt><dd><p>Configures the time to
+                                100ms.</p></dd><dt id="TimeoutStartSec="><span class="term"><code class="varname">TimeoutStartSec=</code></span><a class="headerlink" title="Permalink to this term" href="#TimeoutStartSec=">¶</a></dt><dd><p>Configures the time to
                                 wait for start-up. If a
                                 daemon service does not signal
                                 start-up completion within the
@@ -344,7 +361,7 @@
                                 <code class="varname">Type=oneshot</code> is
                                 used in which case the timeout
                                 is disabled by default.
-                                </p></dd><dt><span class="term"><code class="varname">TimeoutStopSec=</code></span></dt><dd><p>Configures the time to
+                                </p></dd><dt id="TimeoutStopSec="><span class="term"><code class="varname">TimeoutStopSec=</code></span><a class="headerlink" title="Permalink to this term" href="#TimeoutStopSec=">¶</a></dt><dd><p>Configures the time to
                                 wait for stop. If a service is asked
                                 to stop but does not terminate in the
                                 specified time, it will be terminated
@@ -357,13 +374,13 @@
                                 time span value such as "5min
                                 20s". Pass 0 to disable the timeout
                                 logic. Defaults to 90s.
-                                </p></dd><dt><span class="term"><code class="varname">TimeoutSec=</code></span></dt><dd><p>A shorthand for configuring
+                                </p></dd><dt id="TimeoutSec="><span class="term"><code class="varname">TimeoutSec=</code></span><a class="headerlink" title="Permalink to this term" href="#TimeoutSec=">¶</a></dt><dd><p>A shorthand for configuring
                                 both <code class="varname">TimeoutStartSec=</code>
                                 and <code class="varname">TimeoutStopSec=</code>
                                 to the specified value.
-                                </p></dd><dt><span class="term"><code class="varname">WatchdogSec=</code></span></dt><dd><p>Configures the
-                                watchdog timeout for a service. This
-                                is activated when the start-up is
+                                </p></dd><dt id="WatchdogSec="><span class="term"><code class="varname">WatchdogSec=</code></span><a class="headerlink" title="Permalink to this term" href="#WatchdogSec=">¶</a></dt><dd><p>Configures the
+                                watchdog timeout for a service. The
+                                watchdog is activated when the start-up is
                                 completed. The service must call
                                 <a href="sd_notify.html"><span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span></a>
                                 regularly with "WATCHDOG=1" (i.e. the
@@ -391,38 +408,63 @@
                                 not set, it will be implicitly set to
                                 <code class="option">main</code>. Defaults to 0,
                                 which disables this
-                                feature.</p></dd><dt><span class="term"><code class="varname">Restart=</code></span></dt><dd><p>Configures whether the
-                                main service process shall be
-                                restarted when it exits. Takes one of
+                                feature.</p></dd><dt id="Restart="><span class="term"><code class="varname">Restart=</code></span><a class="headerlink" title="Permalink to this term" href="#Restart=">¶</a></dt><dd><p>Configures whether the
+                                service shall be restarted when the
+                                service process exits, is killed,
+                                or a timeout is reached. The service
+                                process may be the main service
+                                process, but also one of the processes
+                                specified with
+                                <code class="varname">ExecStartPre=</code>,
+                                <code class="varname">ExecStartPost=</code>,
+                                <code class="varname">ExecStopPre=</code>,
+                                <code class="varname">ExecStopPost=</code>, or
+                                <code class="varname">ExecReload=</code>.
+                                When the death of the process is a
+                                result of systemd operation (e.g. service
+                                stop or restart), the service will not be
+                                restarted. Timeouts include missing
+                                the watchdog "keep-alive ping"
+                                deadline and a service start, reload,
+                                and stop operation timeouts.</p><p>Takes one of
                                 <code class="option">no</code>,
                                 <code class="option">on-success</code>,
                                 <code class="option">on-failure</code>,
-                                <code class="option">on-abort</code> or
+                                <code class="option">on-abort</code>, or
                                 <code class="option">always</code>. If set to
                                 <code class="option">no</code> (the default) the
-                                service will not be restarted when it
-                                exits. If set to
+                                service will not be restarted. If set to
                                 <code class="option">on-success</code> it will be
-                                restarted only when it exited cleanly,
-                                i.e. terminated with an exit code of
-                                0. If set to
-                                <code class="option">on-failure</code> it will be
-                                restarted only when it exited with an
-                                exit code not equaling 0, when
-                                terminated by a signal (including on
+                                restarted only when the service process
+                                exits cleanly.
+                                In this context, a clean exit means
+                                an exit code of 0, or one of the signals
+                                SIGHUP, SIGINT, SIGTERM, or SIGPIPE, and
+                                additionally, exit statuses and signals
+                                specified in <code class="varname">SuccessExitStatus=</code>.
+                                If set to <code class="option">on-failure</code>
+                                the service will be restarted when the
+                                process exits with an nonzero exit code,
+                                is terminated by a signal (including on
                                 core dump), when an operation (such as
-                                service reload) times out or when the
-                                configured watchdog timeout is
-                                triggered. If set to
-                                <code class="option">on-abort</code> it will be
-                                restarted only if it exits due to
-                                reception of an uncaught signal
-                                (including on core dump). If set to
+                                service reload) times out, and when the
+                                configured watchdog timeout is triggered.
+                                If set to
+                                <code class="option">on-abort</code> the service
+                                will be restarted only if the service
+                                process exits due to an uncaught
+                                signal not specified as a clean exit
+                                status.
+                                If set to
                                 <code class="option">always</code> the service
                                 will be restarted regardless whether
                                 it exited cleanly or not, got
                                 terminated abnormally by a signal or
-                                hit a timeout.</p></dd><dt><span class="term"><code class="varname">SuccessExitStatus=</code></span></dt><dd><p>Takes a list of exit
+                                hit a timeout.</p><p>In addition to the above settings,
+                                the service will not be restarted if the
+                                exit code or signal is specified in
+                                <code class="varname">RestartPreventExitStatus=</code>
+                                (see below).</p></dd><dt id="SuccessExitStatus="><span class="term"><code class="varname">SuccessExitStatus=</code></span><a class="headerlink" title="Permalink to this term" href="#SuccessExitStatus=">¶</a></dt><dd><p>Takes a list of exit
                                 status definitions that when returned
                                 by the main service process will be
                                 considered successful termination, in
@@ -430,8 +472,8 @@
                                 code 0 and the signals SIGHUP, SIGINT,
                                 SIGTERM and SIGPIPE. Exit status
                                 definitions can either be numeric exit
-                                codes or termination signal names, and
-                                are separated by spaces. Example:
+                                codes or termination signal names,
+                                separated by spaces. Example:
                                 "<code class="literal">SuccessExitStatus=1 2 8
                                 SIGKILL</code>", ensures that exit
                                 codes 1, 2, 8 and the termination
@@ -443,7 +485,7 @@
                                 assigned to this option the list is
                                 reset, all prior assignments of this
                                 option will have no
-                                effect.</p></dd><dt><span class="term"><code class="varname">RestartPreventExitStatus=</code></span></dt><dd><p>Takes a list of exit
+                                effect.</p></dd><dt id="RestartPreventExitStatus="><span class="term"><code class="varname">RestartPreventExitStatus=</code></span><a class="headerlink" title="Permalink to this term" href="#RestartPreventExitStatus=">¶</a></dt><dd><p>Takes a list of exit
                                 status definitions that when returned
                                 by the main service process will
                                 prevent automatic service restarts
@@ -468,7 +510,7 @@
                                 string is assigned to this option the
                                 list is reset, all prior assignments
                                 of this option will have no
-                                effect.</p></dd><dt><span class="term"><code class="varname">PermissionsStartOnly=</code></span></dt><dd><p>Takes a boolean
+                                effect.</p></dd><dt id="PermissionsStartOnly="><span class="term"><code class="varname">PermissionsStartOnly=</code></span><a class="headerlink" title="Permalink to this term" href="#PermissionsStartOnly=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true, the permission
                                 related execution options as
                                 configured with
@@ -487,7 +529,7 @@
                                 commands. If false, the setting is
                                 applied to all configured commands the
                                 same way. Defaults to
-                                false.</p></dd><dt><span class="term"><code class="varname">RootDirectoryStartOnly=</code></span></dt><dd><p>Takes a boolean
+                                false.</p></dd><dt id="RootDirectoryStartOnly="><span class="term"><code class="varname">RootDirectoryStartOnly=</code></span><a class="headerlink" title="Permalink to this term" href="#RootDirectoryStartOnly=">¶</a></dt><dd><p>Takes a boolean
                                 argument. If true, the root directory
                                 as configured with the
                                 <code class="varname">RootDirectory=</code>
@@ -505,7 +547,7 @@
                                 commands. If false, the setting is
                                 applied to all configured commands the
                                 same way. Defaults to
-                                false.</p></dd><dt><span class="term"><code class="varname">NonBlocking=</code></span></dt><dd><p>Set O_NONBLOCK flag
+                                false.</p></dd><dt id="NonBlocking="><span class="term"><code class="varname">NonBlocking=</code></span><a class="headerlink" title="Permalink to this term" href="#NonBlocking=">¶</a></dt><dd><p>Set O_NONBLOCK flag
                                 for all file descriptors passed via
                                 socket-based activation. If true, all
                                 file descriptors &gt;= 3 (i.e. all except
@@ -515,7 +557,7 @@
                                 useful in conjunction with a socket
                                 unit, as described in
                                 <a href="systemd.socket.html"><span class="citerefentry"><span class="refentrytitle">systemd.socket</span>(5)</span></a>. Defaults
-                                to false.</p></dd><dt><span class="term"><code class="varname">NotifyAccess=</code></span></dt><dd><p>Controls access to the
+                                to false.</p></dd><dt id="NotifyAccess="><span class="term"><code class="varname">NotifyAccess=</code></span><a class="headerlink" title="Permalink to this term" href="#NotifyAccess=">¶</a></dt><dd><p>Controls access to the
                                 service status notification socket, as
                                 accessible via the
                                 <a href="sd_notify.html"><span class="citerefentry"><span class="refentrytitle">sd_notify</span>(3)</span></a>
@@ -541,7 +583,7 @@
                                 <code class="varname">NotifyAccess=</code> not
                                 configured it will be implicitly set
                                 to
-                                <code class="option">main</code>.</p></dd><dt><span class="term"><code class="varname">Sockets=</code></span></dt><dd><p>Specifies the name of
+                                <code class="option">main</code>.</p></dd><dt id="Sockets="><span class="term"><code class="varname">Sockets=</code></span><a class="headerlink" title="Permalink to this term" href="#Sockets=">¶</a></dt><dd><p>Specifies the name of
                                 the socket units this service shall
                                 inherit the sockets from when the
                                 service is started. Normally it
@@ -568,7 +610,7 @@
                                 is assigned to this option the list of
                                 sockets is reset, all prior uses of
                                 this setting will have no
-                                effect.</p></dd><dt><span class="term"><code class="varname">StartLimitInterval=</code>, </span><span class="term"><code class="varname">StartLimitBurst=</code></span></dt><dd><p>Configure service
+                                effect.</p></dd><dt id="StartLimitInterval="><span class="term"><code class="varname">StartLimitInterval=</code>, </span><span class="term"><code class="varname">StartLimitBurst=</code></span><a class="headerlink" title="Permalink to this term" href="#StartLimitInterval=">¶</a></dt><dd><p>Configure service
                                 start rate limiting. By default
                                 services which are started more often
                                 than 5 times within 10s are not
@@ -605,7 +647,7 @@
                                 administrator wants to manually start
                                 a service and the start limit
                                 interferes with
-                                that.</p></dd><dt><span class="term"><code class="varname">StartLimitAction=</code></span></dt><dd><p>Configure the action
+                                that.</p></dd><dt id="StartLimitAction="><span class="term"><code class="varname">StartLimitAction=</code></span><a class="headerlink" title="Permalink to this term" href="#StartLimitAction=">¶</a></dt><dd><p>Configure the action
                                 to take if the rate limit configured
                                 with
                                 <code class="varname">StartLimitInterval=</code>
@@ -639,10 +681,10 @@
                 <a href="systemd.exec.html"><span class="citerefentry"><span class="refentrytitle">systemd.exec</span>(5)</span></a>
                 and
                 <a href="systemd.kill.html"><span class="citerefentry"><span class="refentrytitle">systemd.kill</span>(5)</span></a>
-                for more settings.</p></div><div class="refsect1"><a name="idp1908608"></a><h2>Compatibility Options</h2><p>The following options are also available in the
+                for more settings.</p></div><div class="refsect1"><a name="idm259783100944"></a><h2 id="Compatibility Options">Compatibility Options<a class="headerlink" title="Permalink to this headline" href="#Compatibility%20Options">¶</a></h2><p>The following options are also available in the
                 <code class="literal">[Service]</code> section, but exist purely
                 for compatibility reasons and should not be used in
-                newly written service files.</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">SysVStartPriority=</code></span></dt><dd><p>Set the SysV start
+                newly written service files.</p><div class="variablelist"><dl class="variablelist"><dt id="SysVStartPriority="><span class="term"><code class="varname">SysVStartPriority=</code></span><a class="headerlink" title="Permalink to this term" href="#SysVStartPriority=">¶</a></dt><dd><p>Set the SysV start
                                 priority to use to order this service
                                 in relation to SysV services lacking
                                 LSB headers. This option is only
@@ -660,7 +702,7 @@
                                 instead. For more details see
                                 <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>. If
                                 used, pass an integer value in the
-                                range 0-99.</p></dd><dt><span class="term"><code class="varname">FsckPassNo=</code></span></dt><dd><p>Set the fsck passno
+                                range 0-99.</p></dd><dt id="FsckPassNo="><span class="term"><code class="varname">FsckPassNo=</code></span><a class="headerlink" title="Permalink to this term" href="#FsckPassNo=">¶</a></dt><dd><p>Set the fsck passno
                                 priority to use to order this service
                                 in relation to other file system
                                 checking services. This option is only
@@ -682,7 +724,7 @@
                                 <code class="filename">/etc/fstab</code>'s
                                 fs_passno column. See
                                 <a href="fstab.html"><span class="citerefentry"><span class="refentrytitle">fstab</span>(5)</span></a>
-                                for details.</p></dd></dl></div></div><div class="refsect1"><a name="idp4899456"></a><h2>See Also</h2><p>
+                                for details.</p></dd></dl></div></div><div class="refsect1"><a name="idm259783088144"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemctl.html"><span class="citerefentry"><span class="refentrytitle">systemctl</span>(8)</span></a>,
                           <a href="systemd.unit.html"><span class="citerefentry"><span class="refentrytitle">systemd.unit</span>(5)</span></a>,

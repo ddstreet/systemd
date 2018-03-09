@@ -48,8 +48,6 @@ struct Automount {
 
         char *where;
 
-        UnitRef mount;
-
         int pipe_fd;
         mode_t directory_mode;
         Watch pipe_watch;
@@ -66,8 +64,8 @@ int automount_send_ready(Automount *a, int status);
 
 int automount_add_one_mount_link(Automount *a, Mount *m);
 
-const char* automount_state_to_string(AutomountState i);
-AutomountState automount_state_from_string(const char *s);
+const char* automount_state_to_string(AutomountState i) _const_;
+AutomountState automount_state_from_string(const char *s) _pure_;
 
-const char* automount_result_to_string(AutomountResult i);
-AutomountResult automount_result_from_string(const char *s);
+const char* automount_result_to_string(AutomountResult i) _const_;
+AutomountResult automount_result_from_string(const char *s) _pure_;

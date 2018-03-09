@@ -69,6 +69,7 @@
 #include "ima-setup.h"
 #include "fileio.h"
 #include "smack-setup.h"
+#include "efivars.h"
 
 static enum {
         ACTION_RUN,
@@ -522,9 +523,6 @@ static void strv_free_free(char ***l) {
 }
 
 static void free_join_controllers(void) {
-        if (!arg_join_controllers)
-                return;
-
         strv_free_free(arg_join_controllers);
         arg_join_controllers = NULL;
 }
@@ -670,7 +668,7 @@ static int parse_config_file(void) {
         const char *fn;
         int r;
 
-        fn = arg_running_as == SYSTEMD_SYSTEM ? SYSTEM_CONFIG_FILE : USER_CONFIG_FILE;
+        fn = arg_running_as == SYSTEMD_SYSTEM ? PKGSYSCONFDIR "/system.conf" : PKGSYSCONFDIR "/user.conf";
         f = fopen(fn, "re");
         if (!f) {
                 if (errno == ENOENT)
@@ -680,7 +678,7 @@ static int parse_config_file(void) {
                 return 0;
         }
 
-        r = config_parse(NULL, fn, f, "Manager\0", config_item_table_lookup, (void*) items, false, NULL);
+        r = config_parse(NULL, fn, f, "Manager\0", config_item_table_lookup, (void*) items, false, false, NULL);
         if (r < 0)
                 log_warning("Failed to parse configuration file: %s", strerror(-r));
 
@@ -1219,14 +1217,14 @@ static int initialize_join_controllers(void) {
                 return -ENOMEM;
 
         arg_join_controllers[0] = strv_new("cpu", "cpuacct", NULL);
-        if (!arg_join_controllers[0])
-                return -ENOMEM;
-
         arg_join_controllers[1] = strv_new("net_cls", "net_prio", NULL);
-        if (!arg_join_controllers[1])
-                return -ENOMEM;
-
         arg_join_controllers[2] = NULL;
+
+        if (!arg_join_controllers[0] || !arg_join_controllers[1]) {
+                free_join_controllers();
+                return -ENOMEM;
+        }
+
         return 0;
 }
 
@@ -1239,6 +1237,10 @@ int main(int argc, char *argv[]) {
         bool reexecute = false;
         const char *shutdown_verb = NULL;
         dual_timestamp initrd_timestamp = { 0ULL, 0ULL };
+        dual_timestamp userspace_timestamp = { 0ULL, 0ULL };
+        dual_timestamp kernel_timestamp = { 0ULL, 0ULL };
+        dual_timestamp firmware_timestamp = { 0ULL, 0ULL };
+        dual_timestamp loader_timestamp = { 0ULL, 0ULL };
         static char systemd[] = "systemd";
         bool skip_setup = false;
         int j;
@@ -1259,6 +1261,9 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
 #endif
+
+        dual_timestamp_from_monotonic(&kernel_timestamp, 0);
+        dual_timestamp_get(&userspace_timestamp);
 
         /* Determine if this is a reexecution or normal bootup. We do
          * the full command line parsing much later, so let's just
@@ -1284,7 +1289,9 @@ int main(int argc, char *argv[]) {
         log_show_color(isatty(STDERR_FILENO) > 0);
 
         if (getpid() == 1 && detect_container(NULL) <= 0) {
-
+#ifdef ENABLE_EFI
+                efi_get_boot_timestamps(&userspace_timestamp, &firmware_timestamp, &loader_timestamp);
+#endif
                 /* Running outside of a container as PID 1 */
                 arg_running_as = SYSTEMD_SYSTEM;
                 make_null_stdio();
@@ -1294,7 +1301,7 @@ int main(int argc, char *argv[]) {
                 if (in_initrd()) {
                         char *rd_timestamp = NULL;
 
-                        dual_timestamp_get(&initrd_timestamp);
+                        initrd_timestamp = userspace_timestamp;
                         asprintf(&rd_timestamp, "%llu %llu",
                                  (unsigned long long) initrd_timestamp.realtime,
                                  (unsigned long long) initrd_timestamp.monotonic);
@@ -1354,7 +1361,6 @@ int main(int argc, char *argv[]) {
                 log_set_target(LOG_TARGET_JOURNAL_OR_KMSG);
 
         } else if (getpid() == 1) {
-
                 /* Running inside a container, as PID 1 */
                 arg_running_as = SYSTEMD_SYSTEM;
                 log_set_target(LOG_TARGET_CONSOLE);
@@ -1363,12 +1369,21 @@ int main(int argc, char *argv[]) {
                 /* For the later on, see above... */
                 log_set_target(LOG_TARGET_JOURNAL);
 
-        } else {
+                /* clear the kernel timestamp,
+                 * because we are in a container */
+                kernel_timestamp.monotonic = 0ULL;
+                kernel_timestamp.realtime = 0ULL;
 
+        } else {
                 /* Running as user instance */
                 arg_running_as = SYSTEMD_USER;
                 log_set_target(LOG_TARGET_AUTO);
                 log_open();
+
+                /* clear the kernel timestamp,
+                 * because we are not PID 1 */
+                kernel_timestamp.monotonic = 0ULL;
+                kernel_timestamp.realtime = 0ULL;
         }
 
         /* Initialize default unit */
@@ -1610,11 +1625,13 @@ int main(int argc, char *argv[]) {
         m->default_std_error = arg_default_std_error;
         m->runtime_watchdog = arg_runtime_watchdog;
         m->shutdown_watchdog = arg_shutdown_watchdog;
+        m->userspace_timestamp = userspace_timestamp;
+        m->kernel_timestamp = kernel_timestamp;
+        m->firmware_timestamp = firmware_timestamp;
+        m->loader_timestamp = loader_timestamp;
+        m->initrd_timestamp = initrd_timestamp;
 
         manager_set_default_rlimits(m, arg_default_rlimit);
-
-        if (dual_timestamp_is_set(&initrd_timestamp))
-                m->initrd_timestamp = initrd_timestamp;
 
         if (arg_default_controllers)
                 manager_set_default_controllers(m, arg_default_controllers);
@@ -1683,7 +1700,7 @@ int main(int argc, char *argv[]) {
 
                 r = manager_add_job(m, JOB_START, target, JOB_ISOLATE, false, &error, &default_unit_job);
                 if (r == -EPERM) {
-                        log_error("Default target could not be isolated, starting instead: %s", bus_error(&error, r));
+                        log_debug("Default target could not be isolated, starting instead: %s", bus_error(&error, r));
                         dbus_error_free(&error);
 
                         r = manager_add_job(m, JOB_START, target, JOB_REPLACE, false, &error, &default_unit_job);

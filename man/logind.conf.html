@@ -1,9 +1,26 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>logind.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>logind.conf</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="logind.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>logind.conf — Login manager configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/systemd/logind.conf</code></p></div><div class="refsect1"><a name="idp166928"></a><h2>Description</h2><p>This file configures various parameters of the systemd login manager <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idp168960"></a><h2>Options</h2><p>All options are configured in the
-                <code class="literal">[Login]</code> section:</p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><code class="varname">NAutoVTs=</code></span></dt><dd><p>Takes a positive
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="logind.conf"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>logind.conf — Login manager configuration file</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><p><code class="filename">/etc/systemd/logind.conf</code></p></div><div class="refsect1"><a name="idm259795689488"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p>This file configures various parameters of the systemd login manager <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>.</p></div><div class="refsect1"><a name="idm259795687456"></a><h2 id="Options">Options<a class="headerlink" title="Permalink to this headline" href="#Options">¶</a></h2><p>All options are configured in the
+                <code class="literal">[Login]</code> section:</p><div class="variablelist"><dl class="variablelist"><dt id="NAutoVTs="><span class="term"><code class="varname">NAutoVTs=</code></span><a class="headerlink" title="Permalink to this term" href="#NAutoVTs=">¶</a></dt><dd><p>Takes a positive
                                 integer. Configures how many virtual
                                 terminals (VTs) to allocate by default
                                 that -- when switched to and
@@ -37,7 +54,7 @@
                                 directive. Defaults to 6. When set to
                                 0, automatic spawning of
                                 <code class="literal">autovt</code> services is
-                                disabled. </p></dd><dt><span class="term"><code class="varname">ReserveVT=</code></span></dt><dd><p>Takes a positive
+                                disabled. </p></dd><dt id="ReserveVT="><span class="term"><code class="varname">ReserveVT=</code></span><a class="headerlink" title="Permalink to this term" href="#ReserveVT=">¶</a></dt><dd><p>Takes a positive
                                 integer. Configures the number of one
                                 virtual terminal that shall
                                 unconditionally be reserved for
@@ -55,12 +72,12 @@
                                 <code class="literal">getty</code> available on
                                 Alt-F6.). When set to 0, VT
                                 reservation is
-                                disabled.</p></dd><dt><span class="term"><code class="varname">KillUserProcesses=</code></span></dt><dd><p>Takes a boolean
+                                disabled.</p></dd><dt id="KillUserProcesses="><span class="term"><code class="varname">KillUserProcesses=</code></span><a class="headerlink" title="Permalink to this term" href="#KillUserProcesses=">¶</a></dt><dd><p>Takes a boolean
                                 argument. Configures whether the
                                 processes of a user should be killed
                                 when she or he completely logs out (i.e. after
                                 her/his last session ended). Defaults to
-                                <code class="literal">no</code>.</p></dd><dt><span class="term"><code class="varname">IdleAction=</code></span></dt><dd><p>Configures the action
+                                <code class="literal">no</code>.</p></dd><dt id="IdleAction="><span class="term"><code class="varname">IdleAction=</code></span><a class="headerlink" title="Permalink to this term" href="#IdleAction=">¶</a></dt><dd><p>Configures the action
                                 to take when the system is idle. Takes
                                 one of <code class="literal">ignore</code>,
                                 <code class="literal">poweroff</code>,
@@ -79,11 +96,11 @@
                                 and no idle inhibitor lock is active,
                                 and subsequently the time configured
                                 with <code class="varname">IdleActionSec=</code>
-                                (see below) has passed.</p></dd><dt><span class="term"><code class="varname">IdleActionSec=</code></span></dt><dd><p>Configures the delay
+                                (see below) has passed.</p></dd><dt id="IdleActionSec="><span class="term"><code class="varname">IdleActionSec=</code></span><a class="headerlink" title="Permalink to this term" href="#IdleActionSec=">¶</a></dt><dd><p>Configures the delay
                                 after which the action configured in
                                 <code class="varname">IdleAction=</code> (see
                                 above) is taken after the system is
-                                idle.</p></dd><dt><span class="term"><code class="varname">KillOnlyUsers=</code>, </span><span class="term"><code class="varname">KillExcludeUsers=</code></span></dt><dd><p>These settings take
+                                idle.</p></dd><dt id="KillOnlyUsers="><span class="term"><code class="varname">KillOnlyUsers=</code>, </span><span class="term"><code class="varname">KillExcludeUsers=</code></span><a class="headerlink" title="Permalink to this term" href="#KillOnlyUsers=">¶</a></dt><dd><p>These settings take
                                 space separated lists of user names
                                 that influence the effect of
                                 <code class="varname">KillUserProcesses=</code>. If
@@ -98,7 +115,7 @@
                                 defaults to <code class="literal">root</code>
                                 and takes precedence over
                                 <code class="varname">KillOnlyUsers=</code>
-                                which defaults to the empty list.</p></dd><dt><span class="term"><code class="varname">Controllers=</code>, </span><span class="term"><code class="varname">ResetControllers=</code></span></dt><dd><p>These settings control
+                                which defaults to the empty list.</p></dd><dt id="Controllers="><span class="term"><code class="varname">Controllers=</code>, </span><span class="term"><code class="varname">ResetControllers=</code></span><a class="headerlink" title="Permalink to this term" href="#Controllers=">¶</a></dt><dd><p>These settings control
                                 the default control group hierarchies
                                 users logging in are added to, in
                                 addition to the
@@ -126,14 +143,14 @@
                                 newly created sessions will be part of
                                 the control groups of the system
                                 service that created the
-                                session.</p></dd><dt><span class="term"><code class="varname">InhibitDelayMaxSec=</code></span></dt><dd><p>Specifies the maximum
+                                session.</p></dd><dt id="InhibitDelayMaxSec="><span class="term"><code class="varname">InhibitDelayMaxSec=</code></span><a class="headerlink" title="Permalink to this term" href="#InhibitDelayMaxSec=">¶</a></dt><dd><p>Specifies the maximum
                                 time a system shutdown or sleep
                                 request is delayed due to an inhibitor
                                 lock of type <code class="literal">delay</code>
                                 being active -- before it is ignored
                                 and the operation executed
                                 anyway. Defaults to
-                                5s.</p></dd><dt><span class="term"><code class="varname">HandlePowerKey=</code>, </span><span class="term"><code class="varname">HandleSuspendKey=</code>, </span><span class="term"><code class="varname">HandleHibernateKey=</code>, </span><span class="term"><code class="varname">HandleLidSwitch=</code></span></dt><dd><p>Controls whether
+                                5s.</p></dd><dt id="HandlePowerKey="><span class="term"><code class="varname">HandlePowerKey=</code>, </span><span class="term"><code class="varname">HandleSuspendKey=</code>, </span><span class="term"><code class="varname">HandleHibernateKey=</code>, </span><span class="term"><code class="varname">HandleLidSwitch=</code></span><a class="headerlink" title="Permalink to this term" href="#HandlePowerKey=">¶</a></dt><dd><p>Controls whether
                                 logind shall handle the system power
                                 and sleep keys and the lid switch to
                                 trigger actions such as system
@@ -165,7 +182,7 @@
                                 default to <code class="literal">suspend</code>.
                                 <code class="varname">HandleHibernateKey=</code>
                                 defaults to
-                                <code class="literal">hibernate</code>.</p></dd><dt><span class="term"><code class="varname">PowerKeyIgnoreInhibited=</code>, </span><span class="term"><code class="varname">SuspendKeyIgnoreInhibited=</code>, </span><span class="term"><code class="varname">HibernateKeyIgnoreInhibited=</code>, </span><span class="term"><code class="varname">LidSwitchIgnoreInhibited=</code></span></dt><dd><p>Controls whether
+                                <code class="literal">hibernate</code>.</p></dd><dt id="PowerKeyIgnoreInhibited="><span class="term"><code class="varname">PowerKeyIgnoreInhibited=</code>, </span><span class="term"><code class="varname">SuspendKeyIgnoreInhibited=</code>, </span><span class="term"><code class="varname">HibernateKeyIgnoreInhibited=</code>, </span><span class="term"><code class="varname">LidSwitchIgnoreInhibited=</code></span><a class="headerlink" title="Permalink to this term" href="#PowerKeyIgnoreInhibited=">¶</a></dt><dd><p>Controls whether
                                 actions triggered by the power and
                                 sleep keys and the lid switch are
                                 subject to inhibitor locks. These
@@ -197,7 +214,7 @@
                 <a href="pam_systemd.html"><span class="citerefentry"><span class="refentrytitle">pam_systemd</span>(8)</span></a>. The
                 latter kills processes of a session as soon as it
                 ends, the former kills processes as soon as the last
-                session of the user ends.</p></div><div class="refsect1"><a name="idp5055440"></a><h2>See Also</h2><p>
+                session of the user ends.</p></div><div class="refsect1"><a name="idm259794595984"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                           <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                           <a href="systemd-logind.service.html"><span class="citerefentry"><span class="refentrytitle">systemd-logind.service</span>(8)</span></a>,
                           <a href="loginctl.html"><span class="citerefentry"><span class="refentrytitle">loginctl</span>(1)</span></a>,

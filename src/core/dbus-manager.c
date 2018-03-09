@@ -1186,11 +1186,9 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                 if (!client)
                         goto oom;
 
-                r = set_put(s, client);
-                if (r < 0) {
-                        free(client);
+                r = set_consume(s, client);
+                if (r < 0)
                         return bus_send_error_reply(connection, message, NULL, r);
-                }
 
                 reply = dbus_message_new_method_return(message);
                 if (!reply)
@@ -1505,8 +1503,11 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                 }
 
                 /* Safety check */
-                if (isempty(switch_root_init))
+                if (isempty(switch_root_init)) {
                         good = path_is_os_tree(switch_root);
+                        if (!good)
+                                log_error("Not switching root: %s does not seem to be an OS tree. /etc/os-release is missing.", switch_root);
+                }
                 else {
                         _cleanup_free_ char *p = NULL;
 
@@ -1515,6 +1516,8 @@ static DBusHandlerResult bus_manager_message_handler(DBusConnection *connection,
                                 goto oom;
 
                         good = access(p, X_OK) >= 0;
+                        if (!good)
+                                log_error("Not switching root: cannot execute new init %s", p);
                 }
                 if (!good)
                         return bus_send_error_reply(connection, message, NULL, -EINVAL);

@@ -415,7 +415,7 @@ _public_ void sd_journal_flush_matches(sd_journal *j) {
 }
 
 static int compare_entry_order(JournalFile *af, Object *_ao,
-                         JournalFile *bf, uint64_t bp) {
+                               JournalFile *bf, uint64_t bp) {
 
         uint64_t a, b;
         Object *ao, *bo;
@@ -498,7 +498,7 @@ static int compare_entry_order(JournalFile *af, Object *_ao,
         return 0;
 }
 
-static int compare_with_location(JournalFile *af, Object *ao, Location *l) {
+_pure_ static int compare_with_location(JournalFile *af, Object *ao, Location *l) {
         uint64_t a;
 
         assert(af);
@@ -1251,11 +1251,11 @@ static void check_network(sd_journal *j, int fd) {
                 return;
 
         j->on_network =
-                sfs.f_type == (__SWORD_TYPE) CIFS_MAGIC_NUMBER ||
-                sfs.f_type == (__SWORD_TYPE) CODA_SUPER_MAGIC ||
-                sfs.f_type == (__SWORD_TYPE) NCP_SUPER_MAGIC ||
-                sfs.f_type == (__SWORD_TYPE) NFS_SUPER_MAGIC ||
-                sfs.f_type == (__SWORD_TYPE) SMB_SUPER_MAGIC;
+                F_TYPE_CMP(sfs.f_type, CIFS_MAGIC_NUMBER) ||
+                F_TYPE_CMP(sfs.f_type, CODA_SUPER_MAGIC) ||
+                F_TYPE_CMP(sfs.f_type, NCP_SUPER_MAGIC) ||
+                F_TYPE_CMP(sfs.f_type, NFS_SUPER_MAGIC) ||
+                F_TYPE_CMP(sfs.f_type, SMB_SUPER_MAGIC);
 }
 
 static int add_file(sd_journal *j, const char *prefix, const char *filename) {

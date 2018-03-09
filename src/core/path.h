@@ -80,8 +80,6 @@ struct Path {
 
         LIST_HEAD(PathSpec, specs);
 
-        UnitRef unit;
-
         PathState state, deserialized_state;
 
         bool inotify_triggered;
@@ -92,8 +90,6 @@ struct Path {
         PathResult result;
 };
 
-void path_unit_notify(Unit *u, UnitActiveState new_state);
-
 /* Called from the mount code figure out if a mount is a dependency of
  * any of the paths of this path object */
 int path_add_one_mount_link(Path *p, Mount *m);
@@ -102,11 +98,11 @@ void path_free_specs(Path *p);
 
 extern const UnitVTable path_vtable;
 
-const char* path_state_to_string(PathState i);
-PathState path_state_from_string(const char *s);
+const char* path_state_to_string(PathState i) _const_;
+PathState path_state_from_string(const char *s) _pure_;
 
-const char* path_type_to_string(PathType i);
-PathType path_type_from_string(const char *s);
+const char* path_type_to_string(PathType i) _const_;
+PathType path_type_from_string(const char *s) _pure_;
 
-const char* path_result_to_string(PathResult i);
-PathResult path_result_from_string(const char *s);
+const char* path_result_to_string(PathResult i) _const_;
+PathResult path_result_from_string(const char *s) _pure_;

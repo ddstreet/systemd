@@ -1,8 +1,25 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_journal_print</title><meta name="generator" content="DocBook XSL Stylesheets V1.77.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><a href="index.html">Index </a>·
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>sd_journal_print</title><meta name="generator" content="DocBook XSL Stylesheets V1.78.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><style>
+    a.headerlink {
+      color: #c60f0f;
+      font-size: 0.8em;
+      padding: 0 4px 0 4px;
+      text-decoration: none;
+      visibility: hidden;
+    }
+
+    a.headerlink:hover {
+      background-color: #c60f0f;
+      color: white;
+    }
+
+    h1:hover > a.headerlink, h2:hover > a.headerlink, h3:hover > a.headerlink, dt:hover > a.headerlink {
+      visibility: visible;
+    }
+  </style><a href="index.html">Index </a>·
   <a href="systemd.directives.html">Directives </a>·
   <a href="../python-systemd/index.html">Python </a>·
   <a href="../libudev/index.html">libudev </a>·
-  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 202</span><hr><div class="refentry"><a name="sd_journal_print"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_journal_print, sd_journal_printv, sd_journal_send, sd_journal_sendv, sd_journal_perror, SD_JOURNAL_SUPPRESS_LOCATION — Submit log entries to the journal</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-journal.h&gt;</pre><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_print</b>(</code></td><td>int <var class="pdparam">priority</var>, </td></tr><tr><td> </td><td>const char* <var class="pdparam">format</var>, </td></tr><tr><td> </td><td>...<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_printv</b>(</code></td><td>int <var class="pdparam">priority</var>, </td></tr><tr><td> </td><td>const char* <var class="pdparam">format</var>, </td></tr><tr><td> </td><td>va_list <var class="pdparam">ap</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_send</b>(</code></td><td>const char* <var class="pdparam">format</var>, </td></tr><tr><td> </td><td>...<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_sendv</b>(</code></td><td>const struct iovec *<var class="pdparam">iov</var>, </td></tr><tr><td> </td><td>int <var class="pdparam">n</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_perror</b>(</code></td><td>const char* <var class="pdparam">message</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1"><a name="idp27120"></a><h2>Description</h2><p><code class="function">sd_journal_print()</code> may be
+  <a href="../libudev/index.html">gudev </a><span style="float:right">systemd 204</span><hr><div class="refentry"><a name="sd_journal_print"></a><div class="titlepage"></div><div class="refnamediv"><h2>Name</h2><p>sd_journal_print, sd_journal_printv, sd_journal_send, sd_journal_sendv, sd_journal_perror, SD_JOURNAL_SUPPRESS_LOCATION — Submit log entries to the journal</p></div><div class="refsynopsisdiv"><h2>Synopsis</h2><div class="funcsynopsis"><pre class="funcsynopsisinfo">#include &lt;systemd/sd-journal.h&gt;</pre><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_print</b>(</code></td><td>int <var class="pdparam">priority</var>, </td></tr><tr><td> </td><td>const char* <var class="pdparam">format</var>, </td></tr><tr><td> </td><td>...<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_printv</b>(</code></td><td>int <var class="pdparam">priority</var>, </td></tr><tr><td> </td><td>const char* <var class="pdparam">format</var>, </td></tr><tr><td> </td><td>va_list <var class="pdparam">ap</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_send</b>(</code></td><td>const char* <var class="pdparam">format</var>, </td></tr><tr><td> </td><td>...<code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_sendv</b>(</code></td><td>const struct iovec *<var class="pdparam">iov</var>, </td></tr><tr><td> </td><td>int <var class="pdparam">n</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div><table border="0" class="funcprototype-table" summary="Function synopsis" style="cellspacing: 0; cellpadding: 0;"><tr><td><code class="funcdef">int <b class="fsfunc">sd_journal_perror</b>(</code></td><td>const char* <var class="pdparam">message</var><code>)</code>;</td></tr></table><div class="funcprototype-spacer"> </div></div></div><div class="refsect1"><a name="idm259774278688"></a><h2 id="Description">Description<a class="headerlink" title="Permalink to this headline" href="#Description">¶</a></h2><p><code class="function">sd_journal_print()</code> may be
                 used to submit simple, plain text log entries to the
                 system journal. The first argument is a priority
                 value. This is followed by a format string and its
@@ -101,10 +118,10 @@ sd_journal_send("MESSAGE=Hello World, this is PID %lu!", (unsigned long) getpid(
                 log entries that are generated via
                 <code class="function">sd_journal_send()</code>. Using
                 <code class="function">syslog()</code> has the benefit of being
-                more portable.</p></div><div class="refsect1"><a name="idp70144"></a><h2>Return Value</h2><p>The four calls return 0 on success or a negative
+                more portable.</p></div><div class="refsect1"><a name="idm259774235216"></a><h2 id="Return Value">Return Value<a class="headerlink" title="Permalink to this headline" href="#Return%20Value">¶</a></h2><p>The four calls return 0 on success or a negative
                 errno-style error code. The
                 <a href="errno.html"><span class="citerefentry"><span class="refentrytitle">errno</span>(3)</span></a>
-                variable itself is not altered.</p></div><div class="refsect1"><a name="idp5036240"></a><h2>Notes</h2><p>The <code class="function">sd_journal_print()</code>,
+                variable itself is not altered.</p></div><div class="refsect1"><a name="idm259769322816"></a><h2 id="Notes">Notes<a class="headerlink" title="Permalink to this headline" href="#Notes">¶</a></h2><p>The <code class="function">sd_journal_print()</code>,
                 <code class="function">sd_journal_printv()</code>,
                 <code class="function">sd_journal_send()</code> and
                 <code class="function">sd_journal_sendv()</code> interfaces
@@ -112,7 +129,7 @@ sd_journal_send("MESSAGE=Hello World, this is PID %lu!", (unsigned long) getpid(
                 and linked to with the
                 <code class="literal">libsystemd-journal</code>
                 <a href="pkg-config.html"><span class="citerefentry"><span class="refentrytitle">pkg-config</span>(1)</span></a>
-                file.</p></div><div class="refsect1"><a name="idp5041440"></a><h2>See Also</h2><p>
+                file.</p></div><div class="refsect1"><a name="idm259769317616"></a><h2 id="See Also">See Also<a class="headerlink" title="Permalink to this headline" href="#See%20Also">¶</a></h2><p>
                         <a href="systemd.html"><span class="citerefentry"><span class="refentrytitle">systemd</span>(1)</span></a>,
                         <a href="sd-journal.html"><span class="citerefentry"><span class="refentrytitle">sd-journal</span>(3)</span></a>,
                         <a href="sd_journal_stream_fd.html"><span class="citerefentry"><span class="refentrytitle">sd_journal_stream_fd</span>(3)</span></a>,
