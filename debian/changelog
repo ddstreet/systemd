@@ -1,3 +1,10 @@
+systemd (234-2ubuntu12.4) artful; urgency=medium
+
+  * Revert "systemd.postinst: enable persistent journal."
+    This reverts commit 099860f8d8d253696ceef731ab25a70a806a4f5b. (LP: #1758865)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 26 Mar 2018 22:34:22 +0100
+
 systemd (234-2ubuntu12.3) artful; urgency=medium
 
   [ Dimitri John Ledkov ]
