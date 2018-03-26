@@ -2443,14 +2443,13 @@ static int setup_keyring(
                 uid_t uid, gid_t gid) {
 
         key_serial_t keyring;
-        key_serial_t key;
         int r;
+        uid_t saved_uid;
+        gid_t saved_gid;
 
         assert(u);
         assert(context);
         assert(p);
-
-        key = -1;
 
         /* Let's set up a new per-service "session" kernel keyring for each system service. This has the benefit that
          * each service runs with its own keyring shared among all processes of the service, but with no hook-up beyond
@@ -2464,6 +2463,26 @@ static int setup_keyring(
 
         if (context->keyring_mode == EXEC_KEYRING_INHERIT)
                 return 0;
+
+        /* Acquiring a reference to the user keyring is nasty. We briefly change identity in order to get things set up
+         * properly by the kernel. If we don't do that then we can't create it atomically, and that sucks for parallel
+         * execution. This mimics what pam_keyinit does, too. Setting up session keyring, to be owned by the right user
+         * & group is just as nasty as acquiring a reference to the user keyring. */
+
+        saved_uid = getuid();
+        saved_gid = getgid();
+
+        if (gid_is_valid(gid) && gid != saved_gid) {
+                if (setregid(gid, -1) < 0)
+                        return log_unit_error_errno(u, errno, "Failed to change GID for user keyring: %m");
+        }
+
+        if (uid_is_valid(uid) && uid != saved_uid) {
+                if (setreuid(uid, -1) < 0) {
+                        (void) setregid(saved_gid, -1);
+                        return log_unit_error_errno(u, errno, "Failed to change UID for user keyring: %m");
+                }
+        }
 
         keyring = keyctl(KEYCTL_JOIN_SESSION_KEYRING, 0, 0, 0, 0);
         if (keyring == -1) {
@@ -2479,52 +2498,8 @@ static int setup_keyring(
                 return 0;
         }
 
-        /* Populate they keyring with the invocation ID by default. */
-        if (!sd_id128_is_null(u->invocation_id)) {
-                key = add_key("user", "invocation_id", &u->invocation_id, sizeof(u->invocation_id), KEY_SPEC_SESSION_KEYRING);
-                if (key == -1)
-                        log_unit_debug_errno(u, errno, "Failed to add invocation ID to keyring, ignoring: %m");
-                else {
-                        if (keyctl(KEYCTL_SETPERM, key,
-                                   KEY_POS_VIEW|KEY_POS_READ|KEY_POS_SEARCH|
-                                   KEY_USR_VIEW|KEY_USR_READ|KEY_USR_SEARCH, 0, 0) < 0)
-                                return log_unit_error_errno(u, errno, "Failed to restrict invocation ID permission: %m");
-                }
-        }
-
-        /* And now, make the keyring owned by the service's user */
-        if (uid_is_valid(uid) || gid_is_valid(gid))
-                if (keyctl(KEYCTL_CHOWN, keyring, uid, gid, 0) < 0) {
-                        log_unit_error_errno(u, errno, "Failed to change ownership of session keyring: %m");
-                        /* well, the kernel didn't - cause the kernel is borked */
-                        if (keyctl(KEYCTL_UNLINK, key, keyring, 0, 0) < 0)
-                                log_unit_debug_errno(u, errno, "Failed to unlink (clean-up) key, after failing to change ownership: %m");
-                        return 0;
-                }
-
         /* When requested link the user keyring into the session keyring. */
         if (context->keyring_mode == EXEC_KEYRING_SHARED) {
-                uid_t saved_uid;
-                gid_t saved_gid;
-
-                /* Acquiring a reference to the user keyring is nasty. We briefly change identity in order to get things
-                 * set up properly by the kernel. If we don't do that then we can't create it atomically, and that
-                 * sucks for parallel execution. This mimics what pam_keyinit does, too.*/
-
-                saved_uid = getuid();
-                saved_gid = getgid();
-
-                if (gid_is_valid(gid) && gid != saved_gid) {
-                        if (setregid(gid, -1) < 0)
-                                return log_unit_error_errno(u, errno, "Failed to change GID for user keyring: %m");
-                }
-
-                if (uid_is_valid(uid) && uid != saved_uid) {
-                        if (setreuid(uid, -1) < 0) {
-                                (void) setregid(saved_gid, -1);
-                                return log_unit_error_errno(u, errno, "Failed to change UID for user keyring: %m");
-                        }
-                }
 
                 if (keyctl(KEYCTL_LINK,
                            KEY_SPEC_USER_KEYRING,
@@ -2537,17 +2512,33 @@ static int setup_keyring(
 
                         return log_unit_error_errno(u, r, "Failed to link user keyring into session keyring: %m");
                 }
+        }
 
-                if (uid_is_valid(uid) && uid != saved_uid) {
-                        if (setreuid(saved_uid, -1) < 0) {
-                                (void) setregid(saved_gid, -1);
-                                return log_unit_error_errno(u, errno, "Failed to change UID back for user keyring: %m");
-                        }
+        /* Restore uid/gid back */
+        if (uid_is_valid(uid) && uid != saved_uid) {
+                if (setreuid(saved_uid, -1) < 0) {
+                        (void) setregid(saved_gid, -1);
+                        return log_unit_error_errno(u, errno, "Failed to change UID back for user keyring: %m");
                 }
+        }
 
-                if (gid_is_valid(gid) && gid != saved_gid) {
-                        if (setregid(saved_gid, -1) < 0)
-                                return log_unit_error_errno(u, errno, "Failed to change GID back for user keyring: %m");
+        if (gid_is_valid(gid) && gid != saved_gid) {
+                if (setregid(saved_gid, -1) < 0)
+                        return log_unit_error_errno(u, errno, "Failed to change GID back for user keyring: %m");
+        }
+
+        /* Populate they keyring with the invocation ID by default, as original saved_uid. */
+        if (!sd_id128_is_null(u->invocation_id)) {
+                key_serial_t key;
+
+                key = add_key("user", "invocation_id", &u->invocation_id, sizeof(u->invocation_id), KEY_SPEC_SESSION_KEYRING);
+                if (key == -1)
+                        log_unit_debug_errno(u, errno, "Failed to add invocation ID to keyring, ignoring: %m");
+                else {
+                        if (keyctl(KEYCTL_SETPERM, key,
+                                   KEY_POS_VIEW|KEY_POS_READ|KEY_POS_SEARCH|
+                                   KEY_USR_VIEW|KEY_USR_READ|KEY_USR_SEARCH, 0, 0) < 0)
+                                return log_unit_error_errno(u, errno, "Failed to restrict invocation ID permission: %m");
                 }
         }
 

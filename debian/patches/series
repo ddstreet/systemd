@@ -9,6 +9,8 @@ meson-fix-systemd-pot-target-when-polkit-devel-is-not-ins.patch
 test-test-functions-Debian-Ubuntu-now-ship-95-dm-notify.r.patch
 test-test-functions-on-PP64-use-vmlinux.patch
 test-test-functions-on-PPC64-use-hvc0-console.patch
+test-masked-unit-with-drop-ins.patch
+install-detect-masked-unit-with-drop-ins.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
@@ -38,7 +40,6 @@ debian/Skip-starting-systemd-remount-fs.service-in-containers.patch
 debian/Ubuntu-UseDomains-by-default.patch
 debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
 debian/Ubuntu-units-set-ConditionVirtualization-private-users-on-j.patch
-debian/UBUNTU-core-unlink-the-invocation-id-key-if-cannot-change-keyrin.patch
 debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
 debian/UBUNTU-drop-using-kvm-for-qemu-tests-as-this-current.patch
 debian/UBUNTU-test-test-functions-drop-all-prefixes.patch
@@ -47,3 +48,6 @@ debian/UBUNTU-resolved-disable-global-LLMNR-and-MulticastDNS.patch
 debian/UBUNTU-Add-AssumedApparmorLabel-unconfined-to-timedate1-dbus.patch
 debian/UBUNTU-test-fs-utils-detect-container.patch
 debian/UBUNTU-test-test-functions-launch-qemu-with-vga-none.patch
+debian/UBUNTU-core-use-setreuid-setregid-trick-to-create-session-k.patch
+debian/UBUNTU-wait-online-exit-if-no-links-are-managed.patch
+debian/UBUNTU-journald.service-set-Nice-1-to-dodge-watchdog-on-soft-loc.patch
