@@ -2071,9 +2071,13 @@ static int apply_working_directory(
 
 static int setup_keyring(Unit *u, const ExecParameters *p, uid_t uid, gid_t gid) {
         key_serial_t keyring;
+        key_serial_t key;
+        int r;
 
         assert(u);
         assert(p);
+
+        key = -1;
 
         /* Let's set up a new per-service "session" kernel keyring for each system service. This has the benefit that
          * each service runs with its own keyring shared among all processes of the service, but with no hook-up beyond
@@ -2101,8 +2105,6 @@ static int setup_keyring(Unit *u, const ExecParameters *p, uid_t uid, gid_t gid)
 
         /* Populate they keyring with the invocation ID by default. */
         if (!sd_id128_is_null(u->invocation_id)) {
-                key_serial_t key;
-
                 key = add_key("user", "invocation_id", &u->invocation_id, sizeof(u->invocation_id), KEY_SPEC_SESSION_KEYRING);
                 if (key == -1)
                         log_debug_errno(errno, "Failed to add invocation ID to keyring, ignoring: %m");
@@ -2116,8 +2118,13 @@ static int setup_keyring(Unit *u, const ExecParameters *p, uid_t uid, gid_t gid)
 
         /* And now, make the keyring owned by the service's user */
         if (uid_is_valid(uid) || gid_is_valid(gid))
-                if (keyctl(KEYCTL_CHOWN, keyring, uid, gid, 0) < 0)
-                        return log_error_errno(errno, "Failed to change ownership of session keyring: %m");
+                if (keyctl(KEYCTL_CHOWN, keyring, uid, gid, 0) < 0) {
+                        log_error_errno(errno, "Failed to change ownership of session keyring: %m");
+                        /* well, the kernel didn't - cause the kernel is borked */
+                        if (keyctl(KEYCTL_UNLINK, key, keyring, 0, 0) < 0)
+                                log_debug_errno(errno, "Failed to unlink (clean-up) key, after failing to change ownership: %m");
+                        return 0;
+                }
 
         return 0;
 }
