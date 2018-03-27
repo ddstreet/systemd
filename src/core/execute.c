@@ -2443,7 +2443,7 @@ static int setup_keyring(
                 uid_t uid, gid_t gid) {
 
         key_serial_t keyring;
-        int r;
+        int r = 0;
         uid_t saved_uid;
         gid_t saved_gid;
 
@@ -2479,8 +2479,8 @@ static int setup_keyring(
 
         if (uid_is_valid(uid) && uid != saved_uid) {
                 if (setreuid(uid, -1) < 0) {
-                        (void) setregid(saved_gid, -1);
-                        return log_unit_error_errno(u, errno, "Failed to change UID for user keyring: %m");
+                        r = log_unit_error_errno(u, errno, "Failed to change UID for user keyring: %m");
+                        goto out;
                 }
         }
 
@@ -2493,9 +2493,9 @@ static int setup_keyring(
                 else if (errno == EDQUOT)
                         log_unit_debug_errno(u, errno, "Out of kernel keyrings to allocate, ignoring.");
                 else
-                        return log_unit_error_errno(u, errno, "Setting up kernel keyring failed: %m");
+                        r = log_unit_error_errno(u, errno, "Setting up kernel keyring failed: %m");
 
-                return 0;
+                goto out;
         }
 
         /* When requested link the user keyring into the session keyring. */
@@ -2504,21 +2504,16 @@ static int setup_keyring(
                 if (keyctl(KEYCTL_LINK,
                            KEY_SPEC_USER_KEYRING,
                            KEY_SPEC_SESSION_KEYRING, 0, 0) < 0) {
-
-                        r = -errno;
-
-                        (void) setreuid(saved_uid, -1);
-                        (void) setregid(saved_gid, -1);
-
-                        return log_unit_error_errno(u, r, "Failed to link user keyring into session keyring: %m");
+                        r = log_unit_error_errno(u, errno, "Failed to link user keyring into session keyring: %m");
+                        goto out;
                 }
         }
 
         /* Restore uid/gid back */
         if (uid_is_valid(uid) && uid != saved_uid) {
                 if (setreuid(saved_uid, -1) < 0) {
-                        (void) setregid(saved_gid, -1);
-                        return log_unit_error_errno(u, errno, "Failed to change UID back for user keyring: %m");
+                        r = log_unit_error_errno(u, errno, "Failed to change UID back for user keyring: %m");
+                        goto out;
                 }
         }
 
@@ -2538,11 +2533,20 @@ static int setup_keyring(
                         if (keyctl(KEYCTL_SETPERM, key,
                                    KEY_POS_VIEW|KEY_POS_READ|KEY_POS_SEARCH|
                                    KEY_USR_VIEW|KEY_USR_READ|KEY_USR_SEARCH, 0, 0) < 0)
-                                return log_unit_error_errno(u, errno, "Failed to restrict invocation ID permission: %m");
+                                r = log_unit_error_errno(u, errno, "Failed to restrict invocation ID permission: %m");
                 }
         }
 
-        return 0;
+out:
+        /* Revert back uid & gid for the the last time, and exit */
+        /* no extra logging, as only the first already reported error matters */
+        if (getuid() != saved_uid)
+                (void) setreuid(saved_uid, -1);
+
+        if (getgid() != saved_gid)
+                (void) setregid(saved_gid, -1);
+
+        return r;
 }
 
 static void append_socket_pair(int *array, unsigned *n, int pair[2]) {

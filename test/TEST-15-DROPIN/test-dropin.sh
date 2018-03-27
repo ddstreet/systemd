@@ -187,7 +187,7 @@ test_masked_dropins () {
 [Unit]
 After=b.service
 EOF
-        check_ok a UnitFileState masked
+        [ `systemctl is-enabled a` = "masked" ]
 
         # 'b1' is an alias for 'b': masking 'b' dep should not influence 'b1' dep
         echo "*** test a wants b, b1, and one is masked"
