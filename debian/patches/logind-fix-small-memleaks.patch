@@ -1,0 +1,42 @@
+Description: logind - fix small memleaks
+ 1) Fix leak in session_free(), by freeing the reset_controllers ptr;
+ 2) Fix another leak in cgmanager glue code.
+Author: Guilherme G. Piccoli <gpiccoli@canonical.com>
+Bug-Ubuntu: https://launchpad.net/bugs/1750013
+Forwarded: not-needed
+Last-Update: 2018-03-29
+
+Index: systemd-204/src/login/logind-session.c
+===================================================================
+--- systemd-204.orig/src/login/logind-session.c	2018-03-02 18:15:32.000417853 +0000
++++ systemd-204/src/login/logind-session.c	2018-03-02 18:16:00.504417495 +0000
+@@ -93,6 +93,7 @@
+ 
+         free(s->cgroup_path);
+         strv_free(s->controllers);
++        strv_free(s->reset_controllers);
+ 
+         free(s->tty);
+         free(s->display);
+Index: systemd-204/src/shared/cgroup-util.c
+===================================================================
+--- systemd-204.orig/src/shared/cgroup-util.c	2018-03-02 18:15:32.000417853 +0000
++++ systemd-204/src/shared/cgroup-util.c	2018-03-02 18:15:31.996417853 +0000
+@@ -44,7 +44,7 @@
+         _cleanup_free_ char *fs = NULL;
+         FILE *f;
+         int r;
+-        char *value = NULL;
++        _cleanup_free_ char *value = NULL;
+         char *template = NULL;
+         int fd;
+ 
+@@ -111,7 +111,7 @@
+         _cleanup_free_ char *fs = NULL;
+         FILE *f;
+         int r;
+-        char *value = NULL;
++        _cleanup_free_ char *value = NULL;
+         char *template = NULL;
+         int fd;
+ 
