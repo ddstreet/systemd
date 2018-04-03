@@ -1,3 +1,10 @@
+systemd (204-5ubuntu20.28) trusty; urgency=medium
+
+  * logind: fix memleaks in session's free path and cgmanager glue code
+    (LP: #1750013)
+
+ -- Guilherme G. Piccoli <gpiccoli@canonical.com>  Tue, 03 Apr 2018 13:38:08 +0000
+
 systemd (204-5ubuntu20.26) trusty-security; urgency=medium
 
   * SECURITY UPDATE: access to automounted volumes can lock up
