@@ -1792,7 +1792,7 @@ static int match_attr(struct udev_rules *rules, struct udev_device *dev, struct 
         name = rules_str(rules, cur->key.attr_off);
         switch (cur->key.attrsubst) {
         case SB_FORMAT:
-                udev_event_apply_format(event, name, nbuf, sizeof(nbuf));
+                udev_event_apply_format(event, name, nbuf, sizeof(nbuf), false);
                 name = nbuf;
                 /* fall through */
         case SB_NONE:
@@ -1934,7 +1934,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                         char filename[UTIL_PATH_SIZE];
                         int found;
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), filename, sizeof(filename));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), filename, sizeof(filename), false);
                         found = (wait_for_file(event->dev, filename, 10) == 0);
                         if (!found && (cur->key.op != OP_NOMATCH))
                                 goto nomatch;
@@ -2010,7 +2010,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                         struct stat statbuf;
                         int match;
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), filename, sizeof(filename));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), filename, sizeof(filename), false);
                         if (util_resolve_subsys_kernel(event->udev, filename, filename, sizeof(filename), 0) != 0) {
                                 if (filename[0] != '/') {
                                         char tmp[UTIL_PATH_SIZE];
@@ -2042,7 +2042,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
 
                         free(event->program_result);
                         event->program_result = NULL;
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), program, sizeof(program));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), program, sizeof(program), false);
                         envp = udev_device_get_properties_envp(event->dev);
                         log_debug("PROGRAM '%s' %s:%u\n",
                                   program,
@@ -2070,7 +2070,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                 case TK_M_IMPORT_FILE: {
                         char import[UTIL_PATH_SIZE];
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), import, sizeof(import));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), import, sizeof(import), false);
                         if (import_file_into_properties(event->dev, import) != 0)
                                 if (cur->key.op != OP_NOMATCH)
                                         goto nomatch;
@@ -2079,7 +2079,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                 case TK_M_IMPORT_PROG: {
                         char import[UTIL_PATH_SIZE];
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), import, sizeof(import));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), import, sizeof(import), false);
                         log_debug("IMPORT '%s' %s:%u\n",
                                   import,
                                   rules_str(rules, rule->rule.filename_off),
@@ -2110,7 +2110,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                                 event->builtin_run |= (1 << cur->key.builtin_cmd);
                         }
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), command, sizeof(command));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), command, sizeof(command), false);
                         log_debug("IMPORT builtin '%s' %s:%u\n",
                                   udev_builtin_name(cur->key.builtin_cmd),
                                   rules_str(rules, rule->rule.filename_off),
@@ -2187,7 +2187,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                 case TK_M_IMPORT_PARENT: {
                         char import[UTIL_PATH_SIZE];
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), import, sizeof(import));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), import, sizeof(import), false);
                         if (import_parent_into_properties(event->dev, import) != 0)
                                 if (cur->key.op != OP_NOMATCH)
                                         goto nomatch;
@@ -2223,7 +2223,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                                 break;
                         if (cur->key.op == OP_ASSIGN_FINAL)
                                 event->owner_final = true;
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), owner, sizeof(owner));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), owner, sizeof(owner), false);
                         event->owner_set = true;
                         event->uid = util_lookup_user(event->udev, owner);
                         log_debug("OWNER %u %s:%u\n",
@@ -2239,7 +2239,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                                 break;
                         if (cur->key.op == OP_ASSIGN_FINAL)
                                 event->group_final = true;
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), group, sizeof(group));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), group, sizeof(group), false);
                         event->group_set = true;
                         event->gid = util_lookup_group(event->udev, group);
                         log_debug("GROUP %u %s:%u\n",
@@ -2255,7 +2255,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
 
                         if (event->mode_final)
                                 break;
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), mode_str, sizeof(mode_str));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), mode_str, sizeof(mode_str), false);
                         mode = strtol(mode_str, &endptr, 8);
                         if (endptr[0] != '\0') {
                                 log_error("ignoring invalid mode '%s'\n", mode_str);
@@ -2327,10 +2327,10 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                                 char temp[UTIL_NAME_SIZE];
 
                                 /* append value separated by space */
-                                udev_event_apply_format(event, value, temp, sizeof(temp));
+                                udev_event_apply_format(event, value, temp, sizeof(temp), false);
                                 strscpyl(value_new, sizeof(value_new), value_old, " ", temp, NULL);
                         } else
-                                udev_event_apply_format(event, value, value_new, sizeof(value_new));
+                                udev_event_apply_format(event, value, value_new, sizeof(value_new), false);
 
                         entry = udev_device_add_property(event->dev, name, value_new);
                         /* store in db, skip private keys */
@@ -2342,7 +2342,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                         char tag[UTIL_PATH_SIZE];
                         const char *p;
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), tag, sizeof(tag));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), tag, sizeof(tag), false);
                         if (cur->key.op == OP_ASSIGN || cur->key.op == OP_ASSIGN_FINAL)
                                 udev_device_cleanup_tags_list(event->dev);
                         for (p = tag; *p != '\0'; p++) {
@@ -2367,7 +2367,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                                 break;
                         if (cur->key.op == OP_ASSIGN_FINAL)
                                 event->name_final = true;
-                        udev_event_apply_format(event, name, name_str, sizeof(name_str));
+                        udev_event_apply_format(event, name, name_str, sizeof(name_str), false);
                         if (esc == ESCAPE_UNSET || esc == ESCAPE_REPLACE) {
                                 count = util_replace_chars(name_str, "/");
                                 if (count > 0)
@@ -2404,7 +2404,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                                 udev_device_cleanup_devlinks_list(event->dev);
 
                         /* allow  multiple symlinks separated by spaces */
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), temp, sizeof(temp));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), temp, sizeof(temp), false);
                         if (esc == ESCAPE_UNSET)
                                 count = util_replace_chars(temp, "/ ");
                         else if (esc == ESCAPE_REPLACE)
@@ -2444,7 +2444,7 @@ int udev_rules_apply_to_event(struct udev_rules *rules, struct udev_event *event
                                 strscpyl(attr, sizeof(attr), udev_device_get_syspath(event->dev), "/", key_name, NULL);
                         attr_subst_subdir(attr, sizeof(attr));
 
-                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), value, sizeof(value));
+                        udev_event_apply_format(event, rules_str(rules, cur->key.value_off), value, sizeof(value), false);
                         log_debug("ATTR '%s' writing '%s' %s:%u\n", attr, value,
                                   rules_str(rules, rule->rule.filename_off),
                                   rule->rule.filename_line);
