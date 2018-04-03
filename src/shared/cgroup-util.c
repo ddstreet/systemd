@@ -44,7 +44,7 @@ int cg_enumerate_processes(const char *controller, const char *path, FILE **_f) 
         _cleanup_free_ char *fs = NULL;
         FILE *f;
         int r;
-        char *value = NULL;
+        _cleanup_free_ char *value = NULL;
         char *template = NULL;
         int fd;
 
@@ -111,7 +111,7 @@ int cg_enumerate_tasks(const char *controller, const char *path, FILE **_f) {
         _cleanup_free_ char *fs = NULL;
         FILE *f;
         int r;
-        char *value = NULL;
+        _cleanup_free_ char *value = NULL;
         char *template = NULL;
         int fd;
 
