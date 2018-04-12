@@ -63,7 +63,8 @@ Multi-Arch: foreign
 Section: admin
 Priority: important
 Recommends: libpam-systemd,
-            dbus
+            dbus,
+            networkd-dispatcher
 Suggests: systemd-container,
           policykit-1
 Pre-Depends: ${shlibs:Pre-Depends},
