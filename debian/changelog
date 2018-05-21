@@ -1,3 +1,25 @@
+systemd (237-3ubuntu10.1) bionic; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * hwdb: Fix wlan/rfkill keycode on Dell systems. (LP: #1762385)
+  * Cherrypick upstream fix for corrected detection of Virtualbox & Xen.
+    (LP: #1768104)
+  * Further improve captive portal workarounds.
+    Retry any NXDOMAIN results with lower feature levels, instead of just those
+    with 'secure' in the domain name. (LP: #1766969)
+
+  [ Michael Biebl ]
+  * Add dependencies of libsystemd-shared to Pre-Depends.
+    This is necessary so systemctl is functional at all times during a
+    dist-upgrade. (Closes: #897986) (LP: #1771791)
+
+  [ Mario Limonciello ]
+  * Fix hibernate disk offsets.
+    Configure resume offset via sysfs, to enable resume from a swapfile.
+    (LP: #1760106)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 21 May 2018 16:30:12 +0100
+
 systemd (237-3ubuntu10) bionic; urgency=medium
 
   * Create tmpfiles for persistent journal in postinst only when running

@@ -972,20 +972,14 @@ void dns_transaction_process_reply(DnsTransaction *t, DnsPacket *p) {
                  * This is reported as https://github.com/dns-violations/dns-violations/blob/master/2018/DVE-2018-0001.md
                  */
                 if (DNS_PACKET_RCODE(p) == DNS_RCODE_NXDOMAIN && t->current_feature_level >= DNS_SERVER_FEATURE_LEVEL_EDNS0) {
-
                         char key_str[DNS_RESOURCE_KEY_STRING_MAX];
                         dns_resource_key_to_string(t->key, key_str, sizeof key_str);
-                        if (strstr(key_str, "secure") != NULL) {
-                                t->current_feature_level = t->current_feature_level - 1;
-
-                                log_warning("Server returned error %s, suspecting DNS violation DVE-2018-0001, retrying transaction with reduced feature level %s.",
-                                          dns_rcode_to_string(DNS_PACKET_RCODE(p)),
-                                          dns_server_feature_level_to_string(t->current_feature_level));
-
-                                dns_transaction_retry(t, false /* use the same server */);
-                                return;
-                        }
-
+                        t->current_feature_level = t->current_feature_level - 1;
+                        log_warning("Server returned error %s, mitigating potential DNS violation DVE-2018-0001, retrying transaction with reduced feature level %s.",
+                                    dns_rcode_to_string(DNS_PACKET_RCODE(p)),
+                                    dns_server_feature_level_to_string(t->current_feature_level));
+                        dns_transaction_retry(t, false /* use the same server */);
+                        return;
                 }
 
                 if (DNS_PACKET_RCODE(p) == DNS_RCODE_REFUSED) {
