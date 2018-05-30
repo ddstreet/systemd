@@ -61,6 +61,8 @@ static void mount_point_free(MountPoint **head, MountPoint *m) {
         LIST_REMOVE(mount_point, *head, m);
 
         free(m->path);
+        free(m->options);
+        free(m->type);
         free(m);
 }
 
@@ -313,7 +315,7 @@ static int dm_list_get(MountPoint **head) {
                 if (!node)
                         return -ENOMEM;
 
-                m = new(MountPoint, 1);
+                m = new0(MountPoint, 1);
                 if (!m) {
                         free(node);
                         return -ENOMEM;

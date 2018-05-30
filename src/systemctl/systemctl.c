@@ -160,6 +160,7 @@ static enum action {
         ACTION_SUSPEND,
         ACTION_HIBERNATE,
         ACTION_HYBRID_SLEEP,
+        ACTION_SUSPEND_THEN_HIBERNATE,
         ACTION_RUNLEVEL2,
         ACTION_RUNLEVEL3,
         ACTION_RUNLEVEL4,
@@ -2915,8 +2916,8 @@ static int start_unit_one(
                         return log_error_errno(r, "Failed to request match for PropertiesChanged signal: %m");
         }
 
-        log_debug("%s manager for %s on %s, %s",
-                  arg_dry_run ? "Would call" : "Calling",
+        log_debug("%s dbus call org.freedesktop.systemd1.Manager %s(%s, %s)",
+                  arg_dry_run ? "Would execute" : "Executing",
                   method, name, mode);
         if (arg_dry_run)
                 return 0;
@@ -3033,21 +3034,22 @@ static const struct {
         const char *verb;
         const char *mode;
 } action_table[_ACTION_MAX] = {
-        [ACTION_HALT]         = { SPECIAL_HALT_TARGET,         "halt",         "replace-irreversibly" },
-        [ACTION_POWEROFF]     = { SPECIAL_POWEROFF_TARGET,     "poweroff",     "replace-irreversibly" },
-        [ACTION_REBOOT]       = { SPECIAL_REBOOT_TARGET,       "reboot",       "replace-irreversibly" },
-        [ACTION_KEXEC]        = { SPECIAL_KEXEC_TARGET,        "kexec",        "replace-irreversibly" },
-        [ACTION_RUNLEVEL2]    = { SPECIAL_MULTI_USER_TARGET,   NULL,           "isolate" },
-        [ACTION_RUNLEVEL3]    = { SPECIAL_MULTI_USER_TARGET,   NULL,           "isolate" },
-        [ACTION_RUNLEVEL4]    = { SPECIAL_MULTI_USER_TARGET,   NULL,           "isolate" },
-        [ACTION_RUNLEVEL5]    = { SPECIAL_GRAPHICAL_TARGET,    NULL,           "isolate" },
-        [ACTION_RESCUE]       = { SPECIAL_RESCUE_TARGET,       "rescue",       "isolate" },
-        [ACTION_EMERGENCY]    = { SPECIAL_EMERGENCY_TARGET,    "emergency",    "isolate" },
-        [ACTION_DEFAULT]      = { SPECIAL_DEFAULT_TARGET,      "default",      "isolate" },
-        [ACTION_EXIT]         = { SPECIAL_EXIT_TARGET,         "exit",         "replace-irreversibly" },
-        [ACTION_SUSPEND]      = { SPECIAL_SUSPEND_TARGET,      "suspend",      "replace-irreversibly" },
-        [ACTION_HIBERNATE]    = { SPECIAL_HIBERNATE_TARGET,    "hibernate",    "replace-irreversibly" },
-        [ACTION_HYBRID_SLEEP] = { SPECIAL_HYBRID_SLEEP_TARGET, "hybrid-sleep", "replace-irreversibly" },
+        [ACTION_HALT]                 = { SPECIAL_HALT_TARGET,                     "halt",                   "replace-irreversibly" },
+        [ACTION_POWEROFF]             = { SPECIAL_POWEROFF_TARGET,                 "poweroff",               "replace-irreversibly" },
+        [ACTION_REBOOT]               = { SPECIAL_REBOOT_TARGET,                   "reboot",                 "replace-irreversibly" },
+        [ACTION_KEXEC]                = { SPECIAL_KEXEC_TARGET,                    "kexec",                  "replace-irreversibly" },
+        [ACTION_RUNLEVEL2]            = { SPECIAL_MULTI_USER_TARGET,               NULL,                     "isolate" },
+        [ACTION_RUNLEVEL3]            = { SPECIAL_MULTI_USER_TARGET,               NULL,                     "isolate" },
+        [ACTION_RUNLEVEL4]            = { SPECIAL_MULTI_USER_TARGET,               NULL,                     "isolate" },
+        [ACTION_RUNLEVEL5]            = { SPECIAL_GRAPHICAL_TARGET,                NULL,                     "isolate" },
+        [ACTION_RESCUE]               = { SPECIAL_RESCUE_TARGET,                   "rescue",                 "isolate" },
+        [ACTION_EMERGENCY]            = { SPECIAL_EMERGENCY_TARGET,                "emergency",              "isolate" },
+        [ACTION_DEFAULT]              = { SPECIAL_DEFAULT_TARGET,                  "default",                "isolate" },
+        [ACTION_EXIT]                 = { SPECIAL_EXIT_TARGET,                     "exit",                   "replace-irreversibly" },
+        [ACTION_SUSPEND]              = { SPECIAL_SUSPEND_TARGET,                  "suspend",                "replace-irreversibly" },
+        [ACTION_HIBERNATE]            = { SPECIAL_HIBERNATE_TARGET,                "hibernate",              "replace-irreversibly" },
+        [ACTION_HYBRID_SLEEP]         = { SPECIAL_HYBRID_SLEEP_TARGET,             "hybrid-sleep",           "replace-irreversibly" },
+        [ACTION_SUSPEND_THEN_HIBERNATE] = { SPECIAL_SUSPEND_THEN_HIBERNATE_TARGET, "suspend-then-hibernate", "replace-irreversibly" },
 };
 
 static enum action verb_to_action(const char *verb) {
@@ -3215,6 +3217,10 @@ static int logind_set_wall_message(void) {
         if (!m)
                 return log_oom();
 
+        log_debug("%s wall message \"%s\".", arg_dry_run ? "Would set" : "Setting", m);
+        if (arg_dry_run)
+                return 0;
+
         r = sd_bus_call_method(
                         bus,
                         "org.freedesktop.login1",
@@ -3278,12 +3284,21 @@ static int logind_reboot(enum action a) {
                 description = "put system into hybrid sleep";
                 break;
 
+        case ACTION_SUSPEND_THEN_HIBERNATE:
+                method = "SuspendThenHibernate";
+                description = "put system into suspend followed by hibernate";
+                break;
+
         default:
                 return -EINVAL;
         }
 
         polkit_agent_open_maybe();
         (void) logind_set_wall_message();
+
+        log_debug("%s org.freedesktop.login1.Manager %s dbus call.", arg_dry_run ? "Would execute" : "Executing", method);
+        if (arg_dry_run)
+                return 0;
 
         r = sd_bus_call_method(
                         bus,
@@ -3483,6 +3498,9 @@ static int load_kexec_kernel(void) {
                 return 0;
         }
 
+        if (access(KEXEC, X_OK) < 0)
+                return log_error_errno(errno, KEXEC" is not available: %m");
+
         r = find_esp_and_warn(arg_esp_path, false, &where, NULL, NULL, NULL, NULL);
         if (r == -ENOKEY) /* find_esp_and_warn() doesn't warn about this case */
                 return log_error_errno(r, "Cannot find the ESP partition mount point.");
@@ -3511,9 +3529,12 @@ static int load_kexec_kernel(void) {
         if (!options)
                 return log_oom();
 
-        log_debug("%s kexec kernel %s initrd %s options \"%s\".",
-                  arg_dry_run ? "Would load" : "loading",
-                  kernel, initrd, options);
+        log_full(arg_quiet ? LOG_DEBUG : LOG_INFO,
+                 "%s "KEXEC" --load \"%s\" --append \"%s\"%s%s%s",
+                 arg_dry_run ? "Would run" : "Running",
+                 kernel,
+                 options,
+                 initrd ? " --initrd \"" : NULL, strempty(initrd), initrd ? "\"" : "");
         if (arg_dry_run)
                 return 0;
 
@@ -3521,7 +3542,6 @@ static int load_kexec_kernel(void) {
         if (r < 0)
                 return r;
         if (r == 0) {
-
                 const char* const args[] = {
                         KEXEC,
                         "--load", kernel,
@@ -3534,7 +3554,13 @@ static int load_kexec_kernel(void) {
                 _exit(EXIT_FAILURE);
         }
 
-        return wait_for_terminate_and_check("kexec", pid, WAIT_LOG);
+        r = wait_for_terminate_and_check("kexec", pid, WAIT_LOG);
+        if (r < 0)
+                return r;
+        if (r > 0)
+                /* Command failed */
+                return -EPROTO;
+        return 0;
 }
 
 static int set_exit_code(uint8_t code) {
@@ -3592,7 +3618,9 @@ static int start_special(int argc, char *argv[], void *userdata) {
 
         } else if (a == ACTION_KEXEC) {
                 r = load_kexec_kernel();
-                if (r < 0)
+                if (r < 0 && arg_force >= 1)
+                        log_notice("Failed to load kexec kernel, continuing without.");
+                else if (r < 0)
                         return r;
 
         } else if (a == ACTION_EXIT && argc > 1) {
@@ -3629,7 +3657,8 @@ static int start_special(int argc, char *argv[], void *userdata) {
                            ACTION_HALT,
                            ACTION_SUSPEND,
                            ACTION_HIBERNATE,
-                           ACTION_HYBRID_SLEEP)) {
+                           ACTION_HYBRID_SLEEP,
+                           ACTION_SUSPEND_THEN_HIBERNATE)) {
 
                         r = logind_reboot(a);
                         if (r >= 0)
@@ -4042,8 +4071,9 @@ static void print_status_info(
                 char ** dropin;
 
                 STRV_FOREACH(dropin, i->dropin_paths) {
-                        if (! dir || last) {
-                                printf(dir ? "        " : "  Drop-In: ");
+                        if (!dir || last) {
+                                printf(dir ? "           " :
+                                             "  Drop-In: ");
 
                                 dir = mfree(dir);
 
@@ -4053,7 +4083,8 @@ static void print_status_info(
                                         return;
                                 }
 
-                                printf("%s\n           %s", dir,
+                                printf("%s\n"
+                                       "           %s", dir,
                                        special_glyph(TREE_RIGHT));
                         }
 
@@ -7326,7 +7357,9 @@ static void systemctl_help(void) {
                "  switch-root ROOT [INIT]             Change to a different root file system\n"
                "  suspend                             Suspend the system\n"
                "  hibernate                           Hibernate the system\n"
-               "  hybrid-sleep                        Hibernate and suspend the system\n",
+               "  hybrid-sleep                        Hibernate and suspend the system\n"
+               "  suspend-then-hibernate              Suspend the system, wake after a period of\n"
+               "                                      time and put it into hibernate\n",
                program_invocation_short_name);
 }
 
@@ -8428,6 +8461,7 @@ static int systemctl_main(int argc, char *argv[]) {
                 { "suspend",               VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
                 { "hibernate",             VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
                 { "hybrid-sleep",          VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
+                { "suspend-then-hibernate",VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
                 { "default",               VERB_ANY, 1,        VERB_ONLINE_ONLY, start_special        },
                 { "rescue",                VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
                 { "emergency",             VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
@@ -8759,6 +8793,7 @@ int main(int argc, char*argv[]) {
         case ACTION_SUSPEND:
         case ACTION_HIBERNATE:
         case ACTION_HYBRID_SLEEP:
+        case ACTION_SUSPEND_THEN_HIBERNATE:
         case ACTION_EMERGENCY:
         case ACTION_DEFAULT:
                 /* systemctl verbs with no equivalent in the legacy commands.

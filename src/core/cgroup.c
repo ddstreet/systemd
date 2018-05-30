@@ -2272,19 +2272,20 @@ int manager_setup_cgroup(Manager *m) {
         /* 5. Make sure we are in the special "init.scope" unit in the root slice. */
         scope_path = strjoina(m->cgroup_root, "/" SPECIAL_INIT_SCOPE);
         r = cg_create_and_attach(SYSTEMD_CGROUP_CONTROLLER, scope_path, 0);
-        if (r < 0)
+        if (r >= 0) {
+                /* Also, move all other userspace processes remaining in the root cgroup into that scope. */
+                r = cg_migrate(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_root, SYSTEMD_CGROUP_CONTROLLER, scope_path, 0);
+                if (r < 0)
+                        log_warning_errno(r, "Couldn't move remaining userspace processes, ignoring: %m");
+
+                /* 6. And pin it, so that it cannot be unmounted */
+                safe_close(m->pin_cgroupfs_fd);
+                m->pin_cgroupfs_fd = open(path, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY|O_NONBLOCK);
+                if (m->pin_cgroupfs_fd < 0)
+                        return log_error_errno(errno, "Failed to open pin file: %m");
+
+        } else if (r < 0 && !m->test_run_flags)
                 return log_error_errno(r, "Failed to create %s control group: %m", scope_path);
-
-        /* Also, move all other userspace processes remaining in the root cgroup into that scope. */
-        r = cg_migrate(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_root, SYSTEMD_CGROUP_CONTROLLER, scope_path, 0);
-        if (r < 0)
-                log_warning_errno(r, "Couldn't move remaining userspace processes, ignoring: %m");
-
-        /* 6. And pin it, so that it cannot be unmounted */
-        safe_close(m->pin_cgroupfs_fd);
-        m->pin_cgroupfs_fd = open(path, O_RDONLY|O_CLOEXEC|O_DIRECTORY|O_NOCTTY|O_NONBLOCK);
-        if (m->pin_cgroupfs_fd < 0)
-                return log_error_errno(errno, "Failed to open pin file: %m");
 
         /* 7. Always enable hierarchical support if it exists... */
         if (!all_unified && m->test_run_flags == 0)
@@ -2305,7 +2306,7 @@ void manager_shutdown_cgroup(Manager *m, bool delete) {
 
         /* We can't really delete the group, since we are in it. But
          * let's trim it. */
-        if (delete && m->cgroup_root)
+        if (delete && m->cgroup_root && m->test_run_flags != MANAGER_TEST_RUN_MINIMAL)
                 (void) cg_trim(SYSTEMD_CGROUP_CONTROLLER, m->cgroup_root, false);
 
         m->cgroup_empty_event_source = sd_event_source_unref(m->cgroup_empty_event_source);

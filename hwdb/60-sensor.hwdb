@@ -15,7 +15,7 @@
 #   /etc/udev/hwdb.d/61-sensor-local.hwdb
 # and add your rules there. To load the new rules execute (as root):
 #   systemd-hwdb update
-#   udevadm trigger -y `dirname $(udevadm info -n "/dev/iio:deviceXXX" -q path)`
+#   udevadm trigger -v -p DEVNAME=/dev/iio:deviceXXX
 # where /dev/iio:deviceXXX is the device in question.
 #
 # If your changes are generally applicable, preferably send them as a pull
@@ -82,7 +82,7 @@ sensor:modalias:acpi:SMO8500*:dmi:*svn*ASUSTeK*:*pn*TP500LB*
  ACCEL_MOUNT_MATRIX=0, 1, 0; 1, 0, 0; 0, 0, 1
 
 sensor:modalias:acpi:SMO8500*:dmi:*svn*ASUSTeK*:*pn*TP300LD*
- ACCEL_MOUNT_MATRIX=0, 1, 0; 1, 0, 0; 0, 0, 1
+ ACCEL_MOUNT_MATRIX=0, -1, 0; -1, 0, 0; 0, 0, 1
 
 #########################################
 # Axxo
@@ -148,6 +148,12 @@ sensor:modalias:acpi:ACCE0001*:dmi:*svnEndless*:*pnELT-NL3*
  ACCEL_MOUNT_MATRIX=0, 1, 0; 0, 0, -1; -1, 0, 0
 
 #########################################
+# Eve Technology
+#########################################
+sensor:modalias:acpi:KIOX000A*:dmi:*:svnEVE*:pnEveV:*
+ ACCEL_MOUNT_MATRIX=0, 1, 0; -1, 0, 0; 0, 0, 1
+
+#########################################
 # GP-electronic
 #########################################
 sensor:modalias:acpi:KIOX000A*:dmi:bvnINSYDECorp.:bvrBYT70A.YNCHENG.WIN.007:*:svnInsyde:pnT701:*
@@ -185,6 +191,12 @@ sensor:modalias:acpi:BOSC0200*:dmi:bvnINSYDECorp.:bvrjumperx.T87.KFBNEE*
 # EZpad 6 Pro
 sensor:modalias:acpi:BOSC0200*:dmi:*:svnJumper:pnEZpad:*:rvr.A006:*
  ACCEL_MOUNT_MATRIX=-1, 0, 0; 0, -1, 0; 0, 0, 1
+
+#########################################
+# Kazam
+#########################################
+sensor:modalias:acpi:KIOX000A*:dmi:bvnINSYDECorp.:bvrVISION.I22K*:svnKAZAM:pnVISION:*
+ ACCEL_MOUNT_MATRIX=0, 1, 0; 1, 0, 0; 0, 0, 1
 
 #########################################
 # Lamina

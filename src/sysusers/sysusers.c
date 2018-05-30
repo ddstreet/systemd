@@ -396,6 +396,7 @@ static const char* default_shell(uid_t uid) {
 static int write_temporary_passwd(const char *passwd_path, FILE **tmpfile, char **tmpfile_path) {
         _cleanup_fclose_ FILE *original = NULL, *passwd = NULL;
         _cleanup_(unlink_and_freep) char *passwd_tmp = NULL;
+        struct passwd *pw = NULL;
         Iterator iterator;
         Item *i;
         int r;
@@ -409,7 +410,6 @@ static int write_temporary_passwd(const char *passwd_path, FILE **tmpfile, char 
 
         original = fopen(passwd_path, "re");
         if (original) {
-                struct passwd *pw;
 
                 r = sync_rights(original, passwd);
                 if (r < 0)
@@ -430,6 +430,11 @@ static int write_temporary_passwd(const char *passwd_path, FILE **tmpfile, char 
                         }
 
                         errno = 0;
+
+                        /* Make sure we keep the NIS entries (if any) at the end. */
+                        if (IN_SET(pw->pw_name[0], '+', '-'))
+                                break;
+
                         if (putpwent(pw, passwd) < 0)
                                 return errno ? -errno : -EIO;
 
@@ -467,6 +472,19 @@ static int write_temporary_passwd(const char *passwd_path, FILE **tmpfile, char 
                 if (putpwent(&n, passwd) != 0)
                         return errno ? -errno : -EIO;
         }
+        errno = 0;
+
+        /* Append the remaining NIS entries if any */
+        while (pw) {
+                errno = 0;
+                if (putpwent(pw, passwd) < 0)
+                        return errno ? -errno : -EIO;
+
+                errno = 0;
+                pw = fgetpwent(original);
+        }
+        if (!IN_SET(errno, 0, ENOENT))
+                return -errno;
 
         r = fflush_and_check(passwd);
         if (r < 0)
@@ -482,6 +500,7 @@ static int write_temporary_passwd(const char *passwd_path, FILE **tmpfile, char 
 static int write_temporary_shadow(const char *shadow_path, FILE **tmpfile, char **tmpfile_path) {
         _cleanup_fclose_ FILE *original = NULL, *shadow = NULL;
         _cleanup_(unlink_and_freep) char *shadow_tmp = NULL;
+        struct spwd *sp = NULL;
         Iterator iterator;
         long lstchg;
         Item *i;
@@ -498,7 +517,6 @@ static int write_temporary_shadow(const char *shadow_path, FILE **tmpfile, char 
 
         original = fopen(shadow_path, "re");
         if (original) {
-                struct spwd *sp;
 
                 r = sync_rights(original, shadow);
                 if (r < 0)
@@ -519,6 +537,11 @@ static int write_temporary_shadow(const char *shadow_path, FILE **tmpfile, char 
                         }
 
                         errno = 0;
+
+                        /* Make sure we keep the NIS entries (if any) at the end. */
+                        if (IN_SET(sp->sp_namp[0], '+', '-'))
+                                break;
+
                         if (putspent(sp, shadow) < 0)
                                 return errno ? -errno : -EIO;
 
@@ -551,6 +574,19 @@ static int write_temporary_shadow(const char *shadow_path, FILE **tmpfile, char 
                 if (putspent(&n, shadow) != 0)
                         return errno ? -errno : -EIO;
         }
+        errno = 0;
+
+        /* Append the remaining NIS entries if any */
+        while (sp) {
+                errno = 0;
+                if (putspent(sp, shadow) < 0)
+                        return errno ? -errno : -EIO;
+
+                errno = 0;
+                sp = fgetspent(original);
+        }
+        if (!IN_SET(errno, 0, ENOENT))
+                return -errno;
 
         r = fflush_sync_and_check(shadow);
         if (r < 0)
@@ -567,6 +603,7 @@ static int write_temporary_group(const char *group_path, FILE **tmpfile, char **
         _cleanup_fclose_ FILE *original = NULL, *group = NULL;
         _cleanup_(unlink_and_freep) char *group_tmp = NULL;
         bool group_changed = false;
+        struct group *gr = NULL;
         Iterator iterator;
         Item *i;
         int r;
@@ -580,7 +617,6 @@ static int write_temporary_group(const char *group_path, FILE **tmpfile, char **
 
         original = fopen(group_path, "re");
         if (original) {
-                struct group *gr;
 
                 r = sync_rights(original, group);
                 if (r < 0)
@@ -603,6 +639,12 @@ static int write_temporary_group(const char *group_path, FILE **tmpfile, char **
                                 log_error("%s: Detected collision for GID " GID_FMT ".", group_path, gr->gr_gid);
                                 return  -EEXIST;
                         }
+
+                        errno = 0;
+
+                        /* Make sure we keep the NIS entries (if any) at the end. */
+                        if (IN_SET(gr->gr_name[0], '+', '-'))
+                                break;
 
                         r = putgrent_with_members(gr, group);
                         if (r < 0)
@@ -635,6 +677,19 @@ static int write_temporary_group(const char *group_path, FILE **tmpfile, char **
 
                 group_changed = true;
         }
+        errno = 0;
+
+        /* Append the remaining NIS entries if any */
+        while (gr) {
+                errno = 0;
+                if (putgrent(gr, group) != 0)
+                        return errno > 0 ? -errno : -EIO;
+
+                errno = 0;
+                gr = fgetgrent(original);
+        }
+        if (!IN_SET(errno, 0, ENOENT))
+                return -errno;
 
         r = fflush_sync_and_check(group);
         if (r < 0)

@@ -387,8 +387,7 @@ if cc.get_id() == 'clang'
         foreach arg : ['-Wno-typedef-redefinition',
                        '-Wno-gnu-variable-sized-type-not-at-end',
                       ]
-                if cc.has_argument(arg,
-                                   name : '@0@ is supported'.format(arg))
+                if cc.has_argument(arg)
                         add_project_arguments(arg, language : 'c')
                 endif
         endforeach
@@ -429,8 +428,7 @@ endforeach
 if get_option('buildtype') != 'debug'
         foreach arg : ['-ffunction-sections',
                        '-fdata-sections']
-                if cc.has_argument(arg,
-                                   name : '@0@ is supported'.format(arg))
+                if cc.has_argument(arg)
                         add_project_arguments(arg, language : 'c')
                 endif
         endforeach
@@ -604,7 +602,7 @@ endforeach
 conf.set_quoted('TELINIT', get_option('telinit-path'))
 
 if run_command('ln', '--relative', '--help').returncode() != 0
-        error('ln does not support --relative')
+        error('ln does not support --relative (added in coreutils 8.16)')
 endif
 
 ############################################################

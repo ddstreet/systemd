@@ -112,6 +112,9 @@ static int list_bus_names(sd_bus *bus, char **argv) {
         }
 
         merged = new(char*, hashmap_size(names) + 1);
+        if (!merged)
+                return log_oom();
+
         HASHMAP_FOREACH_KEY(v, k, names, iterator)
                 merged[n++] = k;
 
@@ -282,8 +285,6 @@ static void print_subtree(const char *prefix, const char *path, char **l) {
 }
 
 static void print_tree(const char *prefix, char **l) {
-
-        pager_open(arg_no_pager, false);
 
         prefix = strempty(prefix);
 
