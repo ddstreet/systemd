@@ -259,7 +259,8 @@ ifeq ($(DEB_VENDOR),Ubuntu)
 endif
 
 override_dh_installinit:
-	dh_installinit --no-start
+	dh_installinit --no-scripts -psystemd
+	dh_installinit --no-start -Nsystemd
 
 PROJECT_VERSION ?= $(shell awk '/PACKAGE_VERSION/ {print $$3}' build-deb/config.h | tr -d \")
 
