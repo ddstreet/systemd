@@ -1,22 +1,4 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
-/***
-  This file is part of systemd.
-
-  Copyright 2010 Lennart Poettering
-
-  systemd is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published by
-  the Free Software Foundation; either version 2.1 of the License, or
-  (at your option) any later version.
-
-  systemd is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public License
-  along with systemd; If not, see <http://www.gnu.org/licenses/>.
-***/
 
 #include <errno.h>
 #include <ftw.h>
@@ -48,10 +30,10 @@
 #include "virt.h"
 
 typedef enum MountMode {
-        MNT_NONE  =           0,
-        MNT_FATAL =           1 <<  0,
-        MNT_IN_CONTAINER =    1 <<  1,
-        MNT_CHECK_WRITABLE  = 1 <<  2,
+        MNT_NONE           = 0,
+        MNT_FATAL          = 1 << 0,
+        MNT_IN_CONTAINER   = 1 << 1,
+        MNT_CHECK_WRITABLE = 1 << 2,
 } MountMode;
 
 typedef struct MountPoint {
@@ -171,7 +153,7 @@ static int mount_one(const MountPoint *p, bool relabel) {
 
         /* Relabel first, just in case */
         if (relabel)
-                (void) label_fix(p->where, true, true);
+                (void) label_fix(p->where, LABEL_IGNORE_ENOENT|LABEL_IGNORE_EROFS);
 
         r = path_is_mount_point(p->where, NULL, AT_SYMLINK_FOLLOW);
         if (r < 0 && r != -ENOENT) {
@@ -209,7 +191,7 @@ static int mount_one(const MountPoint *p, bool relabel) {
 
         /* Relabel again, since we now mounted something fresh here */
         if (relabel)
-                (void) label_fix(p->where, false, false);
+                (void) label_fix(p->where, 0);
 
         if (p->mode & MNT_CHECK_WRITABLE) {
                 if (access(p->where, W_OK) < 0) {
@@ -294,7 +276,7 @@ int mount_cgroup_controllers(char ***join_controllers) {
                         if (strv_find(*k, controller))
                                 break;
 
-                if (k && *k) {
+                if (*k) {
                         char **i, **j;
 
                         for (i = *k, j = *k; *i; i++) {
@@ -318,10 +300,8 @@ int mount_cgroup_controllers(char ***join_controllers) {
                         options = strv_join(*k, ",");
                         if (!options)
                                 return log_oom();
-                } else {
-                        options = controller;
-                        controller = NULL;
-                }
+                } else
+                        options = TAKE_PTR(controller);
 
                 where = strappend("/sys/fs/cgroup/", options);
                 if (!where)
@@ -334,7 +314,7 @@ int mount_cgroup_controllers(char ***join_controllers) {
                 if (r < 0)
                         return r;
 
-                if (r > 0 && k && *k) {
+                if (r > 0 && *k) {
                         char **i;
 
                         for (i = *k; *i; i++) {
@@ -379,7 +359,7 @@ static int nftw_cb(
         if (_unlikely_(ftwbuf->level == 0))
                 return FTW_CONTINUE;
 
-        label_fix(fpath, false, false);
+        (void) label_fix(fpath, 0);
 
         /* /run/initramfs is static data and big, no need to
          * dynamically relabel its contents at boot... */
@@ -401,19 +381,18 @@ static int relabel_cgroup_filesystems(void) {
                    only when the filesystem has been already populated by a previous instance of systemd
                    running from initrd. Otherwise don't remount anything and leave the filesystem read-write
                    for the cgroup filesystems to be mounted inside. */
-                r = statfs("/sys/fs/cgroup", &st);
-                if (r < 0) {
+                if (statfs("/sys/fs/cgroup", &st) < 0)
                         return log_error_errno(errno, "Failed to determine mount flags for /sys/fs/cgroup: %m");
-                }
 
                 if (st.f_flags & ST_RDONLY)
                         (void) mount(NULL, "/sys/fs/cgroup", NULL, MS_REMOUNT, NULL);
 
-                label_fix("/sys/fs/cgroup", false, false);
-                nftw("/sys/fs/cgroup", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
+                (void) label_fix("/sys/fs/cgroup", 0);
+                (void) nftw("/sys/fs/cgroup", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
 
                 if (st.f_flags & ST_RDONLY)
                         (void) mount(NULL, "/sys/fs/cgroup", NULL, MS_REMOUNT|MS_RDONLY, NULL);
+
         } else if (r < 0)
                 return log_error_errno(r, "Failed to determine whether we are in all unified mode: %m");
 
@@ -439,9 +418,9 @@ int mount_setup(bool loaded_policy) {
 
                 before_relabel = now(CLOCK_MONOTONIC);
 
-                nftw("/dev", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
-                nftw("/dev/shm", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
-                nftw("/run", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
+                (void) nftw("/dev", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
+                (void) nftw("/dev/shm", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
+                (void) nftw("/run", nftw_cb, 64, FTW_MOUNT|FTW_PHYS|FTW_ACTIONRETVAL);
 
                 r = relabel_cgroup_filesystems();
                 if (r < 0)
@@ -475,14 +454,20 @@ int mount_setup(bool loaded_policy) {
         (void) mkdir_label("/run/systemd", 0755);
         (void) mkdir_label("/run/systemd/system", 0755);
 
-        /* Set up inaccessible items */
+        /* Set up inaccessible (and empty) file nodes of all types */
         (void) mkdir_label("/run/systemd/inaccessible", 0000);
         (void) mknod("/run/systemd/inaccessible/reg", S_IFREG | 0000, 0);
         (void) mkdir_label("/run/systemd/inaccessible/dir", 0000);
-        (void) mknod("/run/systemd/inaccessible/chr", S_IFCHR | 0000, makedev(0, 0));
-        (void) mknod("/run/systemd/inaccessible/blk", S_IFBLK | 0000, makedev(0, 0));
         (void) mkfifo("/run/systemd/inaccessible/fifo", 0000);
         (void) mknod("/run/systemd/inaccessible/sock", S_IFSOCK | 0000, 0);
+
+        /* The following two are likely to fail if we lack the privs for it (for example in an userns environment, if
+         * CAP_SYS_MKNOD is missing, or if a device node policy prohibit major/minor of 0 device nodes to be
+         * created). But that's entirely fine. Consumers of these files should carry fallback to use a different node
+         * then, for example /run/systemd/inaccessible/sock, which is close enough in behaviour and semantics for most
+         * uses. */
+        (void) mknod("/run/systemd/inaccessible/chr", S_IFCHR | 0000, makedev(0, 0));
+        (void) mknod("/run/systemd/inaccessible/blk", S_IFBLK | 0000, makedev(0, 0));
 
         return 0;
 }
