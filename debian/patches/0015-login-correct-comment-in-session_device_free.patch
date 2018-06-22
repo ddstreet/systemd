@@ -1,0 +1,26 @@
+From: Alan Jenkins <alan.christopher.jenkins@gmail.com>
+Date: Tue, 6 Mar 2018 20:16:10 +0000
+Subject: [PATCH 15/19] login: correct comment in session_device_free()
+
+We're not removing the pushed fd "again"; this is the only place
+logind removes it from PID1.  (And stopping the fd doesn't always
+cause PID1 to remove the fd itself; it depends on the device type).
+
+(cherry picked from commit a94c162021bbb0d6065b433040cef693d76162cb)
+---
+ src/login/logind-session-device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index 73eee72..de7d963 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -419,7 +419,7 @@ void session_device_free(SessionDevice *sd) {
+         if (sd->pushed_fd) {
+                 const char *m;
+ 
+-                /* Remove the pushed fd again, just in case. */
++                /* Make sure to remove the pushed fd. */
+ 
+                 m = strjoina("FDSTOREREMOVE=1\n"
+                              "FDNAME=session-", sd->session->id);

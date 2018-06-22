@@ -1,0 +1,28 @@
+From: Alan Jenkins <alan.christopher.jenkins@gmail.com>
+Date: Tue, 6 Mar 2018 16:16:00 +0000
+Subject: [PATCH 16/19] login: we only allow opening character devices
+
+We already don't allow directly opening block devices attached to the seat.
+They are handled by udisks instead.  Clarify the code used when restarting
+logind.
+
+(cherry picked from commit 8b983cc74a85bda4d662fd822b433327fc568d40)
+---
+ src/login/logind.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/login/logind.c b/src/login/logind.c
+index bf4e55d..953e1fc 100644
+--- a/src/login/logind.c
++++ b/src/login/logind.c
+@@ -453,8 +453,8 @@ static int manager_attach_fds(Manager *m) {
+                         continue;
+                 }
+ 
+-                if (!S_ISCHR(st.st_mode) && !S_ISBLK(st.st_mode)) {
+-                        log_debug("Device fd doesn't actually point to device node: %m");
++                if (!S_ISCHR(st.st_mode)) {
++                        log_debug("Device fd doesn't point to a character device node");
+                         close_nointr(fd);
+                         continue;
+                 }

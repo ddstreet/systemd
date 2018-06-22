@@ -1,0 +1,36 @@
+From: =?utf-8?q?Zbigniew_J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 10 May 2018 01:34:33 +0200
+Subject: [PATCH 19/19] logind: fix borked r check
+
+CID #1390947, #1390952.
+
+(cherry picked from commit 36591e108093a16892d8521babc18ad246fb594b)
+---
+ src/login/logind.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/login/logind.c b/src/login/logind.c
+index 0b5e222..17cfdc2 100644
+--- a/src/login/logind.c
++++ b/src/login/logind.c
+@@ -426,14 +426,18 @@ static int parse_fdname(const char *fdname, char **session_id, dev_t *dev) {
+ 
+         if (!streq(parts[0], "session"))
+                 return -EINVAL;
++
+         id = strdup(parts[1]);
+         if (!id)
+                 return -ENOMEM;
+ 
+         if (!streq(parts[2], "device"))
+                 return -EINVAL;
+-        r = safe_atou(parts[3], &major) ||
+-            safe_atou(parts[4], &minor);
++
++        r = safe_atou(parts[3], &major);
++        if (r < 0)
++                return r;
++        r = safe_atou(parts[4], &minor);
+         if (r < 0)
+                 return r;
+ 
