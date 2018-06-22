@@ -1,0 +1,26 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 26 Feb 2018 18:33:05 +0100
+Subject: [PATCH 03/19] logind: propagate the right error,
+ don't make up ENOMEM
+
+(cherry picked from commit e38aa66426ad657b6a9adcbd041fab27e216594b)
+---
+ src/login/logind-session-device.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index 0992f26..30e29e1 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -370,10 +370,8 @@ int session_device_new(Session *s, dev_t dev, bool open_device, SessionDevice **
+                 goto error;
+ 
+         r = hashmap_put(s->devices, &sd->dev, sd);
+-        if (r < 0) {
+-                r = -ENOMEM;
++        if (r < 0)
+                 goto error;
+-        }
+ 
+         if (open_device) {
+                 /* Open the device for the first time. We need a valid fd to pass back

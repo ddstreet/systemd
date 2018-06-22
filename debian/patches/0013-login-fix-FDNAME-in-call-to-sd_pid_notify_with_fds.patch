@@ -1,0 +1,35 @@
+From: Alan Jenkins <alan.christopher.jenkins@gmail.com>
+Date: Sat, 3 Mar 2018 18:37:50 +0000
+Subject: [PATCH 13/19] login: fix FDNAME in call to sd_pid_notify_with_fds()
+
+$ git grep FDNAME
+logind-session-device.c: ... "FDNAME=session-", sd->session->id);
+logind-session-device.c: ... "FDNAME=session", sd->session->id);
+
+Oops.
+
+Fixes #8343.  Or at least a more minimal reproducer.  Xorg still
+dies when logind is restarted, but the Xorg message says this
+is entirely deliberate.
+
+(This could also be the reason I hit #8035, instead of the race
+condition I originally suggested).
+
+(cherry picked from commit b5cdfa40ca6aae5e98a69da7a8b350215f807649)
+---
+ src/login/logind-session-device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index c64fb43..7253f95 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -526,7 +526,7 @@ int session_device_save(SessionDevice *sd) {
+                 return 0;
+ 
+         m = strjoina("FDSTORE=1\n"
+-                     "FDNAME=session", sd->session->id);
++                     "FDNAME=session-", sd->session->id);
+ 
+         r = sd_pid_notify_with_fds(0, false, m, &sd->fd, 1);
+         if (r < 0)

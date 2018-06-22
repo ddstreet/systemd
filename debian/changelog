@@ -1,3 +1,19 @@
+systemd (237-3ubuntu10.2) bionic; urgency=medium
+
+  * logind: backport v238/v239 fixes for handling DRM devices.
+    These changes introduce all the fixes that correct handling of open fd's
+    related to the DRM devices, as used by for example NVIDIA GPUs. This backport
+    includes some refactoring, corrections, and comment updates. This to insure
+    that correct history is preserved, code comments match reality, and to ease
+    backporting logind fixes in the future SRUs. (LP: #1777099)
+  * Disable dh_installinit generation of tmpfiles for the systemd package.
+    Replace with a manual safe call to systemd-tmpfiles which will process any
+    updates to the tmpfiles shipped by systemd package, taking into account any
+    overrides shipped by other packages, sysadmin, or specified in the runtime
+    directories. (LP: #1748147)
+
+ -- Dimitri John Ledkov 🌈 <xnox@ubuntu.com>  Fri, 22 Jun 2018 13:55:09 +0100
+
 systemd (237-3ubuntu10.1) bionic; urgency=medium
 
   [ Dimitri John Ledkov ]
