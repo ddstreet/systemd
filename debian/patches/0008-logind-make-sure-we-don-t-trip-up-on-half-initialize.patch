@@ -1,0 +1,24 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 26 Feb 2018 18:34:49 +0100
+Subject: [PATCH 08/19] logind: make sure we don't trip up on half-initialized
+ session devices
+
+Fixes: #8035
+(cherry picked from commit 4d219f5343b1924e7c519c2c178aeb5d1a5ab924)
+---
+ src/login/logind-session-device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index f160af1..65b4bb8 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -420,7 +420,7 @@ void session_device_free(SessionDevice *sd) {
+ 
+         session_device_stop(sd);
+         session_device_notify(sd, SESSION_DEVICE_RELEASE);
+-        close_nointr(sd->fd);
++        safe_close(sd->fd);
+ 
+         LIST_REMOVE(sd_by_device, sd->device->session_devices, sd);
+ 

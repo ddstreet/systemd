@@ -1,0 +1,196 @@
+From: Alan Jenkins <alan.christopher.jenkins@gmail.com>
+Date: Tue, 6 Mar 2018 15:59:38 +0000
+Subject: [PATCH 17/19] login: don't remove all devices from PID1 when only
+ one was removed
+
+FDSTOREREMOVE=1 removes all fds with the specified name.  And we had named
+the fds after the session.  Better fix that.
+
+Closes #8344.
+
+AFAICT there's no point providing compatibility code for this transition.
+No-one would be restarting logind on a system with a GUI (where the
+session devices are used), because doing so has been killing the GUI, and
+even causing startup of the GUI to fail leading to a restart loop.
+
+Upgrading logind on a running system with a GUI might start being possible
+after this commit (and after also fixing the display server of your
+choice).
+
+(cherry picked from commit 1bef256cf5838d4bbc55654206aa6254d7fddb59)
+---
+ src/login/logind-session-device.c | 38 +++++++++++++++++---------
+ src/login/logind.c                | 56 ++++++++++++++++++++++++++++++++-------
+ 2 files changed, 73 insertions(+), 21 deletions(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index de7d963..04063c3 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -416,15 +416,21 @@ error:
+ void session_device_free(SessionDevice *sd) {
+         assert(sd);
+ 
++        /* Make sure to remove the pushed fd. */
+         if (sd->pushed_fd) {
+-                const char *m;
+-
+-                /* Make sure to remove the pushed fd. */
+-
+-                m = strjoina("FDSTOREREMOVE=1\n"
+-                             "FDNAME=session-", sd->session->id);
+-
+-                (void) sd_notify(false, m);
++                _cleanup_free_ char *m = NULL;
++                const char *id;
++                int r;
++
++                /* Session ID does not contain separators. */
++                id = sd->session->id;
++                assert(*(id + strcspn(id, "-\n")) == '\0');
++
++                r = asprintf(&m, "FDSTOREREMOVE=1\n"
++                                 "FDNAME=session-%s-device-%u-%u\n",
++                                 id, major(sd->dev), minor(sd->dev));
++                if (r >= 0)
++                        (void) sd_notify(false, m);
+         }
+ 
+         session_device_stop(sd);
+@@ -510,7 +516,8 @@ unsigned int session_device_try_pause_all(Session *s) {
+ }
+ 
+ int session_device_save(SessionDevice *sd) {
+-        const char *m;
++        _cleanup_free_ char *m = NULL;
++        const char *id;
+         int r;
+ 
+         assert(sd);
+@@ -524,9 +531,16 @@ int session_device_save(SessionDevice *sd) {
+ 
+         if (sd->pushed_fd)
+                 return 0;
+-
+-        m = strjoina("FDSTORE=1\n"
+-                     "FDNAME=session-", sd->session->id);
++              
++        /* Session ID does not contain separators. */
++        id = sd->session->id;
++        assert(*(id + strcspn(id, "-\n")) == '\0');
++
++        r = asprintf(&m, "FDSTORE=1\n"
++                         "FDNAME=session-%s-device-%u-%u\n",
++                         id, major(sd->dev), minor(sd->dev));
++        if (r < 0)
++                return r;
+ 
+         r = sd_pid_notify_with_fds(0, false, m, &sd->fd, 1);
+         if (r < 0)
+diff --git a/src/login/logind.c b/src/login/logind.c
+index 953e1fc..0b5e222 100644
+--- a/src/login/logind.c
++++ b/src/login/logind.c
+@@ -36,6 +36,7 @@
+ #include "fd-util.h"
+ #include "format-util.h"
+ #include "logind.h"
++#include "parse-util.h"
+ #include "process-util.h"
+ #include "selinux-util.h"
+ #include "signal-util.h"
+@@ -411,6 +412,38 @@ static int manager_enumerate_users(Manager *m) {
+         return r;
+ }
+ 
++static int parse_fdname(const char *fdname, char **session_id, dev_t *dev) {
++        _cleanup_strv_free_ char **parts = NULL;
++        _cleanup_free_ char *id = NULL;
++        unsigned int major, minor;
++        int r;
++
++        parts = strv_split(fdname, "-");
++        if (!parts)
++                return -ENOMEM;
++        if (strv_length(parts) != 5)
++                return -EINVAL;
++
++        if (!streq(parts[0], "session"))
++                return -EINVAL;
++        id = strdup(parts[1]);
++        if (!id)
++                return -ENOMEM;
++
++        if (!streq(parts[2], "device"))
++                return -EINVAL;
++        r = safe_atou(parts[3], &major) ||
++            safe_atou(parts[4], &minor);
++        if (r < 0)
++                return r;
++
++        *dev = makedev(major, minor);
++        *session_id = id;
++        id = NULL;
++
++        return 0;
++}
++
+ static int manager_attach_fds(Manager *m) {
+         _cleanup_strv_free_ char **fdnames = NULL;
+         int n, i, fd;
+@@ -424,16 +457,21 @@ static int manager_attach_fds(Manager *m) {
+                 return n;
+ 
+         for (i = 0; i < n; i++) {
++                _cleanup_free_ char *id = NULL;
++                dev_t dev;
+                 struct stat st;
+                 SessionDevice *sd;
+                 Session *s;
+-                char *id;
++                int r;
+ 
+                 fd = SD_LISTEN_FDS_START + i;
+ 
+-                id = startswith(fdnames[i], "session-");
+-                if (!id)
++                r = parse_fdname(fdnames[i], &id, &dev);
++                if (r < 0) {
++                        log_debug_errno(r, "Failed to parse fd name %s: %m", fdnames[i]);
++                        close_nointr(fd);
+                         continue;
++                }
+ 
+                 s = hashmap_get(m->sessions, id);
+                 if (!s) {
+@@ -453,24 +491,24 @@ static int manager_attach_fds(Manager *m) {
+                         continue;
+                 }
+ 
+-                if (!S_ISCHR(st.st_mode)) {
+-                        log_debug("Device fd doesn't point to a character device node");
++                if (!S_ISCHR(st.st_mode) || st.st_rdev != dev) {
++                        log_debug("Device fd doesn't point to the expected character device node");
+                         close_nointr(fd);
+                         continue;
+                 }
+ 
+-                sd = hashmap_get(s->devices, &st.st_rdev);
++                sd = hashmap_get(s->devices, &dev);
+                 if (!sd) {
+                         /* Weird, we got an fd for a session device which wasn't
+-                        * recorded in the session state file... */
++                         * recorded in the session state file... */
+                         log_warning("Got fd for missing session device [%u:%u] in session %s",
+-                                    major(st.st_rdev), minor(st.st_rdev), s->id);
++                                    major(dev), minor(dev), s->id);
+                         close_nointr(fd);
+                         continue;
+                 }
+ 
+                 log_debug("Attaching fd to session device [%u:%u] for session %s",
+-                          major(st.st_rdev), minor(st.st_rdev), s->id);
++                          major(dev), minor(dev), s->id);
+ 
+                 session_device_attach_fd(sd, fd, s->was_active);
+         }
