@@ -1,0 +1,22 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 26 Feb 2018 18:33:51 +0100
+Subject: [PATCH 05/19] logind: fd 0 is a valid fd
+
+(cherry picked from commit 4c9cb12c0536503979f44d04491ea7bbe118a4cc)
+---
+ src/login/logind-session-device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index 64162f6..f160af1 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -527,7 +527,7 @@ int session_device_save(SessionDevice *sd) {
+ }
+ 
+ void session_device_attach_fd(SessionDevice *sd, int fd, bool active) {
+-        assert(fd > 0);
++        assert(fd >= 0);
+         assert(sd);
+         assert(sd->fd < 0);
+         assert(!sd->active);
