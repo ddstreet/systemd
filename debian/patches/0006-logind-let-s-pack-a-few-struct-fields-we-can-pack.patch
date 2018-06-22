@@ -1,0 +1,26 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 26 Feb 2018 18:34:13 +0100
+Subject: [PATCH 06/19] logind: let's pack a few struct fields we can pack
+
+(cherry picked from commit 0410444446c84a759a8f2d0917710849fc91384c)
+---
+ src/login/logind-session-device.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/login/logind-session-device.h b/src/login/logind-session-device.h
+index a1cf17a..a9ead7b 100644
+--- a/src/login/logind-session-device.h
++++ b/src/login/logind-session-device.h
+@@ -39,9 +39,9 @@ struct SessionDevice {
+         dev_t dev;
+         char *node;
+         int fd;
+-        bool active;
+-        DeviceType type;
+-        bool pushed_fd;
++        DeviceType type:3;
++        bool active:1;
++        bool pushed_fd:1;
+ 
+         LIST_FIELDS(struct SessionDevice, sd_by_device);
+ };

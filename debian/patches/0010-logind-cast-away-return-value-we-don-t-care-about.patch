@@ -1,0 +1,22 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 2 Mar 2018 11:55:33 +0100
+Subject: [PATCH 10/19] logind: cast away return value we don't care about
+
+(cherry picked from commit 4804600b6a38994ce4157163fe8af68a0c83e3f0)
+---
+ src/login/logind-session-device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index 706245d..db148d1 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -164,7 +164,7 @@ static int session_device_open(SessionDevice *sd, bool active) {
+                 } else
+                         /* DRM-Master is granted to the first user who opens a device automatically (ughh,
+                          * racy!). Hence, we just drop DRM-Master in case we were the first. */
+-                        sd_drmdropmaster(fd);
++                        (void) sd_drmdropmaster(fd);
+                 break;
+ 
+         case DEVICE_TYPE_EVDEV:

@@ -1,0 +1,64 @@
+From: Alan Jenkins <alan.christopher.jenkins@gmail.com>
+Date: Tue, 6 Mar 2018 12:28:54 +0000
+Subject: [PATCH 18/19] login: effectively revert "open device if needed"
+
+This replaces commit 4d3900f1b7ccce03366f9a57d259d0735c1cfbcf.
+The underlying cause of issue #8291 has been fixed, so there is no reason
+to paper over it any more.
+
+But it might still be useful not to crash in the face of bad restart data.
+That can cause several restarts, or maybe at some point an infinite loop
+of restarts.  Fail the start (or stop!) request, and write an error to the
+system log.  Each time reflects a user request where we fail to resume the
+display server's access (or revoke it), and it can be useful if the log
+shows the most recent one.
+
+(cherry picked from commit f27053376074fc6d325e01e699e0125f5d03192a)
+---
+ src/login/logind-session-device.c | 24 +++++++++++++-----------
+ 1 file changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index 04063c3..9f01497 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -193,19 +193,16 @@ static int session_device_start(SessionDevice *sd) {
+         switch (sd->type) {
+ 
+         case DEVICE_TYPE_DRM:
+-
+                 if (sd->fd < 0) {
+-                        /* Open device if it isn't open yet */
+-                        sd->fd = session_device_open(sd, true);
+-                        if (sd->fd < 0)
+-                                return sd->fd;
+-                } else {
+-                        /* Device is kept open. Simply call drmSetMaster() and hope there is no-one else. In case it fails, we
+-                         * keep the device paused. Maybe at some point we have a drmStealMaster(). */
+-                        r = sd_drmsetmaster(sd->fd);
+-                        if (r < 0)
+-                                return r;
++                        log_error("Failed to re-activate DRM fd, as the fd was lost (maybe logind restart went wrong?)");
++                        return -EBADF;
+                 }
++
++                /* Device is kept open. Simply call drmSetMaster() and hope there is no-one else. In case it fails, we
++                 * keep the device paused. Maybe at some point we have a drmStealMaster(). */
++                r = sd_drmsetmaster(sd->fd);
++                if (r < 0)
++                        return r;
+                 break;
+ 
+         case DEVICE_TYPE_EVDEV:
+@@ -239,6 +236,11 @@ static void session_device_stop(SessionDevice *sd) {
+         switch (sd->type) {
+ 
+         case DEVICE_TYPE_DRM:
++                if (sd->fd < 0) {
++                        log_error("Failed to de-activate DRM fd, as the fd was lost (maybe logind restart went wrong?)");
++                        return;
++                }
++
+                 /* On DRM devices we simply drop DRM-Master but keep it open.
+                  * This allows the user to keep resources allocated. The
+                  * CAP_SYS_ADMIN restriction to DRM-Master prevents users from

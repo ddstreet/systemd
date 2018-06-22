@@ -1,0 +1,39 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 2 Mar 2018 11:55:51 +0100
+Subject: [PATCH 11/19] logind: open device if needed
+
+Fixes: #8291
+(cherry picked from commit 4d3900f1b7ccce03366f9a57d259d0735c1cfbcf)
+---
+ src/login/logind-session-device.c | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/src/login/logind-session-device.c b/src/login/logind-session-device.c
+index db148d1..b7476e7 100644
+--- a/src/login/logind-session-device.c
++++ b/src/login/logind-session-device.c
+@@ -193,11 +193,19 @@ static int session_device_start(SessionDevice *sd) {
+         switch (sd->type) {
+ 
+         case DEVICE_TYPE_DRM:
+-                /* Device is kept open. Simply call drmSetMaster() and hope there is no-one else. In case it fails, we
+-                 * keep the device paused. Maybe at some point we have a drmStealMaster(). */
+-                r = sd_drmsetmaster(sd->fd);
+-                if (r < 0)
+-                        return r;
++
++                if (sd->fd < 0) {
++                        /* Open device if it isn't open yet */
++                        sd->fd = session_device_open(sd, true);
++                        if (sd->fd < 0)
++                                return sd->fd;
++                } else {
++                        /* Device is kept open. Simply call drmSetMaster() and hope there is no-one else. In case it fails, we
++                         * keep the device paused. Maybe at some point we have a drmStealMaster(). */
++                        r = sd_drmsetmaster(sd->fd);
++                        if (r < 0)
++                                return r;
++                }
+                 break;
+ 
+         case DEVICE_TYPE_EVDEV:

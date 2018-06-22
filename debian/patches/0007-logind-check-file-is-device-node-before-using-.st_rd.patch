@@ -1,0 +1,27 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 26 Feb 2018 18:34:43 +0100
+Subject: [PATCH 07/19] logind: check file is device node before using
+ .st_rdev
+
+(cherry picked from commit 51ead3e3774aa9306d637723d92bbddf2258d2cb)
+---
+ src/login/logind.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/login/logind.c b/src/login/logind.c
+index 4fa14b7..bf4e55d 100644
+--- a/src/login/logind.c
++++ b/src/login/logind.c
+@@ -453,6 +453,12 @@ static int manager_attach_fds(Manager *m) {
+                         continue;
+                 }
+ 
++                if (!S_ISCHR(st.st_mode) && !S_ISBLK(st.st_mode)) {
++                        log_debug("Device fd doesn't actually point to device node: %m");
++                        close_nointr(fd);
++                        continue;
++                }
++
+                 sd = hashmap_get(s->devices, &st.st_rdev);
+                 if (!sd) {
+                         /* Weird, we got an fd for a session device which wasn't
