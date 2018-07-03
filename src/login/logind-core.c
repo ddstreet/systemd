@@ -19,7 +19,6 @@
 #include "terminal-util.h"
 #include "udev-util.h"
 #include "user-util.h"
-#include "sd-daemon.h"
 
 void manager_reset_config(Manager *m) {
         assert(m);
@@ -498,11 +497,6 @@ int manager_spawn_autovt(Manager *m, unsigned int vtnr) {
 
         if (vtnr > m->n_autovts &&
             vtnr != m->reserve_vt)
-                return 0;
-
-        /* It only makes sense to send a StartUnit call to systemd if this
-         * machine is actually booted with systemd. */
-        if (!sd_booted())
                 return 0;
 
         if (vtnr != m->reserve_vt) {
