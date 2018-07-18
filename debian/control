@@ -158,6 +158,8 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          systemd,
          adduser
+Breaks: systemd (<< 239-6)
+Replaces: systemd (<< 239-6)
 Description: tools for sending and receiving remote journal logs
  This package provides tools for sending and receiving remote journal logs:
   * systemd-journal-remote
@@ -190,7 +192,7 @@ Priority: optional
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          systemd (= ${binary:Version}),
-         python3-minimal,
+         python3,
 Description: tests for systemd
  This package contains the test binaries. Those binaries are primarily used
  for autopkgtest and not meant to be installed on regular user systems.
@@ -332,7 +334,7 @@ Depends: ${shlibs:Depends},
          s390-tools (>> 1.6.2) [s390],
          procps
 Conflicts: hal
-Breaks: systemd (<< 239),
+Breaks: systemd (<< 233-4),
         ifupdown (<< 0.8.5~),
         ifplugd (<< 0.28-19.1~),
         joystick (<< 1:1.4.9-1~),
