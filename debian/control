@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: optional
-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>,
            Marco d'Itri <md@linux.it>,
            Sjoerd Simons <sjoerd@debian.org>,
@@ -20,7 +21,7 @@ Build-Depends: debhelper (>= 10.4~),
                meson (>= 0.44),
                gettext,
                gperf,
-               gnu-efi [amd64 i386 arm64],
+               gnu-efi [amd64 i386 arm64 armhf],
                libcap-dev (>= 1:2.24-9~),
                libpam0g-dev,
                libapparmor-dev (>= 2.9.0-3+exp2) <!stage1>,
@@ -62,7 +63,8 @@ Multi-Arch: foreign
 Section: admin
 Priority: important
 Recommends: libpam-systemd,
-            dbus
+            dbus,
+            networkd-dispatcher
 Suggests: systemd-container,
           policykit-1
 Pre-Depends: ${shlibs:Pre-Depends},

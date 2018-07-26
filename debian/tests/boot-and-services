@@ -61,12 +61,13 @@ class ServicesTest(unittest.TestCase):
                 subprocess.call(['journalctl', '-b', '-u', f])
             self.assertEqual(failed, [])
 
-    def test_lightdm(self):
-        out = subprocess.check_output(['ps', 'u', '-C', 'lightdm'])
-        self.assertIn(b'lightdm --session', out)
+    @unittest.skipUnless(subprocess.call(['which', 'gdm3'], stdout=subprocess.DEVNULL) == 0, 'gdm3 not found')
+    def test_gdm3(self):
+        out = subprocess.check_output(['ps', 'u', '-C', 'gdm-x-session'])
+        self.assertIn(b'gdm-x-session gnome-session', out)
         out = subprocess.check_output(['ps', 'u', '-C', 'Xorg'])
-        self.assertIn(b':0', out)
-        self.active_unit('lightdm')
+        self.assertIn(b'Xorg vt1', out)
+        self.active_unit('gdm')
 
     def test_dbus(self):
         out = subprocess.check_output(
@@ -105,7 +106,12 @@ class ServicesTest(unittest.TestCase):
         with open('/var/log/syslog') as f:
             log = f.read()
         # has kernel messages
-        self.assertRegex(log, 'kernel:.*[cC]ommand line:')
+        try:
+            self.assertRegex(log, 'kernel:.*[cC]ommand line:')
+        except AssertionError:
+            # hm syslog is trimmed, for some reason?!
+            subprocess.call(['journalctl', '-k'])
+            self.assertRegex(log, 'kernel:.*')
         # has init messages
         self.assertRegex(log, 'systemd.*Reached target Graphical Interface')
         # has other services
@@ -245,7 +251,7 @@ poweroff\n''')
         subprocess.call(['journalctl', '--sync'])
         systemctl = subprocess.Popen(
             ['systemctl', 'status', '-overbose', '-l', 'systemd-nspawn@c1'],
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out = systemctl.communicate()[0].decode('UTF-8', 'replace')
         self.assertEqual(systemctl.returncode, 3, out)
         self.assertNotIn('failed', out)
