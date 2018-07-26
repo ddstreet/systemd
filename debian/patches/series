@@ -1,3 +1,4 @@
+resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch
 sleep-fix-printf-format-of-fiemap-fields.patch
 timesync-changes-type-of-drift_freq-to-int64_t.patch
 sleep-fix-one-more-printf-format-of-a-fiemap-field.patch
@@ -28,3 +29,21 @@ debian/Revert-udev-rules-Permission-changes-for-dev-dri-renderD.patch
 debian/Revert-systemctl-when-removing-enablement-or-mask-symlink.patch
 debian/Revert-udev-rules-Permission-changes-for-dev-kvm.patch
 debian/Drop-seccomp-system-call-filter-for-udev.patch
+debian/Skip-starting-systemd-remount-fs.service-in-containers.patch
+debian/Ubuntu-UseDomains-by-default.patch
+debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
+debian/Ubuntu-units-set-ConditionVirtualization-private-users-on-j.patch
+debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
+debian/UBUNTU-test-test-functions-drop-all-prefixes.patch
+debian/UBUNTU-test-process-util-fails-to-verify-cmdline-changes-in-unpr.patch
+debian/UBUNTU-resolved-disable-global-LLMNR-and-MulticastDNS.patch
+debian/UBUNTU-Add-AssumedApparmorLabel-unconfined-to-timedate1-dbus.patch
+debian/UBUNTU-test-fs-utils-detect-container.patch
+debian/UBUNTU-test-test-functions-launch-qemu-with-vga-none.patch
+debian/UBUNTU-wait-online-exit-if-no-links-are-managed.patch
+debian/UBUNTU-journald.service-set-Nice-1-to-dodge-watchdog-on-soft-loc.patch
+debian/UBUNTU-resolved-Listen-on-both-TCP-and-UDP-by-default.patch
+debian/UBUNTU-networkd-if-RA-was-implicit-do-not-await-ndisc_con.patch
+debian/UBUNTU-units-block-CAP_SYS_MODULE-units-in-containers-too.patch
+debian/UBUNTU-test-execute-fix-execution-expectations-in-container.patch
+debian/UBUNTU-test-fd-util-test_rearrange_stdio-fails-in-a-contain.patch
