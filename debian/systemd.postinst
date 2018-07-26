@@ -39,6 +39,32 @@ if dpkg --compare-versions "$2" lt "218-11~"; then
     systemctl enable systemd-timesyncd.service || true
 fi
 
+# Enable resolved by default on new installs installs and upgrades
+if dpkg --compare-versions "$2" lt "234-1ubuntu2~"; then
+    systemctl enable systemd-resolved.service || true
+fi
+
+# Drop stock /etc/rc.local on upgrades
+if dpkg --compare-versions "$2" lt "234-2ubuntu11~"; then
+        if [ -f /etc/rc.local ]; then
+                if [ "10fd9f051accb6fd1f753f2d48371890" = "$(md5sum /etc/rc.local | cut -d\  -f1)" ]; then
+                        echo Removing empty /etc/rc.local
+                        rm -f /etc/rc.local || true
+                fi
+        fi
+fi
+
+# Use stub resolve.conf by default on new installs
+if [ -z "$2" ]; then
+    mkdir -p /run/systemd/resolve
+    if [ -e /etc/resolv.conf ]; then
+            cp /etc/resolv.conf /run/systemd/resolve/stub-resolv.conf
+    fi
+    # If /etc/resolv.conf is a bind-mount, moving or replacing
+    # /etc/resolv.conf may fail
+    ln -snf ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf || true
+fi
+
 # Enable ondemand by default on new installs installs and upgrades
 if [ -e /lib/systemd/system/ondemand.service ] && dpkg --compare-versions "$2" lt "231-7~"; then
     systemctl enable ondemand.service || true
@@ -96,6 +122,15 @@ systemd-machine-id-setup
 # Setup system users and groups
 addgroup --quiet --system systemd-journal
 
+# Enable persistent journal, in auto-mode, by default on new installs installs and upgrades
+if dpkg --compare-versions "$2" lt "235-3ubuntu3~"; then
+    mkdir -p /var/log/journal
+    # create tmpfiles only when running systemd, otherwise %b substitution fails
+    if [ -d /run/systemd/system ]; then
+        systemd-tmpfiles --create --prefix /var/log/journal
+    fi
+fi
+
 # We need to stop running services before we call adduser
 RESTART=""
 if dpkg --compare-versions "$2" lt-nl "239-6"; then
@@ -116,6 +151,13 @@ adduser --quiet --system --group --no-create-home --home /run/systemd \
 
 # Initial update of the Message Catalogs database
 _update_catalog
+
+# Disable networkd when upgrading from broken versions 8..10. Turns out
+# enabling networkd unconditionally has long boot time side-effects
+if dpkg --compare-versions "$2" gt "234-2ubuntu8~" &&
+   dpkg --compare-versions "$2" lt "234-2ubuntu11~"; then
+    systemctl disable systemd-networkd-wait-online.service || true
+fi
 
 if [ -n "$2" ]; then
     _systemctl daemon-reexec || true
@@ -154,5 +196,11 @@ if dpkg --compare-versions "$2" lt-nl "236-1~"; then
     # StateDirectory=systemd/timesync.
     rm -f /var/lib/systemd/clock
 fi
+
+# Process all tmpfiles that we ship, including any overrides in
+# runtime-dir/sysadmin-dir/other packages (e.g. rsyslog)
+#
+# Ignore if this fails, because e.g. %b will fail on WSL
+systemd-tmpfiles --create || :
 
 #DEBHELPER#
