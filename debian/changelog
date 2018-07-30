@@ -1,3 +1,14 @@
+systemd (229-4ubuntu21.4) xenial; urgency=medium
+
+  * debian/extra/start-udev: test that sync parameters file is writable, before
+    writing to it. On old kernels (e.g. v4.4) the file is available but is
+    read-only, thus writing to it causes init to fail and thus raise a kernel
+    panic. As an extra caution ignore failures to write into that file anyway,
+    since synchronous scsi probing is not critical enough to prevent starting
+    d-i. LP: #1784454
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 30 Jul 2018 19:58:15 +0100
+
 systemd (229-4ubuntu21.3) xenial; urgency=medium
 
   [ Dimitri John Ledkov ]
