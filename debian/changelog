@@ -1,3 +1,13 @@
+systemd (237-3ubuntu10.4) UNRELEASED; urgency=medium
+
+  * debian/extra/start-udev: On old kernels (e.g. v4.4) the file is available
+    but appears to be non-writable. Hide error messages and ignore failure to
+    write out sync into the parameters file. This does not regress
+    https://pad.lv/1779815 since older kernel did synchronous scan anyway. But
+    it does resolve failure to start the installer on old kernels LP: #1784454
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 30 Jul 2018 19:53:41 +0100
+
 systemd (237-3ubuntu10.3) bionic; urgency=medium
 
   * debian/extra/start-udev: Set scsi_mod scan=sync even if it's builtin
