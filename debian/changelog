@@ -1,3 +1,10 @@
+systemd (237-3ubuntu10.3) bionic; urgency=medium
+
+  * debian/extra/start-udev: Set scsi_mod scan=sync even if it's builtin
+    to the kernel (we previously only set it in modprobe.d) LP: #1779815
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Fri, 20 Jul 2018 11:13:58 -0600
+
 systemd (237-3ubuntu10.2) bionic; urgency=medium
 
   * logind: backport v238/v239 fixes for handling DRM devices.
