@@ -17,9 +17,11 @@ units = [
         'systemd-tmpfiles-clean.timer',
 ]
 
+meson.add_install_script('sh', '-c',
+                         mkdir_p.format(userunitdir))
 foreach file : units
-        install_data(file,
-                     install_dir : userunitdir)
+        meson.add_install_script(
+            'sh', '-c', cp_cmd.format(meson.current_source_dir() + '/' + file, userunitdir))
 endforeach
 
 in_units = [
