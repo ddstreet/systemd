@@ -525,6 +525,7 @@ perl = find_program('perl', required : false)
 
 meson_make_symlink = meson.source_root() + '/tools/meson-make-symlink.sh'
 mkdir_p = 'mkdir -p $DESTDIR/@0@'
+cp_cmd = 'cp @0@ $DESTDIR/@1@'
 test_efi_create_disk_sh = find_program('test/test-efi-create-disk.sh')
 splash_bmp = files('test/splash.bmp')
 

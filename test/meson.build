@@ -198,9 +198,16 @@ if install_tests
                 if subdir == file
                         subdir = ''
                 endif
-
-                install_data(file,
-                             install_dir : testsdir + '/testdata/' + subdir)
+                # because install_data is broken, and instead of copying test
+                # files as real files into target dir it now copies them as
+                # dangling symlinks, if the source file is a symlink to another
+                # file in the tree
+                src = meson.current_source_dir() + '/' + file
+                target = testsdir + '/testdata/' + subdir
+                meson.add_install_script('sh', '-c',
+                                         mkdir_p.format(target))
+                meson.add_install_script('sh', '-c',
+                                         cp_cmd.format(src, target))
         endforeach
 endif
 
