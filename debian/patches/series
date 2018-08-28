@@ -125,3 +125,4 @@ lp1833671-networkd-keep-bond-slave-up-if-already-attached.patch
 hwdb-revert-airplane-mode-keys-handling-on-Dell.patch
 0001-shared-but-util-drop-trusted-annotation-from-bus_ope.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
+cryptsetup-add-support-for-sector-size-option-8881.patch
