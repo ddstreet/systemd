@@ -82,3 +82,4 @@ debian/UBUNTU-networkd-if-RA-was-implicit-do-not-await-ndisc_con.patch
 debian/UBUNTU-introduce-TAKE_PTR-macro.patch
 debian/UBUNTU-sleep-Add-support-for-setting-a-disk-offset.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
+debian/UBUNTU-Support-system-image-read-only-etc.patch
