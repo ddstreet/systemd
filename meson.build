@@ -421,7 +421,6 @@ decl_headers = '''
 #include <uchar.h>
 #include <linux/ethtool.h>
 #include <linux/fib_rules.h>
-#include <linux/stat.h>
 #include <sys/stat.h>
 '''
 # FIXME: key_serial_t is only defined in keyutils.h, this is bound to fail
@@ -435,9 +434,23 @@ foreach decl : ['char16_t',
                ]
 
         # We get -1 if the size cannot be determined
-        have = cc.sizeof(decl, prefix : decl_headers) > 0
+        have = cc.sizeof(decl, prefix : decl_headers, args : '-D_GNU_SOURCE') > 0
+
+        if decl == 'struct statx'
+                if have
+                        want_linux_stat_h = false
+                else
+                        have = cc.sizeof(decl,
+                                         prefix : decl_headers + '#include <linux/stat.h>',
+                                         args : '-D_GNU_SOURCE') > 0
+                        want_linux_stat_h = have
+                endif
+        endif
+
         conf.set10('HAVE_' + decl.underscorify().to_upper(), have)
 endforeach
+
+conf.set10('WANT_LINUX_STAT_H', want_linux_stat_h)
 
 foreach decl : [['IFLA_INET6_ADDR_GEN_MODE',         'linux/if_link.h'],
                 ['IN6_ADDR_GEN_MODE_STABLE_PRIVACY', 'linux/if_link.h'],
@@ -525,7 +538,6 @@ perl = find_program('perl', required : false)
 
 meson_make_symlink = meson.source_root() + '/tools/meson-make-symlink.sh'
 mkdir_p = 'mkdir -p $DESTDIR/@0@'
-cp_cmd = 'cp @0@ $DESTDIR/@1@'
 test_efi_create_disk_sh = find_program('test/test-efi-create-disk.sh')
 splash_bmp = files('test/splash.bmp')
 
@@ -742,7 +754,9 @@ substs.set('USERS_GID', users_gid)
 conf.set10('ENABLE_ADM_GROUP', get_option('adm-group'))
 conf.set10('ENABLE_WHEEL_GROUP', get_option('wheel-group'))
 
-substs.set('DEV_KVM_MODE', get_option('dev-kvm-mode'))
+dev_kvm_mode = get_option('dev-kvm-mode')
+substs.set('DEV_KVM_MODE', dev_kvm_mode)
+conf.set10('DEV_KVM_UACCESS', dev_kvm_mode != '0666')
 
 kill_user_processes = get_option('default-kill-user-processes')
 conf.set10('KILL_USER_PROCESSES', kill_user_processes)
@@ -922,11 +936,17 @@ if want_libcryptsetup != 'false' and not fuzzer_build
                                    version : '>= 1.6.0',
                                    required : want_libcryptsetup == 'true')
         have = libcryptsetup.found()
+        have_sector = cc.has_member(
+                    'struct crypt_params_plain',
+                    'sector_size',
+                    prefix : '#include <libcryptsetup.h>')
 else
         have = false
+        have_sector = false
         libcryptsetup = []
 endif
 conf.set10('HAVE_LIBCRYPTSETUP', have)
+conf.set10('HAVE_LIBCRYPTSETUP_SECTOR_SIZE', have_sector)
 
 want_libcurl = get_option('libcurl')
 if want_libcurl != 'false' and not fuzzer_build
