@@ -34,6 +34,7 @@ virt-if-we-detect-Xen-by-DMI-trust-that-over-CPUID.patch
 0018-login-effectively-revert-open-device-if-needed.patch
 0019-logind-fix-borked-r-check.patch
 cryptsetup-add-support-for-sector-size-option-8881.patch
+systemctl-correctly-proceed-to-immediate-shutdown-if-sche.patch
 debian/Use-Debian-specific-config-files.patch
 debian/don-t-try-to-start-autovt-units-when-not-running-wit.patch
 debian/Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
