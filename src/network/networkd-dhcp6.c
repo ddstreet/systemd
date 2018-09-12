@@ -119,7 +119,7 @@ static int dhcp6_pd_prefix_distribute(Link *dhcp6_link, Iterator *i,
         Link *link;
         Manager *manager = dhcp6_link->manager;
         union in_addr_union prefix;
-        uint8_t n_prefixes, n_used = 0;
+        uint64_t n_prefixes, n_used = 0;
         _cleanup_free_ char *buf = NULL;
         int r;
 
@@ -132,17 +132,17 @@ static int dhcp6_pd_prefix_distribute(Link *dhcp6_link, Iterator *i,
         if (r < 0)
                 return r;
 
-        n_prefixes = 1 << (64 - pd_prefix_len);
+        n_prefixes = UINT64_C(1) << (64 - pd_prefix_len);
 
         (void) in_addr_to_string(AF_INET6, &prefix, &buf);
-        log_link_debug(dhcp6_link, "Assigning up to %u prefixes from %s/%u",
+        log_link_debug(dhcp6_link, "Assigning up to %" PRIu64 " prefixes from %s/%u",
                        n_prefixes, strnull(buf), pd_prefix_len);
 
         while (hashmap_iterate(manager->links, i, (void **)&link, NULL)) {
                 Link *assigned_link;
 
                 if (n_used == n_prefixes) {
-                        log_link_debug(dhcp6_link, "Assigned %u/%u prefixes from %s/%u",
+                        log_link_debug(dhcp6_link, "Assigned %" PRIu64 "/%" PRIu64 " prefixes from %s/%u",
                                        n_used, n_prefixes, strnull(buf), pd_prefix_len);
 
                         return -EAGAIN;
@@ -169,7 +169,7 @@ static int dhcp6_pd_prefix_distribute(Link *dhcp6_link, Iterator *i,
                                 continue;
 
                 } else
-                        log_link_debug(link, "Assigned prefix %u/%u %s/64 to link",
+                        log_link_debug(link, "Assigned prefix %" PRIu64 "/%" PRIu64 " %s/64 to link",
                                        n_used + 1, n_prefixes, strnull(buf));
 
                 n_used++;
@@ -181,7 +181,7 @@ static int dhcp6_pd_prefix_distribute(Link *dhcp6_link, Iterator *i,
 
         if (n_used < n_prefixes) {
                 Route *route;
-                int n = n_used;
+                uint64_t n = n_used;
 
                 r = route_new(&route);
                 if (r < 0)
@@ -453,7 +453,14 @@ static int dhcp6_set_hostname(sd_dhcp6_client *client, Link *link) {
                 hn = hostname;
         }
 
-        return sd_dhcp6_client_set_fqdn(client, hn);
+        r = sd_dhcp6_client_set_fqdn(client, hn);
+        if (r == -EINVAL && hostname)
+                /* Ignore error when the machine's hostname is not suitable to send in DHCP packet. */
+                log_link_warning_errno(link, r, "DHCP6 CLIENT: Failed to set hostname from kernel hostname, ignoring: %m");
+        else if (r < 0)
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set hostname: %m");
+
+        return 0;
 }
 
 int dhcp6_configure(Link *link) {
@@ -495,7 +502,7 @@ int dhcp6_configure(Link *link) {
 
         r = dhcp6_set_hostname(client, link);
         if (r < 0)
-                goto error;
+                return r;
 
         r = sd_dhcp6_client_set_ifindex(client, link->ifindex);
         if (r < 0)
