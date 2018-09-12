@@ -6,8 +6,11 @@
 #include <stdlib.h>
 #include <util.h>
 
-#include "tests.h"
+#include "alloc-util.h"
+#include "fileio.h"
 #include "path-util.h"
+#include "strv.h"
+#include "tests.h"
 
 char* setup_fake_runtime_dir(void) {
         char t[] = "/tmp/fake-xdg-runtime-XXXXXX", *p;
@@ -19,38 +22,57 @@ char* setup_fake_runtime_dir(void) {
         return p;
 }
 
-const char* get_testdata_dir(const char *suffix) {
+static void load_testdata_env(void) {
+        static bool called = false;
+        _cleanup_free_ char *s = NULL;
+        _cleanup_free_ char *envpath = NULL;
+        _cleanup_strv_free_ char **pairs = NULL;
+        char **k, **v;
+
+        if (called)
+                return;
+        called = true;
+
+        assert_se(readlink_and_make_absolute("/proc/self/exe", &s) >= 0);
+        dirname(s);
+
+        envpath = path_join(NULL, s, "systemd-runtest.env");
+        if (load_env_file_pairs(NULL, envpath, NULL, &pairs) < 0)
+                return;
+
+        STRV_FOREACH_PAIR(k, v, pairs)
+                setenv(*k, *v, 0);
+}
+
+const char* get_testdata_dir(void) {
         const char *env;
-        /* convenience: caller does not need to free result */
-        static char testdir[PATH_MAX];
+
+        load_testdata_env();
 
         /* if the env var is set, use that */
         env = getenv("SYSTEMD_TEST_DATA");
-        testdir[sizeof(testdir) - 1] = '\0';
-        if (env) {
-                if (access(env, F_OK) < 0) {
-                        fputs("ERROR: $SYSTEMD_TEST_DATA directory does not exist\n", stderr);
-                        exit(EXIT_FAILURE);
-                }
-                strncpy(testdir, env, sizeof(testdir) - 1);
-        } else {
-                _cleanup_free_ char *exedir = NULL;
-                assert_se(readlink_and_make_absolute("/proc/self/exe", &exedir) >= 0);
-
-                /* Check if we're running from the builddir. If so, use the compiled in path. */
-                if (path_startswith(exedir, ABS_BUILD_DIR))
-                        assert_se(snprintf(testdir, sizeof(testdir), "%s/test", ABS_SRC_DIR) > 0);
-                else
-                        /* Try relative path, according to the install-test layout */
-                        assert_se(snprintf(testdir, sizeof(testdir), "%s/testdata", dirname(exedir)) > 0);
-
-                /* test this without the suffix, as it may contain a glob */
-                if (access(testdir, F_OK) < 0) {
-                        fputs("ERROR: Cannot find testdata directory, set $SYSTEMD_TEST_DATA\n", stderr);
-                        exit(EXIT_FAILURE);
-                }
+        if (!env)
+                env = SYSTEMD_TEST_DATA;
+        if (access(env, F_OK) < 0) {
+                fprintf(stderr, "ERROR: $SYSTEMD_TEST_DATA directory [%s] does not exist\n", env);
+                exit(EXIT_FAILURE);
         }
 
-        strncpy(testdir + strlen(testdir), suffix, sizeof(testdir) - strlen(testdir) - 1);
-        return testdir;
+        return env;
+}
+
+const char* get_catalog_dir(void) {
+        const char *env;
+
+        load_testdata_env();
+
+        /* if the env var is set, use that */
+        env = getenv("SYSTEMD_CATALOG_DIR");
+        if (!env)
+                env = SYSTEMD_CATALOG_DIR;
+        if (access(env, F_OK) < 0) {
+                fprintf(stderr, "ERROR: $SYSTEMD_CATALOG_DIR directory [%s] does not exist\n", env);
+                exit(EXIT_FAILURE);
+        }
+        return env;
 }
