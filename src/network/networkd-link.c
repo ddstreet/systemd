@@ -499,19 +499,28 @@ static int link_new(Manager *manager, sd_netlink_message *message, Link **ret) {
 static void link_free(Link *link) {
         Address *address;
         Link *carrier;
+        Route *route;
         Iterator i;
 
         if (!link)
                 return;
 
-        while (!set_isempty(link->addresses))
-                address_free(set_first(link->addresses));
+        while ((route = set_first(link->routes)))
+                route_free(route);
 
-        while (!set_isempty(link->addresses_foreign))
-                address_free(set_first(link->addresses_foreign));
+        while ((route = set_first(link->routes_foreign)))
+                route_free(route);
+
+        link->routes = set_free(link->routes);
+        link->routes_foreign = set_free(link->routes_foreign);
+
+        while ((address = set_first(link->addresses)))
+                address_free(address);
+
+        while ((address = set_first(link->addresses_foreign)))
+                address_free(address);
 
         link->addresses = set_free(link->addresses);
-
         link->addresses_foreign = set_free(link->addresses_foreign);
 
         while ((address = link->pool_addresses)) {
@@ -1096,7 +1105,7 @@ static int link_enter_set_addresses(Link *link) {
 
         /* now that we can figure out a default address for the dhcp server,
            start it */
-        if (link_dhcp4_server_enabled(link)) {
+        if (link_dhcp4_server_enabled(link) && (link->flags & IFF_UP)) {
                 Address *address;
                 Link *uplink = NULL;
                 bool acquired_uplink = false;
