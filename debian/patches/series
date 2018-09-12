@@ -87,3 +87,4 @@ CVE-2018-6954.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
 cryptsetup-add-support-for-sector-size-option-8881.patch
 debian/UBUNTU-Support-system-image-read-only-etc.patch
+systemctl-correctly-proceed-to-immediate-shutdown-if-sche.patch
