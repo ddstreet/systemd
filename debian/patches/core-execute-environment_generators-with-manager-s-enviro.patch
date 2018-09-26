@@ -1,0 +1,20 @@
+From: Dimitri John Ledkov <xnox@ubuntu.com>
+Date: Wed, 12 Sep 2018 19:51:23 +0100
+Subject: core: execute environment_generators with manager's environment
+
+(cherry picked from commit ea368f0bd2b77bbc67eab42471b470582f0bd6bc)
+---
+ src/core/manager.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -3410,7 +3410,7 @@
+         if (!generator_path_any(paths))
+                 return 0;
+ 
+-        return execute_directories(paths, DEFAULT_TIMEOUT_USEC, gather_environment, args, NULL, NULL);
++        return execute_directories(paths, DEFAULT_TIMEOUT_USEC, gather_environment, args, NULL, m->environment);
+ }
+ 
+ static int manager_run_generators(Manager *m) {
