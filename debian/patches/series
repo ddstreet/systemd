@@ -124,3 +124,4 @@ lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
 lp1833671-networkd-keep-bond-slave-up-if-already-attached.patch
 hwdb-revert-airplane-mode-keys-handling-on-Dell.patch
 0001-shared-but-util-drop-trusted-annotation-from-bus_ope.patch
+debian/UBUNTU-units-disable-journald-watchdog.patch
