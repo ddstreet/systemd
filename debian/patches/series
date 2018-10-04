@@ -84,3 +84,4 @@ CVE-2018-15688.patch
 CVE-2018-15686.patch
 CVE-2018-15687.patch
 CVE-2018-6954.patch
+debian/UBUNTU-units-disable-journald-watchdog.patch
