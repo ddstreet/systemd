@@ -87,3 +87,4 @@ debian/UBUNTU-introduce-TAKE_PTR-macro.patch
 debian/UBUNTU-sleep-Add-support-for-setting-a-disk-offset.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
 debian/UBUNTU-Support-system-image-read-only-etc.patch
+networkd-add-support-to-configure-IPv6-MTU-8664.patch
