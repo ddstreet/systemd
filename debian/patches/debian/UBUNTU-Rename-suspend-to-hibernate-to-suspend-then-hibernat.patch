@@ -411,7 +411,7 @@ index 94e3e26..b430120 100644
  
          r = parse_sleep_config(verb, &modes, &states, NULL);
 diff --git a/src/sleep/sleep.c b/src/sleep/sleep.c
-index 48e7c38..2830b23 100644
+index 5ee394e..f74bbe5 100644
 --- a/src/sleep/sleep.c
 +++ b/src/sleep/sleep.c
 @@ -224,7 +224,7 @@ static void help(void) {
@@ -442,7 +442,7 @@ index 48e7c38..2830b23 100644
          else
                  r = execute(modes, states);
 diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
-index c27116f..70f8dd4 100644
+index df0f2c5..e14ebcc 100644
 --- a/src/systemctl/systemctl.c
 +++ b/src/systemctl/systemctl.c
 @@ -160,7 +160,7 @@ static enum action {
@@ -531,7 +531,7 @@ index c27116f..70f8dd4 100644
                  { "default",               VERB_ANY, 1,        VERB_ONLINE_ONLY, start_special        },
                  { "rescue",                VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
                  { "emergency",             VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
-@@ -8761,7 +8761,7 @@ int main(int argc, char*argv[]) {
+@@ -8763,7 +8763,7 @@ int main(int argc, char*argv[]) {
          case ACTION_SUSPEND:
          case ACTION_HIBERNATE:
          case ACTION_HYBRID_SLEEP:

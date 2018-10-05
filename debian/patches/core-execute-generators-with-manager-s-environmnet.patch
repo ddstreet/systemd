@@ -7,9 +7,11 @@ Subject: core: execute generators with manager's environmnet
  src/core/manager.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
+diff --git a/src/core/manager.c b/src/core/manager.c
+index 6b8e63c..16235e8 100644
 --- a/src/core/manager.c
 +++ b/src/core/manager.c
-@@ -3442,7 +3442,7 @@
+@@ -3442,7 +3442,7 @@ static int manager_run_generators(Manager *m) {
  
          RUN_WITH_UMASK(0022)
                  execute_directories((const char* const*) paths, DEFAULT_TIMEOUT_USEC,

@@ -10,12 +10,15 @@ Bug-Ubuntu: https://launchpad.net/bugs/1776626
  src/cryptsetup/cryptsetup.c | 30 ++++++++++++++++++++++++++++++
  3 files changed, 45 insertions(+)
 
+diff --git a/man/crypttab.xml b/man/crypttab.xml
+index dc43257..f400114 100644
 --- a/man/crypttab.xml
 +++ b/man/crypttab.xml
-@@ -284,6 +284,15 @@
+@@ -283,6 +283,15 @@
+         option.</para></listitem>
        </varlistentry>
  
-       <varlistentry>
++      <varlistentry>
 +        <term><option>sector-size=</option></term>
 +
 +        <listitem><para>Specifies the sector size in bytes. See
@@ -24,13 +27,14 @@ Bug-Ubuntu: https://launchpad.net/bugs/1776626
 +        option.</para></listitem>
 +      </varlistentry>
 +
-+      <varlistentry>
+       <varlistentry>
          <term><option>swap</option></term>
  
-         <listitem><para>The encrypted block device will be used as a
+diff --git a/meson.build b/meson.build
+index 36a62d2..87108a0 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -941,11 +941,17 @@
+@@ -941,11 +941,17 @@ if want_libcryptsetup != 'false' and not fuzzer_build
                                     version : '>= 1.6.0',
                                     required : want_libcryptsetup == 'true')
          have = libcryptsetup.found()
@@ -48,6 +52,8 @@ Bug-Ubuntu: https://launchpad.net/bugs/1776626
  
  want_libcurl = get_option('libcurl')
  if want_libcurl != 'false' and not fuzzer_build
+diff --git a/src/cryptsetup/cryptsetup.c b/src/cryptsetup/cryptsetup.c
+index 7255ff4..8a3d562 100644
 --- a/src/cryptsetup/cryptsetup.c
 +++ b/src/cryptsetup/cryptsetup.c
 @@ -41,10 +41,14 @@
@@ -65,7 +71,7 @@ Bug-Ubuntu: https://launchpad.net/bugs/1776626
  static int arg_key_slot = CRYPT_ANY_SLOT;
  static unsigned arg_keyfile_size = 0;
  static uint64_t arg_keyfile_offset = 0;
-@@ -104,6 +108,29 @@
+@@ -104,6 +108,29 @@ static int parse_one_option(const char *option) {
  
                  arg_key_size /= 8;
  
@@ -95,7 +101,7 @@ Bug-Ubuntu: https://launchpad.net/bugs/1776626
          } else if ((val = startswith(option, "key-slot="))) {
  
                  arg_type = ANY_LUKS;
-@@ -490,6 +517,9 @@
+@@ -490,6 +517,9 @@ static int attach_luks_or_plain(struct crypt_device *cd,
                  struct crypt_params_plain params = {
                          .offset = arg_offset,
                          .skip = arg_skip,

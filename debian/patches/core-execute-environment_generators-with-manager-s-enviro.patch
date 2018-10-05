@@ -7,9 +7,11 @@ Subject: core: execute environment_generators with manager's environment
  src/core/manager.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
+diff --git a/src/core/manager.c b/src/core/manager.c
+index 020348e..6b8e63c 100644
 --- a/src/core/manager.c
 +++ b/src/core/manager.c
-@@ -3410,7 +3410,7 @@
+@@ -3410,7 +3410,7 @@ static int manager_run_environment_generators(Manager *m) {
          if (!generator_path_any(paths))
                  return 0;
  

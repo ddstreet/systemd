@@ -14,9 +14,11 @@ systemd-shim/systemd-service implementation).
  src/systemctl/systemctl.c | 6 ++++--
  1 file changed, 4 insertions(+), 2 deletions(-)
 
+diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
+index 5732d88..d733c86 100644
 --- a/src/systemctl/systemctl.c
 +++ b/src/systemctl/systemctl.c
-@@ -8580,8 +8580,10 @@
+@@ -8580,8 +8580,10 @@ static int halt_main(void) {
          if (r < 0)
                  return r;
  

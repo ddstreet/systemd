@@ -15,7 +15,7 @@ This reverts commit 4e15a7343cb389e97f3eb4f49699161862d8b8b2.
  4 files changed, 2 insertions(+), 9 deletions(-)
 
 diff --git a/meson.build b/meson.build
-index c734561..b9e59ec 100644
+index a7168a3..08c15ca 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -753,7 +753,6 @@ if get_option('wheel-group')
@@ -26,7 +26,7 @@ index c734561..b9e59ec 100644
  
  kill_user_processes = get_option('default-kill-user-processes')
  conf.set10('KILL_USER_PROCESSES', kill_user_processes)
-@@ -2741,7 +2740,6 @@ status = [
+@@ -2747,7 +2746,6 @@ status = [
          'minimum container UID base:        @0@'.format(container_uid_base_min),
          'maximum container UID base:        @0@'.format(container_uid_base_max),
          '/dev/kvm access mode:              @0@'.format(get_option('dev-kvm-mode')),

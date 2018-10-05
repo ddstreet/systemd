@@ -13,6 +13,8 @@ Bug-Ubuntu: https://launchpad.net/bugs/1227520
  src/hostname/hostnamed.c | 28 ++++++++++++++++++++++++----
  1 file changed, 24 insertions(+), 4 deletions(-)
 
+diff --git a/src/hostname/hostnamed.c b/src/hostname/hostnamed.c
+index 1c8c769..c92d792 100644
 --- a/src/hostname/hostnamed.c
 +++ b/src/hostname/hostnamed.c
 @@ -31,6 +31,7 @@
@@ -23,7 +25,7 @@ Bug-Ubuntu: https://launchpad.net/bugs/1227520
  #include "selinux-util.h"
  #include "strv.h"
  #include "user-util.h"
-@@ -76,6 +77,25 @@
+@@ -76,6 +77,25 @@ static void context_free(Context *c) {
          bus_verify_polkit_async_registry_free(c->polkit_registry);
  }
  
@@ -49,7 +51,7 @@ Bug-Ubuntu: https://launchpad.net/bugs/1227520
  static int context_read_data(Context *c) {
          int r;
          struct utsname u;
-@@ -303,12 +323,12 @@
+@@ -303,12 +323,12 @@ static int context_write_data_static_hostname(Context *c) {
  
          if (isempty(c->data[PROP_STATIC_HOSTNAME])) {
  
@@ -64,7 +66,7 @@ Bug-Ubuntu: https://launchpad.net/bugs/1227520
  }
  
  static int context_write_data_machine_info(Context *c) {
-@@ -354,13 +374,13 @@
+@@ -354,13 +374,13 @@ static int context_write_data_machine_info(Context *c) {
          }
  
          if (strv_isempty(l)) {

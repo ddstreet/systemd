@@ -424,7 +424,7 @@ index f924174..0000000
 -
 -</policyconfig>
 diff --git a/src/login/meson.build b/src/login/meson.build
-index 599c44e..5b75382 100644
+index 599c44ea..5b75382 100644
 --- a/src/login/meson.build
 +++ b/src/login/meson.build
 @@ -87,12 +87,7 @@ if conf.get('ENABLE_LOGIND') == 1

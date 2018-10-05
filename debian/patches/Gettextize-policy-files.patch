@@ -282,7 +282,7 @@ index 4c1c34d..f924174 100644
                          <allow_any>auth_admin_keep</allow_any>
                          <allow_inactive>auth_admin_keep</allow_inactive>
 diff --git a/src/login/meson.build b/src/login/meson.build
-index e8e4f7b..599c44e 100644
+index e8e4f7b..599c44ea 100644
 --- a/src/login/meson.build
 +++ b/src/login/meson.build
 @@ -88,14 +88,12 @@ if conf.get('ENABLE_LOGIND') == 1

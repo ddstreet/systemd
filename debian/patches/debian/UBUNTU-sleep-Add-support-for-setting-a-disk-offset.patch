@@ -18,6 +18,8 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
  src/test/test-sleep.c     |  43 ++++++++++++++++-
  4 files changed, 220 insertions(+), 16 deletions(-)
 
+diff --git a/src/shared/sleep-config.c b/src/shared/sleep-config.c
+index b430120..d6d13ee 100644
 --- a/src/shared/sleep-config.c
 +++ b/src/shared/sleep-config.c
 @@ -20,6 +20,7 @@
@@ -28,7 +30,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
  #include <stdbool.h>
  #include <stddef.h>
  #include <stdio.h>
-@@ -187,13 +188,10 @@
+@@ -187,13 +188,10 @@ int can_sleep_disk(char **types) {
  
  #define HIBERNATION_SWAP_THRESHOLD 0.98
  
@@ -43,7 +45,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
          f = fopen("/proc/swaps", "re");
          if (!f) {
                  log_full(errno == ENOENT ? LOG_DEBUG : LOG_WARNING,
-@@ -205,7 +203,7 @@
+@@ -205,7 +203,7 @@ static int hibernation_partition_size(size_t *size, size_t *used) {
          (void) fscanf(f, "%*s %*s %*s %*s %*s\n");
  
          for (i = 1;; i++) {
@@ -52,7 +54,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
                  size_t size_field, used_field;
                  int k;
  
-@@ -215,7 +213,7 @@
+@@ -215,7 +213,7 @@ static int hibernation_partition_size(size_t *size, size_t *used) {
                             "%zu "   /* swap size */
                             "%zu "   /* used */
                             "%*i\n", /* priority */
@@ -61,7 +63,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
                  if (k != 4) {
                          if (k == EOF)
                                  break;
-@@ -224,13 +222,18 @@
+@@ -224,13 +222,18 @@ static int hibernation_partition_size(size_t *size, size_t *used) {
                          continue;
                  }
  
@@ -85,7 +87,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
                  return 0;
          }
  
-@@ -253,7 +256,7 @@
+@@ -253,7 +256,7 @@ static bool enough_memory_for_hibernation(void) {
          if (access("/sys/power/tuxonice", F_OK) == 0)
                  return true;
  
@@ -94,7 +96,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
          if (r < 0)
                  return false;
  
-@@ -277,6 +280,95 @@
+@@ -277,6 +280,95 @@ static bool enough_memory_for_hibernation(void) {
          return r;
  }
  
@@ -190,6 +192,8 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
  static bool can_s2h(void) {
          int r;
  
+diff --git a/src/shared/sleep-config.h b/src/shared/sleep-config.h
+index 3dacda0..b91a4b2 100644
 --- a/src/shared/sleep-config.h
 +++ b/src/shared/sleep-config.h
 @@ -20,9 +20,12 @@
@@ -205,6 +209,8 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
  
  int can_sleep(const char *verb);
  int can_sleep_disk(char **types);
+diff --git a/src/sleep/sleep.c b/src/sleep/sleep.c
+index f74bbe5..3db679a 100644
 --- a/src/sleep/sleep.c
 +++ b/src/sleep/sleep.c
 @@ -4,6 +4,7 @@
@@ -291,7 +297,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
  static int write_mode(char **modes) {
          int r = 0;
          char **mode;
-@@ -110,9 +173,14 @@
+@@ -110,9 +173,14 @@ static int execute(char **modes, char **states) {
                  return log_error_errno(errno, "Failed to open /sys/power/state: %m");
  
          /* Configure the hibernation mode */
@@ -309,6 +315,8 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
  
          execute_directories(dirs, DEFAULT_TIMEOUT_USEC, NULL, NULL, arguments, NULL);
  
+diff --git a/src/test/test-sleep.c b/src/test/test-sleep.c
+index cea511d..05fd6c0 100644
 --- a/src/test/test-sleep.c
 +++ b/src/test/test-sleep.c
 @@ -18,13 +18,43 @@
@@ -355,7 +363,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
  static void test_sleep(void) {
          _cleanup_strv_free_ char
                  **standby = strv_new("standby", NULL),
-@@ -52,6 +82,8 @@
+@@ -52,6 +82,8 @@ static void test_sleep(void) {
  }
  
  int main(int argc, char* argv[]) {
@@ -364,7 +372,7 @@ Signed-off-by: Mario Limonciello <mario.limonciello@dell.com>
          log_parse_environment();
          log_open();
  
-@@ -60,5 +92,14 @@
+@@ -60,5 +92,14 @@ int main(int argc, char* argv[]) {
  
          test_sleep();
  

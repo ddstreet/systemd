@@ -12,9 +12,11 @@ Subject: exec-util: in execute_directories, support initial exec environment
  src/test/test-exec-util.c | 43 ++++++++++++++++++++++++++++++++++++-------
  6 files changed, 52 insertions(+), 17 deletions(-)
 
+diff --git a/src/basic/exec-util.c b/src/basic/exec-util.c
+index 0829b3d..f13de4f 100644
 --- a/src/basic/exec-util.c
 +++ b/src/basic/exec-util.c
-@@ -92,11 +92,12 @@
+@@ -92,11 +92,12 @@ static int do_execute(
                  gather_stdout_callback_t const callbacks[_STDOUT_CONSUME_MAX],
                  void* const callback_args[_STDOUT_CONSUME_MAX],
                  int output_fd,
@@ -29,7 +31,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
          int r;
  
          /* We fork this all off from a child process so that we can somewhat cleanly make
-@@ -121,6 +122,9 @@
+@@ -121,6 +122,9 @@ static int do_execute(
          if (timeout != USEC_INFINITY)
                  alarm((timeout + USEC_PER_SEC - 1) / USEC_PER_SEC);
  
@@ -39,7 +41,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
          STRV_FOREACH(path, paths) {
                  _cleanup_free_ char *t = NULL;
                  _cleanup_close_ int fd = -1;
-@@ -187,7 +191,8 @@
+@@ -187,7 +191,8 @@ int execute_directories(
                  usec_t timeout,
                  gather_stdout_callback_t const callbacks[_STDOUT_CONSUME_MAX],
                  void* const callback_args[_STDOUT_CONSUME_MAX],
@@ -49,7 +51,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
  
          char **dirs = (char**) directories;
          _cleanup_close_ int fd = -1;
-@@ -218,7 +223,7 @@
+@@ -218,7 +223,7 @@ int execute_directories(
          if (r < 0)
                  return r;
          if (r == 0) {
@@ -58,9 +60,11 @@ Subject: exec-util: in execute_directories, support initial exec environment
                  _exit(r < 0 ? EXIT_FAILURE : EXIT_SUCCESS);
          }
  
+diff --git a/src/basic/exec-util.h b/src/basic/exec-util.h
+index d69bec7..e89d5e5 100644
 --- a/src/basic/exec-util.h
 +++ b/src/basic/exec-util.h
-@@ -36,6 +36,7 @@
+@@ -36,6 +36,7 @@ int execute_directories(
                  usec_t timeout,
                  gather_stdout_callback_t const callbacks[_STDOUT_CONSUME_MAX],
                  void* const callback_args[_STDOUT_CONSUME_MAX],
@@ -69,9 +73,11 @@ Subject: exec-util: in execute_directories, support initial exec environment
 +                char *envp[]);
  
  extern const gather_stdout_callback_t gather_environment[_STDOUT_CONSUME_MAX];
+diff --git a/src/core/manager.c b/src/core/manager.c
+index e837a46..020348e 100644
 --- a/src/core/manager.c
 +++ b/src/core/manager.c
-@@ -3410,7 +3410,7 @@
+@@ -3410,7 +3410,7 @@ static int manager_run_environment_generators(Manager *m) {
          if (!generator_path_any(paths))
                  return 0;
  
@@ -80,7 +86,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
  }
  
  static int manager_run_generators(Manager *m) {
-@@ -3442,7 +3442,7 @@
+@@ -3442,7 +3442,7 @@ static int manager_run_generators(Manager *m) {
  
          RUN_WITH_UMASK(0022)
                  execute_directories((const char* const*) paths, DEFAULT_TIMEOUT_USEC,
@@ -89,9 +95,11 @@ Subject: exec-util: in execute_directories, support initial exec environment
  
  finish:
          lookup_paths_trim_generator(&m->lookup_paths);
+diff --git a/src/core/shutdown.c b/src/core/shutdown.c
+index cc31b33..d78e9f9 100644
 --- a/src/core/shutdown.c
 +++ b/src/core/shutdown.c
-@@ -444,7 +444,7 @@
+@@ -444,7 +444,7 @@ int main(int argc, char *argv[]) {
          arguments[0] = NULL;
          arguments[1] = arg_verb;
          arguments[2] = NULL;
@@ -100,9 +108,11 @@ Subject: exec-util: in execute_directories, support initial exec environment
  
          if (!in_container && !in_initrd() &&
              access("/run/initramfs/shutdown", X_OK) == 0) {
+diff --git a/src/sleep/sleep.c b/src/sleep/sleep.c
+index 518032e..616e579 100644
 --- a/src/sleep/sleep.c
 +++ b/src/sleep/sleep.c
-@@ -111,7 +111,7 @@
+@@ -111,7 +111,7 @@ static int execute(char **modes, char **states) {
          if (r < 0)
                  return r;
  
@@ -111,7 +121,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
  
          log_struct(LOG_INFO,
                     "MESSAGE_ID=" SD_MESSAGE_SLEEP_START_STR,
-@@ -130,7 +130,7 @@
+@@ -130,7 +130,7 @@ static int execute(char **modes, char **states) {
                     NULL);
  
          arguments[1] = (char*) "post";
@@ -120,6 +130,8 @@ Subject: exec-util: in execute_directories, support initial exec environment
  
          return r;
  }
+diff --git a/src/test/test-exec-util.c b/src/test/test-exec-util.c
+index bd9c809..169dcc0 100644
 --- a/src/test/test-exec-util.c
 +++ b/src/test/test-exec-util.c
 @@ -35,6 +35,7 @@
@@ -130,7 +142,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
  #include "rm-rf.h"
  #include "string-util.h"
  #include "strv.h"
-@@ -134,9 +135,9 @@
+@@ -134,9 +135,9 @@ static void test_execute_directory(bool gather_stdout) {
          assert_se(chmod(mask2e, 0755) == 0);
  
          if (gather_stdout)
@@ -142,7 +154,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
  
          assert_se(chdir(template_lo) == 0);
          assert_se(access("it_works", F_OK) >= 0);
-@@ -201,7 +202,7 @@
+@@ -201,7 +202,7 @@ static void test_execution_order(void) {
          assert_se(chmod(override, 0755) == 0);
          assert_se(chmod(masked, 0755) == 0);
  
@@ -151,7 +163,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
  
          assert_se(read_full_file(output, &contents, NULL) >= 0);
          assert_se(streq(contents, "30-override\n80-foo\n90-bar\nlast\n"));
-@@ -284,7 +285,7 @@
+@@ -284,7 +285,7 @@ static void test_stdout_gathering(void) {
          assert_se(chmod(name2, 0755) == 0);
          assert_se(chmod(name3, 0755) == 0);
  
@@ -160,7 +172,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
          assert_se(r >= 0);
  
          log_info("got: %s", output);
-@@ -295,7 +296,7 @@
+@@ -295,7 +296,7 @@ static void test_stdout_gathering(void) {
  static void test_environment_gathering(void) {
          char template[] = "/tmp/test-exec-util.XXXXXXX", **p;
          const char *dirs[] = {template, NULL};
@@ -169,7 +181,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
          int r;
  
          char **tmp = NULL; /* this is only used in the forked process, no cleanup here */
-@@ -341,7 +342,32 @@
+@@ -341,7 +342,32 @@ static void test_environment_gathering(void) {
          assert_se(chmod(name2, 0755) == 0);
          assert_se(chmod(name3, 0755) == 0);
  
@@ -203,7 +215,7 @@ Subject: exec-util: in execute_directories, support initial exec environment
          assert_se(r >= 0);
  
          STRV_FOREACH(p, env)
-@@ -350,7 +376,10 @@
+@@ -350,7 +376,10 @@ static void test_environment_gathering(void) {
          assert_se(streq(strv_env_get(env, "A"), "22:23:24"));
          assert_se(streq(strv_env_get(env, "B"), "12"));
          assert_se(streq(strv_env_get(env, "C"), "001"));

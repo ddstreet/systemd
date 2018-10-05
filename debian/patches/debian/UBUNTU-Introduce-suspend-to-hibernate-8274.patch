@@ -565,7 +565,7 @@ index fc5a81d..3dacda0 100644
  int can_sleep(const char *verb);
  int can_sleep_disk(char **types);
 diff --git a/src/sleep/sleep.c b/src/sleep/sleep.c
-index 518032e..48e7c38 100644
+index 616e579..5ee394e 100644
 --- a/src/sleep/sleep.c
 +++ b/src/sleep/sleep.c
 @@ -4,6 +4,7 @@
@@ -721,7 +721,7 @@ index 518032e..48e7c38 100644
          return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
  }
 diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
-index 75198a5..c27116f 100644
+index a188774..df0f2c5 100644
 --- a/src/systemctl/systemctl.c
 +++ b/src/systemctl/systemctl.c
 @@ -160,6 +160,7 @@ static enum action {
@@ -811,7 +811,7 @@ index 75198a5..c27116f 100644
                  { "default",               VERB_ANY, 1,        VERB_ONLINE_ONLY, start_special        },
                  { "rescue",                VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
                  { "emergency",             VERB_ANY, 1,        VERB_ONLINE_ONLY, start_system_special },
-@@ -8750,6 +8761,7 @@ int main(int argc, char*argv[]) {
+@@ -8752,6 +8763,7 @@ int main(int argc, char*argv[]) {
          case ACTION_SUSPEND:
          case ACTION_HIBERNATE:
          case ACTION_HYBRID_SLEEP:

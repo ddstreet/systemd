@@ -9,7 +9,7 @@ LP: #1773148
  1 file changed, 1 deletion(-)
 
 diff --git a/units/systemd-journald.service.in b/units/systemd-journald.service.in
-index 6fa4362..b3e5499 100644
+index 24c0150..4d2d7a7 100644
 --- a/units/systemd-journald.service.in
 +++ b/units/systemd-journald.service.in
 @@ -23,7 +23,6 @@ Restart=always
