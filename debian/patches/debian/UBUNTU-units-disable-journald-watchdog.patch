@@ -1,0 +1,20 @@
+From: Dimitri John Ledkov <xnox@ubuntu.com>
+Date: Thu, 4 Oct 2018 15:25:50 +0100
+Subject: units: Disable journald Watchdog
+ https://github.com/systemd/systemd/issues/9079
+
+LP: #1773148
+---
+ units/systemd-journald.service.in | 1 -
+ 1 file changed, 1 deletion(-)
+
+--- a/units/systemd-journald.service.in
++++ b/units/systemd-journald.service.in
+@@ -22,7 +22,6 @@
+ NotifyAccess=all
+ StandardOutput=null
+ CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_OVERRIDE CAP_SYS_PTRACE CAP_SYSLOG CAP_AUDIT_CONTROL CAP_AUDIT_READ CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_SETUID CAP_SETGID CAP_MAC_OVERRIDE
+-WatchdogSec=3min
+ FileDescriptorStoreMax=1024
+ 
+ # Increase the default a bit in order to allow many simultaneous

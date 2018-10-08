@@ -1,3 +1,22 @@
+systemd (229-4ubuntu21.5) xenial; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * systemctl: correctly proceed to immediate shutdown if scheduling fails
+    (LP: #1670291)
+  * hwdb: update micmute on Dell laptops. (LP: #1738153)
+  * hwdb: Use wlan keycode for all Dell systems. (LP: #1762385)
+  * units: Disable journald Watchdog (LP: #1773148)
+
+  [ Mauricio Faria de Oliveira ]
+  * core: Fix for service to enter the 'failed' state (rather than 'inactive') after it repeatedly fails restart.
+    (LP: #1795658)
+
+  [ Dimitri John Ledkov ]
+  * Disable dh_installinit generation of tmpfiles for the systemd package.
+    (LP: #1748147)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 08 Oct 2018 16:10:42 +0100
+
 systemd (229-4ubuntu21.4) xenial; urgency=medium
 
   * debian/extra/start-udev: test that sync parameters file is writable, before

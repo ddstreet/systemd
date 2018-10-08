@@ -208,7 +208,7 @@ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnDell*:pn*
  KEYBOARD_KEY_85=brightnessdown                         # Fn+Down Brightness Down
  KEYBOARD_KEY_86=brightnessup                           # Fn+Up Brightness Up
  KEYBOARD_KEY_87=battery                                # Fn+F3 battery icon
- KEYBOARD_KEY_88=unknown                                # Fn+F2 Turn On/Off Wireless - handled in hardware
+ KEYBOARD_KEY_88=!wlan                                  # Fn+(F2|PrtScr|Home) Turn On/Off Wireless
  KEYBOARD_KEY_89=ejectclosecd                           # Fn+F10 Eject CD
  KEYBOARD_KEY_8a=suspend                                # Fn+F1 hibernate
  KEYBOARD_KEY_8b=switchvideomode                        # Fn+F8 CRT/LCD (high keycode: "displaytoggle")
@@ -274,7 +274,7 @@ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnDell*:pnXPS12-9Q33*:pvr*
 evdev:name:Dell WMI hotkeys:dmi:bvn*:bvr*:bd*:svnDell*:pnLatitude*
 # Dell Precision microphone mute
 evdev:name:Dell WMI hotkeys:dmi:bvn*:bvr*:bd*:svnDell*:pnPrecision*
- KEYBOARD_KEY_150=f20                                   # Mic mute toggle, should be micmute
+ KEYBOARD_KEY_100150=f20                                   # Mic mute toggle, should be micmute
 
 ###########################################################
 # Everex
