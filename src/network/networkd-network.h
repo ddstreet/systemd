@@ -166,6 +166,8 @@ struct Network {
         int proxy_arp;
 
         bool ipv6_accept_ra_use_dns;
+        bool active_slave;
+        bool primary_slave;
         DHCPUseDomains ipv6_accept_ra_use_domains;
 
         union in_addr_union ipv6_token;
