@@ -250,7 +250,8 @@ ifeq (, $(filter nocheck, $(DEB_BUILD_OPTIONS)))
 endif
 
 override_dh_installinit:
-	dh_installinit --no-start
+	dh_installinit --noscripts -psystemd
+	dh_installinit --no-start -Nsystemd
 	# the following are only upstart jobs
 	dh_installinit --name=udevtrigger --noscripts
 	dh_installinit --name=udevmonitor --noscripts

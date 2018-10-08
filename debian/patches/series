@@ -114,3 +114,8 @@ Cherry-pick-subset-of-patches-to-introduce-infinity-value.patch
 debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
 CVE-2017-15908.patch
 CVE-2018-1049.patch
+systemctl-correctly-proceed-to-immediate-shutdown-if-sche.patch
+hwdb-update-micmute-YCODE-on-device-node-at-DELL-LAT.patch
+hwdb-Use-wlan-keycode-for-all-Dell-systems-8762.patch
+debian/UBUNTU-units-disable-journald-watchdog.patch
+core-move-enforcement-of-the-start-limit-into-per-unit-type-code-again.patch
