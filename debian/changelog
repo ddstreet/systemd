@@ -1,3 +1,22 @@
+systemd (237-3ubuntu10.5) bionic; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * Add conflicts with upstart and systemd-shim. (LP: #1773859)
+  * units: Disable journald Watchdog (LP: #1773148)
+  * cryptsetup: add support for sector-size= option (LP: #1776626)
+  * systemctl: correctly proceed to immediate shutdown if scheduling fails
+    (LP: #1670291)
+  * core: export environment when running generators.
+    Ensure that manager's environment (including e.g. PATH) is exported when
+    running generators. Otherwise, one is at a mercy of running without PATH which
+    can lead to buggy generator behaviour. (LP: #1771858)
+  * networkd: add support to set IPv6MTUBytes (LP: #1671951)
+
+  [ Michael Vogt ]
+  * Re-add support for /etc/writable for core18. (LP: #1778936)
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 08 Oct 2018 11:21:20 +0100
+
 systemd (237-3ubuntu10.4) bionic; urgency=medium
 
   * debian/extra/start-udev: On old kernels (e.g. v4.4) the file is available
