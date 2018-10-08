@@ -1,0 +1,26 @@
+From fc6e082622c73eb9a22ce16a278d8c4dd7594cbb Mon Sep 17 00:00:00 2001
+From: nikolaof <fikasnikolaos@gmail.com>
+Date: Wed, 11 Jan 2017 15:35:20 +0200
+Subject: [PATCH] hwdb: update micmute YCODE on device node at DELL LATITUDE
+ laptops for mic mute button. (#5012)
+
+---
+ hwdb/60-keyboard.hwdb | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/hwdb/60-keyboard.hwdb b/hwdb/60-keyboard.hwdb
+index 114d9c6651..c8452f47d0 100644
+--- a/hwdb/60-keyboard.hwdb
++++ b/hwdb/60-keyboard.hwdb
+@@ -284,7 +284,7 @@ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnDell*:pnXPS12-9Q33*:pvr*
+ evdev:name:Dell WMI hotkeys:dmi:bvn*:bvr*:bd*:svnDell*:pnLatitude*
+ # Dell Precision microphone mute
+ evdev:name:Dell WMI hotkeys:dmi:bvn*:bvr*:bd*:svnDell*:pnPrecision*
+- KEYBOARD_KEY_150=f20                                   # Mic mute toggle, should be micmute
++ KEYBOARD_KEY_100150=f20                                   # Mic mute toggle, should be micmute
+ 
+ ###########################################################
+ # Everex
+-- 
+2.19.0
+
