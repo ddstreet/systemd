@@ -1,3 +1,14 @@
+systemd (229-4ubuntu21.3) xenial; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * udev-udeb: ship modprobe.d snippet to force scsi_mod.scan=sync in d-i.
+
+  [ Adam Conrad ]
+  * debian/extra/start-udev: Set scsi_mod scan=sync even if it's builtin
+    to the kernel (we previously only set it in modprobe.d) LP: #1779815
+
+ -- Adam Conrad <adconrad@ubuntu.com>  Thu, 26 Jul 2018 04:00:09 -0600
+
 systemd (229-4ubuntu21.2) xenial; urgency=medium
 
   [ Dimitri John Ledkov ]
