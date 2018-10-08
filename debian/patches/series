@@ -116,3 +116,4 @@ CVE-2017-15908.patch
 CVE-2018-1049.patch
 systemctl-correctly-proceed-to-immediate-shutdown-if-sche.patch
 hwdb-update-micmute-YCODE-on-device-node-at-DELL-LAT.patch
+hwdb-Use-wlan-keycode-for-all-Dell-systems-8762.patch
