@@ -1,3 +1,12 @@
+systemd (239-7ubuntu10.1) cosmic-security; urgency=medium
+
+  * SECURITY UPDATE: buffer overflow in dhcp6 client
+    - debian/patches/CVE-2018-15688.patch:  make sure we have enough space
+      for the DHCP6 option header in src/libsystemd-network/dhcp6-option.c.
+    - CVE-2018-15688
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Wed, 31 Oct 2018 11:36:32 -0400
+
 systemd (239-7ubuntu10) cosmic; urgency=medium
 
   * units: Disable journald Watchdog (LP: #1773148)
