@@ -119,3 +119,4 @@ hwdb-update-micmute-YCODE-on-device-node-at-DELL-LAT.patch
 hwdb-Use-wlan-keycode-for-all-Dell-systems-8762.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
 core-move-enforcement-of-the-start-limit-into-per-unit-type-code-again.patch
+CVE-2018-15688.patch
