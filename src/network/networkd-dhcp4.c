@@ -597,7 +597,14 @@ static int dhcp4_set_hostname(Link *link) {
                 hn = hostname;
         }
 
-        return sd_dhcp_client_set_hostname(link->dhcp_client, hn);
+        r = sd_dhcp_client_set_hostname(link->dhcp_client, hn);
+        if (r == -EINVAL && hostname)
+                /* Ignore error when the machine's hostname is not suitable to send in DHCP packet. */
+                log_link_warning_errno(link, r, "DHCP4 CLIENT: Failed to set hostname from kernel hostname, ignoring: %m");
+        else if (r < 0)
+                return log_link_error_errno(link, r, "DHCP4 CLIENT: Failed to set hostname: %m");
+
+        return 0;
 }
 
 static bool promote_secondaries_enabled(const char *ifname) {
