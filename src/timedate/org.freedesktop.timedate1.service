@@ -12,3 +12,4 @@ Name=org.freedesktop.timedate1
 Exec=/lib/systemd/systemd-timedated
 User=root
 SystemdService=dbus-org.freedesktop.timedate1.service
+AssumedAppArmorLabel=unconfined
