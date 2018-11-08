@@ -22,7 +22,6 @@
 typedef struct Route Route;
 
 #include "networkd-network.h"
-#include "networkd.h"
 
 struct Route {
         Network *network;
@@ -37,7 +36,7 @@ struct Route {
         unsigned char protocol;  /* RTPROT_* */
         unsigned char tos;
         uint32_t priority; /* note that ip(8) calls this 'metric' */
-        unsigned char table;
+        uint32_t table;
         unsigned char pref;
         unsigned flags;
 
@@ -58,11 +57,10 @@ void route_free(Route *route);
 int route_configure(Route *route, Link *link, sd_netlink_message_handler_t callback);
 int route_remove(Route *route, Link *link, sd_netlink_message_handler_t callback);
 
-int route_get(Link *link, int family, union in_addr_union *dst, unsigned char dst_prefixlen, unsigned char tos, uint32_t priority, unsigned char table, Route **ret);
-int route_add(Link *link, int family, union in_addr_union *dst, unsigned char dst_prefixlen, unsigned char tos, uint32_t priority, unsigned char table, Route **ret);
-int route_add_foreign(Link *link, int family, union in_addr_union *dst, unsigned char dst_prefixlen, unsigned char tos, uint32_t priority, unsigned char table, Route **ret);
-int route_update(Route *route, union in_addr_union *src, unsigned char src_prefixlen, union in_addr_union *gw, union in_addr_union *prefsrc, unsigned char scope, unsigned char protocol);
-void route_drop(Route *route);
+int route_get(Link *link, int family, const union in_addr_union *dst, unsigned char dst_prefixlen, unsigned char tos, uint32_t priority, unsigned char table, Route **ret);
+int route_add(Link *link, int family, const union in_addr_union *dst, unsigned char dst_prefixlen, unsigned char tos, uint32_t priority, unsigned char table, Route **ret);
+int route_add_foreign(Link *link, int family, const union in_addr_union *dst, unsigned char dst_prefixlen, unsigned char tos, uint32_t priority, unsigned char table, Route **ret);
+int route_update(Route *route, const union in_addr_union *src, unsigned char src_prefixlen, const union in_addr_union *gw, const union in_addr_union *prefsrc, unsigned char scope, unsigned char protocol);
 
 int route_expire_handler(sd_event_source *s, uint64_t usec, void *userdata);
 
@@ -74,3 +72,4 @@ int config_parse_preferred_src(const char *unit, const char *filename, unsigned 
 int config_parse_destination(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_route_priority(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_route_scope(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+int config_parse_route_table(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
