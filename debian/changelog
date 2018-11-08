@@ -1,3 +1,16 @@
+systemd (229-4ubuntu21.8) xenial-security; urgency=medium
+
+  * SECURITY UPDATE: reexec state injection
+    - debian/patches/CVE-2018-15686.patch: when deserializing state always use
+      read_line(…, LONG_LINE_MAX, …) rather than fgets()
+    - CVE-2018-15686
+  * SECURITY UPDATE: symlink mishandling in systemd-tmpfiles
+    - debian/patches/CVE-2018-6954.patch: don't resolve pathnames when traversing
+      recursively through directory trees
+    - CVE-2018-6954
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Thu, 08 Nov 2018 00:01:30 +0000
+
 systemd (229-4ubuntu21.6) xenial-security; urgency=medium
 
   * SECURITY UPDATE: buffer overflow in dhcp6 client
