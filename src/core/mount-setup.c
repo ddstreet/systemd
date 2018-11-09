@@ -88,11 +88,21 @@ static const MountPoint mount_table[] = {
         { "tmpfs",      "/sys/fs/cgroup",            "tmpfs",      "mode=755", MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME,
           NULL,       MNT_IN_CONTAINER },
 #ifdef HAVE_XATTR
+#ifdef HAVE_DEPUTY
+        { "cgroup",     "/sys/fs/cgroup/dsystemd",    "cgroup",     "none,name=dsystemd,xattr", MS_NOSUID|MS_NOEXEC|MS_NODEV,
+          NULL,       MNT_IN_CONTAINER },
+#else
         { "cgroup",     "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd,xattr", MS_NOSUID|MS_NOEXEC|MS_NODEV,
           NULL,       MNT_IN_CONTAINER },
 #endif
+#endif
+#ifdef HAVE_DEPUTY
+        { "cgroup",     "/sys/fs/cgroup/dsystemd",    "cgroup",     "none,name=dsystemd", MS_NOSUID|MS_NOEXEC|MS_NODEV,
+          NULL,       MNT_IN_CONTAINER },
+#else
         { "cgroup",     "/sys/fs/cgroup/systemd",    "cgroup",     "none,name=systemd", MS_NOSUID|MS_NOEXEC|MS_NODEV,
           NULL,       MNT_IN_CONTAINER },
+#endif
         { "pstore",     "/sys/fs/pstore",            "pstore",     NULL, MS_NOSUID|MS_NOEXEC|MS_NODEV,
           NULL,       MNT_NONE },
 #ifdef ENABLE_EFI
