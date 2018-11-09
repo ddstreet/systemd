@@ -303,11 +303,7 @@ int lookup_paths_init(
                                         "/run/systemd/system",
                                         STRV_IFNOTNULL(generator),
                                         "/usr/local/lib/systemd/system",
-                                        SYSTEM_DATA_UNIT_PATH,
-                                        "/usr/lib/systemd/system",
-#ifdef HAVE_SPLIT_USR
-                                        "/lib/systemd/system",
-#endif
+                                        "/lib/systemd/upstart",
                                         STRV_IFNOTNULL(generator_late),
                                         NULL);
 
