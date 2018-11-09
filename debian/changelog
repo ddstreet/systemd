@@ -1,3 +1,11 @@
+systemd (204-5ubuntu20.29) trusty; urgency=medium
+
+  * d/p/0001-udev-build-by-path-identifiers-for-ATA-devices.patch
+    create /dev/disk/by-path/ symlinks for (s)ata disks
+    (LP: #1802525)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 09 Nov 2018 10:16:27 -0500
+
 systemd (204-5ubuntu20.28) trusty; urgency=medium
 
   * logind: fix memleaks in session's free path and cgmanager glue code

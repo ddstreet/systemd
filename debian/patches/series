@@ -41,3 +41,4 @@ deputy_cgroup.patch
 do-not-create-run-nologin.patch
 CVE-2018-1049.patch
 logind-fix-small-memleaks.patch
+0001-udev-build-by-path-identifiers-for-ATA-devices.patch
