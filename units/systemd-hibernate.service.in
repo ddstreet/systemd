@@ -14,4 +14,4 @@ After=sleep.target
 
 [Service]
 Type=oneshot
-ExecStart=@rootlibexecdir@/systemd-sleep hibernate
+ExecStart=/usr/sbin/pm-hibernate
