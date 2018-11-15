@@ -30,6 +30,7 @@
 #include "hostname-util.h"
 #include "parse-util.h"
 #include "path-util.h"
+#include "fs-util.h"
 #include "selinux-util.h"
 #include "strv.h"
 #include "user-util.h"
@@ -73,6 +74,25 @@ static void context_free(Context *c) {
 
         context_reset(c);
         bus_verify_polkit_async_registry_free(c->polkit_registry);
+}
+
+/* Hack for Ubuntu phone: check if path is an existing symlink to
+ * /etc/writable; if it is, update that instead */
+static const char* writable_filename(const char *path) {
+        ssize_t r;
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
+        const char *result = path;
+        int orig_errno = errno;
+
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
+        }
+
+        errno = orig_errno;
+        return result;
 }
 
 static int context_read_data(Context *c) {
@@ -302,12 +322,12 @@ static int context_write_data_static_hostname(Context *c) {
 
         if (isempty(c->data[PROP_STATIC_HOSTNAME])) {
 
-                if (unlink("/etc/hostname") < 0)
+                if (unlink(writable_filename("/etc/hostname")) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
-        return write_string_file_atomic_label("/etc/hostname", c->data[PROP_STATIC_HOSTNAME]);
+        return write_string_file_atomic_label(writable_filename("/etc/hostname"), c->data[PROP_STATIC_HOSTNAME]);
 }
 
 static int context_write_data_machine_info(Context *c) {
@@ -353,13 +373,13 @@ static int context_write_data_machine_info(Context *c) {
         }
 
         if (strv_isempty(l)) {
-                if (unlink("/etc/machine-info") < 0)
+                if (unlink(writable_filename("/etc/machine-info")) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 return 0;
         }
 
-        return write_env_file_label("/etc/machine-info", l);
+        return write_env_file_label(writable_filename("/etc/machine-info"), l);
 }
 
 static int property_get_icon_name(
