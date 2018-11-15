@@ -1,3 +1,13 @@
+systemd (237-3ubuntu10.7) bionic-security; urgency=medium
+
+  * debian/systemd.postinst: Skip daemon-reexec and try-restarts during shutdown
+    (LP: #1803391)
+    Author: Balint Reczey
+    File: debian/systemd.postinst
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=18eea38c62e73158d2160e319de31e054a58b8df
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 15 Nov 2018 23:00:20 +0000
+
 systemd (237-3ubuntu10.6) bionic-security; urgency=medium
 
   * SECURITY UPDATE: reexec state injection
