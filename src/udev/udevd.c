@@ -1254,7 +1254,7 @@ static int on_post(sd_event_source *s, void *userdata) {
                                 r = sd_event_exit(manager->event, 0);
                                 if (r < 0)
                                         return r;
-                        } else if (manager->cgroup)
+                        } else if (manager->cgroup && !streq(manager->cgroup, "/"))
                                 /* cleanup possible left-over processes in our cgroup */
                                 cg_kill(SYSTEMD_CGROUP_CONTROLLER, manager->cgroup, SIGKILL, false, true, NULL);
                 }
