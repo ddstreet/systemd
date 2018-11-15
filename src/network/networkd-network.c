@@ -194,6 +194,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->dhcp_use_routes = true;
         /* NOTE: this var might be overwriten by network_apply_anonymize_if_set */
         network->dhcp_send_hostname = true;
+        network->dhcp_use_domains = DHCP_USE_DOMAINS_YES;
         /* To enable/disable RFC7844 Anonymity Profiles */
         network->dhcp_anonymize = false;
         network->dhcp_route_metric = DHCP_ROUTE_METRIC;
@@ -246,6 +247,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->multicast = -1;
         network->allmulticast = -1;
         network->ipv6_accept_ra_use_dns = true;
+        network->ipv6_accept_ra_use_domains = DHCP_USE_DOMAINS_YES;
         network->ipv6_accept_ra_route_table = RT_TABLE_MAIN;
         network->ipv6_mtu = 0;
 
