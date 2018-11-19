@@ -1,3 +1,56 @@
+systemd (237-3ubuntu10.10) bionic; urgency=medium
+
+  * debian/extra/start-udev: ignore failure to set sync parameter.
+    On old kernels (e.g. v4.4) the file is available but appears to be
+    non-writable. Hide error messages and ignore failure to write out sync into the
+    parameters file. This does not regress https://pad.lv/1779815 since older
+    kernel did synchronous scan anyway. But it does resolve failure to start the
+    installer on old kernels. (LP: #1784454)
+    File: debian/extra/start-udev
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=98862745cf9cbbb74ea6b30ecd29e45a17feff95
+
+  * Add conflicts with upstart and systemd-shim. (LP: #1773859)
+    File: debian/control
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5ca89133e790fd0942e0ad81fa0c6998032d8882
+
+  * units: Disable journald Watchdog (LP: #1773148)
+    File: debian/patches/debian/UBUNTU-units-disable-journald-watchdog.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=779d89090e81ec832417146f4a858626febfb595
+
+  * cryptsetup: add support for sector-size= option (LP: #1776626)
+    File: debian/patches/cryptsetup-add-support-for-sector-size-option-8881.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=2de081e8901f1780c3c1ffe586e40d2d8e8df1ed
+
+  * Re-add support for /etc/writable for core18. (LP: #1778936)
+    Author: Michael Vogt
+    File: debian/patches/debian/UBUNTU-Support-system-image-read-only-etc.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b2c03bbc5ae7d3e9bf3c9dde9aa6c247c3f6573b
+
+  * systemctl: correctly proceed to immediate shutdown if scheduling fails
+    (LP: #1670291)
+    File: debian/patches/systemctl-correctly-proceed-to-immediate-shutdown-if-sche.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=e69ab6c34b9bb7cd1b42a6ad7d24d7ce0ca103f5
+
+  * core: export environment when running generators.
+    Ensure that manager's environment (including e.g. PATH) is exported when
+    running generators. Otherwise, one is at a mercy of running without PATH which
+    can lead to buggy generator behaviour. (LP: #1771858)
+    Files:
+    - debian/patches/core-execute-environment_generators-with-manager-s-enviro.patch
+    - debian/patches/core-execute-generators-with-manager-s-environmnet.patch
+    - debian/patches/exec-util-in-execute_directories-support-initial-exec-env.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=76b0ec80fdff83b8a14596fe001e2e9fccd83bf2
+
+  * networkd: add support to set IPv6MTUBytes (LP: #1671951)
+    File: debian/patches/networkd-add-support-to-configure-IPv6-MTU-8664.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b700a36f3d272e740460619ad7a5f489dadd010f
+
+  * Specify Ubuntu's Vcs-Git
+    File: debian/control
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a69e9713d513fb1cdf547e1cc7f21d283cdd9a74
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Mon, 19 Nov 2018 17:48:47 +0000
+
 systemd (237-3ubuntu10.9) bionic-security; urgency=medium
 
   [ Chris Coulson ]
