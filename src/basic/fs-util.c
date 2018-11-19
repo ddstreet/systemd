@@ -465,6 +465,31 @@ int mkfifo_atomic(const char *path, mode_t mode) {
         return 0;
 }
 
+int mkfifoat_atomic(int dirfd, const char *path, mode_t mode) {
+        _cleanup_free_ char *t = NULL;
+        int r;
+
+        assert(path);
+
+        if (path_is_absolute(path))
+                return mkfifo_atomic(path, mode);
+
+        /* We're only interested in the (random) filename.  */
+        r = tempfn_random_child("", NULL, &t);
+        if (r < 0)
+                return r;
+
+        if (mkfifoat(dirfd, t, mode) < 0)
+                return -errno;
+
+        if (renameat(dirfd, t, dirfd, path) < 0) {
+                unlink_noerrno(t);
+                return -errno;
+        }
+
+        return 0;
+}
+
 int get_files_in_directory(const char *path, char ***list) {
         _cleanup_closedir_ DIR *d = NULL;
         struct dirent *de;
@@ -808,7 +833,7 @@ int chase_symlinks(const char *path, const char *original_root, unsigned flags, 
                     fd_is_fs_type(child, AUTOFS_SUPER_MAGIC) > 0)
                         return -EREMOTE;
 
-                if (S_ISLNK(st.st_mode)) {
+                if (S_ISLNK(st.st_mode) && !((flags & CHASE_NOFOLLOW) && isempty(todo))) {
                         char *joined;
 
                         _cleanup_free_ char *destination = NULL;
