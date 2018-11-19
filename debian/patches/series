@@ -85,3 +85,11 @@ CVE-2018-15686.patch
 CVE-2018-15687.patch
 CVE-2018-6954.patch
 CVE-2018-6954_2.patch
+debian/UBUNTU-units-disable-journald-watchdog.patch
+cryptsetup-add-support-for-sector-size-option-8881.patch
+debian/UBUNTU-Support-system-image-read-only-etc.patch
+systemctl-correctly-proceed-to-immediate-shutdown-if-sche.patch
+exec-util-in-execute_directories-support-initial-exec-env.patch
+core-execute-environment_generators-with-manager-s-enviro.patch
+core-execute-generators-with-manager-s-environmnet.patch
+networkd-add-support-to-configure-IPv6-MTU-8664.patch
