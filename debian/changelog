@@ -1,3 +1,17 @@
+systemd (229-4ubuntu21.10) xenial-security; urgency=medium
+
+  [ Chris Coulson ]
+  * Revert the fixes for CVE-2018-6954 for causing a regression when running
+    in a container on old kernels (LP: #1804847)
+    - update debian/patches/series
+
+  [ Balint Reczey ]
+  * Fix LP: #1803391 - Don't always trigger systemctl stop of udev service
+    and sockets
+    - update debian/udev.postinst
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Tue, 27 Nov 2018 11:10:48 +0000
+
 systemd (229-4ubuntu21.9) xenial-security; urgency=medium
 
   * SECURITY UPDATE: symlink mishandling in systemd-tmpfiles

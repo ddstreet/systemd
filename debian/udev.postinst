@@ -158,7 +158,7 @@ case "$1" in
       upgrade_fixes "$@"
       if ! chrooted; then
 	if can_start_udevd; then
-	  handle_service_rename
+	  handle_service_rename "$@"
 	  # This is necessary for the handle_service_rename case, but does not
 	  # hurt in general (invoke-rc.d does it, too).
 	  if [ -d /run/systemd/system ] ; then

@@ -1202,10 +1202,7 @@ int tempfn_random_child(const char *p, const char *extra, char **ret) {
         if (!t)
                 return -ENOMEM;
 
-        if (isempty(p))
-                x = stpcpy(stpcpy(t, ".#"), extra);
-        else
-                x = stpcpy(stpcpy(stpcpy(t, p), "/.#"), extra);
+        x = stpcpy(stpcpy(stpcpy(t, p), "/.#"), extra);
 
         u = random_u64();
         for (i = 0; i < 16; i++) {
