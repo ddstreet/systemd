@@ -49,6 +49,7 @@ hwdb-Fix-wlan-keycode-for-all-Dell-Latitude-and-Precision.patch
 hwdb-Update-PNP-IDs-of-Goldstar-now-LG-Electronics-.-1005.patch
 hwdb-revert-airplane-mode-keys-handling-on-Dell.patch
 meson-rename-Ddebug-to-Ddebug-extra.patch
+resolved-Increase-size-of-TCP-stub-replies.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
@@ -91,6 +92,7 @@ debian/UBUNTU-revert-networkd-unify-set-MTU.patch
 debian/UBUNTU-Support-system-image-read-only-etc.patch
 debian/UBUNTU-bump-selftest-timeouts.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
+debian/UBUNTU-core-set-run-size-to-10-like-initramfs-tools-does.patch
 CVE-2018-15688.patch
 CVE-2018-15686.patch
 CVE-2018-15687.patch
