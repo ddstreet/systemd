@@ -124,3 +124,4 @@ CVE-2018-15686.patch
 # Disabled for now - see https://launchpad.net/bugs/1804847
 #CVE-2018-6954.patch
 #CVE-2018-6954_2.patch
+fix-egde-case-when-processing-proc-self-mountinfo.patch
