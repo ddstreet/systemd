@@ -1,3 +1,12 @@
+systemd (229-4ubuntu21.11) xenial; urgency=medium
+
+  * d/p/fix-egde-case-when-processing-proc-self-mountinfo.patch:
+    Mounting any file system to a mount point in a directory
+    that is bind mounted to itself will create an inactive
+    mount unit. (LP: #1795764)
+
+ -- Eric Desrochers <eric.desrochers@canonical.com>  Tue, 11 Dec 2018 20:05:39 +0000
+
 systemd (229-4ubuntu21.10) xenial-security; urgency=medium
 
   [ Chris Coulson ]

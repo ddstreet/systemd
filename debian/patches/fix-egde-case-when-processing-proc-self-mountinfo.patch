@@ -1,0 +1,56 @@
+Description: core: Fix edge case when processing /proc/self/mountinfo
+
+ Currently, if there are two /proc/self/mountinfo entries with the same
+ mount point path, the mount setup flags computed for the second of
+ these two entries will overwrite the mount setup flags computed for
+ the first of these two entries. This is the root cause of issue #7798.
+ This patch changes mount_setup_existing_unit to prevent the
+ just_mounted mount setup flag from being overwritten if it is set to
+ true. This will allow all mount units created from /proc/self/mountinfo
+ entries to be initialized properly.
+
+ Fixes: #7798
+
+Author: <rkolchmeyer <rkolchmeyer@users.noreply.github.com>
+Origin: upstream, https://github.com/systemd/systemd/pull/7811/commits/59702046dd1acfa5a88991f83b56abe9a95edc6d
+Bug: https://github.com/systemd/systemd/issues/7798
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1795764
+Index: systemd-229/src/core/mount.c
+===================================================================
+--- systemd-229.orig/src/core/mount.c
++++ systemd-229/src/core/mount.c
+@@ -1342,7 +1342,7 @@ static int mount_setup_unit(
+         _cleanup_free_ char *e = NULL, *w = NULL, *o = NULL, *f = NULL;
+         bool load_extras = false;
+         MountParameters *p;
+-        bool delete, changed = false;
++        bool delete, just_mounted, changed = false;
+         Unit *u;
+         int r;
+ 
+@@ -1408,6 +1408,7 @@ static int mount_setup_unit(
+                 }
+ 
+                 unit_add_to_load_queue(u);
++                just_mounted = true;
+                 changed = true;
+         } else {
+                 delete = false;
+@@ -1438,6 +1439,8 @@ static int mount_setup_unit(
+                         load_extras = true;
+                         changed = true;
+                 }
++
++                just_mounted = !MOUNT(u)->from_proc_self_mountinfo || MOUNT(u)->just_mounted;
+         }
+ 
+         w = strdup(what);
+@@ -1457,7 +1460,7 @@ static int mount_setup_unit(
+ 
+         if (set_flags) {
+                 MOUNT(u)->is_mounted = true;
+-                MOUNT(u)->just_mounted = !MOUNT(u)->from_proc_self_mountinfo;
++                MOUNT(u)->just_mounted = just_mounted;
+                 MOUNT(u)->just_changed = changed;
+         }
+ 
