@@ -25,7 +25,7 @@ static void test_basic_parsing(void) {
         _cleanup_free_ char *journal_data_path = NULL;
         int r;
 
-        journal_data_path = path_join(NULL, get_testdata_dir(), "journal-data/journal-1.txt");
+        journal_data_path = path_join(get_testdata_dir(), "journal-data/journal-1.txt");
         imp.fd = open(journal_data_path, O_RDONLY|O_CLOEXEC);
         assert_se(imp.fd >= 0);
 
@@ -56,7 +56,7 @@ static void test_bad_input(void) {
         _cleanup_free_ char *journal_data_path = NULL;
         int r;
 
-        journal_data_path = path_join(NULL, get_testdata_dir(), "journal-data/journal-2.txt");
+        journal_data_path = path_join(get_testdata_dir(), "journal-data/journal-2.txt");
         imp.fd = open(journal_data_path, O_RDONLY|O_CLOEXEC);
         assert_se(imp.fd >= 0);
 
@@ -69,8 +69,7 @@ static void test_bad_input(void) {
 }
 
 int main(int argc, char **argv) {
-        log_set_max_level(LOG_DEBUG);
-        log_parse_environment();
+        test_setup_logging(LOG_DEBUG);
 
         test_basic_parsing();
         test_bad_input();

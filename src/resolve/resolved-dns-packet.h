@@ -1,9 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 #pragma once
 
-/***
- ***/
-
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 
@@ -56,7 +53,7 @@ struct DnsPacketHeader {
 #define DNS_PACKET_UNICAST_SIZE_LARGE_MAX 4096u
 
 struct DnsPacket {
-        int n_ref;
+        unsigned n_ref;
         DnsProtocol protocol;
         size_t size, allocated, rindex, max_size;
         void *_data; /* don't access directly, use DNS_PACKET_DATA()! */

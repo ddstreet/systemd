@@ -17,15 +17,17 @@
 #include "bus-label.h"
 #include "bus-util.h"
 #include "copy.h"
+#include "env-file.h"
 #include "env-util.h"
 #include "fd-util.h"
-#include "fileio.h"
 #include "format-util.h"
 #include "fs-util.h"
 #include "in-addr-util.h"
+#include "io-util.h"
 #include "local-addresses.h"
 #include "machine-dbus.h"
 #include "machine.h"
+#include "missing_capability.h"
 #include "mkdir.h"
 #include "os-util.h"
 #include "path-util.h"
@@ -33,6 +35,7 @@
 #include "signal-util.h"
 #include "strv.h"
 #include "terminal-util.h"
+#include "tmpfile-util.h"
 #include "user-util.h"
 
 static BUS_DEFINE_PROPERTY_GET_ENUM(property_get_class, machine_class, MachineClass);
@@ -250,8 +253,8 @@ int bus_machine_method_get_addresses(sd_bus_message *message, void *userdata, sd
                                 .msg_iovlen = 2,
                         };
 
-                        iov[0] = (struct iovec) { .iov_base = &family, .iov_len = sizeof(family) };
-                        iov[1] = (struct iovec) { .iov_base = &in_addr, .iov_len = sizeof(in_addr) };
+                        iov[0] = IOVEC_MAKE(&family, sizeof(family));
+                        iov[1] = IOVEC_MAKE(&in_addr, sizeof(in_addr));
 
                         n = recvmsg(pair[0], &mh, 0);
                         if (n < 0)
@@ -367,13 +370,13 @@ int bus_machine_method_get_os_release(sd_bus_message *message, void *userdata, s
 
                 pair[1] = safe_close(pair[1]);
 
-                f = fdopen(pair[0], "re");
+                f = fdopen(pair[0], "r");
                 if (!f)
                         return -errno;
 
                 pair[0] = -1;
 
-                r = load_env_file_pairs(f, "/etc/os-release", NULL, &l);
+                r = load_env_file_pairs(f, "/etc/os-release", &l);
                 if (r < 0)
                         return r;
 
@@ -600,7 +603,7 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
                 if (strv_isempty(args)) {
                         args = strv_free(args);
 
-                        args = strv_new(path, NULL);
+                        args = strv_new(path);
                         if (!args)
                                 return -ENOMEM;
                 }
@@ -1053,7 +1056,7 @@ finish:
 }
 
 int bus_machine_method_copy(sd_bus_message *message, void *userdata, sd_bus_error *error) {
-        const char *src, *dest, *host_path, *container_path, *host_basename, *host_dirname, *container_basename, *container_dirname;
+        const char *src, *dest, *host_path, *container_path, *host_basename, *container_basename, *container_dirname;
         _cleanup_close_pair_ int errno_pipe_fd[2] = { -1, -1 };
         CopyFlags copy_flags = COPY_REFLINK|COPY_MERGE;
         _cleanup_close_ int hostfd = -1;
@@ -1114,16 +1117,14 @@ int bus_machine_method_copy(sd_bus_message *message, void *userdata, sd_bus_erro
         }
 
         host_basename = basename(host_path);
-        t = strdupa(host_path);
-        host_dirname = dirname(t);
 
         container_basename = basename(container_path);
         t = strdupa(container_path);
         container_dirname = dirname(t);
 
-        hostfd = open(host_dirname, O_CLOEXEC|O_RDONLY|O_NOCTTY|O_DIRECTORY);
+        hostfd = open_parent(host_path, O_CLOEXEC, 0);
         if (hostfd < 0)
-                return sd_bus_error_set_errnof(error, errno, "Failed to open host directory %s: %m", host_dirname);
+                return sd_bus_error_set_errnof(error, hostfd, "Failed to open host directory %s: %m", host_path);
 
         if (pipe2(errno_pipe_fd, O_CLOEXEC|O_NONBLOCK) < 0)
                 return sd_bus_error_set_errnof(error, errno, "Failed to create pipe: %m");
