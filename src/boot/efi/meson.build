@@ -103,10 +103,6 @@ if have_gnu_efi
                 endif
         endif
 
-        message('efi-libdir: "@0@"'.format(efi_libdir))
-        message('efi-ldsdir: "@0@"'.format(efi_ldsdir))
-        message('efi-includedir: "@0@"'.format(efi_incdir))
-
         compile_args = ['-Wall',
                         '-Wextra',
                         '-std=gnu90',
@@ -160,10 +156,10 @@ if have_gnu_efi
                                                  + compile_args,
                                        depend_files : efi_headers)
                 if (common_sources + systemd_boot_sources).contains(file)
-                        systemd_boot_objects += [o_file]
+                        systemd_boot_objects += o_file
                 endif
                 if (common_sources + stub_sources).contains(file)
-                        stub_objects += [o_file]
+                        stub_objects += o_file
                 endif
         endforeach
 
@@ -182,9 +178,11 @@ if have_gnu_efi
                                   efi_ldflags + tuple[2] +
                                   ['-lefi', '-lgnuefi', libgcc_file_name])
 
-                test('no-undefined-symbols-' + tuple[0],
-                     no_undefined_symbols,
-                     args : [so])
+                if want_tests != 'false'
+                        test('no-undefined-symbols-' + tuple[0],
+                             no_undefined_symbols,
+                             args : [so])
+                endif
 
                 stub = custom_target(
                         tuple[1],

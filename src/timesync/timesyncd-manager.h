@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 #pragma once
 
-
 #include <sys/timex.h>
 
 #include "sd-bus.h"
@@ -72,7 +71,7 @@ struct Manager {
                 double offset;
                 double delay;
         } samples[8];
-        unsigned int samples_idx;
+        unsigned samples_idx;
         double samples_jitter;
         usec_t max_root_distance_usec;
 

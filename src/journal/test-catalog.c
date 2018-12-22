@@ -11,13 +11,13 @@
 #include "catalog.h"
 #include "fd-util.h"
 #include "fs-util.h"
-#include "fileio.h"
 #include "log.h"
 #include "macro.h"
 #include "path-util.h"
 #include "string-util.h"
 #include "strv.h"
 #include "tests.h"
+#include "tmpfile-util.h"
 #include "util.h"
 
 static char** catalog_dirs = NULL;
@@ -201,14 +201,12 @@ static void test_catalog_file_lang(void) {
 
 int main(int argc, char *argv[]) {
         _cleanup_(unlink_tempfilep) char database[] = "/tmp/test-catalog.XXXXXX";
-        _cleanup_free_ char *text = NULL, *catalog_dir = NULL;
+        _cleanup_free_ char *text = NULL;
         int r;
 
         setlocale(LC_ALL, "de_DE.UTF-8");
 
-        log_set_max_level(LOG_DEBUG);
-        log_parse_environment();
-        log_open();
+        test_setup_logging(LOG_DEBUG);
 
         /* If test-catalog is located at the build directory, then use catalogs in that.
          * If it is not, e.g. installed by systemd-tests package, then use installed catalogs. */
