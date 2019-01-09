@@ -11,7 +11,7 @@ fi
 # This covers the same case as lib/modprobe.d/scsi-mod-scan-sync.conf
 # in the event that scsi_mod is built in to the kernel, not a module:
 if [ -f /sys/module/scsi_mod/parameters/scan ]; then
-    echo sync > /sys/module/scsi_mod/parameters/scan >/dev/null || :
+    echo sync > /sys/module/scsi_mod/parameters/scan
 fi
 
 SYSTEMD_LOG_LEVEL=notice /lib/systemd/systemd-udevd --daemon --resolve-names=never
