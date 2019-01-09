@@ -15,8 +15,8 @@
 #DNS=
 #FallbackDNS=@DNS_SERVERS@
 #Domains=
-#LLMNR=yes
-#MulticastDNS=yes
+#LLMNR=no
+#MulticastDNS=no
 #DNSSEC=@DEFAULT_DNSSEC_MODE@
 #Cache=yes
 #DNSStubListener=udp
