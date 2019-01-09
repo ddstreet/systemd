@@ -1,3 +1,28 @@
+systemd (237-3ubuntu10.11) bionic-security; urgency=medium
+
+  * SECURITY UPDATE: memory corruption in journald via attacker controlled alloca
+    - debian/patches/CVE-2018-16864.patch: journald: do not store the iovec
+      entry for process commandline on the stack
+    - CVE-2018-16864
+  * SECURITY UPDATE: memory corruption in journald via attacker controlled alloca
+    - debian/patches/CVE-2018-16865_1.patch: journald: set a limit on the
+      number of fields (1k)
+    - debian/patches/CVE-2018-16865_2.patch: journal-remote: set a limit on the
+      number of fields in a message
+    - CVE-2018-16865
+  * SECURITY UPDATE: out-of-bounds read in journald
+    - debian/patches/CVE-2018-16866.patch: journal: fix syslog_parse_identifier()
+    - CVE-2018-16866
+
+  * Fix LP: #1804603 - btrfs-util: unbreak tmpfiles' subvol creation
+    - add debian/patches/btrfs-util-unbreak-tmpfiles-subvol-creation.patch
+    - update debian/patches/series
+  * Fix LP: #1804864 - test: Set executable bits on TEST-22-TMPFILES shell scripts
+    - add debian/patches/test-Set-executable-bits-on-TEST-22-TMPFILES-shell-script.patch
+    - update debian/patches/series
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Wed, 09 Jan 2019 15:11:53 +0000
+
 systemd (237-3ubuntu10.9) bionic-security; urgency=medium
 
   [ Chris Coulson ]
