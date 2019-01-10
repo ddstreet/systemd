@@ -1,3 +1,34 @@
+systemd (229-4ubuntu21.15) xenial-security; urgency=medium
+
+  * SECURITY UPDATE: memory corruption in journald via attacker controlled alloca
+    - debian/patches/CVE-2018-16864.patch: journald: do not store the iovec
+      entry for process commandline on the stack
+    - CVE-2018-16864
+  * SECURITY UPDATE: memory corruption in journald via attacker controlled alloca
+    - debian/patches/CVE-2018-16865_1.patch: journald: set a limit on the
+      number of fields (1k)
+    - debian/patches/CVE-2018-16865_2.patch: journal-remote: set a limit on the
+      number of fields in a message
+    - CVE-2018-16865
+  * SECURITY UPDATE: out-of-bounds read in journald
+    - debian/patches/CVE-2018-16866.patch: journal: fix syslog_parse_identifier()
+    - CVE-2018-16866
+  * SECURITY UPDATE: symlink mishandling in systemd-tmpfiles
+    - debian/patches/CVE-2018-6954.patch: don't resolve pathnames when traversing
+      recursively through directory trees
+    - debian/patches/CVE-2018-6954_2.patch: backport the remaining patches to
+      resolve this completely
+    - CVE-2018-6954
+
+  * Fix LP: #1804603 - btrfs-util: unbreak tmpfiles' subvol creation
+    - add debian/patches/btrfs-util-unbreak-tmpfiles-subvol-creation.patch
+    - update debian/patches/series
+  * Fix LP: #1804864 - test: Set executable bits on TEST-22-TMPFILES shell scripts
+    - add debian/patches/test-Set-executable-bits-on-TEST-22-TMPFILES-shell-script.patch
+    - update debian/patches/series
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Thu, 10 Jan 2019 00:15:47 +0000
+
 systemd (229-4ubuntu21.10) xenial-security; urgency=medium
 
   [ Chris Coulson ]
