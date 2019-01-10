@@ -1,3 +1,5 @@
+#pragma once
+
 /***
   This file is part of systemd.
 
@@ -17,18 +19,15 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#pragma once
-
 typedef struct VLan VLan;
 
 #include "networkd-netdev.h"
 
-#define VLANID_MAX 4094
-
 struct VLan {
         NetDev meta;
 
-        uint64_t id;
+        uint16_t id;
 };
 
+DEFINE_NETDEV_CAST(VLAN, VLan);
 extern const NetDevVTable vlan_vtable;
