@@ -1449,7 +1449,7 @@ static int dns_packet_read_type_window(DnsPacket *p, Bitmap **types, size_t *sta
 
                 found = true;
 
-                while (bitmask) {
+                for (; bitmask; bit++, bitmask >>= 1)
                         if (bitmap[i] & bitmask) {
                                 uint16_t n;
 
@@ -1463,10 +1463,6 @@ static int dns_packet_read_type_window(DnsPacket *p, Bitmap **types, size_t *sta
                                 if (r < 0)
                                         goto fail;
                         }
-
-                        bit ++;
-                        bitmask >>= 1;
-                }
         }
 
         if (!found)
