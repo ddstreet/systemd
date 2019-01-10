@@ -94,16 +94,16 @@ AC_PROG_AWK
 
 AC_PATH_PROG([M4], [m4])
 
-AC_PATH_PROG([QUOTAON], [quotaon], [/usr/sbin/quotaon], [$PATH:/usr/sbin:/sbin])
-AC_PATH_PROG([QUOTACHECK], [quotacheck], [/usr/sbin/quotacheck], [$PATH:/usr/sbin:/sbin])
+AC_PATH_PROG([QUOTAON], [quotaon], [/sbin/quotaon], [$PATH:/usr/sbin:/sbin])
+AC_PATH_PROG([QUOTACHECK], [quotacheck], [/sbin/quotacheck], [$PATH:/usr/sbin:/sbin])
 
 AC_PATH_PROG([SETCAP], [setcap], [/usr/sbin/setcap], [$PATH:/usr/sbin:/sbin])
 
-AC_PATH_PROG([KILL], [kill], [/usr/bin/kill], [$PATH:/usr/sbin:/sbin])
+AC_PATH_PROG([KILL], [kill], [/bin/kill], [$PATH:/usr/sbin:/sbin])
 
-AC_PATH_PROG([KMOD], [kmod], [/usr/bin/kmod], [$PATH:/usr/sbin:/sbin])
+AC_PATH_PROG([KMOD], [kmod], [/bin/kmod], [$PATH:/usr/sbin:/sbin])
 
-AC_PATH_PROG([KEXEC], [kexec], [/usr/sbin/kexec], [$PATH:/usr/sbin:/sbin])
+AC_PATH_PROG([KEXEC], [kexec], [/sbin/kexec], [$PATH:/usr/sbin:/sbin])
 
 AC_PATH_PROG([SULOGIN], [sulogin], [/usr/sbin/sulogin], [$PATH:/usr/sbin:/sbin])
 
