@@ -121,6 +121,11 @@ debian/UBUNTU-units-disable-journald-watchdog.patch
 core-move-enforcement-of-the-start-limit-into-per-unit-type-code-again.patch
 CVE-2018-15688.patch
 CVE-2018-15686.patch
-# Disabled for now - see https://launchpad.net/bugs/1804847
-#CVE-2018-6954.patch
-#CVE-2018-6954_2.patch
+CVE-2018-6954.patch
+CVE-2018-6954_2.patch
+btrfs-util-unbreak-tmpfiles-subvol-creation.patch
+test-Set-executable-bits-on-TEST-22-TMPFILES-shell-script.patch
+CVE-2018-16864.patch
+CVE-2018-16865_1.patch
+CVE-2018-16865_2.patch
+CVE-2018-16866.patch
