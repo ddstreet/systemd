@@ -1117,6 +1117,7 @@ libsystemd_shared_la_LIBADD = \
 
 libsystemd_shared_la_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	-Wl,--version-script=$(top_srcdir)/src/shared/libshared.sym \
 	-release $(PACKAGE_VERSION)
 
 
