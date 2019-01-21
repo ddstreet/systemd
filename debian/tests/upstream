@@ -5,7 +5,7 @@ set -e
 
 # even after installing policycoreutils this fails with
 # "Failed to install /usr/libexec/selinux/hll/pp"
-BLACKLIST="TEST-06-SELINUX"
+BLACKLIST="TEST-06-SELINUX TEST-16-EXTEND-TIMEOUT"
 
 # some tests are flaky
 BLACKLIST="$BLACKLIST
