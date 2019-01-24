@@ -1,3 +1,14 @@
+systemd (240-4ubuntu2) disco; urgency=medium
+
+  * Import patches to support PPC64LE qemu based testing.
+    Files:
+    - debian/tests/control
+    - debian/patches/test-test-functions-on-PP64-use-vmlinux.patch
+    - debian/patches/test-test-functions-on-PPC64-use-hvc0-console.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=483a4daba07f809883883e8e8b9c365cfbf7256e
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 24 Jan 2019 16:55:01 +0000
+
 systemd (240-4ubuntu1) disco; urgency=medium
 
   * Skip starting systemd-remount-fs.service in containers
@@ -98,11 +109,6 @@ systemd (240-4ubuntu1) disco; urgency=medium
     networking is unplugged or not yet configured on boot. (LP: #1714301)
     File: debian/systemd.postinst
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=694473d812b50d2fefd6494d494ca02b91bc8785
-
-  * networkd: change UseMTU default to true.
-    Cherry-pick upstream change. (LP: #1717471)
-    File: debian/patches/networkd-change-UseMTU-default-to-true.-6837.patch
-    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=44aa315dd6d9054a5cabd413ec8657b6bfdfc029
 
   * postinst: drop empty/stock /etc/rc.local (LP: #1716979)
     File: debian/systemd.postinst
