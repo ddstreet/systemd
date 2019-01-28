@@ -217,7 +217,7 @@ static bool link_proxy_arp_enabled(Link *link) {
         return true;
 }
 
-static bool link_ipv6_accept_ra_enabled(Link *link) {
+static bool link_ipv6_accept_ra_enabled_implicit(Link *link, bool * implicit) {
         assert(link);
 
         if (!socket_ipv6_is_supported())
@@ -236,15 +236,22 @@ static bool link_ipv6_accept_ra_enabled(Link *link) {
          * disabled if local forwarding is enabled).
          * If set, ignore or enforce RA independent of local forwarding state.
          */
-        if (link->network->ipv6_accept_ra < 0)
+        if (link->network->ipv6_accept_ra < 0) {
                 /* default to accept RA if ip_forward is disabled and ignore RA if ip_forward is enabled */
+                if (implicit)
+                        *implicit = true;
                 return !link_ipv6_forward_enabled(link);
+        }
         else if (link->network->ipv6_accept_ra > 0)
                 /* accept RA even if ip_forward is enabled */
                 return true;
         else
                 /* ignore RA */
                 return false;
+}
+
+static bool link_ipv6_accept_ra_enabled(Link *link) {
+        return link_ipv6_accept_ra_enabled_implicit(link, NULL);
 }
 
 static IPv6PrivacyExtensions link_ipv6_privacy_extensions(Link *link) {
@@ -280,6 +287,29 @@ static int link_enable_ipv6(Link *link) {
                                        enable_disable(!disabled), link->ifname);
         else
                 log_link_info(link, "IPv6 successfully %sd", enable_disable(!disabled));
+
+        return 0;
+}
+
+static int link_disable_ipv6_addr_gen_mode(Link *link) {
+        const char *p = NULL;
+        int r;
+
+        /* Make this a NOP if IPv6 is not available */
+        if (!socket_ipv6_is_supported())
+                return 0;
+
+        if (link->flags & IFF_LOOPBACK)
+                return 0;
+
+        if (link_ipv6ll_enabled(link))
+                return 0;
+
+        p = strjoina("/proc/sys/net/ipv6/conf/", link->ifname, "/addr_gen_mode");
+
+        r = write_string_file(p, "1", WRITE_STRING_FILE_VERIFY_ON_FAILURE | WRITE_STRING_FILE_DISABLE_BUFFER);
+        if (r < 0)
+                log_link_warning_errno(link, r, "Cannot set IPv6 address gen mode for interface: %m");
 
         return 0;
 }
@@ -773,8 +803,10 @@ void link_check_ready(Link *link) {
                      !link->dhcp4_configured && !link->dhcp6_configured))
                         return;
 
-                if (link_ipv6_accept_ra_enabled(link) && !link->ndisc_configured)
-                        return;
+                bool implicit = false;
+                if (link_ipv6_accept_ra_enabled_implicit(link, &implicit) && !link->ndisc_configured)
+                        if (!implicit)
+                                return;
         }
 
         SET_FOREACH(a, link->addresses, i)
@@ -1807,6 +1839,9 @@ int link_up(Link *link) {
         r = sd_netlink_message_open_container(req, IFLA_AF_SPEC);
         if (r < 0)
                 return log_link_error_errno(link, r, "Could not open IFLA_AF_SPEC container: %m");
+
+
+        (void) link_disable_ipv6_addr_gen_mode(link);
 
         if (link_ipv6_enabled(link)) {
                 /* if the kernel lacks ipv6 support setting IFF_UP fails if any ipv6 options are passed */
