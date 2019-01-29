@@ -1,0 +1,37 @@
+From: Tore Anderson <tore@fud.no>
+Date: Mon, 17 Dec 2018 09:15:59 +0100
+Subject: [PATCH] resolve: enable EDNS0 towards the 127.0.0.53 stub resolver
+
+This appears to be necessary for client software to ensure the reponse data
+is validated with DNSSEC. For example, `ssh -v -o VerifyHostKeyDNS=yes -o
+StrictHostKeyChecking=yes redpilllinpro01.ring.nlnog.net` fails if EDNS0 is
+not enabled. The debugging output reveals that the `SSHFP` records were
+found in DNS, but were considered insecure.
+
+Note that the patch intentionally does *not* enable EDNS0 in the
+`/run/systemd/resolve/resolv.conf` file (the one that contains `nameserver`
+entries for the upstream DNS servers), as it is impossible to know for
+certain that all the upstream DNS servers handles EDNS0 correctly.
+
+Origin: https://github.com/systemd/systemd/commit/93158c77bc69fde7cf5cff733617631c1e566fe8
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1811471
+
+--- a/src/resolve/resolv.conf
++++ b/src/resolve/resolv.conf
+@@ -15,3 +15,4 @@
+ # operation for /etc/resolv.conf.
+ 
+ nameserver 127.0.0.53
++options edns0
+--- a/src/resolve/resolved-resolv-conf.c
++++ b/src/resolve/resolved-resolv-conf.c
+@@ -273,7 +273,8 @@
+                        "# See man:systemd-resolved.service(8) for details about the supported modes of\n"
+                        "# operation for /etc/resolv.conf.\n"
+                        "\n"
+-                       "nameserver 127.0.0.53\n", f);
++                       "nameserver 127.0.0.53\n"
++                       "options edns0\n", f);
+ 
+         if (!ordered_set_isempty(domains))
+                 write_resolv_conf_search(domains, f);
