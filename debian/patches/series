@@ -91,3 +91,5 @@ CVE-2018-16864.patch
 CVE-2018-16865_1.patch
 CVE-2018-16865_2.patch
 CVE-2018-16866.patch
+resolved-Increase-size-of-TCP-stub-replies.patch
+resolve-enable-EDNS0-towards-the-127.0.0.53-stub-res.patch
