@@ -156,3 +156,7 @@ static inline const char *skip_dev_prefix(const char *p) {
 
         return e ?: p;
 }
+static inline const char *empty_to_root(const char *path) {
+        return isempty(path) ? "/" : path;
+}
+
