@@ -42,6 +42,9 @@ meson-stop-setting-fPIE-globally.patch
 Revert-Always-rename-an-interface-to-its-name-specified-i.patch
 process-util-don-t-use-overly-large-buffer-to-store-proce.patch
 networkd-honour-LinkLocalAddressing.patch
+Move-link_check_ready-to-later-in-the-file.patch
+Install-routes-after-addresses-are-ready.patch
+tests-Add-test-for-IPv6-source-routing.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
@@ -79,3 +82,12 @@ debian/UBUNTU-core-set-run-size-to-10-like-initramfs-tools-does.patch
 resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch
 test-test-functions-on-PP64-use-vmlinux.patch
 test-test-functions-on-PPC64-use-hvc0-console.patch
+Revert-namespace-be-more-careful-when-handling-namespacin.patch
+stream-follow-coding-style-don-t-use-degrade-to-bool-for-.patch
+stream-track-type-of-DnsStream-object.patch
+transaction-simplify-handling-if-we-get-an-unexpected-DNS.patch
+llmnr-add-comment-why-we-install-no-complete-handler-on-s.patch
+resolved-restart-stream-timeout-whenever-we-managed-to-re.patch
+resolved-only-call-complete-with-zero-argument-in-LLMNR-c.patch
+resolved-add-comment-to-dns_stream_complete-about-its-err.patch
+resolved-keep-stub-stream-connections-up-for-as-long-as-c.patch
