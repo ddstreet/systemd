@@ -284,6 +284,29 @@ static int link_enable_ipv6(Link *link) {
         return 0;
 }
 
+static int link_disable_ipv6_addr_gen_mode(Link *link) {
+        const char *p = NULL;
+        int r;
+
+        /* Make this a NOP if IPv6 is not available */
+        if (!socket_ipv6_is_supported())
+                return 0;
+
+        if (link->flags & IFF_LOOPBACK)
+                return 0;
+
+        if (link_ipv6ll_enabled(link))
+                return 0;
+
+        p = strjoina("/proc/sys/net/ipv6/conf/", link->ifname, "/addr_gen_mode");
+
+        r = write_string_file(p, "1", WRITE_STRING_FILE_VERIFY_ON_FAILURE | WRITE_STRING_FILE_DISABLE_BUFFER);
+        if (r < 0)
+                log_link_warning_errno(link, r, "Cannot set IPv6 address gen mode for interface: %m");
+
+        return 0;
+}
+
 void link_update_operstate(Link *link) {
         LinkOperationalState operstate;
         assert(link);
@@ -1807,6 +1830,9 @@ int link_up(Link *link) {
         r = sd_netlink_message_open_container(req, IFLA_AF_SPEC);
         if (r < 0)
                 return log_link_error_errno(link, r, "Could not open IFLA_AF_SPEC container: %m");
+
+
+        (void) link_disable_ipv6_addr_gen_mode(link);
 
         if (link_ipv6_enabled(link)) {
                 /* if the kernel lacks ipv6 support setting IFF_UP fails if any ipv6 options are passed */
