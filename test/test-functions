@@ -158,6 +158,7 @@ $KERNEL_APPEND \
 -net none \
 -m 512M \
 -nographic \
+-vga none \
 -kernel $KERNEL_BIN \
 -drive format=raw,cache=unsafe,file=${TESTDIR}/rootdisk.img \
 "
