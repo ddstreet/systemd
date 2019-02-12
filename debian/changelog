@@ -1,3 +1,17 @@
+systemd (239-7ubuntu10.8) cosmic-security; urgency=medium
+
+  * SECURITY UPDATE: denial of service via crafted dbus message
+    - debian/patches/CVE-2019-6454.patch: sd-bus: enforce a size limit for
+      dbus paths, and don't allocate them on the stack
+    - debian/patches/sd-bus-if-we-receive-an-invalid-dbus-message-ignore-.patch:
+      sd-bus: if we receive an invalid dbus message, ignore and proceeed
+    - CVE-2019-6454
+
+  * Do not remove multiple spaces after identifier in syslog message
+    - add debian/patches/journal-do-not-remove-multiple-spaces-after-identifi.patch
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Tue, 12 Feb 2019 00:41:18 +0000
+
 systemd (239-7ubuntu10.7) cosmic; urgency=medium
 
   * d/p/resolve-enable-EDNS0-towards-the-127.0.0.53-stub-res.patch
