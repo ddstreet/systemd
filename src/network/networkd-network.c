@@ -51,8 +51,8 @@ static int network_load_one(Manager *manager, const char *filename) {
         if (!file) {
                 if (errno == ENOENT)
                         return 0;
-                else
-                        return -errno;
+
+                return -errno;
         }
 
         if (null_or_empty_fd(fileno(file))) {
@@ -113,11 +113,14 @@ static int network_load_one(Manager *manager, const char *filename) {
 
         network->dhcp_server_emit_dns = true;
         network->dhcp_server_emit_ntp = true;
+        network->dhcp_server_emit_router = true;
         network->dhcp_server_emit_timezone = true;
 
         network->use_bpdu = true;
         network->allow_port_to_be_root = true;
         network->unicast_flood = true;
+
+        network->lldp_mode = LLDP_MODE_ROUTERS_ONLY;
 
         network->llmnr = RESOLVE_SUPPORT_YES;
         network->mdns = RESOLVE_SUPPORT_NO;
@@ -129,6 +132,9 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->ipv6_accept_ra = -1;
         network->ipv6_dad_transmits = -1;
         network->ipv6_hop_limit = -1;
+        network->duid.type = _DUID_TYPE_INVALID;
+        network->proxy_arp = -1;
+        network->ipv6_accept_ra_use_dns = true;
 
         r = config_parse(NULL, filename, file,
                          "Match\0"
@@ -139,8 +145,10 @@ static int network_load_one(Manager *manager, const char *filename) {
                          "DHCP\0"
                          "DHCPv4\0" /* compat */
                          "DHCPServer\0"
+                         "IPv6AcceptRA\0"
                          "Bridge\0"
-                         "BridgeFDB\0",
+                         "BridgeFDB\0"
+                         "BridgeVLAN\0",
                          config_item_perf_lookup, network_network_gperf_lookup,
                          false, false, true, network);
         if (r < 0)
@@ -236,8 +244,8 @@ void network_free(Network *network) {
         strv_free(network->bind_carrier);
 
         netdev_unref(network->bridge);
-
         netdev_unref(network->bond);
+        netdev_unref(network->vrf);
 
         HASHMAP_FOREACH(netdev, network->stacked_netdevs, i) {
                 hashmap_remove(network->stacked_netdevs, netdev->ifname);
@@ -394,6 +402,19 @@ int network_apply(Manager *manager, Network *network, Link *link) {
         return 0;
 }
 
+bool network_has_static_ipv6_addresses(Network *network) {
+        Address *address;
+
+        assert(network);
+
+        LIST_FOREACH(addresses, address, network->static_addresses) {
+                if (address->family == AF_INET6)
+                        return true;
+        }
+
+        return false;
+}
+
 int config_parse_netdev(const char *unit,
                 const char *filename,
                 unsigned line,
@@ -448,6 +469,10 @@ int config_parse_netdev(const char *unit,
                 break;
         case NETDEV_KIND_BOND:
                 network->bond = netdev;
+
+                break;
+        case NETDEV_KIND_VRF:
+                network->vrf = netdev;
 
                 break;
         case NETDEV_KIND_VLAN:
@@ -627,10 +652,7 @@ int config_parse_ipv4ll(
          * config_parse_address_family_boolean(), except that it
          * applies only to IPv4 */
 
-        if (parse_boolean(rvalue))
-                *link_local |= ADDRESS_FAMILY_IPV4;
-        else
-                *link_local &= ~ADDRESS_FAMILY_IPV4;
+        SET_FLAG(*link_local, ADDRESS_FAMILY_IPV4, parse_boolean(rvalue));
 
         return 0;
 }
@@ -994,6 +1016,10 @@ int config_parse_dnssec_negative_trust_anchors(
                         continue;
                 }
 
+                r = set_ensure_allocated(&n->dnssec_negative_trust_anchors, &dns_name_hash_ops);
+                if (r < 0)
+                        return log_oom();
+
                 r = set_put(n->dnssec_negative_trust_anchors, w);
                 if (r < 0)
                         return log_oom();
@@ -1013,3 +1039,13 @@ static const char* const dhcp_use_domains_table[_DHCP_USE_DOMAINS_MAX] = {
 };
 
 DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(dhcp_use_domains, DHCPUseDomains, DHCP_USE_DOMAINS_YES);
+
+DEFINE_CONFIG_PARSE_ENUM(config_parse_lldp_mode, lldp_mode, LLDPMode, "Failed to parse LLDP= setting.");
+
+static const char* const lldp_mode_table[_LLDP_MODE_MAX] = {
+        [LLDP_MODE_NO] = "no",
+        [LLDP_MODE_YES] = "yes",
+        [LLDP_MODE_ROUTERS_ONLY] = "routers-only",
+};
+
+DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(lldp_mode, LLDPMode, LLDP_MODE_YES);
