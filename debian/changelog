@@ -1,3 +1,17 @@
+systemd (229-4ubuntu21.16) xenial-security; urgency=medium
+
+  * SECURITY UPDATE: denial of service via crafted dbus message
+    - debian/patches/CVE-2019-6454.patch: sd-bus: enforce a size limit for
+      dbus paths, and don't allocate them on the stack
+    - debian/patches/sd-bus-if-we-receive-an-invalid-dbus-message-ignore-.patch:
+      sd-bus: if we receive an invalid dbus message, ignore and proceeed
+    - CVE-2019-6454
+
+  * Do not remove multiple spaces after identifier in syslog message
+    - add debian/patches/journal-do-not-remove-multiple-spaces-after-identifi.patch
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Wed, 13 Feb 2019 22:03:22 +0000
+
 systemd (229-4ubuntu21.15) xenial-security; urgency=medium
 
   * SECURITY UPDATE: memory corruption in journald via attacker controlled alloca
