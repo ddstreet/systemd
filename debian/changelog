@@ -1,3 +1,35 @@
+systemd (239-7ubuntu10.8) cosmic; urgency=medium
+
+  * hwdb: Revert wlan keycode changes, rely on xkeyboard-config fixes instead.
+    (LP: #1799364)
+    Author: seb128
+    Files:
+    - debian/patches/hwdb-Fix-wlan-keycode-for-all-Dell-Latitude-and-Precision.patch
+    - debian/patches/hwdb-revert-airplane-mode-keys-handling-on-Dell.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=41c450015e7db58907d5181f0b280cd7619223a9
+
+  * hwdb: Update PNP IDs of Goldstar (now: LG Electronics) (LP: #1804584)
+    File: debian/patches/hwdb-Update-PNP-IDs-of-Goldstar-now-LG-Electronics-.-1005.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=1de4a44da4acaca85da828c2e3de26c6bc84eed6
+
+  * Stop testing that gdm3 is up.
+    Ubuntu Desktop is only supported on amd64, and on real hardware. Testing that
+    gdm3 fails to start (yet continues to be running, with a half broken logind
+    session) is not useful on dummy xorg video cards in nested VMs.
+    (LP: #1805358)
+    File: debian/tests/control
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8c8e5ea9b3a9619f199c7691ae25f6788def3043
+
+  * core: set /run size to 10%, like initramfs-tools does.
+    Currently there is a difference between initrd and initrd-less boots,
+    w.r.t. size= mount option of /run. This yields different runtime journald caps
+    (1% vs 10%), and on dense deployments of containers may result in OOM kills.
+    (LP: #1799251)
+    File: debian/patches/debian/UBUNTU-core-set-run-size-to-10-like-initramfs-tools-does.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=42ecc0609074ca6f08d10f8ee123088f9f35914f
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 13 Feb 2019 16:22:55 +0000
+
 systemd (239-7ubuntu10.7) cosmic; urgency=medium
 
   * d/p/resolve-enable-EDNS0-towards-the-127.0.0.53-stub-res.patch
