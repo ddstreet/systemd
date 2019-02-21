@@ -28,6 +28,7 @@
 #include "path-util.h"
 #include "process-util.h"
 #include "socket-util.h"
+#include "stdio-util.h"
 #include "strv.h"
 #include "terminal-util.h"
 #include "util.h"
@@ -195,25 +196,30 @@ static int export_legacy_dbus_address(
                 uid_t uid,
                 const char *runtime) {
 
-        _cleanup_free_ char *s = NULL;
+        const char *s;
+        _cleanup_free_ char *t = NULL;
         int r = PAM_BUF_ERR;
 
-        /* FIXME: We *really* should move the access() check into the
-         * daemons that spawn dbus-daemon, instead of forcing
-         * DBUS_SESSION_BUS_ADDRESS= here. */
+        /* We need to export $DBUS_SESSION_BUS_ADDRESS because various applications will not connect
+         * correctly to the bus without it. This setting matches what dbus.socket does for the user
+         * session using 'systemctl --user set-environment'. We want to have the same configuration
+         * in processes started from the PAM session.
+         *
+         * The setting of the address is guarded by the access() check because it is also possible to compile
+         * dbus without --enable-user-session, in which case this socket is not used, and
+         * $DBUS_SESSION_BUS_ADDRESS should not be set. An alternative approach would to not do the access()
+         * check here, and let applications try on their own, by using "unix:path=%s/bus;autolaunch:". But we
+         * expect the socket to be present by the time we do this check, so we can just as well check once
+         * here. */
 
-        s = strjoin(runtime, "/bus");
-        if (!s)
-                goto error;
-
+        s = strjoina(runtime, "/bus");
         if (access(s, F_OK) < 0)
                 return PAM_SUCCESS;
 
-        s = mfree(s);
-        if (asprintf(&s, DEFAULT_USER_BUS_ADDRESS_FMT, runtime) < 0)
+        if (asprintf(&t, DEFAULT_USER_BUS_ADDRESS_FMT, runtime) < 0)
                 goto error;
 
-        r = pam_misc_setenv(handle, "DBUS_SESSION_BUS_ADDRESS", s, 0);
+        r = pam_misc_setenv(handle, "DBUS_SESSION_BUS_ADDRESS", t, 0);
         if (r != PAM_SUCCESS)
                 goto error;
 
@@ -426,11 +432,9 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         pam_get_item(handle, PAM_SERVICE, (const void**) &service);
         if (streq_ptr(service, "systemd-user")) {
-                _cleanup_free_ char *rt = NULL;
+                char rt[STRLEN("/run/user/") + DECIMAL_STR_MAX(uid_t)];
 
-                if (asprintf(&rt, "/run/user/"UID_FMT, pw->pw_uid) < 0)
-                        return PAM_BUF_ERR;
-
+                xsprintf(rt, "/run/user/"UID_FMT, pw->pw_uid);
                 if (validate_runtime_directory(handle, rt, pw->pw_uid)) {
                         r = pam_misc_setenv(handle, "XDG_RUNTIME_DIR", rt, 0);
                         if (r != PAM_SUCCESS) {
@@ -607,7 +611,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
         if (r < 0) {
                 if (sd_bus_error_has_name(&error, BUS_ERROR_SESSION_BUSY)) {
                         if (debug)
-                                pam_syslog(handle, LOG_DEBUG, "Cannot create session: %s", bus_error_message(&error, r));
+                                pam_syslog(handle, LOG_DEBUG, "Not creating session: %s", bus_error_message(&error, r));
                         return PAM_SUCCESS;
                 } else {
                         pam_syslog(handle, LOG_ERR, "Failed to create session: %s", bus_error_message(&error, r));

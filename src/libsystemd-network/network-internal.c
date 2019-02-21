@@ -52,7 +52,7 @@ int net_get_unique_predictable_data(sd_device *device, uint64_t *result) {
 
         l = strlen(name);
         sz = sizeof(sd_id128_t) + l;
-        v = alloca(sz);
+        v = newa(uint8_t, sz);
 
         /* fetch some persistent data unique to this machine */
         r = sd_id128_get_machine((sd_id128_t*) v);
@@ -102,7 +102,6 @@ bool net_match_config(Set *match_mac,
                       Condition *match_arch,
                       const struct ether_addr *dev_mac,
                       const char *dev_path,
-                      const char *dev_parent_driver,
                       const char *dev_driver,
                       const char *dev_type,
                       const char *dev_name) {
