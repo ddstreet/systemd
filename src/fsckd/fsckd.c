@@ -623,7 +623,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return 0;
 
                 case ARG_VERSION:
-                        puts(PACKAGE_STRING);
+                        puts("systemd " GIT_VERSION);
                         puts(SYSTEMD_FEATURES);
                         return 0;
 

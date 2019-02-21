@@ -148,11 +148,16 @@ static void netdev_callbacks_clear(NetDev *netdev) {
         }
 }
 
+bool netdev_is_managed(NetDev *netdev) {
+        if (!netdev || !netdev->manager || !netdev->ifname)
+                return false;
+
+        return hashmap_get(netdev->manager->netdevs, netdev->ifname) == netdev;
+}
+
 static void netdev_detach_from_manager(NetDev *netdev) {
         if (netdev->ifname && netdev->manager)
                 hashmap_remove(netdev->manager->netdevs, netdev->ifname);
-
-        netdev->manager = NULL;
 }
 
 static NetDev *netdev_free(NetDev *netdev) {
@@ -476,7 +481,7 @@ int netdev_get_mac(const char *ifname, struct ether_addr **ret) {
 
         l = strlen(ifname);
         sz = sizeof(sd_id128_t) + l;
-        v = alloca(sz);
+        v = newa(uint8_t, sz);
 
         /* fetch some persistent data unique to the machine */
         r = sd_id128_get_machine((sd_id128_t*) v);
@@ -668,7 +673,7 @@ int netdev_load_one(Manager *manager, const char *filename) {
                              netdev_raw->match_host, netdev_raw->match_virt,
                              netdev_raw->match_kernel_cmdline, netdev_raw->match_kernel_version,
                              netdev_raw->match_arch,
-                             NULL, NULL, NULL, NULL, NULL, NULL) <= 0)
+                             NULL, NULL, NULL, NULL, NULL) <= 0)
                 return 0;
 
         if (netdev_raw->kind == _NETDEV_KIND_INVALID) {
