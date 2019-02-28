@@ -1,34 +1,37 @@
-systemd (239-7ubuntu10.8) cosmic; urgency=medium
+systemd (239-7ubuntu10.9) cosmic; urgency=medium
 
-  * hwdb: Revert wlan keycode changes, rely on xkeyboard-config fixes instead.
-    (LP: #1799364)
-    Author: seb128
-    Files:
-    - debian/patches/hwdb-Fix-wlan-keycode-for-all-Dell-Latitude-and-Precision.patch
-    - debian/patches/hwdb-revert-airplane-mode-keys-handling-on-Dell.patch
-    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=41c450015e7db58907d5181f0b280cd7619223a9
+  [ Victor Tapia ]
+  * d/p/stop-mount-error-propagation.patch:
+    keep mount errors local to the failing mount point instead of
+    blocking the processing of all mounts (LP: #1755863)
 
-  * hwdb: Update PNP IDs of Goldstar (now: LG Electronics) (LP: #1804584)
-    File: debian/patches/hwdb-Update-PNP-IDs-of-Goldstar-now-LG-Electronics-.-1005.patch
-    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=1de4a44da4acaca85da828c2e3de26c6bc84eed6
+  [ Daniel Axtens ]
+  * Fix a bug where IPv6 routes that specified PreferredSource
+    would not be added - upstream bug #5882. (LP: #1812760)
+    - debian/patches/networkd-don-t-remove-ip-address.patch,
+      debian/patches/networkd-don-t-remove-route.patch: don't clear out all
+      IP addresses and routes when starting, only ones not in the config.
+      Required for the remaining patches to fully cover the field.
+    - debian/patches/Move-link_check_ready-to-later-in-the-file.patch,
+      debian/patches/Install-routes-after-addresses-are-ready.patch: wait
+      until addresses are ready (not tentative) before installing routes,
+      allowing routes with IPv6 source addresses to work.
 
-  * Stop testing that gdm3 is up.
-    Ubuntu Desktop is only supported on amd64, and on real hardware. Testing that
-    gdm3 fails to start (yet continues to be running, with a half broken logind
-    session) is not useful on dummy xorg video cards in nested VMs.
-    (LP: #1805358)
-    File: debian/tests/control
-    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8c8e5ea9b3a9619f199c7691ae25f6788def3043
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 28 Feb 2019 14:29:48 -0500
 
-  * core: set /run size to 10%, like initramfs-tools does.
-    Currently there is a difference between initrd and initrd-less boots,
-    w.r.t. size= mount option of /run. This yields different runtime journald caps
-    (1% vs 10%), and on dense deployments of containers may result in OOM kills.
-    (LP: #1799251)
-    File: debian/patches/debian/UBUNTU-core-set-run-size-to-10-like-initramfs-tools-does.patch
-    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=42ecc0609074ca6f08d10f8ee123088f9f35914f
+systemd (239-7ubuntu10.8) cosmic-security; urgency=medium
 
- -- Dimitri John Ledkov <xnox@ubuntu.com>  Wed, 13 Feb 2019 16:22:55 +0000
+  * SECURITY UPDATE: denial of service via crafted dbus message
+    - debian/patches/CVE-2019-6454.patch: sd-bus: enforce a size limit for
+      dbus paths, and don't allocate them on the stack
+    - debian/patches/sd-bus-if-we-receive-an-invalid-dbus-message-ignore-.patch:
+      sd-bus: if we receive an invalid dbus message, ignore and proceeed
+    - CVE-2019-6454
+
+  * Do not remove multiple spaces after identifier in syslog message
+    - add debian/patches/journal-do-not-remove-multiple-spaces-after-identifi.patch
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Tue, 12 Feb 2019 00:41:18 +0000
 
 systemd (239-7ubuntu10.7) cosmic; urgency=medium
 
