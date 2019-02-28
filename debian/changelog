@@ -1,3 +1,12 @@
+systemd (237-3ubuntu10.15) bionic; urgency=medium
+
+  [ Victor Tapia ]
+  * d/p/stop-mount-error-propagation.patch:
+    keep mount errors local to the failing mount point instead of blocking
+    the processing of all mounts (LP: #1755863)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 28 Feb 2019 16:03:40 -0500
+
 systemd (237-3ubuntu10.13) bionic-security; urgency=medium
 
   * SECURITY UPDATE: denial of service via crafted dbus message
