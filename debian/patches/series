@@ -96,3 +96,4 @@ resolve-enable-EDNS0-towards-the-127.0.0.53-stub-res.patch
 CVE-2019-6454.patch
 sd-bus-if-we-receive-an-invalid-dbus-message-ignore-.patch
 journal-do-not-remove-multiple-spaces-after-identifi.patch
+stop-mount-error-propagation.patch
