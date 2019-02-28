@@ -149,7 +149,8 @@ struct Network {
         bool fast_leave;
         bool allow_port_to_be_root;
         bool unicast_flood;
-        unsigned cost;
+        uint32_t cost;
+        uint16_t priority;
 
         uint16_t pvid;
         uint32_t br_vid_bitmap[BRIDGE_VLAN_BITMAP_LEN];
