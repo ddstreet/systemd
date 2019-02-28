@@ -43,7 +43,7 @@ typedef int (*sd_netlink_message_handler_t)(sd_netlink *nl, sd_netlink_message *
 int sd_netlink_new_from_netlink(sd_netlink **nl, int fd);
 int sd_netlink_open(sd_netlink **nl);
 int sd_netlink_open_fd(sd_netlink **nl, int fd);
-int sd_netlink_inc_rcvbuf(const sd_netlink *const rtnl, const int size);
+int sd_netlink_inc_rcvbuf(sd_netlink *nl, const size_t size);
 
 sd_netlink *sd_netlink_ref(sd_netlink *nl);
 sd_netlink *sd_netlink_unref(sd_netlink *nl);
@@ -64,7 +64,7 @@ int sd_netlink_wait(sd_netlink *nl, uint64_t timeout);
 int sd_netlink_add_match(sd_netlink *nl, uint16_t match, sd_netlink_message_handler_t c, void *userdata);
 int sd_netlink_remove_match(sd_netlink *nl, uint16_t match, sd_netlink_message_handler_t c, void *userdata);
 
-int sd_netlink_attach_event(sd_netlink *nl, sd_event *e, int priority);
+int sd_netlink_attach_event(sd_netlink *nl, sd_event *e, int64_t priority);
 int sd_netlink_detach_event(sd_netlink *nl);
 
 int sd_netlink_message_append_string(sd_netlink_message *m, unsigned short type, const char *data);
@@ -131,14 +131,16 @@ int sd_rtnl_message_link_set_type(sd_netlink_message *m, unsigned type);
 int sd_rtnl_message_link_set_family(sd_netlink_message *m, unsigned family);
 int sd_rtnl_message_link_get_ifindex(sd_netlink_message *m, int *ifindex);
 int sd_rtnl_message_link_get_flags(sd_netlink_message *m, unsigned *flags);
-int sd_rtnl_message_link_get_type(sd_netlink_message *m, unsigned *type);
+int sd_rtnl_message_link_get_type(sd_netlink_message *m, unsigned short *type);
 
 int sd_rtnl_message_route_set_dst_prefixlen(sd_netlink_message *m, unsigned char prefixlen);
 int sd_rtnl_message_route_set_src_prefixlen(sd_netlink_message *m, unsigned char prefixlen);
 int sd_rtnl_message_route_set_scope(sd_netlink_message *m, unsigned char scope);
 int sd_rtnl_message_route_set_flags(sd_netlink_message *m, unsigned flags);
+int sd_rtnl_message_route_set_table(sd_netlink_message *m, unsigned char table);
 int sd_rtnl_message_route_get_flags(sd_netlink_message *m, unsigned *flags);
 int sd_rtnl_message_route_get_family(sd_netlink_message *m, int *family);
+int sd_rtnl_message_route_set_family(sd_netlink_message *m, int family);
 int sd_rtnl_message_route_get_protocol(sd_netlink_message *m, unsigned char *protocol);
 int sd_rtnl_message_route_get_scope(sd_netlink_message *m, unsigned char *scope);
 int sd_rtnl_message_route_get_tos(sd_netlink_message *m, unsigned char *tos);
