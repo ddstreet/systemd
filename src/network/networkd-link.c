@@ -838,6 +838,15 @@ void link_check_ready(Link *link) {
         if (!link->network)
                 return;
 
+        SET_FOREACH(a, link->addresses, i)
+                if (!address_is_ready(a))
+                        return;
+
+        if (!link->addresses_ready) {
+                link->addresses_ready = true;
+                link_enter_set_routes(link);
+        }
+
         if (!link->static_routes_configured)
                 return;
 
@@ -868,10 +877,6 @@ void link_check_ready(Link *link) {
                         if (!implicit)
                                 return;
         }
-
-        SET_FOREACH(a, link->addresses, i)
-                if (!address_is_ready(a))
-                        return;
 
         if (link->state != LINK_STATE_CONFIGURED)
                 link_enter_configured(link);
@@ -922,7 +927,7 @@ static int address_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userda
 
         if (link->address_messages == 0) {
                 log_link_debug(link, "Addresses set");
-                link_enter_set_routes(link);
+                link_check_ready(link);
         }
 
         return 1;
@@ -1222,9 +1227,9 @@ static int link_enter_set_addresses(Link *link) {
                 log_link_debug(link, "Offering DHCPv4 leases");
         }
 
-        if (link->address_messages == 0)
-                link_enter_set_routes(link);
-        else
+        if (link->address_messages == 0) {
+                link_check_ready(link);
+        } else
                 log_link_debug(link, "Setting addresses");
 
         return 0;
