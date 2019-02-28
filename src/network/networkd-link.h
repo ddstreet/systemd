@@ -166,6 +166,7 @@ int link_set_timezone(Link *link, const char *timezone);
 
 int ipv4ll_configure(Link *link);
 int dhcp4_configure(Link *link);
+int dhcp4_set_promote_secondaries(Link *link);
 int dhcp6_configure(Link *link);
 int dhcp6_request_address(Link *link, int ir);
 
