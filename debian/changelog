@@ -1,3 +1,24 @@
+systemd (239-7ubuntu10.9) cosmic; urgency=medium
+
+  [ Victor Tapia ]
+  * d/p/stop-mount-error-propagation.patch:
+    keep mount errors local to the failing mount point instead of
+    blocking the processing of all mounts (LP: #1755863)
+
+  [ Daniel Axtens ]
+  * Fix a bug where IPv6 routes that specified PreferredSource
+    would not be added - upstream bug #5882. (LP: #1812760)
+    - debian/patches/networkd-don-t-remove-ip-address.patch,
+      debian/patches/networkd-don-t-remove-route.patch: don't clear out all
+      IP addresses and routes when starting, only ones not in the config.
+      Required for the remaining patches to fully cover the field.
+    - debian/patches/Move-link_check_ready-to-later-in-the-file.patch,
+      debian/patches/Install-routes-after-addresses-are-ready.patch: wait
+      until addresses are ready (not tentative) before installing routes,
+      allowing routes with IPv6 source addresses to work.
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 28 Feb 2019 14:29:48 -0500
+
 systemd (239-7ubuntu10.8) cosmic-security; urgency=medium
 
   * SECURITY UPDATE: denial of service via crafted dbus message
