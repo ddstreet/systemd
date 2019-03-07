@@ -2113,6 +2113,11 @@ static int open_follow(char **filename, FILE **_f, Set *names, char **_final) {
                 r = readlink_and_make_absolute(*filename, &target);
                 if (r < 0)
                         return r;
+                /* Ignore linked units in /lib/systemd/system/ for deputy systemd init */
+                if (strneq(target, "/lib/systemd/system/", strlen("/lib/systemd/system/"))) {
+                        log_warning("Ignoring %s -> %s for systemd deputy init", *filename, target);
+                        return -ENOENT;
+                }
 
                 free(*filename);
                 *filename = target;
