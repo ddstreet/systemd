@@ -424,11 +424,11 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         seat = pam_getenv(handle, "XDG_SEAT");
         if (isempty(seat))
-                seat = getenv("XDG_SEAT");
+                seat = secure_getenv("XDG_SEAT");
 
         cvtnr = pam_getenv(handle, "XDG_VTNR");
         if (isempty(cvtnr))
-                cvtnr = getenv("XDG_VTNR");
+                cvtnr = secure_getenv("XDG_VTNR");
 
         service = strempty(service);
         tty = strempty(tty);
@@ -477,7 +477,7 @@ _public_ PAM_EXTERN int pam_sm_open_session(
 
         class = pam_getenv(handle, "XDG_SESSION_CLASS");
         if (isempty(class))
-                class = getenv("XDG_SESSION_CLASS");
+                class = secure_getenv("XDG_SESSION_CLASS");
         if (isempty(class))
                 class = class_pam;
         if (isempty(class))
