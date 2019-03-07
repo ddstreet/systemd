@@ -582,7 +582,7 @@ fail:
         automount_enter_dead(a, AUTOMOUNT_FAILURE_RESOURCES);
 }
 
-static void automount_enter_runnning(Automount *a) {
+static void automount_enter_running(Automount *a) {
         _cleanup_dbus_error_free_ DBusError error;
         struct stat st;
         int r;
@@ -609,18 +609,22 @@ static void automount_enter_runnning(Automount *a) {
                 goto fail;
         }
 
-        if (!S_ISDIR(st.st_mode) || st.st_dev != a->dev_id)
+        /* The mount unit may have been explicitly started before we got the
+         * autofs request. Ack it to unblock anything waiting on the mount point. */
+        if (!S_ISDIR(st.st_mode) || st.st_dev != a->dev_id) {
                 log_info_unit(UNIT(a)->id,
                               "%s's automount point already active?", UNIT(a)->id);
-        else {
-                r = manager_add_job(UNIT(a)->manager, JOB_START, UNIT_TRIGGER(UNIT(a)),
-                                    JOB_REPLACE, true, &error, NULL);
-                if (r < 0) {
-                        log_warning_unit(UNIT(a)->id,
-                                         "%s failed to queue mount startup job: %s",
-                                         UNIT(a)->id, bus_error(&error, r));
-                        goto fail;
-                }
+                automount_send_ready(a, 0);
+                return;
+        }
+
+        r = manager_add_job(UNIT(a)->manager, JOB_START, UNIT_TRIGGER(UNIT(a)),
+                            JOB_REPLACE, true, &error, NULL);
+        if (r < 0) {
+                log_warning_unit(UNIT(a)->id,
+                                 "%s failed to queue mount startup job: %s",
+                                 UNIT(a)->id, bus_error(&error, r));
+                goto fail;
         }
 
         automount_set_state(a, AUTOMOUNT_RUNNING);
@@ -819,7 +823,7 @@ static void automount_fd_event(Unit *u, int fd, uint32_t events, Watch *w) {
                         goto fail;
                 }
 
-                automount_enter_runnning(a);
+                automount_enter_running(a);
                 break;
 
         default:
