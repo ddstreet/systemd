@@ -93,6 +93,7 @@ void session_free(Session *s) {
 
         free(s->cgroup_path);
         strv_free(s->controllers);
+        strv_free(s->reset_controllers);
 
         free(s->tty);
         free(s->display);
