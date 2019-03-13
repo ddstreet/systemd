@@ -134,3 +134,4 @@ sd-bus-if-we-receive-an-invalid-dbus-message-ignore-.patch
 journal-do-not-remove-multiple-spaces-after-identifi.patch
 stop-mount-error-propagation.patch
 fix-egde-case-when-processing-proc-self-mountinfo.patch
+fix-race-daemon-reload-8803.patch
