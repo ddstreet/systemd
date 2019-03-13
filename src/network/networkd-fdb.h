@@ -19,10 +19,12 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-typedef struct FdbEntry FdbEntry;
+#include "list.h"
+#include "macro.h"
 
-#include "networkd-network.h"
-#include "networkd.h"
+typedef struct Network Network;
+typedef struct FdbEntry FdbEntry;
+typedef struct Link Link;
 
 struct FdbEntry {
         Network *network;
@@ -34,9 +36,9 @@ struct FdbEntry {
         LIST_FIELDS(FdbEntry, static_fdb_entries);
 };
 
-int fdb_entry_new_static(Network *const network, const unsigned section, FdbEntry **ret);
+int fdb_entry_new_static(Network *network, unsigned section, FdbEntry **ret);
 void fdb_entry_free(FdbEntry *fdb_entry);
-int fdb_entry_configure(Link *const link, FdbEntry *const fdb_entry);
+int fdb_entry_configure(Link *link, FdbEntry *fdb_entry);
 
 DEFINE_TRIVIAL_CLEANUP_FUNC(FdbEntry*, fdb_entry_free);
 #define _cleanup_fdbentry_free_ _cleanup_(fdb_entry_freep)
