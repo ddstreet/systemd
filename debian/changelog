@@ -1,3 +1,14 @@
+systemd (237-3ubuntu10.16) bionic; urgency=medium
+
+  * d/p/Support-system-image-read-only-etc.patch:
+    - re-add support for /etc/writable for core18 (LP: #1778936)
+  * d/p/fix-race-daemon-reload-8803.patch:
+    - backport systemd upstream PR#8803 to fix race when doing
+      systemctl and systemctl daemon-reload at the same time
+      LP: #1819728
+
+ -- Michael Vogt <michael.vogt@ubuntu.com>  Wed, 13 Mar 2019 07:42:11 +0100
+
 systemd (237-3ubuntu10.15) bionic; urgency=medium
 
   [ Victor Tapia ]
