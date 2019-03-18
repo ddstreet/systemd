@@ -1,3 +1,19 @@
+systemd (237-3ubuntu10.17) bionic; urgency=medium
+
+  [ Michael Vogt ]
+  * d/p/Support-system-image-read-only-etc.patch:
+    - re-add support for /etc/writable for core18 (LP: #1778936)
+  * d/p/fix-race-daemon-reload-8803.patch:
+    - backport systemd upstream PR#8803 and PR#11121 to fix race
+      when doing systemctl and systemctl daemon-reload at the
+      same time LP: #1819728
+
+  [ Balint Reczey ]
+   * d/p/virt-detect-WSL-environment-as-a-container.patch:
+     - virt: detect WSL environment as a container (LP: #1816753)
+
+ -- Michael Vogt <michael.vogt@ubuntu.com>  Mon, 18 Mar 2019 08:40:44 +0100
+
 systemd (237-3ubuntu10.16) bionic; urgency=medium
 
   * d/p/Support-system-image-read-only-etc.patch:
