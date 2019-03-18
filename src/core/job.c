@@ -57,7 +57,6 @@ Job* job_new_raw(Unit *unit) {
         j->manager = unit->manager;
         j->unit = unit;
         j->type = _JOB_TYPE_INVALID;
-        j->reloaded = false;
 
         return j;
 }
@@ -105,7 +104,7 @@ void job_unlink(Job *j) {
         j->timer_event_source = sd_event_source_unref(j->timer_event_source);
 }
 
-void job_free(Job *j) {
+Job* job_free(Job *j) {
         assert(j);
         assert(!j->installed);
         assert(!j->transaction_prev);
@@ -118,7 +117,7 @@ void job_free(Job *j) {
         sd_bus_track_unref(j->bus_track);
         strv_free(j->deserialized_clients);
 
-        free(j);
+        return mfree(j);
 }
 
 static void job_set_state(Job *j, JobState state) {
@@ -167,7 +166,7 @@ void job_uninstall(Job *j) {
 
         unit_add_to_gc_queue(j->unit);
 
-        hashmap_remove(j->manager->jobs, UINT32_TO_PTR(j->id));
+        hashmap_remove_value(j->manager->jobs, UINT32_TO_PTR(j->id), j);
         j->installed = false;
 }
 
@@ -257,6 +256,7 @@ Job* job_install(Job *j) {
 
 int job_install_deserialized(Job *j) {
         Job **pj;
+        int r;
 
         assert(!j->installed);
 
@@ -266,14 +266,18 @@ int job_install_deserialized(Job *j) {
         }
 
         pj = (j->type == JOB_NOP) ? &j->unit->nop_job : &j->unit->job;
-        if (*pj) {
-                log_unit_debug(j->unit, "Unit already has a job installed. Not installing deserialized job.");
-                return -EEXIST;
-        }
+        if (*pj)
+                return log_unit_debug_errno(j->unit, EEXIST,
+                                            "Unit already has a job installed. Not installing deserialized job.");
+
+        r = hashmap_put(j->manager->jobs, UINT32_TO_PTR(j->id), j);
+        if (r == -EEXIST)
+                return log_unit_debug_errno(j->unit, r, "Job ID %" PRIu32 " already used, cannot deserialize job.", j->id);
+        if (r < 0)
+                return log_unit_debug_errno(j->unit, r, "Failed to insert job into jobs hash table: %m");
 
         *pj = j;
         j->installed = true;
-        j->reloaded = true;
 
         if (j->state == JOB_RUNNING)
                 j->unit->manager->n_running_jobs++;
@@ -868,19 +872,6 @@ static void job_fail_dependencies(Unit *u, UnitDependency d) {
         }
 }
 
-static int job_save_pending_finished_job(Job *j) {
-        int r;
-
-        assert(j);
-
-        r = set_ensure_allocated(&j->manager->pending_finished_jobs, NULL);
-        if (r < 0)
-                return r;
-
-        job_unlink(j);
-        return set_put(j->manager->pending_finished_jobs, j);
-}
-
 int job_finish_and_invalidate(Job *j, JobResult result, bool recursive, bool already) {
         Unit *u;
         Unit *other;
@@ -920,12 +911,7 @@ int job_finish_and_invalidate(Job *j, JobResult result, bool recursive, bool alr
                 j->manager->n_failed_jobs++;
 
         job_uninstall(j);
-        /* Remember jobs started before the reload */
-        if (MANAGER_IS_RELOADING(j->manager) && j->reloaded) {
-                if (job_save_pending_finished_job(j) < 0)
-                        job_free(j);
-        } else
-                job_free(j);
+        job_free(j);
 
         /* Fail depending jobs on failure */
         if (result != JOB_DONE && recursive) {
