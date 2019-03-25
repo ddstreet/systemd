@@ -1,3 +1,9 @@
+systemd (239-7ubuntu10.11) cosmic; urgency=medium
+
+  * virt: detect WSL environment as a container (LP: #1816753)
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Mon, 25 Mar 2019 11:30:22 +0100
+
 systemd (239-7ubuntu10.10) cosmic; urgency=medium
 
   [ Victor Tapia ]
