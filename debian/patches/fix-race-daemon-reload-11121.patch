@@ -1,0 +1,380 @@
+From: Michael Vogt <michael.vogt@ubuntu.com>
+Date: Mon, 25 Mar 2019 08:44:34 +0100
+Subject: Backport daemon reload race fix (PR#11121)
+
+There is a race in the systemd code when daemon-reload happens
+in parallel with other systemctl operations (like start/stop).
+Upstream fixed this first in PR#8803 but the fix is incomplete
+and sometimes causes a segfault (see systemd issue #10716).
+The full fix is in PR#11121 and this patch first applied #8803 with
+the PR #11121 on top.
+Index: systemd-229/src/core/job.c
+===================================================================
+--- systemd-229.orig/src/core/job.c
++++ systemd-229/src/core/job.c
+@@ -77,7 +77,7 @@ Job* job_new(Unit *unit, JobType type) {
+         return j;
+ }
+ 
+-void job_free(Job *j) {
++void job_unlink(Job *j) {
+         assert(j);
+         assert(!j->installed);
+         assert(!j->transaction_prev);
+@@ -85,18 +85,33 @@ void job_free(Job *j) {
+         assert(!j->subject_list);
+         assert(!j->object_list);
+ 
+-        if (j->in_run_queue)
++        if (j->in_run_queue) {
+                 LIST_REMOVE(run_queue, j->manager->run_queue, j);
++                j->in_run_queue = false;                
++        }
+ 
+-        if (j->in_dbus_queue)
++        if (j->in_dbus_queue) {
+                 LIST_REMOVE(dbus_queue, j->manager->dbus_job_queue, j);
++                j->in_dbus_queue = false;
++        }
++        
++        j->timer_event_source = sd_event_source_unref(j->timer_event_source);
++}
+ 
+-        sd_event_source_unref(j->timer_event_source);
++Job* job_free(Job *j) {
++        assert(j);
++        assert(!j->installed);
++        assert(!j->transaction_prev);
++        assert(!j->transaction_next);
++        assert(!j->subject_list);
++        assert(!j->object_list);
+ 
++        job_unlink(j);
++ 
+         sd_bus_track_unref(j->clients);
+         strv_free(j->deserialized_clients);
+ 
+-        free(j);
++        return mfree(j);
+ }
+ 
+ static void job_set_state(Job *j, JobState state) {
+@@ -145,7 +160,7 @@ void job_uninstall(Job *j) {
+ 
+         unit_add_to_gc_queue(j->unit);
+ 
+-        hashmap_remove(j->manager->jobs, UINT32_TO_PTR(j->id));
++        hashmap_remove_value(j->manager->jobs, UINT32_TO_PTR(j->id), j);
+         j->installed = false;
+ }
+ 
+@@ -232,6 +247,7 @@ Job* job_install(Job *j) {
+ 
+ int job_install_deserialized(Job *j) {
+         Job **pj;
++        int r;
+ 
+         assert(!j->installed);
+ 
+@@ -241,10 +257,15 @@ int job_install_deserialized(Job *j) {
+         }
+ 
+         pj = (j->type == JOB_NOP) ? &j->unit->nop_job : &j->unit->job;
+-        if (*pj) {
+-                log_unit_debug(j->unit, "Unit already has a job installed. Not installing deserialized job.");
+-                return -EEXIST;
+-        }
++        if (*pj)
++                return log_unit_debug_errno(j->unit, EEXIST,
++                                            "Unit already has a job installed. Not installing deserialized job.");
++
++        r = hashmap_put(j->manager->jobs, UINT32_TO_PTR(j->id), j);
++        if (r == -EEXIST)
++                return log_unit_debug_errno(j->unit, r, "Job ID %" PRIu32 " already used, cannot deserialize job.", j->id);
++        if (r < 0)
++                return log_unit_debug_errno(j->unit, r, "Failed to insert job into jobs hash table: %m");
+ 
+         *pj = j;
+         j->installed = true;
+Index: systemd-229/src/core/job.h
+===================================================================
+--- systemd-229.orig/src/core/job.h
++++ systemd-229/src/core/job.h
+@@ -172,7 +172,8 @@ struct Job {
+ 
+ Job* job_new(Unit *unit, JobType type);
+ Job* job_new_raw(Unit *unit);
+-void job_free(Job *job);
++void job_unlink(Job *job);
++Job* job_free(Job *job);
+ Job* job_install(Job *j);
+ int job_install_deserialized(Job *j);
+ void job_uninstall(Job *j);
+@@ -227,6 +228,8 @@ void job_shutdown_magic(Job *j);
+ 
+ int job_get_timeout(Job *j, usec_t *timeout) _pure_;
+ 
++DEFINE_TRIVIAL_CLEANUP_FUNC(Job*, job_free);
++
+ const char* job_type_to_string(JobType t) _const_;
+ JobType job_type_from_string(const char *s) _pure_;
+ 
+Index: systemd-229/src/core/unit.c
+===================================================================
+--- systemd-229.orig/src/core/unit.c
++++ systemd-229/src/core/unit.c
+@@ -1811,9 +1811,75 @@ void unit_trigger_notify(Unit *u) {
+                         UNIT_VTABLE(other)->trigger_notify(other, u);
+ }
+ 
++static bool unit_process_job(Job *j, UnitActiveState ns, bool reload_success) {
++        bool unexpected = false;
++
++        assert(j);
++
++        if (j->state == JOB_WAITING)
++
++                /* So we reached a different state for this job. Let's see if we can run it now if it failed previously
++                 * due to EAGAIN. */
++                job_add_to_run_queue(j);
++
++        /* Let's check whether the unit's new state constitutes a finished job, or maybe contradicts a running job and
++         * hence needs to invalidate jobs. */
++
++        switch (j->type) {
++
++        case JOB_START:
++        case JOB_VERIFY_ACTIVE:
++
++                if (UNIT_IS_ACTIVE_OR_RELOADING(ns))
++                        job_finish_and_invalidate(j, JOB_DONE, true);
++                else if (j->state == JOB_RUNNING && ns != UNIT_ACTIVATING) {
++                        unexpected = true;
++
++                        if (UNIT_IS_INACTIVE_OR_FAILED(ns))
++                                job_finish_and_invalidate(j, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
++                }
++
++                break;
++
++        case JOB_RELOAD:
++        case JOB_RELOAD_OR_START:
++        case JOB_TRY_RELOAD:
++
++                if (j->state == JOB_RUNNING) {
++                        if (ns == UNIT_ACTIVE)
++-                                        job_finish_and_invalidate(j, reload_success ? JOB_DONE : JOB_FAILED, true);
++                        else if (!IN_SET(ns, UNIT_ACTIVATING, UNIT_RELOADING)) {
++                                unexpected = true;
++
++                                if (UNIT_IS_INACTIVE_OR_FAILED(ns))
++-                                                job_finish_and_invalidate(j, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
++                        }
++                }
++
++                break;
++
++        case JOB_STOP:
++        case JOB_RESTART:
++        case JOB_TRY_RESTART:
++
++                if (UNIT_IS_INACTIVE_OR_FAILED(ns))
++                        job_finish_and_invalidate(j, JOB_DONE, true);
++                else if (j->state == JOB_RUNNING && ns != UNIT_DEACTIVATING) {
++                        unexpected = true;
++                        job_finish_and_invalidate(j, JOB_FAILED, true);
++                }
++
++                break;
++
++        default:
++                assert_not_reached("Job type unknown");
++        }
++
++        return unexpected;
++}
++
+ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success) {
+         Manager *m;
+-        bool unexpected;
+ 
+         assert(u);
+         assert(os < _UNIT_ACTIVE_STATE_MAX);
+@@ -1868,82 +1934,18 @@ void unit_notify(Unit *u, UnitActiveStat
+                 }
+         }
+ 
+-        if (u->job) {
+-                unexpected = false;
+-
+-                if (u->job->state == JOB_WAITING)
+-
+-                        /* So we reached a different state for this
+-                         * job. Let's see if we can run it now if it
+-                         * failed previously due to EAGAIN. */
+-                        job_add_to_run_queue(u->job);
+-
+-                /* Let's check whether this state change constitutes a
+-                 * finished job, or maybe contradicts a running job and
+-                 * hence needs to invalidate jobs. */
+-
+-                switch (u->job->type) {
+-
+-                case JOB_START:
+-                case JOB_VERIFY_ACTIVE:
+-
+-                        if (UNIT_IS_ACTIVE_OR_RELOADING(ns))
+-                                job_finish_and_invalidate(u->job, JOB_DONE, true);
+-                        else if (u->job->state == JOB_RUNNING && ns != UNIT_ACTIVATING) {
+-                                unexpected = true;
+-
+-                                if (UNIT_IS_INACTIVE_OR_FAILED(ns))
+-                                        job_finish_and_invalidate(u->job, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
+-                        }
+-
+-                        break;
+-
+-                case JOB_RELOAD:
+-                case JOB_RELOAD_OR_START:
+-                case JOB_TRY_RELOAD:
+-
+-                        if (u->job->state == JOB_RUNNING) {
+-                                if (ns == UNIT_ACTIVE)
+-                                        job_finish_and_invalidate(u->job, reload_success ? JOB_DONE : JOB_FAILED, true);
+-                                else if (ns != UNIT_ACTIVATING && ns != UNIT_RELOADING) {
+-                                        unexpected = true;
+-
+-                                        if (UNIT_IS_INACTIVE_OR_FAILED(ns))
+-                                                job_finish_and_invalidate(u->job, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
+-                                }
+-                        }
+-
+-                        break;
+-
+-                case JOB_STOP:
+-                case JOB_RESTART:
+-                case JOB_TRY_RESTART:
+-
+-                        if (UNIT_IS_INACTIVE_OR_FAILED(ns))
+-                                job_finish_and_invalidate(u->job, JOB_DONE, true);
+-                        else if (u->job->state == JOB_RUNNING && ns != UNIT_DEACTIVATING) {
+-                                unexpected = true;
+-                                job_finish_and_invalidate(u->job, JOB_FAILED, true);
+-                        }
+-
+-                        break;
+-
+-                default:
+-                        assert_not_reached("Job type unknown");
+-                }
+-
+-        } else
+-                unexpected = true;
+-
+         if (m->n_reloading <= 0) {
++                bool unexpected;
+ 
+-                /* If this state change happened without being
+-                 * requested by a job, then let's retroactively start
+-                 * or stop dependencies. We skip that step when
+-                 * deserializing, since we don't want to create any
+-                 * additional jobs just because something is already
+-                 * activated. */
++                /* Let's propagate state changes to the job */
++                if (u->job)
++                        unexpected = unit_process_job(u->job, ns, reload_success);
++                else
++                        unexpected = true;
+ 
++                /* If this state change happened without being requested by a job, then let's retroactively start or
++                 * stop dependencies. We skip that step when deserializing, since we don't want to create any
++                 * additional jobs just because something is already activated. */
+                 if (unexpected) {
+                         if (UNIT_IS_INACTIVE_OR_FAILED(os) && UNIT_IS_ACTIVE_OR_ACTIVATING(ns))
+                                 retroactively_start_dependencies(u);
+@@ -2673,6 +2675,29 @@ void unit_serialize_item_format(Unit *u,
+         fputc('\n', f);
+ }
+ 
++static int unit_deserialize_job(Unit *u, FILE *f, FDSet *fds) {
++        _cleanup_(job_freep) Job *j = NULL;
++        int r;
++
++        assert(u);
++        assert(f);
++
++        j = job_new_raw(u);
++        if (!j)
++                return log_oom();
++
++        r = job_deserialize(j, f, fds);
++        if (r < 0)
++                return r;
++
++        r = job_install_deserialized(j);
++        if (r < 0)
++                return r;
++
++        TAKE_PTR(j);
++        return 0;
++}
++
+ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
+         ExecRuntime **rt = NULL;
+         size_t offset;
+@@ -2710,33 +2735,12 @@ int unit_deserialize(Unit *u, FILE *f, F
+                         v = l+k;
+ 
+                 if (streq(l, "job")) {
+-                        if (v[0] == '\0') {
+-                                /* new-style serialized job */
+-                                Job *j;
+-
+-                                j = job_new_raw(u);
+-                                if (!j)
+-                                        return log_oom();
+-
+-                                r = job_deserialize(j, f, fds);
+-                                if (r < 0) {
+-                                        job_free(j);
+-                                        return r;
+-                                }
+-
+-                                r = hashmap_put(u->manager->jobs, UINT32_TO_PTR(j->id), j);
+-                                if (r < 0) {
+-                                        job_free(j);
+-                                        return r;
+-                                }
+-
+-                                r = job_install_deserialized(j);
+-                                if (r < 0) {
+-                                        hashmap_remove(u->manager->jobs, UINT32_TO_PTR(j->id));
+-                                        job_free(j);
++                        if (v[0] == '\0') {                        
++                                /* New-style serialized job */
++                                r = unit_deserialize_job(u, f, fds);
++                                if (r < 0)
+                                         return r;
+-                                }
+-                        } else  /* legacy for pre-44 */
++                        } else  /* Legacy for pre-44 */
+                                 log_unit_warning(u, "Update from too old systemd versions are unsupported, cannot deserialize job: %s", v);
+                         continue;
+                 } else if (streq(l, "state-change-timestamp")) {
+Index: systemd-229/src/basic/alloc-util.h
+===================================================================
+--- systemd-229.orig/src/basic/alloc-util.h
++++ systemd-229/src/basic/alloc-util.h
+@@ -113,3 +113,12 @@ void* greedy_realloc0(void **p, size_t *
+                 _new_ = alloca_align(_size_, (align));                  \
+                 (void*)memset(_new_, 0, _size_);                        \
+         })
++
++/* Takes inspiration from Rusts's Option::take() method: reads and returns a pointer, but at the same time resets it to
++ * NULL. See: https://doc.rust-lang.org/std/option/enum.Option.html#method.take */
++#define TAKE_PTR(ptr)                           \
++        ({                                      \
++                typeof(ptr) _ptr_ = (ptr);      \
++                (ptr) = NULL;                   \
++                _ptr_;                          \
++        })
