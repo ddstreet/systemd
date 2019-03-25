@@ -266,9 +266,6 @@ struct Manager {
 
         /* non-zero if we are reloading or reexecuting, */
         int n_reloading;
-        /* A set which contains all jobs that started before reload and finished
-         * during it */
-        Set *pending_finished_jobs;
 
         unsigned n_installed_jobs;
         unsigned n_failed_jobs;
@@ -377,5 +374,3 @@ int manager_update_failed_units(Manager *m, Unit *u, bool failed);
 
 const char *manager_state_to_string(ManagerState m) _const_;
 ManagerState manager_state_from_string(const char *s) _pure_;
-
-#define MANAGER_IS_RELOADING(m) ((m)->n_reloading > 0)

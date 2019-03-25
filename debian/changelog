@@ -1,3 +1,17 @@
+systemd (229-4ubuntu21.19) xenial; urgency=medium
+
+  [ Michael Vogt ]
+  * d/p/fix-race-daemon-reload-11121.patch:
+    - backport systemd upstream PR#8803 and PR#11121 to fix race
+      when doing systemctl and systemctl daemon-reload at the
+      same time LP: #1819728
+
+  [ Balint Reczey ]  
+  * d/p/virt-detect-WSL-environment-as-a-container.patch:
+    - virt: detect WSL environment as a container (LP: #1816753)
+
+ -- Michael Vogt <michael.vogt@ubuntu.com>  Mon, 25 Mar 2019 16:04:56 +0100
+
 systemd (229-4ubuntu21.18) xenial; urgency=medium
 
   * d/p/fix-race-daemon-reload-8803.patch:
