@@ -212,10 +212,16 @@ static int process_http_upload(
                         break;
                 else if (r < 0) {
                         log_warning("Failed to process data for connection %p", connection);
-                        if (r == -E2BIG)
+                        if (r == -ENOBUFS)
                                 return mhd_respondf(connection,
                                                     r, MHD_HTTP_PAYLOAD_TOO_LARGE,
                                                     "Entry is too large, maximum is " STRINGIFY(DATA_SIZE_MAX) " bytes.");
+
+                        else if (r == -E2BIG)
+                                return mhd_respondf(connection,
+                                                    r, MHD_HTTP_REQUEST_ENTITY_TOO_LARGE,
+                                                    "Entry with more fields than the maximum of " STRINGIFY(ENTRY_FIELD_COUNT_MAX) ".");
+
                         else
                                 return mhd_respondf(connection,
                                                     r, MHD_HTTP_UNPROCESSABLE_ENTITY,
