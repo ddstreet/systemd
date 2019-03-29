@@ -1,3 +1,13 @@
+systemd (229-4ubuntu21.21) xenial-security; urgency=medium
+
+  * SECURITY UDPATE: Unsafe environment usage in pam_systemd.so leads to
+    incorrect Policykit authorization
+    - debian/patches/CVE-2019-3842.patch: Use secure_getenv() rather than
+      getenv() in pam_systemd.c
+    - CVE-2019-3842
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Fri, 29 Mar 2019 16:43:00 +0000
+
 systemd (229-4ubuntu21.19) xenial; urgency=medium
 
   [ Michael Vogt ]
@@ -6,7 +16,7 @@ systemd (229-4ubuntu21.19) xenial; urgency=medium
       when doing systemctl and systemctl daemon-reload at the
       same time LP: #1819728
 
-  [ Balint Reczey ]  
+  [ Balint Reczey ]
   * d/p/virt-detect-WSL-environment-as-a-container.patch:
     - virt: detect WSL environment as a container (LP: #1816753)
 
