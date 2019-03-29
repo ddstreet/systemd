@@ -1,3 +1,5 @@
+#pragma once
+
 /***
   This file is part of systemd.
 
@@ -17,9 +19,7 @@
   along with systemd; If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-#pragma once
-
-typedef struct Tunnel Tunnel;
+#include "in-addr-util.h"
 
 #include "networkd-netdev.h"
 
@@ -37,7 +37,7 @@ typedef enum IPv6FlowLabel {
         _NETDEV_IPV6_FLOWLABEL_INVALID = -1,
 } IPv6FlowLabel;
 
-struct Tunnel {
+typedef struct Tunnel {
         NetDev meta;
 
         uint8_t encap_limit;
@@ -49,6 +49,10 @@ struct Tunnel {
         unsigned tos;
         unsigned flags;
 
+        uint32_t key;
+        uint32_t ikey;
+        uint32_t okey;
+
         union in_addr_union local;
         union in_addr_union remote;
 
@@ -56,8 +60,17 @@ struct Tunnel {
 
         bool pmtudisc;
         bool copy_dscp;
-};
+} Tunnel;
 
+DEFINE_NETDEV_CAST(IPIP, Tunnel);
+DEFINE_NETDEV_CAST(GRE, Tunnel);
+DEFINE_NETDEV_CAST(GRETAP, Tunnel);
+DEFINE_NETDEV_CAST(IP6GRE, Tunnel);
+DEFINE_NETDEV_CAST(IP6GRETAP, Tunnel);
+DEFINE_NETDEV_CAST(SIT, Tunnel);
+DEFINE_NETDEV_CAST(VTI, Tunnel);
+DEFINE_NETDEV_CAST(VTI6, Tunnel);
+DEFINE_NETDEV_CAST(IP6TNL, Tunnel);
 extern const NetDevVTable ipip_vtable;
 extern const NetDevVTable sit_vtable;
 extern const NetDevVTable vti_vtable;
@@ -99,3 +112,8 @@ int config_parse_encap_limit(const char *unit, const char *filename,
                              unsigned section_line, const char *lvalue,
                              int ltype, const char *rvalue, void *data,
                              void *userdata);
+int config_parse_tunnel_key(const char *unit, const char *filename,
+                            unsigned line, const char *section,
+                            unsigned section_line, const char *lvalue,
+                            int ltype, const char *rvalue, void *data,
+                            void *userdata);
