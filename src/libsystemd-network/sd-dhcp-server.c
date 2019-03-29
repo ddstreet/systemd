@@ -29,6 +29,7 @@
 #include "in-addr-util.h"
 #include "siphash24.h"
 #include "string-util.h"
+#include "unaligned.h"
 
 #define DHCP_DEFAULT_LEASE_TIME_USEC USEC_PER_HOUR
 #define DHCP_MAX_LEASE_TIME_USEC (USEC_PER_HOUR*12)
@@ -208,8 +209,7 @@ int sd_dhcp_server_new(sd_dhcp_server **ret, int ifindex) {
         return 0;
 }
 
-int sd_dhcp_server_attach_event(sd_dhcp_server *server, sd_event *event,
-                                int priority) {
+int sd_dhcp_server_attach_event(sd_dhcp_server *server, sd_event *event, int64_t priority) {
         int r;
 
         assert_return(server, -EINVAL);
@@ -260,7 +260,7 @@ static int dhcp_server_send_unicast_raw(sd_dhcp_server *server,
                                         DHCPPacket *packet, size_t len) {
         union sockaddr_union link = {
                 .ll.sll_family = AF_PACKET,
-                .ll.sll_protocol = htons(ETH_P_IP),
+                .ll.sll_protocol = htobe16(ETH_P_IP),
                 .ll.sll_ifindex = server->ifindex,
                 .ll.sll_halen = ETH_ALEN,
         };
@@ -281,10 +281,11 @@ static int dhcp_server_send_unicast_raw(sd_dhcp_server *server,
 }
 
 static int dhcp_server_send_udp(sd_dhcp_server *server, be32_t destination,
+                                uint16_t destination_port,
                                 DHCPMessage *message, size_t len) {
         union sockaddr_union dest = {
                 .in.sin_family = AF_INET,
-                .in.sin_port = htobe16(DHCP_PORT_CLIENT),
+                .in.sin_port = htobe16(destination_port),
                 .in.sin_addr.s_addr = destination,
         };
         struct iovec iov = {
@@ -343,6 +344,7 @@ int dhcp_server_send_packet(sd_dhcp_server *server,
                             DHCPRequest *req, DHCPPacket *packet,
                             int type, size_t optoffset) {
         be32_t destination = INADDR_ANY;
+        uint16_t destination_port = DHCP_PORT_CLIENT;
         int r;
 
         assert(server);
@@ -387,17 +389,19 @@ int dhcp_server_send_packet(sd_dhcp_server *server,
          */
         if (req->message->giaddr) {
                 destination = req->message->giaddr;
+                destination_port = DHCP_PORT_SERVER;
                 if (type == DHCP_NAK)
                         packet->dhcp.flags = htobe16(0x8000);
         } else if (req->message->ciaddr && type != DHCP_NAK)
                 destination = req->message->ciaddr;
 
         if (destination != INADDR_ANY)
-                return dhcp_server_send_udp(server, destination, &packet->dhcp,
+                return dhcp_server_send_udp(server, destination,
+                                            destination_port, &packet->dhcp,
                                             sizeof(DHCPMessage) + optoffset);
         else if (requested_broadcast(req) || type == DHCP_NAK)
                 return dhcp_server_send_udp(server, INADDR_BROADCAST,
-                                            &packet->dhcp,
+                                            destination_port, &packet->dhcp,
                                             sizeof(DHCPMessage) + optoffset);
         else
                 /* we cannot send UDP packet to specific MAC address when the
@@ -465,10 +469,12 @@ static int server_send_offer(sd_dhcp_server *server, DHCPRequest *req,
         if (r < 0)
                 return r;
 
-        r = dhcp_option_append(&packet->dhcp, req->max_optlen, &offset, 0,
-                               SD_DHCP_OPTION_ROUTER, 4, &server->address);
-        if (r < 0)
-                return r;
+        if (server->emit_router) {
+                r = dhcp_option_append(&packet->dhcp, req->max_optlen, &offset, 0,
+                                       SD_DHCP_OPTION_ROUTER, 4, &server->address);
+                if (r < 0)
+                        return r;
+        }
 
         r = dhcp_server_send_packet(server, req, packet, DHCP_OFFER, offset);
         if (r < 0)
@@ -502,10 +508,12 @@ static int server_send_ack(sd_dhcp_server *server, DHCPRequest *req,
         if (r < 0)
                 return r;
 
-        r = dhcp_option_append(&packet->dhcp, req->max_optlen, &offset, 0,
-                               SD_DHCP_OPTION_ROUTER, 4, &server->address);
-        if (r < 0)
-                return r;
+        if (server->emit_router) {
+                r = dhcp_option_append(&packet->dhcp, req->max_optlen, &offset, 0,
+                                       SD_DHCP_OPTION_ROUTER, 4, &server->address);
+                if (r < 0)
+                        return r;
+        }
 
         if (server->n_dns > 0) {
                 r = dhcp_option_append(
@@ -580,7 +588,8 @@ static int server_send_forcerenew(sd_dhcp_server *server, be32_t address,
 
         memcpy(&packet->dhcp.chaddr, chaddr, ETH_ALEN);
 
-        r = dhcp_server_send_udp(server, address, &packet->dhcp,
+        r = dhcp_server_send_udp(server, address, DHCP_PORT_CLIENT,
+                                 &packet->dhcp,
                                  sizeof(DHCPMessage) + optoffset);
         if (r < 0)
                 return r;
@@ -596,17 +605,17 @@ static int parse_request(uint8_t code, uint8_t len, const void *option, void *us
         switch(code) {
         case SD_DHCP_OPTION_IP_ADDRESS_LEASE_TIME:
                 if (len == 4)
-                        req->lifetime = be32toh(*(be32_t*)option);
+                        req->lifetime = unaligned_read_be32(option);
 
                 break;
         case SD_DHCP_OPTION_REQUESTED_IP_ADDRESS:
                 if (len == 4)
-                        req->requested_ip = *(be32_t*)option;
+                        memcpy(&req->requested_ip, option, sizeof(be32_t));
 
                 break;
         case SD_DHCP_OPTION_SERVER_IDENTIFIER:
                 if (len == 4)
-                        req->server_id = *(be32_t*)option;
+                        memcpy(&req->server_id, option, sizeof(be32_t));
 
                 break;
         case SD_DHCP_OPTION_CLIENT_IDENTIFIER:
@@ -624,9 +633,9 @@ static int parse_request(uint8_t code, uint8_t len, const void *option, void *us
 
                 break;
         case SD_DHCP_OPTION_MAXIMUM_MESSAGE_SIZE:
-                if (len == 2)
-                        req->max_optlen = be16toh(*(be16_t*)option) -
-                                          - sizeof(DHCPPacket);
+
+                if (len == 2 && unaligned_read_be16(option) >= sizeof(DHCPPacket))
+                        req->max_optlen = unaligned_read_be16(option) - sizeof(DHCPPacket);
 
                 break;
         }
@@ -955,14 +964,13 @@ static int server_receive_message(sd_event_source *s, int fd,
                 .msg_controllen = sizeof(cmsgbuf),
         };
         struct cmsghdr *cmsg;
-        int buflen = 0, len;
+        ssize_t buflen, len;
 
         assert(server);
 
-        if (ioctl(fd, FIONREAD, &buflen) < 0)
-                return -errno;
-        else if (buflen < 0)
-                return -EIO;
+        buflen = next_datagram_size_fd(fd);
+        if (buflen < 0)
+                return buflen;
 
         message = malloc(buflen);
         if (!message)
@@ -1152,6 +1160,17 @@ int sd_dhcp_server_set_ntp(sd_dhcp_server *server, const struct in_addr ntp[], u
                 server->ntp = c;
                 server->n_ntp = n;
         }
+
+        return 1;
+}
+
+int sd_dhcp_server_set_emit_router(sd_dhcp_server *server, int enabled) {
+        assert_return(server, -EINVAL);
+
+        if (enabled == server->emit_router)
+                return 0;
+
+        server->emit_router = enabled;
 
         return 1;
 }
