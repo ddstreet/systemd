@@ -1,3 +1,13 @@
+systemd (237-3ubuntu10.19) bionic-security; urgency=medium
+
+  * SECURITY UDPATE: Unsafe environment usage in pam_systemd.so leads to
+    incorrect Policykit authorization
+    - debian/patches/CVE-2019-3842.patch: Use secure_getenv() rather than
+      getenv() in pam_systemd.c
+    - CVE-2019-3842
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Fri, 29 Mar 2019 16:40:26 +0000
+
 systemd (237-3ubuntu10.17) bionic; urgency=medium
 
   [ Michael Vogt ]
