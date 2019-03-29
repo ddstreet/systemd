@@ -136,3 +136,4 @@ stop-mount-error-propagation.patch
 fix-egde-case-when-processing-proc-self-mountinfo.patch
 fix-race-daemon-reload-11121.patch
 virt-detect-WSL-environment-as-a-container-id-wsl.patch
+CVE-2019-3842.patch
