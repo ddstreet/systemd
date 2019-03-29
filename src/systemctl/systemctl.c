@@ -7255,6 +7255,13 @@ static int parse_argv(int argc, char *argv[]) {
                                  * request to it. For now we simply
                                  * guess that it is Upstart. */
 
+                                /* work around upstart exec'ing systemd when /sbin/init
+                                 * changes (https://launchpad.net/bugs/1430479) */
+                                if (argv[1] != NULL && streq(argv[1], "u")) {
+                                    log_warning("Ignoring telinit u request, systemd is not running");
+                                    return -ENOTSUP;
+                                }
+
                                 execv(TELINIT, argv);
 
                                 log_error("Couldn't find an alternative telinit implementation to spawn.");
