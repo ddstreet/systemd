@@ -1,0 +1,38 @@
+From e6b65ab76073338a620a0c425d4b17f2281c1eb0 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 1 Nov 2018 23:38:01 +0900
+Subject: [PATCH] network: fix return value of routing_policy_rule_get()
+
+To distinguish source of rule.
+
+Origin: upstream, https://github.com/systemd/systemd/commit/e6b65ab76073338a620
+Bug: https://github.com/systemd/systemd/issues/11280
+Bug-Ubuntu: https://launchpad.net/bugs/1818282
+---
+
+Index: systemd-237/src/network/networkd-link.c
+===================================================================
+--- systemd-237.orig/src/network/networkd-link.c
++++ systemd-237/src/network/networkd-link.c
+@@ -804,7 +804,7 @@ static int link_set_routing_policy_rule(
+         LIST_FOREACH(rules, rule, link->network->rules) {
+                 r = routing_policy_rule_get(link->manager, rule->family, &rule->from, rule->from_prefixlen, &rule->to,
+                                             rule->to_prefixlen, rule->tos, rule->fwmark, rule->table, rule->iif, rule->oif, &rrule);
+-                if (r == 1) {
++                if (r == 0) {
+                         (void) routing_policy_rule_make_local(link->manager, rrule);
+                         continue;
+                 }
+Index: systemd-237/src/network/networkd-routing-policy-rule.c
+===================================================================
+--- systemd-237.orig/src/network/networkd-routing-policy-rule.c
++++ systemd-237/src/network/networkd-routing-policy-rule.c
+@@ -212,7 +212,7 @@ int routing_policy_rule_get(Manager *m,
+                 if (existing) {
+                         if (ret)
+                                 *ret = existing;
+-                        return 1;
++                        return 0;
+                 }
+         }
+ 
