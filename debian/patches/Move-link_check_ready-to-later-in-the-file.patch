@@ -1,0 +1,147 @@
+From 6accfd3139a0ccef9859b742452c04926f52515c Mon Sep 17 00:00:00 2001
+From: Daniel Axtens <dja@axtens.net>
+Date: Wed, 5 Dec 2018 20:39:41 +1100
+Subject: [PATCH] Move link_check_ready() to later in the file
+
+We're about to need it to be later in the file for the next commit.
+Moving it now means that when we change it in the next commit, it's
+not intermingled with the move.
+
+No functional change intended.
+
+Signed-off-by: Daniel Axtens <dja@axtens.net>
+
+Origin: upstream, https://github.com/systemd/systemd/commit/6accfd3139a0ccef9859b742452c04926f52515c
+Bug-Ubuntu: https://launchpad.net/bugs/1812760
+---
+ src/network/networkd-link.c | 114 ++++++++++++++++++------------------
+ 1 file changed, 57 insertions(+), 57 deletions(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -741,62 +741,6 @@
+         link_dirty(link);
+ }
+ 
+-void link_check_ready(Link *link) {
+-        Address *a;
+-        Iterator i;
+-
+-        assert(link);
+-
+-        if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
+-                return;
+-
+-        if (!link->network)
+-                return;
+-
+-        if (!link->addresses_configured)
+-                return;
+-
+-        if (!link->static_routes_configured)
+-                return;
+-
+-        if (!link->routing_policy_rules_configured)
+-                return;
+-
+-        if (link_ipv4ll_enabled(link))
+-                if (!link->ipv4ll_address ||
+-                    !link->ipv4ll_route)
+-                        return;
+-
+-        if (!link->network->bridge) {
+-
+-                if (link_ipv6ll_enabled(link))
+-                        if (in_addr_is_null(AF_INET6, (const union in_addr_union*) &link->ipv6ll_address) > 0)
+-                                return;
+-
+-                if ((link_dhcp4_enabled(link) && !link_dhcp6_enabled(link) &&
+-                     !link->dhcp4_configured) ||
+-                    (link_dhcp6_enabled(link) && !link_dhcp4_enabled(link) &&
+-                     !link->dhcp6_configured) ||
+-                    (link_dhcp4_enabled(link) && link_dhcp6_enabled(link) &&
+-                     !link->dhcp4_configured && !link->dhcp6_configured))
+-                        return;
+-
+-                bool implicit = false;
+-                if (link_ipv6_accept_ra_enabled_implicit(link, &implicit) && !link->ndisc_configured)
+-                        if (!implicit)
+-                                return;
+-        }
+-
+-        SET_FOREACH(a, link->addresses, i)
+-                if (!address_is_ready(a))
+-                        return;
+-
+-        if (link->state != LINK_STATE_CONFIGURED)
+-                link_enter_configured(link);
+-
+-        return;
+-}
+-
+ static int link_set_routing_policy_rule(Link *link) {
+         RoutingPolicyRule *rule, *rrule = NULL;
+         int r;
+@@ -892,6 +836,62 @@
+         return 0;
+ }
+ 
++void link_check_ready(Link *link) {
++        Address *a;
++        Iterator i;
++
++        assert(link);
++
++        if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
++                return;
++
++        if (!link->network)
++                return;
++
++        if (!link->addresses_configured)
++                return;
++
++        if (!link->static_routes_configured)
++                return;
++
++        if (!link->routing_policy_rules_configured)
++                return;
++
++        if (link_ipv4ll_enabled(link))
++                if (!link->ipv4ll_address ||
++                    !link->ipv4ll_route)
++                        return;
++
++        if (!link->network->bridge) {
++
++                if (link_ipv6ll_enabled(link))
++                        if (in_addr_is_null(AF_INET6, (const union in_addr_union*) &link->ipv6ll_address) > 0)
++                                return;
++
++                if ((link_dhcp4_enabled(link) && !link_dhcp6_enabled(link) &&
++                     !link->dhcp4_configured) ||
++                    (link_dhcp6_enabled(link) && !link_dhcp4_enabled(link) &&
++                     !link->dhcp6_configured) ||
++                    (link_dhcp4_enabled(link) && link_dhcp6_enabled(link) &&
++                     !link->dhcp4_configured && !link->dhcp6_configured))
++                        return;
++
++                bool implicit = false;
++                if (link_ipv6_accept_ra_enabled_implicit(link, &implicit) && !link->ndisc_configured)
++                        if (!implicit)
++                                return;
++        }
++
++        SET_FOREACH(a, link->addresses, i)
++                if (!address_is_ready(a))
++                        return;
++
++        if (link->state != LINK_STATE_CONFIGURED)
++                link_enter_configured(link);
++
++        return;
++}
++
+ int link_route_remove_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
+         _cleanup_link_unref_ Link *link = userdata;
+         int r;

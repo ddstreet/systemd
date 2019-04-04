@@ -1,3 +1,28 @@
+systemd (237-3ubuntu10.20) bionic; urgency=medium
+
+  [ Ioanna Alifieraki ]
+  * d/p/backport_network-fix-return-value-of-routing_policy_rule_get.patch,
+    d/p/backport_network-remove-routing-policy-rule-from-foreign.patch,
+    d/p/backport_network-do-not-remove-rule-when-requested-by-existing-links.patch:
+    - Fix RoutingPolicyRule does not apply correctly (LP: #1818282)
+
+  [ Dan Streetman ]
+  * d/p/fix-test-22.patch
+    - fix TEST-22 failures
+  * d/p/networkd-Track-address-configuration.patch,
+    d/p/networkd-Use-only-a-generic-CONFIGURING-state.patch,
+    d/p/networkd-don-t-remove-route.patch,
+    d/p/networkd-don-t-remove-ip-address.patch,
+    d/p/Move-link_check_ready-to-later-in-the-file.patch,
+    d/p/network-set-_configured-flags-to-false-before-reques.patch,
+    d/p/Install-routes-after-addresses-are-ready.patch:
+    - PreferredSource not working in *.network files (LP: #1812760)
+
+  [ Dimitri John Ledkov ]
+  * Specify Ubuntu's Vcs-Git
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 04 Apr 2019 07:29:38 -0400
+
 systemd (237-3ubuntu10.19) bionic-security; urgency=medium
 
   * SECURITY UDPATE: Unsafe environment usage in pam_systemd.so leads to
