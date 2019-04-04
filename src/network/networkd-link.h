@@ -19,9 +19,7 @@
 
 typedef enum LinkState {
         LINK_STATE_PENDING,
-        LINK_STATE_ENSLAVING,
-        LINK_STATE_SETTING_ADDRESSES,
-        LINK_STATE_SETTING_ROUTES,
+        LINK_STATE_CONFIGURING,
         LINK_STATE_CONFIGURED,
         LINK_STATE_UNMANAGED,
         LINK_STATE_FAILED,
@@ -79,6 +77,10 @@ typedef struct Link {
         Set *addresses_foreign;
         Set *routes;
         Set *routes_foreign;
+
+        bool addresses_configured;
+
+        bool addresses_ready;
 
         sd_dhcp_client *dhcp_client;
         sd_dhcp_lease *dhcp_lease;

@@ -1,0 +1,54 @@
+From 2428613f854f46b6624199c2dc58d02617320133 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 30 Dec 2018 22:08:10 +0900
+Subject: [PATCH] network: set *_configured flags to false before requesting
+ addresses or freinds
+
+Fixes #11272.
+
+Origin: upstream, https://github.com/systemd/systemd/commit/2428613f854f46b6624199c2dc58d02617320133
+Bug-Ubuntu: https://launchpad.net/bugs/1812760
+---
+ src/network/networkd-link.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -739,6 +739,9 @@
+         assert(link);
+         assert(link->network);
+ 
++        link_set_state(link, LINK_STATE_CONFIGURING);
++        link->routing_policy_rules_configured = false;
++
+         LIST_FOREACH(rules, rule, link->network->rules) {
+                 r = routing_policy_rule_get(link->manager, rule->family, &rule->from, rule->from_prefixlen, &rule->to,
+                                             rule->to_prefixlen, rule->tos, rule->fwmark, rule->table, rule->iif, rule->oif, &rrule);
+@@ -804,6 +807,7 @@
+         assert(link->state != _LINK_STATE_INVALID);
+ 
+         link_set_state(link, LINK_STATE_CONFIGURING);
++        link->static_routes_configured = false;
+ 
+         (void) link_set_routing_policy_rule(link);
+ 
+@@ -1080,12 +1084,17 @@
+         assert(link->network);
+         assert(link->state != _LINK_STATE_INVALID);
+ 
++        link_set_state(link, LINK_STATE_CONFIGURING);
++
++        /* Reset all *_configured flags we are configuring. */
++        link->addresses_configured = false;
++        link->static_routes_configured = false;
++        link->routing_policy_rules_configured = false;
++
+         r = link_set_bridge_fdb(link);
+         if (r < 0)
+                 return r;
+ 
+-        link_set_state(link, LINK_STATE_CONFIGURING);
+-
+         LIST_FOREACH(addresses, ad, link->network->static_addresses) {
+                 r = address_configure(ad, link, address_handler, false);
+                 if (r < 0) {
