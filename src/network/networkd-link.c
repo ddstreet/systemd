@@ -731,7 +731,7 @@ static void link_enter_configured(Link *link) {
         assert(link);
         assert(link->network);
 
-        if (link->state != LINK_STATE_SETTING_ROUTES)
+        if (link->state != LINK_STATE_CONFIGURING)
                 return;
 
         log_link_info(link, "Configured");
@@ -739,6 +739,105 @@ static void link_enter_configured(Link *link) {
         link_set_state(link, LINK_STATE_CONFIGURED);
 
         link_dirty(link);
+}
+
+static int link_set_routing_policy_rule(Link *link) {
+        RoutingPolicyRule *rule, *rrule = NULL;
+        int r;
+
+        assert(link);
+        assert(link->network);
+
+        link_set_state(link, LINK_STATE_CONFIGURING);
+        link->routing_policy_rules_configured = false;
+
+        LIST_FOREACH(rules, rule, link->network->rules) {
+                r = routing_policy_rule_get(link->manager, rule->family, &rule->from, rule->from_prefixlen, &rule->to,
+                                            rule->to_prefixlen, rule->tos, rule->fwmark, rule->table, rule->iif, rule->oif, &rrule);
+                if (r == 0) {
+                        (void) routing_policy_rule_make_local(link->manager, rrule);
+                        continue;
+                }
+
+                r = routing_policy_rule_configure(rule, link, link_routing_policy_rule_handler, false);
+                if (r < 0) {
+                        log_link_warning_errno(link, r, "Could not set routing policy rules: %m");
+                        link_enter_failed(link);
+                        return r;
+                }
+
+                link->routing_policy_rule_messages++;
+        }
+
+        routing_policy_rule_purge(link->manager, link);
+        if (link->routing_policy_rule_messages == 0) {
+                link->routing_policy_rules_configured = true;
+                link_check_ready(link);
+        } else
+                log_link_debug(link, "Setting routing policy rules");
+
+        return 0;
+}
+
+static int route_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
+        _cleanup_link_unref_ Link *link = userdata;
+        int r;
+
+        assert(link->route_messages > 0);
+        assert(IN_SET(link->state, LINK_STATE_CONFIGURING,
+                      LINK_STATE_FAILED, LINK_STATE_LINGER));
+
+        link->route_messages--;
+
+        if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
+                return 1;
+
+        r = sd_netlink_message_get_errno(m);
+        if (r < 0 && r != -EEXIST)
+                log_link_warning_errno(link, r, "Could not set route: %m");
+
+        if (link->route_messages == 0) {
+                log_link_debug(link, "Routes set");
+                link->static_routes_configured = true;
+                link_check_ready(link);
+        }
+
+        return 1;
+}
+
+static int link_request_set_routes(Link *link) {
+        Route *rt;
+        int r;
+
+        assert(link);
+        assert(link->network);
+        assert(link->addresses_configured);
+        assert(link->address_messages == 0);
+        assert(link->state != _LINK_STATE_INVALID);
+
+        link_set_state(link, LINK_STATE_CONFIGURING);
+        link->static_routes_configured = false;
+
+        (void) link_set_routing_policy_rule(link);
+
+        LIST_FOREACH(routes, rt, link->network->static_routes) {
+                r = route_configure(rt, link, route_handler);
+                if (r < 0) {
+                        log_link_warning_errno(link, r, "Could not set routes: %m");
+                        link_enter_failed(link);
+                        return r;
+                }
+
+                link->route_messages++;
+        }
+
+        if (link->route_messages == 0) {
+                link->static_routes_configured = true;
+                link_check_ready(link);
+        } else
+                log_link_debug(link, "Setting routes");
+
+        return 0;
 }
 
 void link_check_ready(Link *link) {
@@ -752,6 +851,18 @@ void link_check_ready(Link *link) {
 
         if (!link->network)
                 return;
+
+        if (!link->addresses_configured)
+                return;
+
+        SET_FOREACH(a, link->addresses, i)
+                if (!address_is_ready(a))
+                        return;
+
+        if (!link->addresses_ready) {
+                link->addresses_ready = true;
+                link_request_set_routes(link);
+        }
 
         if (!link->static_routes_configured)
                 return;
@@ -784,108 +895,10 @@ void link_check_ready(Link *link) {
                                 return;
         }
 
-        SET_FOREACH(a, link->addresses, i)
-                if (!address_is_ready(a))
-                        return;
-
         if (link->state != LINK_STATE_CONFIGURED)
                 link_enter_configured(link);
 
         return;
-}
-
-static int link_set_routing_policy_rule(Link *link) {
-        RoutingPolicyRule *rule, *rrule = NULL;
-        int r;
-
-        assert(link);
-        assert(link->network);
-
-        LIST_FOREACH(rules, rule, link->network->rules) {
-                r = routing_policy_rule_get(link->manager, rule->family, &rule->from, rule->from_prefixlen, &rule->to,
-                                            rule->to_prefixlen, rule->tos, rule->fwmark, rule->table, rule->iif, rule->oif, &rrule);
-                if (r == 1) {
-                        (void) routing_policy_rule_make_local(link->manager, rrule);
-                        continue;
-                }
-
-                r = routing_policy_rule_configure(rule, link, link_routing_policy_rule_handler, false);
-                if (r < 0) {
-                        log_link_warning_errno(link, r, "Could not set routing policy rules: %m");
-                        link_enter_failed(link);
-                        return r;
-                }
-
-                link->routing_policy_rule_messages++;
-        }
-
-        routing_policy_rule_purge(link->manager, link);
-        if (link->routing_policy_rule_messages == 0) {
-                link->routing_policy_rules_configured = true;
-                link_check_ready(link);
-        } else
-                log_link_debug(link, "Setting routing policy rules");
-
-        return 0;
-}
-
-static int route_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
-        _cleanup_link_unref_ Link *link = userdata;
-        int r;
-
-        assert(link->route_messages > 0);
-        assert(IN_SET(link->state, LINK_STATE_SETTING_ADDRESSES,
-                      LINK_STATE_SETTING_ROUTES, LINK_STATE_FAILED,
-                      LINK_STATE_LINGER));
-
-        link->route_messages--;
-
-        if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
-                return 1;
-
-        r = sd_netlink_message_get_errno(m);
-        if (r < 0 && r != -EEXIST)
-                log_link_warning_errno(link, r, "Could not set route: %m");
-
-        if (link->route_messages == 0) {
-                log_link_debug(link, "Routes set");
-                link->static_routes_configured = true;
-                link_check_ready(link);
-        }
-
-        return 1;
-}
-
-static int link_enter_set_routes(Link *link) {
-        Route *rt;
-        int r;
-
-        assert(link);
-        assert(link->network);
-        assert(link->state == LINK_STATE_SETTING_ADDRESSES);
-
-        (void) link_set_routing_policy_rule(link);
-
-        link_set_state(link, LINK_STATE_SETTING_ROUTES);
-
-        LIST_FOREACH(routes, rt, link->network->static_routes) {
-                r = route_configure(rt, link, route_handler);
-                if (r < 0) {
-                        log_link_warning_errno(link, r, "Could not set routes: %m");
-                        link_enter_failed(link);
-                        return r;
-                }
-
-                link->route_messages++;
-        }
-
-        if (link->route_messages == 0) {
-                link->static_routes_configured = true;
-                link_check_ready(link);
-        } else
-                log_link_debug(link, "Setting routes");
-
-        return 0;
 }
 
 int link_route_remove_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
@@ -915,7 +928,7 @@ static int address_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userda
         assert(link);
         assert(link->ifname);
         assert(link->address_messages > 0);
-        assert(IN_SET(link->state, LINK_STATE_SETTING_ADDRESSES,
+        assert(IN_SET(link->state, LINK_STATE_CONFIGURING,
                LINK_STATE_FAILED, LINK_STATE_LINGER));
 
         link->address_messages--;
@@ -931,7 +944,8 @@ static int address_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userda
 
         if (link->address_messages == 0) {
                 log_link_debug(link, "Addresses set");
-                link_enter_set_routes(link);
+                link->addresses_configured = true;
+                link_check_ready(link);
         }
 
         return 1;
@@ -1075,7 +1089,7 @@ static int link_set_bridge_fdb(Link *link) {
         return 0;
 }
 
-static int link_enter_set_addresses(Link *link) {
+static int link_request_set_addresses(Link *link) {
         AddressLabel *label;
         Address *ad;
         int r;
@@ -1084,11 +1098,17 @@ static int link_enter_set_addresses(Link *link) {
         assert(link->network);
         assert(link->state != _LINK_STATE_INVALID);
 
+        link_set_state(link, LINK_STATE_CONFIGURING);
+
+        /* Reset all *_configured flags we are configuring. */
+        link->addresses_configured = false;
+        link->addresses_ready = false;
+        link->static_routes_configured = false;
+        link->routing_policy_rules_configured = false;
+
         r = link_set_bridge_fdb(link);
         if (r < 0)
                 return r;
-
-        link_set_state(link, LINK_STATE_SETTING_ADDRESSES);
 
         LIST_FOREACH(addresses, ad, link->network->static_addresses) {
                 r = address_configure(ad, link, address_handler, false);
@@ -1232,9 +1252,10 @@ static int link_enter_set_addresses(Link *link) {
                 log_link_debug(link, "Offering DHCPv4 leases");
         }
 
-        if (link->address_messages == 0)
-                link_enter_set_routes(link);
-        else
+        if (link->address_messages == 0) {
+                link->addresses_configured = true;
+                link_check_ready(link);
+        } else
                 log_link_debug(link, "Setting addresses");
 
         return 0;
@@ -2210,7 +2231,7 @@ static int link_joined(Link *link) {
         if (!link_has_carrier(link) && !link->network->configure_without_carrier)
                 return 0;
 
-        return link_enter_set_addresses(link);
+        return link_request_set_addresses(link);
 }
 
 static int netdev_join_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
@@ -2248,7 +2269,7 @@ static int link_enter_join_netdev(Link *link) {
         assert(link->network);
         assert(link->state == LINK_STATE_PENDING);
 
-        link_set_state(link, LINK_STATE_ENSLAVING);
+        link_set_state(link, LINK_STATE_CONFIGURING);
 
         link_dirty(link);
 
@@ -2493,6 +2514,38 @@ static int link_set_ipv6_hop_limit(Link *link) {
         return 0;
 }
 
+static bool link_is_static_route_configured(Link *link, Route *route) {
+        Route *net_route;
+
+        assert(link);
+        assert(route);
+
+        if (!link->network)
+                return false;
+
+        LIST_FOREACH(routes, net_route, link->network->static_routes)
+                if (route_equal(net_route, route))
+                        return true;
+
+        return false;
+}
+
+static bool link_is_static_address_configured(Link *link, Address *address) {
+        Address *net_address;
+
+        assert(link);
+        assert(address);
+
+        if (!link->network)
+                return false;
+
+        LIST_FOREACH(addresses, net_address, link->network->static_addresses)
+                if (address_equal(net_address, address))
+                        return true;
+
+        return false;
+}
+
 static int link_drop_foreign_config(Link *link) {
         Address *address;
         Route *route;
@@ -2504,9 +2557,15 @@ static int link_drop_foreign_config(Link *link) {
                 if (address->family == AF_INET6 && in_addr_is_link_local(AF_INET6, &address->in_addr) == 1)
                         continue;
 
-                r = address_remove(address, link, link_address_remove_handler);
-                if (r < 0)
-                        return r;
+                if (link_is_static_address_configured(link, address)) {
+                        r = address_add(link, address->family, &address->in_addr, address->prefixlen, NULL);
+                        if (r < 0)
+                                return log_link_error_errno(link, r, "Failed to add address: %m");
+                } else {
+                        r = address_remove(address, link, link_address_remove_handler);
+                        if (r < 0)
+                                return r;
+                }
         }
 
         SET_FOREACH(route, link->routes_foreign, i) {
@@ -2514,9 +2573,15 @@ static int link_drop_foreign_config(Link *link) {
                 if (route->protocol == RTPROT_KERNEL)
                         continue;
 
-                r = route_remove(route, link, link_route_remove_handler);
-                if (r < 0)
-                        return r;
+                if (link_is_static_route_configured(link, route)) {
+                        r = route_add(link, route->family, &route->dst, route->dst_prefixlen, route->tos, route->priority, route->table, NULL);
+                        if (r < 0)
+                                return r;
+                } else {
+                        r = route_remove(route, link, link_route_remove_handler);
+                        if (r < 0)
+                                return r;
+                }
         }
 
         return 0;
@@ -3115,7 +3180,7 @@ static int link_carrier_gained(Link *link) {
                         return r;
                 }
 
-                r = link_enter_set_addresses(link);
+                r = link_request_set_addresses(link);
                 if (r < 0)
                         return r;
         }
@@ -3199,7 +3264,7 @@ int link_update(Link *link, sd_netlink_message *m) {
         if (link->state == LINK_STATE_LINGER) {
                 link_ref(link);
                 log_link_info(link, "Link readded");
-                link_set_state(link, LINK_STATE_ENSLAVING);
+                link_set_state(link, LINK_STATE_CONFIGURING);
 
                 r = link_new_carrier_maps(link);
                 if (r < 0)
@@ -3744,9 +3809,7 @@ void link_clean(Link *link) {
 
 static const char* const link_state_table[_LINK_STATE_MAX] = {
         [LINK_STATE_PENDING] = "pending",
-        [LINK_STATE_ENSLAVING] = "configuring",
-        [LINK_STATE_SETTING_ADDRESSES] = "configuring",
-        [LINK_STATE_SETTING_ROUTES] = "configuring",
+        [LINK_STATE_CONFIGURING] = "configuring",
         [LINK_STATE_CONFIGURED] = "configured",
         [LINK_STATE_UNMANAGED] = "unmanaged",
         [LINK_STATE_FAILED] = "failed",
