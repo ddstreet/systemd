@@ -1,0 +1,38 @@
+Author: Dan Streetman <ddstreet@canonical.com>
+Subject: fix TEST-22
+Forwarded: not-needed
+
+This fixes the constant failure of TEST-22.
+
+
+--- a/src/tmpfiles/tmpfiles.c
++++ b/src/tmpfiles/tmpfiles.c
+@@ -1679,6 +1679,10 @@
+         }
+         if (r < 0)
+                 return log_error_errno(r, "is_dir() failed on path %s: %m", path);
++        if (r == 0) {
++                log_error("'%s' already exists and is not a directory.", path);
++                return -EEXIST;
++        }
+ 
+         return path_set_perms(i, path);
+ }
+@@ -1998,7 +2002,7 @@
+                 break;
+ 
+         case EMPTY_DIRECTORY:
+-                r = empty_directory(i, i->path);
++                r = glob_item(i, empty_directory);
+                 if (r < 0)
+                         return r;
+ 
+diff --git a/test/TEST-22-TMPFILES/run-tmpfiles-tests.sh b/test/TEST-22-TMPFILES/run-tmpfiles-tests.sh
+old mode 100644
+new mode 100755
+diff --git a/test/TEST-22-TMPFILES/test-01.sh b/test/TEST-22-TMPFILES/test-01.sh
+old mode 100644
+new mode 100755
+diff --git a/test/TEST-22-TMPFILES/test.sh b/test/TEST-22-TMPFILES/test.sh
+old mode 100644
+new mode 100755
