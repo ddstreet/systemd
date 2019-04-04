@@ -1,0 +1,84 @@
+From 30226d2718d9c3209ff779465ab62c3fb05b3f22 Mon Sep 17 00:00:00 2001
+From: Tobias Jungel <tobias.jungel@bisdn.de>
+Date: Wed, 31 Oct 2018 13:33:54 +0100
+Subject: [PATCH] networkd: don't remove ip address
+
+In case networkd is restarted this prevents a removal of an already existing IP
+address that would be configured using networkd. With the proposed changes the
+IP address will be kept on the interface without removing. This happens only on
+physical hosts or VMs since networkd handles interface configuration slightly
+different in containers.
+
+Origin: upstream, https://github.com/systemd/systemd/commit/30226d2718d9c3209ff779465ab62c3fb05b3f22
+Bug-Ubuntu: https://launchpad.net/bugs/1812760
+---
+ src/network/networkd-address.c |  6 ++++++
+ src/network/networkd-link.c    | 28 +++++++++++++++++++++++++---
+ 2 files changed, 31 insertions(+), 3 deletions(-)
+
+--- a/src/network/networkd-address.c
++++ b/src/network/networkd-address.c
+@@ -429,6 +429,7 @@
+                 sd_netlink_message_handler_t callback) {
+ 
+         _cleanup_(sd_netlink_message_unrefp) sd_netlink_message *req = NULL;
++        _cleanup_free_ char *b = NULL;
+         int r;
+ 
+         assert(address);
+@@ -438,6 +439,11 @@
+         assert(link->manager);
+         assert(link->manager->rtnl);
+ 
++        if (DEBUG_LOGGING) {
++                if (in_addr_to_string(address->family, &address->in_addr, &b) >= 0)
++                        log_link_debug(link, "Removing address %s", b);
++        }
++
+         r = sd_rtnl_message_new_addr(link->manager->rtnl, &req, RTM_DELADDR,
+                                      link->ifindex, address->family);
+         if (r < 0)
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -2649,6 +2649,22 @@
+         return false;
+ }
+ 
++static bool link_is_static_address_configured(Link *link, Address *address) {
++        Address *net_address;
++
++        assert(link);
++        assert(address);
++
++        if (!link->network)
++                return false;
++
++        LIST_FOREACH(addresses, net_address, link->network->static_addresses)
++                if (address_equal(net_address, address))
++                        return true;
++
++        return false;
++}
++
+ static int link_drop_foreign_config(Link *link) {
+         Address *address;
+         Route *route;
+@@ -2660,9 +2676,15 @@
+                 if (address->family == AF_INET6 && in_addr_is_link_local(AF_INET6, &address->in_addr) == 1)
+                         continue;
+ 
+-                r = address_remove(address, link, link_address_remove_handler);
+-                if (r < 0)
+-                        return r;
++                if (link_is_static_address_configured(link, address)) {
++                        r = address_add(link, address->family, &address->in_addr, address->prefixlen, NULL);
++                        if (r < 0)
++                                return log_link_error_errno(link, r, "Failed to add address: %m");
++                } else {
++                        r = address_remove(address, link, link_address_remove_handler);
++                        if (r < 0)
++                                return r;
++                }
+         }
+ 
+         SET_FOREACH(route, link->routes_foreign, i) {
