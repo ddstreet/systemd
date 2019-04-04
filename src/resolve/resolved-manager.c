@@ -572,8 +572,8 @@ int manager_new(Manager **ret) {
         m->dns_stub_udp_fd = m->dns_stub_tcp_fd = -1;
         m->hostname_fd = -1;
 
-        m->llmnr_support = RESOLVE_SUPPORT_YES;
-        m->mdns_support = RESOLVE_SUPPORT_YES;
+        m->llmnr_support = RESOLVE_SUPPORT_NO;
+        m->mdns_support = RESOLVE_SUPPORT_NO;
         m->dnssec_mode = DEFAULT_DNSSEC_MODE;
         m->dns_over_tls_mode = DEFAULT_DNS_OVER_TLS_MODE;
         m->enable_cache = true;
