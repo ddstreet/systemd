@@ -1,0 +1,69 @@
+From c42ff3a1a7bfea66dc4655096c79bd481159091b Mon Sep 17 00:00:00 2001
+From: "William A. Kennington III" <william@wkennington.com>
+Date: Fri, 30 Nov 2018 15:54:45 -0800
+Subject: [PATCH] networkd: Track address configuration
+
+This will be useful to assert that our static route configuration always
+happens after address configuration once our individual configure state
+goes away.
+
+Origin: upstream, https://github.com/systemd/systemd/commit/c42ff3a1a7bfea66dc4655096c79bd481159091b
+Bug-Ubuntu: https://launchpad.net/bugs/1812760
+---
+ src/network/networkd-link.c | 11 +++++++++--
+ src/network/networkd-link.h |  2 ++
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -744,6 +744,9 @@
+         if (!link->network)
+                 return;
+ 
++        if (!link->addresses_configured)
++                return;
++
+         if (!link->static_routes_configured)
+                 return;
+ 
+@@ -853,6 +856,8 @@
+ 
+         assert(link);
+         assert(link->network);
++        assert(link->addresses_configured);
++        assert(link->address_messages == 0);
+         assert(link->state == LINK_STATE_SETTING_ADDRESSES);
+ 
+         (void) link_set_routing_policy_rule(link);
+@@ -922,6 +927,7 @@
+ 
+         if (link->address_messages == 0) {
+                 log_link_debug(link, "Addresses set");
++                link->addresses_configured = true;
+                 link_enter_set_routes(link);
+         }
+ 
+@@ -1222,9 +1228,10 @@
+                 log_link_debug(link, "Offering DHCPv4 leases");
+         }
+ 
+-        if (link->address_messages == 0)
++        if (link->address_messages == 0) {
++                link->addresses_configured = true;
+                 link_enter_set_routes(link);
+-        else
++        } else
+                 log_link_debug(link, "Setting addresses");
+ 
+         return 0;
+--- a/src/network/networkd-link.h
++++ b/src/network/networkd-link.h
+@@ -80,6 +80,8 @@
+         Set *routes;
+         Set *routes_foreign;
+ 
++        bool addresses_configured;
++
+         sd_dhcp_client *dhcp_client;
+         sd_dhcp_lease *dhcp_lease;
+         char *lease_file;
