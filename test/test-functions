@@ -148,10 +148,6 @@ $KERNEL_APPEND \
         QEMU_OPTIONS="$QEMU_OPTIONS -initrd $INITRD"
     fi
 
-    if [ -c /dev/kvm ]; then
-        QEMU_OPTIONS="$QEMU_OPTIONS -machine accel=kvm -enable-kvm -cpu host"
-    fi
-
     if [[ "$QEMU_TIMEOUT" != "infinity" ]]; then
         QEMU_BIN="timeout --foreground $QEMU_TIMEOUT $QEMU_BIN"
     fi
