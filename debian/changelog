@@ -1,3 +1,42 @@
+systemd (232-25+deb9u11) stretch-security; urgency=high
+
+  * pam-systemd: use secure_getenv() rather than getenv()
+    Fixes a vulnerability in the systemd PAM module which insecurely uses
+    the environment and lacks seat verification permitting spoofing an
+    active session to PolicyKit. (CVE-2019-3842)
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 08 Apr 2019 12:51:41 +0200
+
+systemd (232-25+deb9u10) stretch; urgency=medium
+
+  * journald: fix assertion failure on journal_file_link_data (Closes: #916880)
+  * tmpfiles: fix "e" to support shell style globs (Closes: #918400)
+  * mount-util: accept that name_to_handle_at() might fail with EPERM.
+    Container managers frequently block name_to_handle_at(), returning
+    EACCES or EPERM when this is issued. Accept that, and simply fall back
+    to fdinfo-based checks. (Closes: #917122)
+  * automount: ack automount requests even when already mounted.
+    Fixes a race condition in systemd which could result in automount requests
+    not being serviced and processes using them to hang, causing denial of
+    service. (CVE-2018-1049)
+  * core: when deserializing state always use read_line(…, LONG_LINE_MAX, …)
+    Fixes improper serialization on upgrade which can influence systemd
+    execution environment and lead to root privilege escalation.
+    (CVE-2018-15686, Closes: #912005)
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 10 Mar 2019 15:52:46 +0100
+
+systemd (232-25+deb9u9) stretch-security; urgency=high
+
+  * Non-maintainer upload by the Security Team.
+  * Refuse dbus message paths longer than BUS_PATH_SIZE_MAX limit
+    (CVE-2019-6454)
+  * Allocate temporary strings to hold dbus paths on the heap (CVE-2019-6454)
+  * sd-bus: if we receive an invalid dbus message, ignore and proceeed
+    (CVE-2019-6454)
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Sun, 17 Feb 2019 09:22:58 +0100
+
 systemd (232-25+deb9u8) stretch-security; urgency=high
 
   * Non-maintainer upload by the Security Team.
