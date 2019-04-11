@@ -820,7 +820,7 @@ CapabilityBoundingSet=~CAP_B CAP_C</programlisting>
         names must be relative, and may not include <literal>..</literal>. If set, one or more
         directories by the specified names will be created (including their parents) below the locations
         defined in the following table, when the unit is started. Also, the corresponding environment variable
-        is defined with the full path of directories. If multiple directories are set, then int the environment variable
+        is defined with the full path of directories. If multiple directories are set, then in the environment variable
         the paths are concatenated with colon (<literal>:</literal>).</para>
         <table>
           <title>Automatic directory creation and environment variables</title>
@@ -2878,7 +2878,7 @@ StandardInputData=SWNrIHNpdHplIGRhIHVuJyBlc3NlIEtsb3BzLAp1ZmYgZWVtYWwga2xvcHAncy
         <citerefentry><refentrytitle>systemd</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
         <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
         <citerefentry><refentrytitle>systemd-analyze</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
-        <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
+        <citerefentry><refentrytitle>journalctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
         <citerefentry><refentrytitle>systemd.unit</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
         <citerefentry><refentrytitle>systemd.service</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
         <citerefentry><refentrytitle>systemd.socket</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
