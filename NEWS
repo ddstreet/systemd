@@ -453,6 +453,14 @@ CHANGES WITH 240:
           notified about this userspace breakage quickly, but they chose to
           ignore it.
 
+        * PermissionsStartOnly= setting is deprecated (but is still supported
+          for backwards compatibility). The same functionality is provided by
+          the more flexible "+", "!", and "!!" prefixes to ExecStart= and other
+          commands.
+
+        * $DBUS_SESSION_BUS_ADDRESS environment variable is not set by
+          pam_systemd anymore.
+
         Contributions from: afg, Alan Jenkins, Aleksei Timofeyev, Alexander
         Filippov, Alexander Kurtz, Alexey Bogdanenko, Andreas Henriksson,
         Andrew Jorgensen, Anita Zhang, apnix-uk, Arkan49, Arseny Maslennikov,
@@ -865,6 +873,8 @@ CHANGES WITH 239:
           implemented by the pre-existing "system-update.target" unit. It
           allows ordering services before the service that executes the actual
           update process in a generic way.
+
+        * Systemd now emits warnings whenever .include syntax is used.
 
         Contributions from: Adam Duskett, Alan Jenkins, Alessandro Casale,
         Alexander Kurtz, Alex Gartrell, Anssi Hannula, Arnaud Rebillout, Brian
@@ -6234,6 +6244,9 @@ CHANGES WITH 210:
           for other architectures like x86 and does not support
           IFUNC. Please make sure to use --enable-compat-libs only
           during a transitional period!
+
+        * The .include syntax has been deprecated and is not documented
+          anymore. Drop-in files in .d directories should be used instead.
 
         Contributions from: Andreas Fuchs, Armin K., Colin Walters,
         Daniel Mack, Dave Reisner, David Herrmann, Djalal Harouni,
