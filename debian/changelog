@@ -1,3 +1,11 @@
+systemd (237-3ubuntu10.21) bionic; urgency=medium
+
+  * d/p/networkd-fix-dhcp4-link-without-routes-not-being-con.patch:
+    - fix dhcp4 link without routes not being considered ready
+    - (LP: #1804478)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Mon, 15 Apr 2019 08:29:50 -0400
+
 systemd (237-3ubuntu10.20) bionic; urgency=medium
 
   [ Ioanna Alifieraki ]
