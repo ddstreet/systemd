@@ -1,3 +1,17 @@
+systemd (239-7ubuntu10.14) cosmic; urgency=medium
+
+  * d/p/resolved-rework-how-we-determine-which-scope-to-send.patch
+    - fix DNS leakage (LP: 1754671)
+  * d/t/boot-and-services:
+    - skip test_no_failed if gdm failed to start (LP: #1830484)
+  * d/p/ask-password-prevent-buffer-overrow-when-reading-fro.patch:
+    - prevent buffer overflow when reading keyring (LP: #1814373)
+  * d/t/boot-smoke:
+    - Fix false negative checking for running jobs after boot
+      (LP: #1825997)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 24 Apr 2019 17:08:26 -0400
+
 systemd (239-7ubuntu10.13) cosmic; urgency=medium
 
   [ Ioanna Alifieraki ]
