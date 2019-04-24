@@ -35,6 +35,7 @@ class ServicesTest(unittest.TestCase):
 
         self.assertIn('systemd', os.readlink('/proc/1/exe'))
 
+    @unittest.skipUnless(subprocess.call(['ps', 'u', '-C', 'gdm-x-session'], stdout=subprocess.DEVNULL) == 0, 'gdm-x-session failed to start')
     def test_no_failed(self):
         '''No failed units'''
 
