@@ -2335,21 +2335,19 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
         m->n_reloading ++;
 
         for (;;) {
-                char line[LINE_MAX], *l;
+                _cleanup_free_ char *line = NULL;
+                 const char *l;
 
-                if (!fgets(line, sizeof(line), f)) {
-                        if (feof(f))
-                                r = 0;
-                        else
-                                r = -errno;
-
+                r = read_line(f, LONG_LINE_MAX, &line);
+                if (r < 0) {
+                        r = log_error_errno(r, "Failed to read serialization line: %m");
                         goto finish;
                 }
+                if (r == 0)
+                        break;
 
-                char_array_0(line);
                 l = strstrip(line);
-
-                if (l[0] == 0)
+                if (isempty(l)) /* end marker */
                         break;
 
                 if (startswith(l, "current-job-id=")) {
@@ -2471,20 +2469,17 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
         }
 
         for (;;) {
+                _cleanup_free_ char *name = NULL;
                 Unit *u;
-                char name[UNIT_NAME_MAX+2];
 
                 /* Start marker */
-                if (!fgets(name, sizeof(name), f)) {
-                        if (feof(f))
-                                r = 0;
-                        else
-                                r = -errno;
-
+                r = read_line(f, LONG_LINE_MAX, &name);
+                if (r < 0) {
+                        r = log_error_errno(r, "Failed to read serialization line: %m");
                         goto finish;
                 }
-
-                char_array_0(name);
+                if (r == 0)
+                        break;
 
                 r = manager_load_unit(m, strstrip(name), NULL, NULL, &u);
                 if (r < 0)
@@ -2496,9 +2491,6 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
         }
 
 finish:
-        if (ferror(f))
-                r = -EIO;
-
         assert(m->n_reloading > 0);
         m->n_reloading --;
 
