@@ -5,6 +5,7 @@
 
 import sys
 import os
+import platform
 import unittest
 import subprocess
 
@@ -90,6 +91,10 @@ if __name__ == '__main__':
     if subprocess.call(['apt-cache', 'show', 'upstart-sysv'],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE) != 0:
         print('SKIP: upstart-sysv not available')
+        sys.exit(0)
+
+    if platform.processor() == 's390x':
+        print('SKIP: test requires grub, not supported on s390x')
         sys.exit(0)
 
     if not os.getenv('ADT_REBOOT_MARK'):

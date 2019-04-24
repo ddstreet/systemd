@@ -1,0 +1,108 @@
+From: Lennart Poettering <lennart@poettering.net>
+Origin: Upstream, https://github.com/systemd/systemd/pull/7997
+Bug: https://github.com/systemd/systemd/issues/7875
+Bug-Ubuntu: https://launchpad.net/bugs/1828892
+Date: Thu, 25 Jan 2018 15:14:25 +0100
+Subject: [PATCH] systemctl: load unit if needed in "systemctl is-active"
+
+Previously, we'd explicitly use "GetUnit()" on the server side to
+convert a unit name into a bus path, as that function will return an
+error if the unit is not currently loaded. If we'd convert the path on
+the client side, and access the unit this way directly the unit would be
+loaded automatically in the background.
+
+The old logic was done in order to minimize the effect of "is-active" on
+the system, i.e. that a monoitoring command does not itself alter the
+state of the system.
+
+however, this is problematic as this can lead to confusing results if
+the queried unit name is an alias that currently is not loaded: we'd
+claim the unit wasn't active even though this isn't strictly true: the
+unit the name is an alias for might be.
+
+Hence, let's simplify the code, and accept that we might end up loading
+a unit briefly here, and let's make "systemctl is-active" skip the
+GetUnit() thing and calculate the unit path right away.
+
+Fixes: #7875
+---
+ src/systemctl/systemctl.c | 55 ++++++++++++---------------------------
+ 1 file changed, 16 insertions(+), 39 deletions(-)
+
+Index: systemd-229/src/systemctl/systemctl.c
+===================================================================
+--- systemd-229.orig/src/systemctl/systemctl.c
++++ systemd-229/src/systemctl/systemctl.c
+@@ -2426,55 +2426,32 @@ static int unit_find_paths(
+ 
+ static int get_state_one_unit(sd_bus *bus, const char *name, UnitActiveState *active_state) {
+         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+-        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
+-        _cleanup_free_ char *buf = NULL;
++        _cleanup_free_ char *buf = NULL, *path = NULL;
+         UnitActiveState state;
+-        const char *path;
+         int r;
+ 
+         assert(name);
+         assert(active_state);
+ 
+-        /* We don't use unit_dbus_path_from_name() directly since we don't want to load the unit unnecessarily, if it
+-         * isn't loaded. */
+-        r = sd_bus_call_method(
++        path = unit_dbus_path_from_name(name);
++        if (!path)
++                return log_oom();
++
++        r = sd_bus_get_property_string(
+                         bus,
+                         "org.freedesktop.systemd1",
+-                        "/org/freedesktop/systemd1",
+-                        "org.freedesktop.systemd1.Manager",
+-                        "GetUnit",
++                        path,
++                        "org.freedesktop.systemd1.Unit",
++                        "ActiveState",
+                         &error,
+-                        &reply,
+-                        "s", name);
+-        if (r < 0) {
+-                if (!sd_bus_error_has_name(&error,  BUS_ERROR_NO_SUCH_UNIT))
+-                        return log_error_errno(r, "Failed to retrieve unit: %s", bus_error_message(&error, r));
+-
+-                /* The unit is currently not loaded, hence say it's "inactive", since all units that aren't loaded are
+-                 * considered inactive. */
+-                state = UNIT_INACTIVE;
+-
+-        } else {
+-                r = sd_bus_message_read(reply, "o", &path);
+-                if (r < 0)
+-                        return bus_log_parse_error(r);
+-
+-                r = sd_bus_get_property_string(
+-                                bus,
+-                                "org.freedesktop.systemd1",
+-                                path,
+-                                "org.freedesktop.systemd1.Unit",
+-                                "ActiveState",
+-                                &error,
+-                                &buf);
+-                if (r < 0)
+-                        return log_error_errno(r, "Failed to retrieve unit state: %s", bus_error_message(&error, r));
+-
+-                state = unit_active_state_from_string(buf);
+-                if (state == _UNIT_ACTIVE_STATE_INVALID) {
+-                        log_error("Invalid unit state '%s' for: %s", buf, name);
+-                        return -EINVAL;
+-                }
++                        &buf);
++        if (r < 0)
++                return log_error_errno(r, "Failed to retrieve unit state: %s", bus_error_message(&error, r));
++
++        state = unit_active_state_from_string(buf);
++        if (state == _UNIT_ACTIVE_STATE_INVALID) {
++                log_error("Invalid unit state '%s' for: %s", buf, name);
++                return -EINVAL;
+         }
+ 
+         *active_state = state;
