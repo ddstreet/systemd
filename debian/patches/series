@@ -115,3 +115,5 @@ networkd-don-t-remove-ip-address.patch
 Move-link_check_ready-to-later-in-the-file.patch
 network-set-_configured-flags-to-false-before-reques.patch
 Install-routes-after-addresses-are-ready.patch
+ask-password-prevent-buffer-overrow-when-reading-fro.patch
+resolved-rework-how-we-determine-which-scope-to-send.patch
