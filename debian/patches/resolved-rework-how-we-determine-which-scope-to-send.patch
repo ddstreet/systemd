@@ -1,0 +1,141 @@
+From a97a3b256cd6c56ab1d817440d3b8acb3272ee17 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 3 Dec 2018 16:25:00 +0100
+Subject: [PATCH] resolved: rework how we determine which scope to send a query
+ to
+
+Fixes: #10830 #9825 #9472
+
+Origin: upstream, https://github.com/systemd/systemd/commit/a97a3b256
+Bug: https://github.com/systemd/systemd/issues/9472
+Bug: https://github.com/systemd/systemd/issues/9825
+Bug: https://github.com/systemd/systemd/issues/10830
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1754671
+
+---
+ src/resolve/resolved-dns-query.c | 27 ++++++++++-------------
+ src/resolve/resolved-dns-scope.c | 37 +++++++++++++++++++++++++++++---
+ src/resolve/resolved-dns-scope.h |  3 ++-
+ 3 files changed, 47 insertions(+), 20 deletions(-)
+
+--- a/src/resolve/resolved-dns-query.c
++++ b/src/resolve/resolved-dns-query.c
+@@ -706,22 +706,15 @@
+                         continue;
+ 
+                 match = dns_scope_good_domain(s, q->ifindex, q->flags, name);
+-                if (match < 0)
+-                        return match;
+-
+-                if (match == DNS_SCOPE_NO)
++                if (match < 0) {
++                        log_debug("Couldn't check if '%s' matches against scope, ignoring.", name);
+                         continue;
++                }
+ 
+-                found = match;
+-
+-                if (match == DNS_SCOPE_YES) {
++                if (match > found) { /* Does this match better? If so, remember how well it matched, and the first one
++                                      * that matches this well */
++                        found = match;
+                         first = s;
+-                        break;
+-                } else {
+-                        assert(match == DNS_SCOPE_MAYBE);
+-
+-                        if (!first)
+-                                first = s;
+                 }
+         }
+ 
+@@ -749,10 +742,12 @@
+                         continue;
+ 
+                 match = dns_scope_good_domain(s, q->ifindex, q->flags, name);
+-                if (match < 0)
+-                        goto fail;
++                if (match < 0) {
++                        log_debug("Couldn't check if '%s' matches agains scope, ignoring.", name);
++                        continue;
++                }
+ 
+-                if (match != found)
++                if (match < found)
+                         continue;
+ 
+                 r = dns_query_add_candidate(q, s);
+--- a/src/resolve/resolved-dns-scope.c
++++ b/src/resolve/resolved-dns-scope.c
+@@ -423,9 +423,25 @@
+         return dns_scope_socket(s, SOCK_STREAM, family, address, server, port);
+ }
+ 
+-DnsScopeMatch dns_scope_good_domain(DnsScope *s, int ifindex, uint64_t flags, const char *domain) {
++DnsScopeMatch dns_scope_good_domain(
++                DnsScope *s,
++                int ifindex,
++                uint64_t flags,
++                const char *domain) {
++
+         DnsSearchDomain *d;
+ 
++        /* This returns the following return values:
++         *
++         *    DNS_SCOPE_NO         → This scope is not suitable for lookups of this domain, at all
++         *    DNS_SCOPE_MAYBE      → This scope is suitable, but only if nothing else wants it
++         *    DNS_SCOPE_YES_BASE+n → This scope is suitable, and 'n' suffix labels match
++         *
++         *  (The idea is that the caller will only use the scopes with the longest 'n' returned. If no scopes return
++         *  DNS_SCOPE_YES_BASE+n, then it should use those which returned DNS_SCOPE_MAYBE. It should never use those
++         *  which returned DNS_SCOPE_NO.)
++         */
++
+         assert(s);
+         assert(domain);
+ 
+@@ -461,6 +477,7 @@
+ 
+         case DNS_PROTOCOL_DNS: {
+                 DnsServer *dns_server;
++                int n_best = -1;
+ 
+                 /* Never route things to scopes that lack DNS servers */
+                 dns_server = dns_scope_get_dns_server(s);
+@@ -471,8 +488,22 @@
+                  * we return DNS_SCOPE_YES here, rather than just DNS_SCOPE_MAYBE, which means other wildcard scopes
+                  * won't be considered anymore. */
+                 LIST_FOREACH(domains, d, dns_scope_get_search_domains(s))
+-                        if (dns_name_endswith(domain, d->name) > 0)
+-                                return DNS_SCOPE_YES;
++                        if (dns_name_endswith(domain, d->name) > 0) {
++                                int c;
++
++                                c = dns_name_count_labels(d->name);
++                                if (c < 0)
++                                        continue;
++
++                                if (c > n_best)
++                                        n_best = c;
++                        }
++
++                /* Let's return the number of labels in the best matching result */
++                if (n_best >= 0) {
++                        assert(n_best <= DNS_SCOPE_YES_END - DNS_SCOPE_YES_BASE);
++                        return DNS_SCOPE_YES_BASE + n_best;
++                }
+ 
+                 /* If the DNS server has route-only domains, don't send other requests to it. This would be a privacy
+                  * violation, will most probably fail anyway, and adds unnecessary load. */
+--- a/src/resolve/resolved-dns-scope.h
++++ b/src/resolve/resolved-dns-scope.h
+@@ -37,7 +37,8 @@
+ typedef enum DnsScopeMatch {
+         DNS_SCOPE_NO,
+         DNS_SCOPE_MAYBE,
+-        DNS_SCOPE_YES,
++        DNS_SCOPE_YES_BASE, /* Add the number of matching labels to this */
++        DNS_SCOPE_YES_END = DNS_SCOPE_YES_BASE + DNS_N_LABELS_MAX,
+         _DNS_SCOPE_MATCH_MAX,
+         _DNS_SCOPE_INVALID = -1
+ } DnsScopeMatch;
