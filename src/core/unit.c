@@ -1434,7 +1434,7 @@ void unit_status_emit_starting_stopping_reloading(Unit *u, JobType t) {
         unit_status_print_starting_stopping(u, t);
 }
 
-static int unit_start_limit_test(Unit *u) {
+int unit_start_limit_test(Unit *u) {
         assert(u);
 
         if (ratelimit_test(&u->start_limit)) {
@@ -1460,7 +1460,6 @@ static int unit_start_limit_test(Unit *u) {
 int unit_start(Unit *u) {
         UnitActiveState state;
         Unit *following;
-        int r;
 
         assert(u);
 
@@ -1512,11 +1511,6 @@ int unit_start(Unit *u) {
         /* If it is stopped, but we cannot start it, then fail */
         if (!UNIT_VTABLE(u)->start)
                 return -EBADR;
-
-        /* Make sure we don't enter a busy loop of some kind. */
-        r = unit_start_limit_test(u);
-        if (r < 0)
-                return r;
 
         /* We don't suppress calls to ->start() here when we are
          * already starting, to allow this request to be used as a
