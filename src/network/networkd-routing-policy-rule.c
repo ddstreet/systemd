@@ -194,7 +194,7 @@ int routing_policy_rule_get(Manager *m,
                 if (existing) {
                         if (ret)
                                 *ret = existing;
-                        return 1;
+                        return 0;
                 }
         }
 
