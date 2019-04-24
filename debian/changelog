@@ -1,3 +1,31 @@
+systemd (229-4ubuntu21.22) xenial; urgency=medium
+
+  [ Dan Streetman ]
+  * d/t/systemd-fsckd, d/t/cmdline-upstart-boot:
+    - skip on s390x; requires grub (LP: #1830477)
+  * d/p/ask-password-prevent-buffer-overrow-when-reading-fro.patch:
+    - prevent buffer overflow when reading keyring (LP: #1814373)
+
+  [ Dimitri John Ledkov ]
+  * Specify Ubuntu's Vcs-Git
+
+  [ Balint Reczey ]
+  * Append /snap/bin to default PATH.
+    Snapd ships snapd-env-generator, but systemd does not not support
+    environment generators. Hard-coding /snap/bin is less risky than
+    backporting environment generator support and since snaps are considered
+    to be first class packages on Ubuntu /snap/bin can safely added to
+    the default PATH. (LP: #1771858)
+
+  [ Ioanna Alifieraki ]
+  * d/p/systemctl-Replace-check_one_unit-by-get_state_one_un.patch
+    - Backport upstream PR#2768 needed for next patch
+  * d/p/systemctl-load-unit-if-needed-in-systemctl-is-active.patch
+    - Backport upstream PR#7997 to fix alias service reports inactive while
+      aliased is active (LP: #1828892)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 24 Apr 2019 17:15:36 -0400
+
 systemd (229-4ubuntu21.21) xenial-security; urgency=medium
 
   * SECURITY UDPATE: Unsafe environment usage in pam_systemd.so leads to
