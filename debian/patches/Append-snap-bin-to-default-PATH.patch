@@ -1,0 +1,31 @@
+From: Balint Reczey <balint.reczey@canonical.com>
+Date: Tue, 25 Jun 2019 15:45:22 +0200
+Subject: Append /snap/bin to default PATH
+
+Snapd ships snapd-env-generator, but systemd does not not support
+environment generators. Hard-coding /snap/bin is less risky than
+backporting environment generator support and since snaps are considered
+to be first class packages on Ubuntu /snap/bin can safely added to
+the default PATH.
+
+LP: #1771858
+---
+ src/basic/path-util.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/basic/path-util.h b/src/basic/path-util.h
+index 0f9aaca..d20e35da 100644
+--- a/src/basic/path-util.h
++++ b/src/basic/path-util.h
+@@ -31,9 +31,9 @@
+ #define DEFAULT_PATH_SPLIT_USR DEFAULT_PATH_NORMAL ":/sbin:/bin"
+ 
+ #ifdef HAVE_SPLIT_USR
+-#  define DEFAULT_PATH DEFAULT_PATH_SPLIT_USR
++#  define DEFAULT_PATH DEFAULT_PATH_SPLIT_USR ":/snap/bin"
+ #else
+-#  define DEFAULT_PATH DEFAULT_PATH_NORMAL
++#  define DEFAULT_PATH DEFAULT_PATH_NORMAL ":/snap/bin"
+ #endif
+ 
+ bool is_path(const char *p) _pure_;
