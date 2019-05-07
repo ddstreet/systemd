@@ -100,12 +100,13 @@ CONFFLAGS_deb += \
 	-Dcoredump=true \
 	-Delfutils=true \
 	-Dapparmor=true \
-	-Dlibidn=true \
+	-Dlibidn2=true \
 	-Dlibiptc=true \
 	-Dlibcurl=true \
 	-Dimportd=true \
 	-Dmicrohttpd=true \
-	-Dgnutls=true
+	-Dgnutls=true \
+	-Dpcre2=true
 else
 CONFFLAGS_deb += \
 	-Daudit=false \
@@ -113,12 +114,13 @@ CONFFLAGS_deb += \
 	-Dcoredump=false \
 	-Delfutils=false \
 	-Dapparmor=false \
-	-Dlibidn=false \
+	-Dlibidn2=false \
 	-Dlibiptc=false \
 	-Dlibcurl=false \
 	-Dimportd=false \
 	-Dmicrohttpd=false \
-	-Dgnutls=false
+	-Dgnutls=false \
+	-Dpcre2=false
 endif
 
 CONFFLAGS_udeb = \
@@ -129,7 +131,7 @@ CONFFLAGS_udeb = \
 	-Daudit=false \
 	-Dselinux=false\
 	-Dapparmor=false \
-	-Dlibidn=false \
+	-Dlibidn2=false \
 	-Dlibiptc=false \
 	-Dsmack=false \
 	-Dima=false \
@@ -162,7 +164,8 @@ CONFFLAGS_udeb = \
 	-Dman=false \
 	-Defi=false \
 	-Dseccomp=false \
-	-Dsysusers=false
+	-Dsysusers=false \
+	-Dpcre2=false
 
 override_dh_auto_configure:
 	dh_auto_configure --builddirectory=build-deb \

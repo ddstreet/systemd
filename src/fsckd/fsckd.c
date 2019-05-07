@@ -48,6 +48,7 @@
 #include "util.h"
 #include "alloc-util.h"
 #include "locale-util.h"
+#include "plymouth-util.h"
 
 #define FSCKD_SOCKET_PATH "/run/systemd/fsck.progress"
 #define IDLE_TIME_SECONDS 30
@@ -623,8 +624,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return 0;
 
                 case ARG_VERSION:
-                        puts("systemd " GIT_VERSION);
-                        puts(SYSTEMD_FEATURES);
+                        version();
                         return 0;
 
                 case '?':

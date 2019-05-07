@@ -2,6 +2,8 @@
 
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "sd-bus.h"
@@ -20,6 +22,7 @@
 #include "hashmap.h"
 #include "list.h"
 #include "main-func.h"
+#include "memory-util.h"
 #include "missing_capability.h"
 #include "path-util.h"
 #include "selinux-util.h"
@@ -29,7 +32,6 @@
 #include "unit-def.h"
 #include "unit-name.h"
 #include "user-util.h"
-#include "util.h"
 
 #define NULL_ADJTIME_UTC "0.0 0 0\n0\nUTC\n"
 #define NULL_ADJTIME_LOCAL "0.0 0 0\n0\nLOCAL\n"

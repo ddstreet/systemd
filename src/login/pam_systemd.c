@@ -10,14 +10,17 @@
 #include <security/pam_modules.h>
 #include <security/pam_modutil.h>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "alloc-util.h"
 #include "audit-util.h"
 #include "bus-common-errors.h"
 #include "bus-error.h"
+#include "bus-internal.h"
 #include "bus-util.h"
 #include "cgroup-util.h"
-#include "def.h"
 #include "fd-util.h"
 #include "fileio.h"
 #include "format-util.h"
@@ -31,7 +34,6 @@
 #include "stdio-util.h"
 #include "strv.h"
 #include "terminal-util.h"
-#include "util.h"
 
 static int parse_argv(
                 pam_handle_t *handle,
@@ -113,6 +115,15 @@ static int get_user_data(
         *ret_username = username;
 
         return PAM_SUCCESS;
+}
+
+static bool display_is_local(const char *display) {
+        assert(display);
+
+        return
+                display[0] == ':' &&
+                display[1] >= '0' &&
+                display[1] <= '9';
 }
 
 static int socket_from_display(const char *display, char **path) {
