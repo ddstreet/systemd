@@ -37,6 +37,7 @@ bool manager_all_configured(Manager *m) {
         Link *l;
         char **ifname;
         bool one_ready = false;
+        bool none_managed = true;
 
         /* wait for all the links given on the command line to appear */
         STRV_FOREACH(ifname, m->interfaces) {
@@ -67,6 +68,11 @@ bool manager_all_configured(Manager *m) {
                         return false;
                 }
 
+                if (STR_IN_SET(l->state, "configured", "failed")) {
+                        log_info("managing: %s", l->ifname);
+                        none_managed = false;
+                }
+
                 if (l->operational_state &&
                     STR_IN_SET(l->operational_state, "degraded", "routable"))
                         /* we wait for at least one link to be ready,
@@ -74,7 +80,7 @@ bool manager_all_configured(Manager *m) {
                         one_ready = true;
         }
 
-        return one_ready;
+        return one_ready || none_managed;
 }
 
 static int manager_process_link(sd_netlink *rtnl, sd_netlink_message *mm, void *userdata) {
