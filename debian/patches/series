@@ -115,3 +115,4 @@ Install-routes-after-addresses-are-ready.patch
 networkd-fix-dhcp4-link-without-routes-not-being-con.patch
 ask-password-prevent-buffer-overrow-when-reading-fro.patch
 resolved-rework-how-we-determine-which-scope-to-send.patch
+resolved-do-not-hit-CNAME-in-NODATA.patch
