@@ -1,0 +1,30 @@
+Description: Cached cname NODATA returned for A lookup
+ After doing a CNAME lookup that returns NODATA,
+ subsequent A lookups should continue to resolve.
+
+ Fixes #9833.
+
+Author: Yu Watanabe <watanabe.yu+github@gmail.com>
+Origin: upstream, https://github.com/systemd/systemd/commit/3740146a4cbd
+Bug: https://github.com/systemd/systemd/issues/9833
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1818527
+--- a/src/resolve/resolved-dns-cache.c
++++ b/src/resolve/resolved-dns-cache.c
+@@ -809,7 +809,7 @@
+         if (dns_type_may_redirect(k->type)) {
+                 /* Check if we have a CNAME record instead */
+                 i = hashmap_get(c->by_key, &DNS_RESOURCE_KEY_CONST(k->class, DNS_TYPE_CNAME, n));
+-                if (i)
++                if (i && i->type != DNS_CACHE_NODATA)
+                         return i;
+ 
+                 /* OK, let's look for cached DNAME records. */
+@@ -818,7 +818,7 @@
+                                 return NULL;
+ 
+                         i = hashmap_get(c->by_key, &DNS_RESOURCE_KEY_CONST(k->class, DNS_TYPE_DNAME, n));
+-                        if (i)
++                        if (i && i->type != DNS_CACHE_NODATA)
+                                 return i;
+ 
+                         /* Jump one label ahead */
