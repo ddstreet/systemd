@@ -1,3 +1,10 @@
+systemd (237-3ubuntu10.23) bionic; urgency=medium
+
+  * d/p/resolved-do-not-hit-CNAME-in-NODATA.patch:
+    - fix stub resolver cache (LP: #1818527)
+
+ -- Heitor Alves de Siqueira <halves@canonical.com>  Tue, 04 Jun 2019 15:54:24 -0300
+
 systemd (237-3ubuntu10.22) bionic; urgency=medium
 
   * d/p/resolved-rework-how-we-determine-which-scope-to-send.patch
