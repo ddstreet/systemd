@@ -578,3 +578,22 @@ try_dev_shm_without_o_tmpfile:
 
         return -EOPNOTSUPP;
 }
+
+int fd_reopen(int fd, int flags) {
+        char procfs_path[STRLEN("/proc/self/fd/") + DECIMAL_STR_MAX(int)];
+        int new_fd;
+
+        /* Reopens the specified fd with new flags. This is useful for convert an O_PATH fd into a regular one, or to
+         * turn O_RDWR fds into O_RDONLY fds.
+         *
+         * This doesn't work on sockets (since they cannot be open()ed, ever).
+         *
+         * This implicitly resets the file read index to 0. */
+
+        xsprintf(procfs_path, "/proc/self/fd/%i", fd);
+        new_fd = open(procfs_path, flags);
+        if (new_fd < 0)
+                return -errno;
+
+        return new_fd;
+}
