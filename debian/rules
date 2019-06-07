@@ -63,7 +63,6 @@ CONFFLAGS = \
 	-Dvconsole=false \
 	-Dfirstboot=false \
 	-Dxkbcommon=false \
-	-Dportabled=false \
 	-Dwheel-group=false \
 	-Dntp-servers="$(DEFAULT_NTP_SERVERS)" \
 	-Ddns-servers='' \
@@ -86,6 +85,7 @@ CONFFLAGS_deb = \
 	-Dsysusers=true \
 	-Dinstall-tests=true \
 	-Defi=true \
+	-Dman=true \
 	-Dnss-myhostname=true \
 	-Dnss-mymachines=true \
 	-Dnss-resolve=true \
@@ -156,6 +156,7 @@ CONFFLAGS_udeb = \
 	-Dnss-resolve=false \
 	-Dnss-systemd=false \
 	-Dresolve=false \
+	-Dportabled=false \
 	-Dpolkit=false \
 	-Dacl=false \
 	-Dgcrypt=false \
@@ -216,7 +217,6 @@ override_dh_install:
 	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
-	rm -f debian/install/*/lib/systemd/system/halt-local.service
 	# remove files related to factory-reset feature
 	find debian/install/ \( -name 'systemd-update-done*' -o \
 		-name systemd-journal-catalog-update.service -o \
@@ -224,10 +224,6 @@ override_dh_install:
 		-name ldconfig.service -o \
 		-name etc.conf \) -delete
 	rm -rf debian/install/*/usr/share/factory/
-	# remove symlinks enabling default-on services
-	rm -rf debian/install/*/etc/systemd/system/*.target.wants/
-	# remove aliases
-	find debian/install/*/etc/systemd/system/ -type l -delete
 	# replace upstream sysusers.d/basic.conf with proper users for Debian
 	debian/extra/make-sysusers-basic > debian/install/deb/usr/lib/sysusers.d/basic.conf
 	# remove resolvconf compat symlink
