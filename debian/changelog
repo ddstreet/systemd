@@ -1,3 +1,13 @@
+systemd (237-3ubuntu10.24) bionic; urgency=medium
+
+  [Dimitri John Ledkov 🌈]
+  * core: export environment when running generators.
+    Ensure that manager's environment (including e.g. PATH) is exported when
+    running generators. Otherwise, one is at a mercy of running without PATH which
+    can lead to buggy generator behaviour. (LP: #1771858)
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Mon, 24 Jun 2019 14:50:38 +0200
+
 systemd (237-3ubuntu10.23) bionic; urgency=medium
 
   * d/p/resolved-do-not-hit-CNAME-in-NODATA.patch:
