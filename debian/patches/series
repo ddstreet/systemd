@@ -116,3 +116,6 @@ networkd-fix-dhcp4-link-without-routes-not-being-con.patch
 ask-password-prevent-buffer-overrow-when-reading-fro.patch
 resolved-rework-how-we-determine-which-scope-to-send.patch
 resolved-do-not-hit-CNAME-in-NODATA.patch
+exec-util-in-execute_directories-support-initial-exec-env.patch
+core-execute-environment_generators-with-manager-s-enviro.patch
+core-execute-generators-with-manager-s-environmnet.patch
