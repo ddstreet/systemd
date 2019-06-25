@@ -1,4 +1,3 @@
-## Cherry-picked from upstream
 Backport-networkd-231.patch
 time-util-map-ALARM-clockids-to-non-ALARM-clockids-in-now.patch
 clock-util-make-clock_is_localtime-testable-and-add-initi.patch
@@ -72,8 +71,6 @@ Fix-journald-rate-limit-with-low-disk-space.patch
 0001-sysctl-run-sysctl-service-if-proc-sys-net-is-writabl.patch
 0001-sysctl-do-not-fail-systemd-sysctl.service-if-proc-sy.patch
 0001-Add-a-RequiredForOnline-Link-attribute-for-.network-.patch
-
-## Debian specific patches
 Add-back-support-for-Debian-specific-config-files.patch
 don-t-try-to-start-autovt-units-when-not-running-wit.patch
 Make-logind-hostnamed-localed-timedated-D-Bus-activa.patch
@@ -104,8 +101,6 @@ Skip-filesystem-check-if-already-done-by-the-initram.patch
 Revert-core-one-step-back-again-for-nspawn-we-actual.patch
 Revert-core-set-RLIMIT_CORE-to-unlimited-by-default.patch
 Revert-core-enable-TasksMax-for-all-services-by-default-a.patch
-
-## Ubuntu patches:
 Support-system-image-read-only-etc.patch
 systemctl-Don-t-forward-telinit-u-to-upstart.patch
 Provide-shutdown-fallback-for-upstart.patch
@@ -137,3 +132,4 @@ fix-egde-case-when-processing-proc-self-mountinfo.patch
 fix-race-daemon-reload-11121.patch
 virt-detect-WSL-environment-as-a-container-id-wsl.patch
 CVE-2019-3842.patch
+Append-snap-bin-to-default-PATH.patch
