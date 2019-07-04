@@ -1,3 +1,9 @@
+systemd (237-3ubuntu10.24+systemd12929v20190704b1) bionic; urgency=medium
+
+  * Test qemu on s390x/arm64 and try kvm on intel
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 04 Jul 2019 06:09:18 -0400
+
 systemd (237-3ubuntu10.24) bionic; urgency=medium
 
   [Dimitri John Ledkov 🌈]
