@@ -3,6 +3,17 @@
 # Author: Martin Pitt <martin.pitt@ubuntu.com>
 set -e
 
+ARCH=$( dpkg --print-architecture )
+if [ "$ARCH" = "s390x" ] ; then
+    export QEMU_BIN="/usr/bin/qemu-system-s390x"
+    export QEMU_OPTIONS="-machine accel=kvm -enable-kvm"
+elif [ "$ARCH" = "arm64" ] ; then
+    export QEMU_BIN="/usr/bin/qemu-system-aarch64"
+    export QEMU_OPTIONS="-machine virt"
+elif [ "$ARCH" = "amd64" -o "$ARCH" = "i386" ] ; then
+    export QEMU_OPTIONS="-enable-kvm"
+fi
+
 # even after installing policycoreutils this fails with
 # "Failed to install /usr/libexec/selinux/hll/pp"
 BLACKLIST="TEST-06-SELINUX TEST-16-EXTEND-TIMEOUT"

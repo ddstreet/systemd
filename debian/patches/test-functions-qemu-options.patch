@@ -1,0 +1,12 @@
+
+--- systemd-237.orig/test/test-functions
++++ systemd-237/test/test-functions
+@@ -136,7 +136,7 @@ $_cgroup_args \
+ $KERNEL_APPEND \
+ "
+ 
+-    QEMU_OPTIONS="-smp $QEMU_SMP \
++    QEMU_OPTIONS="$QEMU_OPTIONS -smp $QEMU_SMP \
+ -net none \
+ -m 512M \
+ -nographic \
