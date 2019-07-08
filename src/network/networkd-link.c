@@ -28,6 +28,7 @@
 #include "stdio-util.h"
 #include "string-table.h"
 #include "strv.h"
+#include "sysctl-util.h"
 #include "tmpfile-util.h"
 #include "util.h"
 #include "virt.h"
@@ -37,6 +38,20 @@ DUID* link_get_duid(Link *link) {
                 return &link->network->duid;
         else
                 return &link->manager->duid;
+}
+
+int link_sysctl_ipv6_enabled(Link *link) {
+        _cleanup_free_ char *value = NULL;
+        int r;
+
+        r = sysctl_read_ip_property(AF_INET6, link->ifname, "disable_ipv6", &value);
+        if (r < 0)
+                return log_link_warning_errno(link, r,
+                                              "Failed to read net.ipv6.conf.%s.disable_ipv6 sysctl property: %m",
+                                              link->ifname);
+
+        link->sysctl_ipv6_enabled = value[0] == '0';
+        return link->sysctl_ipv6_enabled;
 }
 
 static bool link_dhcp6_enabled(Link *link) {
@@ -49,6 +64,9 @@ static bool link_dhcp6_enabled(Link *link) {
                 return false;
 
         if (!link->network)
+                return false;
+
+        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         return link->network->dhcp & ADDRESS_FAMILY_IPV6;
@@ -108,6 +126,9 @@ static bool link_ipv6ll_enabled(Link *link) {
         if (streq_ptr(link->kind, "wireguard"))
                 return false;
 
+        if (link_sysctl_ipv6_enabled(link) == 0)
+                return false;
+
         return link->network->link_local & ADDRESS_FAMILY_IPV6;
 }
 
@@ -118,6 +139,9 @@ static bool link_ipv6_enabled(Link *link) {
                 return false;
 
         if (link->network->bridge)
+                return false;
+
+        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         /* DHCPv6 client will not be started if no IPv6 link-local address is configured. */
@@ -197,6 +221,9 @@ static bool link_ipv6_forward_enabled(Link *link) {
                 return false;
 
         if (link->network->ip_forward == _ADDRESS_FAMILY_BOOLEAN_INVALID)
+                return false;
+
+        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         return link->network->ip_forward & ADDRESS_FAMILY_IPV6;
@@ -464,6 +491,7 @@ static int link_new(Manager *manager, sd_netlink_message *message, Link **ret) {
                 .rtnl_extended_attrs = true,
                 .ifindex = ifindex,
                 .iftype = iftype,
+                .sysctl_ipv6_enabled = -1,
         };
 
         link->ifname = strdup(ifname);
@@ -753,8 +781,8 @@ static int link_request_set_routing_policy_rule(Link *link) {
                         link_enter_failed(link);
                         return r;
                 }
-
-                link->routing_policy_rule_messages++;
+                if (r > 0)
+                        link->routing_policy_rule_messages++;
         }
 
         routing_policy_rule_purge(link->manager, link);
@@ -828,8 +856,8 @@ static int link_request_set_routes(Link *link) {
                                 link_enter_failed(link);
                                 return r;
                         }
-
-                        link->route_messages++;
+                        if (r > 0)
+                                link->route_messages++;
                 }
 
         if (link->route_messages == 0) {
@@ -1111,8 +1139,8 @@ static int link_request_set_addresses(Link *link) {
                         link_enter_failed(link);
                         return r;
                 }
-
-                link->address_messages++;
+                if (r > 0)
+                        link->address_messages++;
         }
 
         LIST_FOREACH(labels, label, link->network->address_labels) {
