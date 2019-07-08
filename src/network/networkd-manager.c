@@ -23,6 +23,7 @@
 #include "path-util.h"
 #include "set.h"
 #include "strv.h"
+#include "sysctl-util.h"
 #include "tmpfile-util.h"
 #include "virt.h"
 
