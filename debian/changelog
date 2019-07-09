@@ -1,3 +1,11 @@
+systemd (240-6ubuntu5.2) disco; urgency=medium
+
+  [ Jeremy Soller ]
+  * random-util: eat up bad RDRAND values seen on AMD CPUs.
+    This fixes AMD Ryzen 3000 series failing to boot (LP: #1835809)
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Tue, 09 Jul 2019 11:52:55 +0200
+
 systemd (240-6ubuntu5.1) disco; urgency=medium
 
   * d/p/ask-password-prevent-buffer-overrow-when-reading-fro.patch:
