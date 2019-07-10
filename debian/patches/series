@@ -148,3 +148,4 @@ sd-netlink-introduce-sd_netlink_message_append_socka.patch
 network-wireguard-use-sd_netlink_message_append_sock.patch
 ask-password-prevent-buffer-overrow-when-reading-fro.patch
 rdrand-workaround-on-amd.patch
+strv-rework-FOREACH_STRING-macro.patch
