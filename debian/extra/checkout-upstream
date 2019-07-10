@@ -7,8 +7,13 @@
 #
 # Author: Martin Pitt <martin.pitt@ubuntu.com>
 
+# LOCAL set only
+UPSTREAM_KEEP_CHANGELOG=1
+UPSTREAM_HEAD=${UPSTREAM_HEAD:-main}
+
 set -eu
 test -x debian/rules
+TEST_UPSTREAM=1
 if [ -z "${TEST_UPSTREAM:-}" ]; then
     echo "Not in upstream testing mode. Do *not* run this script unless you know what you are doing." >&2
     exit 1
@@ -56,7 +61,7 @@ fi
 echo '3.0 (native)' > debian/source/format
 
 # drop our patches
-rm -rf debian/patches
+#rm -rf debian/patches
 
 # disable tests which are not for upstream
 [ -n "${KEEP_DEBIAN_TESTS:-}" ] || sed -i '/# NOUPSTREAM/ q' debian/tests/control

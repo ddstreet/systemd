@@ -3,6 +3,12 @@
 #export DH_VERBOSE = 1
 #export DEB_BUILD_OPTIONS = nostrip
 
+# LOCAL ONLY: for upstream testing
+CFLAGS=-O0
+DEB_BUILD_PROFILES=noudeb
+CONFFLAGS_UPSTREAM=--werror -Dslow-tests=true
+TEST_UPSTREAM=1
+
 export LC_ALL = C.UTF-8
 
 include /usr/share/dpkg/default.mk
@@ -213,9 +219,6 @@ endif
 	find debian/install/deb/usr/share/man/ -type f | xargs sed -ri 's_/usr(/lib/systemd/system|/lib/systemd/network|/lib/udev|/lib[^/]|/lib/[^a-z])_\1_g'
 
 override_dh_auto_clean:
-ifneq (, $(TEST_UPSTREAM))
-	debian/extra/checkout-upstream
-endif
 	dh_auto_clean --builddirectory=build-deb
 ifeq (, $(filter noudeb, $(DEB_BUILD_PROFILES)))
 	dh_auto_clean --builddirectory=build-udeb

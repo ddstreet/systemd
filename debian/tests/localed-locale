@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Force TEST_UPSTREAM during autopkgtesting
+TEST_UPSTREAM=1
+
 . `dirname $0`/assert.sh
 
 if [ -n "$TEST_UPSTREAM" ]; then

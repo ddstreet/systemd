@@ -15,6 +15,8 @@ from glob import glob
 
 is_container = subprocess.call(['systemd-detect-virt', '--container']) == 0
 
+os.environ['TEST_UPSTREAM'] = '1'
+
 
 def wait_unit_stop(unit, timeout=10):
     '''Wait until given unit is not running any more
