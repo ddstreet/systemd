@@ -4,7 +4,12 @@ systemd (240-6ubuntu10) eoan; urgency=medium
   * random-util: eat up bad RDRAND values seen on AMD CPUs.
     This fixes AMD Ryzen 3000 series failing to boot (LP: #1835809)
 
- -- Balint Reczey <rbalint@ubuntu.com>  Tue, 09 Jul 2019 11:42:05 +0200
+  [ Balint Reczey]
+  * Cherry-pick patches to fix FTBFS with GCC 9:
+    - d/p/strv-rework-FOREACH_STRING-macro.patch
+    - d/p/test-systemctl-nspawn-use-const-char-instead-of-char-as-i.patch
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Thu, 11 Jul 2019 10:35:01 +0200
 
 systemd (240-6ubuntu9) eoan; urgency=medium
 
