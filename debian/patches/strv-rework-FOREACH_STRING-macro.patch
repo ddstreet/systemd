@@ -1,0 +1,44 @@
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 16 Jan 2019 00:13:38 +0100
+Subject: strv: rework FOREACH_STRING() macro
+
+So it's apparently problematic that we use STRV_MAKE() (i.e. a compound
+initializer) outside of the {} block we use it in (and that includes
+outside of the ({}) block, too). Hence, let's rework the macro to not
+need that.
+
+This also makes the macro shorter, which is definitely a good and more
+readable. Moreover, it will now complain if the iterator is a "char*"
+instead of a "const char*", which is good too.
+
+Fixes: #11394
+---
+ src/basic/strv.h | 15 ++++-----------
+ 1 file changed, 4 insertions(+), 11 deletions(-)
+
+diff --git a/src/basic/strv.h b/src/basic/strv.h
+index aa4cd4a..392cab6 100644
+--- a/src/basic/strv.h
++++ b/src/basic/strv.h
+@@ -156,17 +156,10 @@ void strv_print(char **l);
+                 _found;                                         \
+         })
+ 
+-#define FOREACH_STRING(x, ...)                               \
+-        for (char **_l = ({                                  \
+-                char **_ll = STRV_MAKE(__VA_ARGS__);         \
+-                x = _ll ? _ll[0] : NULL;                     \
+-                _ll;                                         \
+-        });                                                  \
+-        _l && *_l;                                           \
+-        x = ({                                               \
+-                _l ++;                                       \
+-                _l[0];                                       \
+-        }))
++#define FOREACH_STRING(x, y, ...)                                       \
++        for (char **_l = STRV_MAKE(({ x = y; }), ##__VA_ARGS__);        \
++             x;                                                         \
++             x = *(++_l))
+ 
+ char **strv_reverse(char **l);
+ char **strv_shell_escape(char **l, const char *bad);
