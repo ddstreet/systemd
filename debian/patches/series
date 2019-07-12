@@ -150,3 +150,5 @@ ask-password-prevent-buffer-overrow-when-reading-fro.patch
 rdrand-workaround-on-amd.patch
 strv-rework-FOREACH_STRING-macro.patch
 test-systemctl-nspawn-use-const-char-instead-of-char-as-i.patch
+seccomp-shm-get-at-dt-now-have-their-own-numbers-everywhe.patch
+seccomp-allow-shmat-to-be-a-separate-syscall-on-architect.patch
