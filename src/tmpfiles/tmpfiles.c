@@ -1679,6 +1679,10 @@ static int empty_directory(Item *i, const char *path) {
         }
         if (r < 0)
                 return log_error_errno(r, "is_dir() failed on path %s: %m", path);
+        if (r == 0) {
+                log_error("'%s' already exists and is not a directory.", path);
+                return -EEXIST;
+        }
 
         return path_set_perms(i, path);
 }
@@ -1998,7 +2002,7 @@ static int create_item(Item *i) {
                 break;
 
         case EMPTY_DIRECTORY:
-                r = empty_directory(i, i->path);
+                r = glob_item(i, empty_directory);
                 if (r < 0)
                         return r;
 
