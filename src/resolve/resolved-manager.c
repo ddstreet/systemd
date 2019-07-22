@@ -599,7 +599,7 @@ int manager_new(Manager **ret) {
         m->llmnr_support = RESOLVE_SUPPORT_NO;
         m->mdns_support = RESOLVE_SUPPORT_NO;
         m->dnssec_mode = DEFAULT_DNSSEC_MODE;
-        m->enable_cache = true;
+        m->enable_cache = DNS_CACHE_MODE_YES;
         m->dns_stub_listener_mode = DNS_STUB_LISTENER_YES;
         m->read_resolv_conf = true;
         m->need_builtin_fallbacks = true;
