@@ -1,3 +1,18 @@
+systemd (237-3ubuntu10.25) bionic; urgency=medium
+
+  [ Dan Streetman ]
+  * d/p/lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch:
+    - set src address for dhcp 'classless' routes (LP: #1835581)
+  * d/p/lp1833671-networkd-keep-bond-slave-up-if-already-attached.patch:
+    - keep bond slave up if already attached (LP: #1833671)
+
+  [ Jorge Niedbalski ]
+  * d/p/lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch:
+    Allows cache=no-negative option to be set, ignoring negative
+    answers to be cached (LP: #1668771).
+
+ -- Dan Streetman <ddstreet@canonical.com>  Mon, 22 Jul 2019 12:45:02 -0400
+
 systemd (237-3ubuntu10.24) bionic; urgency=medium
 
   [Dimitri John Ledkov 🌈]
