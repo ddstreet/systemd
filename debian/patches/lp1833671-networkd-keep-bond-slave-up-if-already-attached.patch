@@ -1,0 +1,50 @@
+From cbff717048ad25b2fb47ea3df688f9df7e6af6c7 Mon Sep 17 00:00:00 2001
+From: Tobias Jungel <tobias.jungel@bisdn.de>
+Origin: upstream, https://github.com/systemd/systemd/commit/cbff717048ad25b2fb47ea3df688f9df7e6af6c7
+Bug: https://github.com/systemd/systemd/issues/10118
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1833671
+Date: Fri, 19 Oct 2018 13:12:35 +0200
+Subject: [PATCH] networkd: keep bond slave up if already attached
+
+There is no need to disable an already correct enslaved interface.
+
+relates to #10118
+---
+ src/network/networkd-link.c | 8 ++++++++
+ src/network/networkd-link.h | 1 +
+ 2 files changed, 9 insertions(+)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -483,6 +483,10 @@
+                         return -ENOMEM;
+         }
+ 
++        r = sd_netlink_message_read_u32(message, IFLA_MASTER, (uint32_t *)&link->master_ifindex);
++        if (r < 0)
++                log_link_debug_errno(link, r, "New device has no master, continuing without");
++
+         r = sd_netlink_message_read_ether_addr(message, IFLA_ADDRESS, &link->mac);
+         if (r < 0)
+                 log_link_debug_errno(link, r, "MAC address not found for new device, continuing without");
+@@ -2280,6 +2284,10 @@
+                 return link_joined(link);
+ 
+         if (link->network->bond) {
++                if (link->network->bond->state == NETDEV_STATE_READY &&
++                    link->network->bond->ifindex == link->master_ifindex)
++                        return link_joined(link);
++
+                 log_struct(LOG_DEBUG,
+                            LOG_LINK_INTERFACE(link),
+                            LOG_NETDEV_INTERFACE(link->network->bond),
+--- a/src/network/networkd-link.h
++++ b/src/network/networkd-link.h
+@@ -67,6 +67,7 @@
+         int n_ref;
+ 
+         int ifindex;
++        int master_ifindex;
+         char *ifname;
+         char *kind;
+         unsigned short iftype;
