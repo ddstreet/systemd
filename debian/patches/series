@@ -119,3 +119,6 @@ resolved-do-not-hit-CNAME-in-NODATA.patch
 exec-util-in-execute_directories-support-initial-exec-env.patch
 core-execute-environment_generators-with-manager-s-enviro.patch
 core-execute-generators-with-manager-s-environmnet.patch
+lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
+lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
+lp1833671-networkd-keep-bond-slave-up-if-already-attached.patch
