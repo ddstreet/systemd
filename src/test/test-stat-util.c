@@ -9,6 +9,7 @@
 #include "macro.h"
 #include "missing.h"
 #include "mountpoint-util.h"
+#include "namespace-util.h"
 #include "path-util.h"
 #include "stat-util.h"
 #include "tmpfile-util.h"
@@ -55,7 +56,6 @@ static void test_path_is_fs_type(void) {
                 assert_se(path_is_fs_type("/run", BTRFS_SUPER_MAGIC) == 0);
         }
         assert_se(path_is_fs_type("/proc", PROC_SUPER_MAGIC) > 0);
-        assert_se(path_is_fs_type("/proc", BTRFS_SUPER_MAGIC) == 0);
         assert_se(path_is_fs_type("/proc", BTRFS_SUPER_MAGIC) == 0);
         assert_se(path_is_fs_type("/i-dont-exist", BTRFS_SUPER_MAGIC) == -ENOENT);
 }

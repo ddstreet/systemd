@@ -7,14 +7,18 @@
 #include "sd-event.h"
 
 #include "device-enumerator-private.h"
+#include "device-private.h"
 #include "fd-util.h"
 #include "fileio.h"
 #include "path-util.h"
+#include "process-util.h"
 #include "set.h"
 #include "string-util.h"
 #include "strv.h"
 #include "udevadm.h"
 #include "udevadm-util.h"
+#include "udev-ctrl.h"
+#include "virt.h"
 
 static bool arg_verbose = false;
 static bool arg_dry_run = false;
@@ -56,6 +60,7 @@ static int exec_list(sd_device_enumerator *e, const char *action, Set *settle_se
 }
 
 static int device_monitor_handler(sd_device_monitor *m, sd_device *dev, void *userdata) {
+        _cleanup_free_ char *val = NULL;
         Set *settle_set = userdata;
         const char *syspath;
 
@@ -68,7 +73,8 @@ static int device_monitor_handler(sd_device_monitor *m, sd_device *dev, void *us
         if (arg_verbose)
                 printf("settle %s\n", syspath);
 
-        if (!set_remove(settle_set, syspath))
+        val = set_remove(settle_set, syspath);
+        if (!val)
                 log_debug("Got epoll event on syspath %s not present in syspath set", syspath);
 
         if (set_isempty(settle_set))
@@ -117,6 +123,8 @@ static int help(void) {
                "     --name-match=NAME              Trigger devices with this /dev name\n"
                "  -b --parent-match=NAME            Trigger devices with that parent device\n"
                "  -w --settle                       Wait for the triggered events to complete\n"
+               "     --wait-daemon[=SECONDS]        Wait for udevd daemon to be initialized\n"
+               "                                    before triggering uevents\n"
                , program_invocation_short_name);
 
         return 0;
@@ -125,6 +133,7 @@ static int help(void) {
 int trigger_main(int argc, char *argv[], void *userdata) {
         enum {
                 ARG_NAME = 0x100,
+                ARG_PING,
         };
 
         static const struct option options[] = {
@@ -142,6 +151,7 @@ int trigger_main(int argc, char *argv[], void *userdata) {
                 { "name-match",        required_argument, NULL, ARG_NAME },
                 { "parent-match",      required_argument, NULL, 'b'      },
                 { "settle",            no_argument,       NULL, 'w'      },
+                { "wait-daemon",       optional_argument, NULL, ARG_PING },
                 { "version",           no_argument,       NULL, 'V'      },
                 { "help",              no_argument,       NULL, 'h'      },
                 {}
@@ -155,8 +165,14 @@ int trigger_main(int argc, char *argv[], void *userdata) {
         _cleanup_(sd_device_monitor_unrefp) sd_device_monitor *m = NULL;
         _cleanup_(sd_event_unrefp) sd_event *event = NULL;
         _cleanup_set_free_free_ Set *settle_set = NULL;
-        bool settle = false;
+        usec_t ping_timeout_usec = 5 * USEC_PER_SEC;
+        bool settle = false, ping = false;
         int c, r;
+
+        if (running_in_chroot() > 0) {
+                log_info("Running in chroot, ignoring request.");
+                return 0;
+        }
 
         r = sd_device_enumerator_new(&e);
         if (r < 0)
@@ -182,19 +198,14 @@ int trigger_main(int argc, char *argv[], void *userdata) {
                                 device_type = TYPE_DEVICES;
                         else if (streq(optarg, "subsystems"))
                                 device_type = TYPE_SUBSYSTEMS;
-                        else {
-                                log_error("Unknown type --type=%s", optarg);
-                                return -EINVAL;
-                        }
+                        else
+                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown type --type=%s", optarg);
                         break;
                 case 'c':
-                        if (STR_IN_SET(optarg, "add", "remove", "change"))
-                                action = optarg;
-                        else {
-                                log_error("Unknown action '%s'", optarg);
-                                return -EINVAL;
-                        }
+                        if (device_action_from_string(optarg) < 0)
+                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown action '%s'", optarg);
 
+                        action = optarg;
                         break;
                 case 's':
                         r = sd_device_enumerator_add_match_subsystem(e, optarg, true);
@@ -247,7 +258,7 @@ int trigger_main(int argc, char *argv[], void *userdata) {
                         if (r < 0)
                                 return log_error_errno(r, "Failed to open the device '%s': %m", optarg);
 
-                        r = sd_device_enumerator_add_match_parent(e, dev);
+                        r = device_enumerator_add_match_parent_incremental(e, dev);
                         if (r < 0)
                                 return log_error_errno(r, "Failed to add parent match '%s': %m", optarg);
                         break;
@@ -263,9 +274,19 @@ int trigger_main(int argc, char *argv[], void *userdata) {
                         if (r < 0)
                                 return log_error_errno(r, "Failed to open the device '%s': %m", optarg);
 
-                        r = sd_device_enumerator_add_match_parent(e, dev);
+                        r = device_enumerator_add_match_parent_incremental(e, dev);
                         if (r < 0)
                                 return log_error_errno(r, "Failed to add parent match '%s': %m", optarg);
+                        break;
+                }
+
+                case ARG_PING: {
+                        ping = true;
+                        if (optarg) {
+                                r = parse_sec(optarg, &ping_timeout_usec);
+                                if (r < 0)
+                                        log_error_errno(r, "Failed to parse timeout value '%s', ignoring: %m", optarg);
+                        }
                         break;
                 }
 
@@ -280,6 +301,28 @@ int trigger_main(int argc, char *argv[], void *userdata) {
                 }
         }
 
+        if (!arg_dry_run || ping) {
+                r = must_be_root();
+                if (r < 0)
+                        return r;
+        }
+
+        if (ping) {
+                _cleanup_(udev_ctrl_unrefp) struct udev_ctrl *uctrl = NULL;
+
+                r = udev_ctrl_new(&uctrl);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to initialize udev control: %m");
+
+                r = udev_ctrl_send_ping(uctrl);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to connect to udev daemon: %m");
+
+                r = udev_ctrl_wait(uctrl, ping_timeout_usec);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to wait for daemon to reply: %m");
+        }
+
         for (; optind < argc; optind++) {
                 _cleanup_(sd_device_unrefp) sd_device *dev = NULL;
 
@@ -287,7 +330,7 @@ int trigger_main(int argc, char *argv[], void *userdata) {
                 if (r < 0)
                         return log_error_errno(r, "Failed to open the device '%s': %m", argv[optind]);
 
-                r = sd_device_enumerator_add_match_parent(e, dev);
+                r = device_enumerator_add_match_parent_incremental(e, dev);
                 if (r < 0)
                         return log_error_errno(r, "Failed to add parent match '%s': %m", argv[optind]);
         }

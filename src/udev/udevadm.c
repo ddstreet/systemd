@@ -16,7 +16,7 @@
 #include "util.h"
 
 static int help(void) {
-        static const char * short_descriptions[][2] = {
+        static const char *const short_descriptions[][2] = {
                 { "info",         "Query sysfs or the udev database" },
                 { "trigger",      "Request events from the kernel"   },
                 { "settle",       "Wait for pending udev events"     },
@@ -113,11 +113,12 @@ static int run(int argc, char *argv[]) {
         udev_parse_config();
         log_parse_environment();
         log_open();
-        log_set_max_level_realm(LOG_REALM_SYSTEMD, log_get_max_level());
 
         r = parse_argv(argc, argv);
         if (r <= 0)
                 return r;
+
+        log_set_max_level_realm(LOG_REALM_SYSTEMD, log_get_max_level());
 
         mac_selinux_init();
         return udevadm_main(argc, argv);

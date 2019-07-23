@@ -1,10 +1,7 @@
 <?xml version='1.0'?> <!--*-nxml-*-->
-<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
   "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
-
-<!--
-  SPDX-License-Identifier: LGPL-2.1+
--->
+<!-- SPDX-License-Identifier: LGPL-2.1+ -->
 
 <refentry id="journald.conf"
     xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -50,7 +47,7 @@
     <para>All options are configured in the
     <literal>[Journal]</literal> section:</para>
 
-    <variablelist>
+    <variablelist class='config-directives'>
 
       <varlistentry>
         <term><varname>Storage=</varname></term>
@@ -258,7 +255,7 @@
 
         <listitem><para>The maximum time to store journal entries.
         This controls whether journal files containing entries older
-        then the specified time span are deleted. Normally, time-based
+        than the specified time span are deleted. Normally, time-based
         deletion of old journal files should not be required as
         size-based deletion with options such as
         <varname>SystemMaxUse=</varname> should be sufficient to

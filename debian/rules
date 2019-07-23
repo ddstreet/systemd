@@ -10,7 +10,7 @@ include /usr/share/dpkg/default.mk
 ifeq ($(DEB_VENDOR),Ubuntu)
     DEFAULT_NTP_SERVERS = ntp.ubuntu.com
     SUPPORT_URL = http://www.ubuntu.com/support
-    CONFFLAGS_DISTRO = -Ddns-servers=''
+    CONFFLAGS_DISTRO =
 else
     DEFAULT_NTP_SERVERS = 0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org
     SUPPORT_URL = https://www.debian.org/support
@@ -63,16 +63,17 @@ CONFFLAGS = \
 	-Dvconsole=false \
 	-Dfirstboot=false \
 	-Dxkbcommon=false \
-	-Dportabled=false \
 	-Dwheel-group=false \
 	-Dntp-servers="$(DEFAULT_NTP_SERVERS)" \
+	-Ddns-servers='' \
 	-Dlink-udev-shared=false \
 	-Dsystem-uid-max=999 \
 	-Dsystem-gid-max=999 \
 	-Dnobody-user=nobody \
 	-Dnobody-group=nogroup \
 	-Dbump-proc-sys-fs-nr-open=false \
-	-Ddev-kvm-mode=0660
+	-Ddev-kvm-mode=0660 \
+	-Dgroup-render-mode=0660
 
 # resolved's DNSSEC support is still not mature enough, don't enable it by
 # default on stable Debian or any Ubuntu releases
@@ -84,6 +85,7 @@ CONFFLAGS_deb = \
 	-Dsysusers=true \
 	-Dinstall-tests=true \
 	-Defi=true \
+	-Dman=true \
 	-Dnss-myhostname=true \
 	-Dnss-mymachines=true \
 	-Dnss-resolve=true \
@@ -98,12 +100,13 @@ CONFFLAGS_deb += \
 	-Dcoredump=true \
 	-Delfutils=true \
 	-Dapparmor=true \
-	-Dlibidn=true \
+	-Dlibidn2=true \
 	-Dlibiptc=true \
 	-Dlibcurl=true \
 	-Dimportd=true \
 	-Dmicrohttpd=true \
-	-Dgnutls=true
+	-Dgnutls=true \
+	-Dpcre2=true
 else
 CONFFLAGS_deb += \
 	-Daudit=false \
@@ -111,12 +114,13 @@ CONFFLAGS_deb += \
 	-Dcoredump=false \
 	-Delfutils=false \
 	-Dapparmor=false \
-	-Dlibidn=false \
+	-Dlibidn2=false \
 	-Dlibiptc=false \
 	-Dlibcurl=false \
 	-Dimportd=false \
 	-Dmicrohttpd=false \
-	-Dgnutls=false
+	-Dgnutls=false \
+	-Dpcre2=false
 endif
 
 CONFFLAGS_udeb = \
@@ -127,7 +131,7 @@ CONFFLAGS_udeb = \
 	-Daudit=false \
 	-Dselinux=false\
 	-Dapparmor=false \
-	-Dlibidn=false \
+	-Dlibidn2=false \
 	-Dlibiptc=false \
 	-Dsmack=false \
 	-Dima=false \
@@ -152,6 +156,7 @@ CONFFLAGS_udeb = \
 	-Dnss-resolve=false \
 	-Dnss-systemd=false \
 	-Dresolve=false \
+	-Dportabled=false \
 	-Dpolkit=false \
 	-Dacl=false \
 	-Dgcrypt=false \
@@ -160,7 +165,8 @@ CONFFLAGS_udeb = \
 	-Dman=false \
 	-Defi=false \
 	-Dseccomp=false \
-	-Dsysusers=false
+	-Dsysusers=false \
+	-Dpcre2=false
 
 override_dh_auto_configure:
 	dh_auto_configure --builddirectory=build-deb \
@@ -210,7 +216,6 @@ override_dh_install:
 	rm -f debian/install/*/etc/init.d/README
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
-	rm -f debian/install/*/lib/systemd/system/halt-local.service
 	# remove files related to factory-reset feature
 	find debian/install/ \( -name 'systemd-update-done*' -o \
 		-name systemd-journal-catalog-update.service -o \
@@ -218,10 +223,6 @@ override_dh_install:
 		-name ldconfig.service -o \
 		-name etc.conf \) -delete
 	rm -rf debian/install/*/usr/share/factory/
-	# remove symlinks enabling default-on services
-	rm -rf debian/install/*/etc/systemd/system/*.target.wants/
-	# remove aliases
-	find debian/install/*/etc/systemd/system/ -type l -delete
 	# replace upstream sysusers.d/basic.conf with proper users for Debian
 	debian/extra/make-sysusers-basic > debian/install/deb/usr/lib/sysusers.d/basic.conf
 	# remove resolvconf compat symlink
@@ -253,7 +254,7 @@ endif
 	set -e; for pkg in $(shell dh_listpackages -Nudev-udeb -Nlibudev1-udeb -Nsystemd); do \
 		echo "... from $$pkg..."; \
 		(cd debian/$$pkg; find -type f -o -type l) | (cd debian/systemd; xargs rm -f --verbose); \
-		(cd debian/$$pkg; find -mindepth 1 -type d) | (cd debian/systemd; xargs rmdir --ignore-fail-on-non-empty --verbose || true); \
+		(cd debian/$$pkg; find -mindepth 1 -type d | sort -r) | (cd debian/systemd; xargs rmdir --ignore-fail-on-non-empty --verbose || true); \
 	done
 
 	# Ubuntu specific files

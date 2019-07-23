@@ -35,6 +35,7 @@
 #include "log.h"
 #include "macro.h"
 #include "main-func.h"
+#include "memory-util.h"
 #include "missing.h"
 #include "mkdir.h"
 #include "parse-util.h"
@@ -48,7 +49,6 @@
 #include "strv.h"
 #include "tmpfile-util.h"
 #include "user-util.h"
-#include "util.h"
 
 /* The maximum size up to which we process coredumps */
 #define PROCESS_SIZE_MAX ((uint64_t) (2LLU*1024LLU*1024LLU*1024LLU))
@@ -142,7 +142,7 @@ static int parse_config(void) {
                                         CONFIG_PARSE_WARN, NULL);
 }
 
-static inline uint64_t storage_size_max(void) {
+static uint64_t storage_size_max(void) {
         if (arg_storage == COREDUMP_STORAGE_EXTERNAL)
                 return arg_external_size_max;
         if (arg_storage == COREDUMP_STORAGE_JOURNAL)
@@ -229,7 +229,7 @@ static int fix_xattr(int fd, const char *context[_CONTEXT_MAX]) {
 
 #define filename_escape(s) xescape((s), "./ ")
 
-static inline const char *coredump_tmpfile_name(const char *s) {
+static const char *coredump_tmpfile_name(const char *s) {
         return s ? s : "(unnamed temporary file)";
 }
 
@@ -369,7 +369,7 @@ static int save_external_coredump(
         if (r < 0)
                 return log_error_errno(r, "Failed to determine coredump file name: %m");
 
-        mkdir_p_label("/var/lib/systemd/coredump", 0755);
+        (void) mkdir_p_label("/var/lib/systemd/coredump", 0755);
 
         fd = open_tmpfile_linkable(fn, O_RDWR|O_CLOEXEC, &tmp);
         if (fd < 0)
@@ -794,15 +794,16 @@ log:
         core_message = strjoin("MESSAGE=Process ", context[CONTEXT_PID],
                                " (", context[CONTEXT_COMM], ") of user ",
                                context[CONTEXT_UID], " dumped core.",
-                               journald_crash ? "\nCoredump diverted to " : NULL,
-                               journald_crash ? filename : NULL);
+                               journald_crash && filename ? "\nCoredump diverted to " : NULL,
+                               journald_crash && filename ? filename : NULL);
         if (!core_message)
                 return log_oom();
 
         if (journald_crash) {
-                /* We cannot log to the journal, so just print the MESSAGE.
+                /* We cannot log to the journal, so just print the message.
                  * The target was set previously to something safe. */
-                log_dispatch(LOG_ERR, 0, core_message);
+                assert(startswith(core_message, "MESSAGE="));
+                log_dispatch(LOG_ERR, 0, core_message + strlen("MESSAGE="));
                 return 0;
         }
 
@@ -1062,19 +1063,10 @@ static int send_iovec(const struct iovec iovec[], size_t n_iovec, int input_fd) 
         return 0;
 }
 
-static char* set_iovec_field(struct iovec *iovec, size_t *n_iovec, const char *field, const char *value) {
-        char *x;
-
-        x = strappend(field, value);
-        if (x)
-                iovec[(*n_iovec)++] = IOVEC_MAKE_STRING(x);
-        return x;
-}
-
 static char* set_iovec_field_free(struct iovec *iovec, size_t *n_iovec, const char *field, char *value) {
         char *x;
 
-        x = set_iovec_field(iovec, n_iovec, field, value);
+        x = set_iovec_string_field(iovec, n_iovec, field, value);
         free(value);
         return x;
 }
@@ -1124,36 +1116,36 @@ static int gather_pid_metadata(
                         disable_coredumps();
                 }
 
-                set_iovec_field(iovec, n_iovec, "COREDUMP_UNIT=", context[CONTEXT_UNIT]);
+                set_iovec_string_field(iovec, n_iovec, "COREDUMP_UNIT=", context[CONTEXT_UNIT]);
         }
 
         if (cg_pid_get_user_unit(pid, &t) >= 0)
                 set_iovec_field_free(iovec, n_iovec, "COREDUMP_USER_UNIT=", t);
 
         /* The next few are mandatory */
-        if (!set_iovec_field(iovec, n_iovec, "COREDUMP_PID=", context[CONTEXT_PID]))
+        if (!set_iovec_string_field(iovec, n_iovec, "COREDUMP_PID=", context[CONTEXT_PID]))
                 return log_oom();
 
-        if (!set_iovec_field(iovec, n_iovec, "COREDUMP_UID=", context[CONTEXT_UID]))
+        if (!set_iovec_string_field(iovec, n_iovec, "COREDUMP_UID=", context[CONTEXT_UID]))
                 return log_oom();
 
-        if (!set_iovec_field(iovec, n_iovec, "COREDUMP_GID=", context[CONTEXT_GID]))
+        if (!set_iovec_string_field(iovec, n_iovec, "COREDUMP_GID=", context[CONTEXT_GID]))
                 return log_oom();
 
-        if (!set_iovec_field(iovec, n_iovec, "COREDUMP_SIGNAL=", context[CONTEXT_SIGNAL]))
+        if (!set_iovec_string_field(iovec, n_iovec, "COREDUMP_SIGNAL=", context[CONTEXT_SIGNAL]))
                 return log_oom();
 
-        if (!set_iovec_field(iovec, n_iovec, "COREDUMP_RLIMIT=", context[CONTEXT_RLIMIT]))
+        if (!set_iovec_string_field(iovec, n_iovec, "COREDUMP_RLIMIT=", context[CONTEXT_RLIMIT]))
                 return log_oom();
 
-        if (!set_iovec_field(iovec, n_iovec, "COREDUMP_HOSTNAME=", context[CONTEXT_HOSTNAME]))
+        if (!set_iovec_string_field(iovec, n_iovec, "COREDUMP_HOSTNAME=", context[CONTEXT_HOSTNAME]))
                 return log_oom();
 
-        if (!set_iovec_field(iovec, n_iovec, "COREDUMP_COMM=", context[CONTEXT_COMM]))
+        if (!set_iovec_string_field(iovec, n_iovec, "COREDUMP_COMM=", context[CONTEXT_COMM]))
                 return log_oom();
 
         if (context[CONTEXT_EXE] &&
-            !set_iovec_field(iovec, n_iovec, "COREDUMP_EXE=", context[CONTEXT_EXE]))
+            !set_iovec_string_field(iovec, n_iovec, "COREDUMP_EXE=", context[CONTEXT_EXE]))
                 return log_oom();
 
         if (sd_pid_get_session(pid, &t) >= 0)
@@ -1221,7 +1213,7 @@ static int gather_pid_metadata(
                 iovec[(*n_iovec)++] = IOVEC_MAKE_STRING(t);
 
         if (safe_atoi(context[CONTEXT_SIGNAL], &signo) >= 0 && SIGNAL_VALID(signo))
-                set_iovec_field(iovec, n_iovec, "COREDUMP_SIGNAL_NAME=SIG", signal_to_string(signo));
+                set_iovec_string_field(iovec, n_iovec, "COREDUMP_SIGNAL_NAME=SIG", signal_to_string(signo));
 
         return 0; /* we successfully acquired all metadata */
 }

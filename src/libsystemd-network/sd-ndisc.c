@@ -13,13 +13,13 @@
 #include "fd-util.h"
 #include "icmp6-util.h"
 #include "in-addr-util.h"
+#include "memory-util.h"
 #include "ndisc-internal.h"
 #include "ndisc-router.h"
 #include "random-util.h"
 #include "socket-util.h"
 #include "string-table.h"
 #include "string-util.h"
-#include "util.h"
 
 #define NDISC_TIMEOUT_NO_RA_USEC (NDISC_ROUTER_SOLICITATION_INTERVAL * NDISC_MAX_ROUTER_SOLICITATIONS)
 
@@ -33,7 +33,6 @@ DEFINE_STRING_TABLE_LOOKUP(ndisc_event, sd_ndisc_event);
 static void ndisc_callback(sd_ndisc *ndisc, sd_ndisc_event event, sd_ndisc_router *rt) {
         assert(ndisc);
         assert(event >= 0 && event < _SD_NDISC_EVENT_MAX);
-
 
         if (!ndisc->callback) {
                 log_ndisc("Received '%s' event.", ndisc_event_to_string(event));

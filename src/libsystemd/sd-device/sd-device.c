@@ -29,7 +29,7 @@
 #include "util.h"
 
 int device_new_aux(sd_device **ret) {
-        sd_device *device = NULL;
+        sd_device *device;
 
         assert(ret);
 
@@ -43,6 +43,7 @@ int device_new_aux(sd_device **ret) {
                 .devmode = (mode_t) -1,
                 .devuid = (uid_t) -1,
                 .devgid = (gid_t) -1,
+                .action = _DEVICE_ACTION_INVALID,
         };
 
         *ret = device;
@@ -205,9 +206,7 @@ int device_set_syspath(sd_device *device, const char *_syspath, bool verify) {
                 return r;
 
         free_and_replace(device->syspath, syspath);
-
         device->devpath = devpath;
-
         return 0;
 }
 
@@ -227,7 +226,6 @@ _public_ int sd_device_new_from_syspath(sd_device **ret, const char *syspath) {
                 return r;
 
         *ret = TAKE_PTR(device);
-
         return 0;
 }
 
@@ -239,7 +237,7 @@ _public_ int sd_device_new_from_devnum(sd_device **ret, char type, dev_t devnum)
         assert_return(IN_SET(type, 'b', 'c'), -EINVAL);
 
         /* use /sys/dev/{block,char}/<maj>:<min> link */
-        snprintf(id, sizeof(id), "%u:%u", major(devnum), minor(devnum));
+        xsprintf(id, "%u:%u", major(devnum), minor(devnum));
 
         syspath = strjoina("/sys/dev/", (type == 'b' ? "block" : "char"), "/", id);
 
@@ -610,8 +608,8 @@ _public_ int sd_device_new_from_device_id(sd_device **ret, const char *id) {
 
                 return sd_device_new_from_devnum(ret, id[0], devt);
         }
-        case 'n':
-        {
+
+        case 'n': {
                 _cleanup_(sd_device_unrefp) sd_device *device = NULL;
                 _cleanup_close_ int sk = -1;
                 struct ifreq ifr = {};
@@ -642,11 +640,10 @@ _public_ int sd_device_new_from_device_id(sd_device **ret, const char *id) {
                         return -ENODEV;
 
                 *ret = TAKE_PTR(device);
-
                 return 0;
         }
-        case '+':
-        {
+
+        case '+': {
                 char subsys[PATH_MAX];
                 char *sysname;
 
@@ -660,6 +657,7 @@ _public_ int sd_device_new_from_device_id(sd_device **ret, const char *id) {
 
                 return sd_device_new_from_subsystem_sysname(ret, subsys, sysname);
         }
+
         default:
                 return -EINVAL;
         }
@@ -727,7 +725,6 @@ _public_ int sd_device_get_parent(sd_device *child, sd_device **ret) {
                 return -ENOENT;
 
         *ret = child->parent;
-
         return 0;
 }
 
@@ -746,11 +743,8 @@ int device_set_subsystem(sd_device *device, const char *_subsystem) {
         if (r < 0)
                 return r;
 
-        free_and_replace(device->subsystem, subsystem);
-
         device->subsystem_set = true;
-
-        return 0;
+        return free_and_replace(device->subsystem, subsystem);
 }
 
 static int device_set_drivers_subsystem(sd_device *device, const char *_subsystem) {
@@ -769,9 +763,7 @@ static int device_set_drivers_subsystem(sd_device *device, const char *_subsyste
         if (r < 0)
                 return r;
 
-        free_and_replace(device->driver_subsystem, subsystem);
-
-        return 0;
+        return free_and_replace(device->driver_subsystem, subsystem);
 }
 
 _public_ int sd_device_get_subsystem(sd_device *device, const char **ret) {
@@ -836,7 +828,6 @@ _public_ int sd_device_get_subsystem(sd_device *device, const char **ret) {
                 return -ENOENT;
 
         *ret = device->subsystem;
-
         return 0;
 }
 
@@ -886,7 +877,6 @@ _public_ int sd_device_get_parent_with_subsystem_devtype(sd_device *child, const
                 return r;
 
         *ret = parent;
-
         return 0;
 }
 
@@ -923,11 +913,8 @@ int device_set_driver(sd_device *device, const char *_driver) {
         if (r < 0)
                 return r;
 
-        free_and_replace(device->driver, driver);
-
         device->driver_set = true;
-
-        return 0;
+        return free_and_replace(device->driver, driver);
 }
 
 _public_ int sd_device_get_driver(sd_device *device, const char **ret) {
@@ -960,7 +947,6 @@ _public_ int sd_device_get_driver(sd_device *device, const char **ret) {
                 return -ENOENT;
 
         *ret = device->driver;
-
         return 0;
 }
 
@@ -972,7 +958,6 @@ _public_ int sd_device_get_devpath(sd_device *device, const char **devpath) {
         assert(device->devpath[0] == '/');
 
         *devpath = device->devpath;
-
         return 0;
 }
 
@@ -992,7 +977,6 @@ _public_ int sd_device_get_devname(sd_device *device, const char **devname) {
         assert(path_startswith(device->devname, "/dev/"));
 
         *devname = device->devname;
-
         return 0;
 }
 
@@ -1001,6 +985,9 @@ static int device_set_sysname(sd_device *device) {
         const char *sysnum = NULL;
         const char *pos;
         size_t len = 0;
+
+        if (!device->devpath)
+                return -EINVAL;
 
         pos = strrchr(device->devpath, '/');
         if (!pos)
@@ -1030,13 +1017,9 @@ static int device_set_sysname(sd_device *device) {
         if (len == 0)
                 sysnum = NULL;
 
-        free_and_replace(device->sysname, sysname);
-
-        device->sysnum = sysnum;
-
         device->sysname_set = true;
-
-        return 0;
+        device->sysnum = sysnum;
+        return free_and_replace(device->sysname, sysname);
 }
 
 _public_ int sd_device_get_sysname(sd_device *device, const char **ret) {
@@ -1054,7 +1037,6 @@ _public_ int sd_device_get_sysname(sd_device *device, const char **ret) {
         assert_return(device->sysname, -ENOENT);
 
         *ret = device->sysname;
-
         return 0;
 }
 
@@ -1074,7 +1056,6 @@ _public_ int sd_device_get_sysnum(sd_device *device, const char **ret) {
                 return -ENOENT;
 
         *ret = device->sysnum;
-
         return 0;
 }
 
@@ -1130,6 +1111,7 @@ int device_add_devlink(sd_device *device, const char *devlink) {
 static int device_add_property_internal_from_string(sd_device *device, const char *str) {
         _cleanup_free_ char *key = NULL;
         char *value;
+        int r;
 
         assert(device);
         assert(str);
@@ -1147,7 +1129,13 @@ static int device_add_property_internal_from_string(sd_device *device, const cha
         if (isempty(++value))
                 value = NULL;
 
-        return device_add_property_internal(device, key, value);
+        /* Add the property to both sd_device::properties and sd_device::properties_db,
+         * as this is called by only handle_db_line(). */
+        r = device_add_property_aux(device, key, value, false);
+        if (r < 0)
+                return r;
+
+        return device_add_property_aux(device, key, value, true);
 }
 
 int device_set_usec_initialized(sd_device *device, usec_t when) {
@@ -1283,17 +1271,14 @@ int device_get_id_filename(sd_device *device, const char **ret) {
         }
 
         *ret = device->id_filename;
-
         return 0;
 }
 
-int device_read_db_internal(sd_device *device, bool force) {
+int device_read_db_internal_filename(sd_device *device, const char *filename) {
         _cleanup_free_ char *db = NULL;
-        char *path;
-        const char *id, *value;
+        const char *value;
+        size_t db_len, i;
         char key;
-        size_t db_len;
-        unsigned i;
         int r;
 
         enum {
@@ -1305,22 +1290,14 @@ int device_read_db_internal(sd_device *device, bool force) {
         } state = PRE_KEY;
 
         assert(device);
+        assert(filename);
 
-        if (device->db_loaded || (!force && device->sealed))
-                return 0;
-
-        r = device_get_id_filename(device, &id);
-        if (r < 0)
-                return r;
-
-        path = strjoina("/run/udev/data/", id);
-
-        r = read_full_file(path, &db, &db_len);
+        r = read_full_file(filename, &db, &db_len);
         if (r < 0) {
                 if (r == -ENOENT)
                         return 0;
-                else
-                        return log_device_debug_errno(device, r, "sd-device: Failed to read db '%s': %m", path);
+
+                return log_device_debug_errno(device, r, "sd-device: Failed to read db '%s': %m", filename);
         }
 
         /* devices with a database entry are initialized */
@@ -1373,11 +1350,29 @@ int device_read_db_internal(sd_device *device, bool force) {
 
                         break;
                 default:
-                        assert_not_reached("Invalid state when parsing db");
+                        return log_device_debug_errno(device, SYNTHETIC_ERRNO(EINVAL), "sd-device: invalid db syntax.");
                 }
         }
 
         return 0;
+}
+
+int device_read_db_internal(sd_device *device, bool force) {
+        const char *id, *path;
+        int r;
+
+        assert(device);
+
+        if (device->db_loaded || (!force && device->sealed))
+                return 0;
+
+        r = device_get_id_filename(device, &id);
+        if (r < 0)
+                return r;
+
+        path = strjoina("/run/udev/data/", id);
+
+        return device_read_db_internal_filename(device, path);
 }
 
 _public_ int sd_device_get_is_initialized(sd_device *device) {
@@ -1415,7 +1410,6 @@ _public_ int sd_device_get_usec_since_initialized(sd_device *device, uint64_t *u
                 return -EIO;
 
         *usec = now_ts - device->usec_initialized;
-
         return 0;
 }
 
@@ -1475,7 +1469,7 @@ _public_ const char *sd_device_get_devlink_next(sd_device *device) {
         return v;
 }
 
-static int device_properties_prepare(sd_device *device) {
+int device_properties_prepare(sd_device *device) {
         int r;
 
         assert(device);
@@ -1558,7 +1552,6 @@ _public_ const char *sd_device_get_property_first(sd_device *device, const char 
 
         if (_value)
                 *_value = value;
-
         return key;
 }
 
@@ -1580,7 +1573,6 @@ _public_ const char *sd_device_get_property_next(sd_device *device, const char *
 
         if (_value)
                 *_value = value;
-
         return key;
 }
 
@@ -1691,7 +1683,6 @@ _public_ int sd_device_get_property_value(sd_device *device, const char *key, co
 
         if (_value)
                 *_value = value;
-
         return 0;
 }
 
@@ -1718,8 +1709,7 @@ static int device_add_sysattr_value(sd_device *device, const char *_key, char *v
         r = hashmap_put(device->sysattr_values, key, value);
         if (r < 0)
                 return r;
-
-        key = NULL;
+        TAKE_PTR(key);
 
         return 0;
 }
@@ -1736,7 +1726,6 @@ static int device_get_sysattr_value(sd_device *device, const char *_key, const c
 
         if (_value)
                 *_value = value;
-
         return 0;
 }
 
@@ -1820,14 +1809,11 @@ _public_ int sd_device_get_sysattr_value(sd_device *device, const char *sysattr,
 
 static void device_remove_sysattr_value(sd_device *device, const char *_key) {
         _cleanup_free_ char *key = NULL;
-        _cleanup_free_ char *value = NULL;
 
         assert(device);
         assert(_key);
 
-        value = hashmap_remove2(device->sysattr_values, _key, (void **) &key);
-
-        return;
+        free(hashmap_remove2(device->sysattr_values, _key, (void **) &key));
 }
 
 /* set the attribute and save it in the cache. If a NULL value is passed the
@@ -1843,7 +1829,6 @@ _public_ int sd_device_set_sysattr_value(sd_device *device, const char *sysattr,
 
         if (!_value) {
                 device_remove_sysattr_value(device, sysattr);
-
                 return 0;
         }
 
@@ -1874,23 +1859,22 @@ _public_ int sd_device_set_sysattr_value(sd_device *device, const char *sysattr,
                 if (r == -EISDIR)
                         return r;
 
-                free(value);
-                value = strdup("");
-                if (!value)
-                        return -ENOMEM;
+                r = free_and_strdup(&value, "");
+                if (r < 0)
+                        return r;
 
                 r = device_add_sysattr_value(device, sysattr, value);
                 if (r < 0)
                         return r;
+                TAKE_PTR(value);
 
-                value = NULL;
                 return -ENXIO;
         }
 
         r = device_add_sysattr_value(device, sysattr, value);
         if (r < 0)
                 return r;
+        TAKE_PTR(value);
 
-        value = NULL;
         return 0;
 }

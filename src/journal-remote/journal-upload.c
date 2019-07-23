@@ -9,6 +9,7 @@
 #include "sd-daemon.h"
 
 #include "alloc-util.h"
+#include "build.h"
 #include "conf-parser.h"
 #include "daemon-util.h"
 #include "def.h"
@@ -105,7 +106,7 @@ static int check_cursor_updating(Uploader *u) {
         if (r < 0)
                 return log_error_errno(r, "Cannot save state to %s: %m",
                                        u->state_file);
-        unlink(temp_path);
+        (void) unlink(temp_path);
 
         return 0;
 }
@@ -236,7 +237,7 @@ int start_upload(Uploader *u,
                         easy_setopt(curl, CURLOPT_VERBOSE, 1L, LOG_WARNING, );
 
                 easy_setopt(curl, CURLOPT_USERAGENT,
-                            "systemd-journal-upload " PACKAGE_STRING,
+                            "systemd-journal-upload " GIT_VERSION,
                             LOG_WARNING, );
 
                 if (arg_key || startswith(u->url, "https://")) {

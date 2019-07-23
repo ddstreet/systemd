@@ -10,6 +10,7 @@
 #include "fd-util.h"
 #include "fileio.h"
 #include "hexdecoct.h"
+#include "sort-util.h"
 #include "string-util.h"
 #include "strv.h"
 
@@ -49,11 +50,11 @@
  *      ` BUS_MATCH_LEAF: E
  */
 
-static inline bool BUS_MATCH_IS_COMPARE(enum bus_match_node_type t) {
+static bool BUS_MATCH_IS_COMPARE(enum bus_match_node_type t) {
         return t >= BUS_MATCH_SENDER && t <= BUS_MATCH_ARG_HAS_LAST;
 }
 
-static inline bool BUS_MATCH_CAN_HASH(enum bus_match_node_type t) {
+static bool BUS_MATCH_CAN_HASH(enum bus_match_node_type t) {
         return (t >= BUS_MATCH_MESSAGE_TYPE && t <= BUS_MATCH_PATH) ||
                 (t >= BUS_MATCH_ARG && t <= BUS_MATCH_ARG_LAST) ||
                 (t >= BUS_MATCH_ARG_HAS && t <= BUS_MATCH_ARG_HAS_LAST);

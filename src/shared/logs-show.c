@@ -25,6 +25,7 @@
 #include "log.h"
 #include "logs-show.h"
 #include "macro.h"
+#include "namespace-util.h"
 #include "output-mode.h"
 #include "parse-util.h"
 #include "process-util.h"
@@ -724,7 +725,7 @@ void json_escape(
 
                 fputs(" ]", f);
         } else {
-                fputc('\"', f);
+                fputc('"', f);
 
                 while (l > 0) {
                         if (IN_SET(*p, '"', '\\')) {
@@ -741,7 +742,7 @@ void json_escape(
                         l--;
                 }
 
-                fputc('\"', f);
+                fputc('"', f);
         }
 }
 

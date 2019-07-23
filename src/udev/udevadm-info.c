@@ -18,9 +18,10 @@
 #include "device-util.h"
 #include "dirent-util.h"
 #include "fd-util.h"
+#include "string-table.h"
 #include "string-util.h"
-#include "udevadm.h"
 #include "udevadm-util.h"
+#include "udevadm.h"
 
 typedef enum ActionType {
         ACTION_QUERY,
@@ -50,21 +51,20 @@ static bool skip_attribute(const char *name) {
                 "subsystem",
                 "module",
         };
-        unsigned i;
 
-        for (i = 0; i < ELEMENTSOF(skip); i++)
-                if (streq(name, skip[i]))
-                        return true;
-        return false;
+        return string_table_lookup(skip, ELEMENTSOF(skip), name) >= 0;
 }
 
 static void print_all_attributes(sd_device *device, const char *key) {
         const char *name, *value;
 
-        FOREACH_DEVICE_PROPERTY(device, name, value) {
+        FOREACH_DEVICE_SYSATTR(device, name) {
                 size_t len;
 
                 if (skip_attribute(name))
+                        continue;
+
+                if (sd_device_get_sysattr_value(device, name, &value) < 0)
                         continue;
 
                 /* skip any values that look like a path */
@@ -358,7 +358,7 @@ int info_main(int argc, char *argv[], void *userdata) {
         ActionType action = ACTION_QUERY;
         QueryType query = QUERY_ALL;
 
-        while ((c = getopt_long(argc, argv, "aced:n:p:q:rxP:RVh", options, NULL)) >= 0)
+        while ((c = getopt_long(argc, argv, "aced:n:p:q:rxP:Vh", options, NULL)) >= 0)
                 switch (c) {
                 case 'n':
                 case 'p': {
@@ -387,10 +387,8 @@ int info_main(int argc, char *argv[], void *userdata) {
                                 query = QUERY_PATH;
                         else if (streq(optarg, "all"))
                                 query = QUERY_ALL;
-                        else {
-                                log_error("unknown query type");
-                                return -EINVAL;
-                        }
+                        else
+                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "unknown query type");
                         break;
                 case 'r':
                         arg_root = true;
@@ -413,6 +411,7 @@ int info_main(int argc, char *argv[], void *userdata) {
                         arg_export = true;
                         break;
                 case 'P':
+                        arg_export = true;
                         arg_export_prefix = optarg;
                         break;
                 case 'V':
@@ -424,7 +423,6 @@ int info_main(int argc, char *argv[], void *userdata) {
                 default:
                         assert_not_reached("Unknown option");
                 }
-
 
         if (action == ACTION_DEVICE_ID_FILE) {
                 if (argv[optind])

@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/xattr.h>
 
 #include "alloc-util.h"
@@ -537,7 +539,7 @@ int pull_job_new(PullJob **ret, const char *url, CurlGlue *glue, void *userdata)
         assert(ret);
 
         u = strdup(url);
-        if (u)
+        if (!u)
                 return -ENOMEM;
 
         j = new(PullJob, 1);

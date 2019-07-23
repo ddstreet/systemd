@@ -5,12 +5,12 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "alloc-util.h"
 #include "extract-word.h"
 #include "macro.h"
 #include "string-util.h"
-#include "util.h"
 
 char *strv_find(char **l, const char *name) _pure_;
 char *strv_find_prefix(char **l, const char *name) _pure_;
@@ -156,17 +156,10 @@ void strv_print(char **l);
                 _found;                                         \
         })
 
-#define FOREACH_STRING(x, ...)                               \
-        for (char **_l = ({                                  \
-                char **_ll = STRV_MAKE(__VA_ARGS__);         \
-                x = _ll ? _ll[0] : NULL;                     \
-                _ll;                                         \
-        });                                                  \
-        _l && *_l;                                           \
-        x = ({                                               \
-                _l ++;                                       \
-                _l[0];                                       \
-        }))
+#define FOREACH_STRING(x, y, ...)                                       \
+        for (char **_l = STRV_MAKE(({ x = y; }), ##__VA_ARGS__);        \
+             x;                                                         \
+             x = *(++_l))
 
 char **strv_reverse(char **l);
 char **strv_shell_escape(char **l, const char *bad);

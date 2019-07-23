@@ -941,7 +941,7 @@ int btrfs_qgroup_destroy_recursive(int fd, uint64_t qgroupid) {
 
         /* Destroys the specified qgroup, but unassigns it from all
          * its parents first. Also, it recursively destroys all
-         * qgroups it is assgined to that have the same id part of the
+         * qgroups it is assigned to that have the same id part of the
          * qgroupid as the specified group. */
 
         r = btrfs_qgroupid_split(qgroupid, NULL, &subvol_id);
@@ -1628,7 +1628,7 @@ int btrfs_subvol_snapshot_fd_full(
                 } else if (r < 0)
                         return r;
 
-                r = copy_directory_fd_full(old_fd, new_path, COPY_MERGE|COPY_REFLINK, progress_path, progress_bytes, userdata);
+                r = copy_directory_fd_full(old_fd, new_path, COPY_MERGE|COPY_REFLINK|COPY_SAME_MOUNT, progress_path, progress_bytes, userdata);
                 if (r < 0)
                         goto fallback_fail;
 

@@ -1,9 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 
 #include <math.h>
-#if HAVE_VALGRIND_VALGRIND_H
-#include <valgrind/valgrind.h>
-#endif
 
 #include "alloc-util.h"
 #include "fd-util.h"
@@ -11,6 +8,7 @@
 #include "json.h"
 #include "string-util.h"
 #include "strv.h"
+#include "tests.h"
 #include "util.h"
 
 static void test_tokenizer(const char *data, ...) {
@@ -45,12 +43,13 @@ static void test_tokenizer(const char *data, ...) {
 
                         d = va_arg(ap, long double);
 
-#if HAVE_VALGRIND_VALGRIND_H
-                        if (!RUNNING_ON_VALGRIND)
-#endif
-                                /* Valgrind doesn't support long double calculations and automatically downgrades to 80bit:
-                                 * http://www.valgrind.org/docs/manual/manual-core.html#manual-core.limits */
-                                assert_se(fabsl(d - v.real) < 0.001L);
+                        /* Valgrind doesn't support long double calculations and automatically downgrades to 80bit:
+                         * http://www.valgrind.org/docs/manual/manual-core.html#manual-core.limits.
+                         * Some architectures might not support long double either.
+                         */
+
+                        assert_se(fabsl(d - v.real) < 1e-10 ||
+                                  fabsl((d - v.real) / v.real) < 1e-10);
 
                 } else if (t == JSON_TOKEN_INTEGER) {
                         intmax_t i;
@@ -211,7 +210,6 @@ static void test_2(JsonVariant *v) {
         assert_se(p && json_variant_type(p) == JSON_VARIANT_REAL && fabsl(json_variant_real(p) - 1.27) < 0.001);
 }
 
-
 static void test_zeroes(JsonVariant *v) {
         size_t i;
 
@@ -285,6 +283,7 @@ static void test_build(void) {
         a = json_variant_unref(a);
         b = json_variant_unref(b);
 
+        const char* arr_1234[] = {"one", "two", "three", "four", NULL};
         assert_se(json_build(&a, JSON_BUILD_ARRAY(JSON_BUILD_OBJECT(JSON_BUILD_PAIR("x", JSON_BUILD_BOOLEAN(true)),
                                                                     JSON_BUILD_PAIR("y", JSON_BUILD_OBJECT(JSON_BUILD_PAIR("this", JSON_BUILD_NULL)))),
                                                   JSON_BUILD_VARIANT(NULL),
@@ -292,8 +291,9 @@ static void test_build(void) {
                                                   JSON_BUILD_STRING(NULL),
                                                   JSON_BUILD_NULL,
                                                   JSON_BUILD_INTEGER(77),
-                                                  JSON_BUILD_ARRAY(JSON_BUILD_VARIANT(JSON_VARIANT_STRING_CONST("foobar")), JSON_BUILD_VARIANT(JSON_VARIANT_STRING_CONST("zzz"))),
-                                                  JSON_BUILD_STRV(STRV_MAKE("one", "two", "three", "four")))) >= 0);
+                                                  JSON_BUILD_ARRAY(JSON_BUILD_VARIANT(JSON_VARIANT_STRING_CONST("foobar")),
+                                                                   JSON_BUILD_VARIANT(JSON_VARIANT_STRING_CONST("zzz"))),
+                                                  JSON_BUILD_STRV((char**) arr_1234))) >= 0);
 
         assert_se(json_variant_format(a, 0, &s) >= 0);
         log_info("GOT: %s\n", s);
@@ -392,6 +392,13 @@ static void test_depth(void) {
                         log_info("max depth at %u", i);
                         break;
                 }
+#if HAS_FEATURE_MEMORY_SANITIZER
+                /* msan doesn't like the stack nesting to be too deep. Let's quit early. */
+                if (i >= 128) {
+                        log_info("quitting early at depth %u", i);
+                        break;
+                }
+#endif
 
                 assert_se(r >= 0);
 
@@ -404,10 +411,7 @@ static void test_depth(void) {
 }
 
 int main(int argc, char *argv[]) {
-
-        log_set_max_level(LOG_DEBUG);
-        log_parse_environment();
-        log_open();
+        test_setup_logging(LOG_DEBUG);
 
         test_tokenizer("x", -EINVAL);
         test_tokenizer("", JSON_TOKEN_END);

@@ -5,15 +5,16 @@
 
 #include "alloc-util.h"
 #include "blockdev-util.h"
+#include "bpf-devices.h"
 #include "bpf-firewall.h"
 #include "btrfs-util.h"
-#include "bpf-devices.h"
 #include "bus-error.h"
 #include "cgroup-util.h"
 #include "cgroup.h"
 #include "fd-util.h"
 #include "fileio.h"
 #include "fs-util.h"
+#include "nulstr-util.h"
 #include "parse-util.h"
 #include "path-util.h"
 #include "process-util.h"
@@ -25,7 +26,7 @@
 #include "string-util.h"
 #include "virt.h"
 
-#define CGROUP_CPU_QUOTA_PERIOD_USEC ((usec_t) 100 * USEC_PER_MSEC)
+#define CGROUP_CPU_QUOTA_DEFAULT_PERIOD_USEC ((usec_t) 100 * USEC_PER_MSEC)
 
 /* Returns the log level to use when cgroup attribute writes fail. When an attribute is missing or we have access
  * problems we downgrade to LOG_DEBUG. This is supposed to be nice to container managers and kernels which want to mask
@@ -98,6 +99,7 @@ void cgroup_context_init(CGroupContext *c) {
                 .cpu_weight = CGROUP_WEIGHT_INVALID,
                 .startup_cpu_weight = CGROUP_WEIGHT_INVALID,
                 .cpu_quota_per_sec_usec = USEC_INFINITY,
+                .cpu_quota_period_usec = USEC_INFINITY,
 
                 .cpu_shares = CGROUP_CPU_SHARES_INVALID,
                 .startup_cpu_shares = CGROUP_CPU_SHARES_INVALID,
@@ -206,6 +208,7 @@ void cgroup_context_dump(CGroupContext *c, FILE* f, const char *prefix) {
         CGroupDeviceAllow *a;
         IPAddressAccessItem *iaai;
         char u[FORMAT_TIMESPAN_MAX];
+        char v[FORMAT_TIMESPAN_MAX];
 
         assert(c);
         assert(f);
@@ -224,6 +227,7 @@ void cgroup_context_dump(CGroupContext *c, FILE* f, const char *prefix) {
                 "%sCPUShares=%" PRIu64 "\n"
                 "%sStartupCPUShares=%" PRIu64 "\n"
                 "%sCPUQuotaPerSecSec=%s\n"
+                "%sCPUQuotaPeriodSec=%s\n"
                 "%sIOWeight=%" PRIu64 "\n"
                 "%sStartupIOWeight=%" PRIu64 "\n"
                 "%sBlockIOWeight=%" PRIu64 "\n"
@@ -248,6 +252,7 @@ void cgroup_context_dump(CGroupContext *c, FILE* f, const char *prefix) {
                 prefix, c->cpu_shares,
                 prefix, c->startup_cpu_shares,
                 prefix, format_timespan(u, sizeof(u), c->cpu_quota_per_sec_usec, 1),
+                prefix, format_timespan(v, sizeof(v), c->cpu_quota_period_usec, 1),
                 prefix, c->io_weight,
                 prefix, c->startup_io_weight,
                 prefix, c->blockio_weight,
@@ -396,26 +401,31 @@ static void cgroup_xattr_apply(Unit *u) {
 }
 
 static int lookup_block_device(const char *p, dev_t *ret) {
-        struct stat st = {};
+        dev_t rdev, dev = 0;
+        mode_t mode;
         int r;
 
         assert(p);
         assert(ret);
 
-        r = device_path_parse_major_minor(p, &st.st_mode, &st.st_rdev);
+        r = device_path_parse_major_minor(p, &mode, &rdev);
         if (r == -ENODEV) { /* not a parsable device node, need to go to disk */
+                struct stat st;
                 if (stat(p, &st) < 0)
                         return log_warning_errno(errno, "Couldn't stat device '%s': %m", p);
+                rdev = (dev_t)st.st_rdev;
+                dev = (dev_t)st.st_dev;
+                mode = st.st_mode;
         } else if (r < 0)
                 return log_warning_errno(r, "Failed to parse major/minor from path '%s': %m", p);
 
-        if (S_ISCHR(st.st_mode)) {
+        if (S_ISCHR(mode)) {
                 log_warning("Device node '%s' is a character device, but block device needed.", p);
                 return -ENOTBLK;
-        } else if (S_ISBLK(st.st_mode))
-                *ret = st.st_rdev;
-        else if (major(st.st_dev) != 0)
-                *ret = st.st_dev; /* If this is not a device node then use the block device this file is stored on */
+        } else if (S_ISBLK(mode))
+                *ret = rdev;
+        else if (major(dev) != 0)
+                *ret = dev; /* If this is not a device node then use the block device this file is stored on */
         else {
                 /* If this is btrfs, getting the backing block device is a bit harder */
                 r = btrfs_get_block_device(p, ret);
@@ -436,7 +446,8 @@ static int lookup_block_device(const char *p, dev_t *ret) {
 }
 
 static int whitelist_device(BPFProgram *prog, const char *path, const char *node, const char *acc) {
-        struct stat st = {};
+        dev_t rdev;
+        mode_t mode;
         int r;
 
         assert(path);
@@ -445,11 +456,12 @@ static int whitelist_device(BPFProgram *prog, const char *path, const char *node
         /* Some special handling for /dev/block/%u:%u, /dev/char/%u:%u, /run/systemd/inaccessible/chr and
          * /run/systemd/inaccessible/blk paths. Instead of stat()ing these we parse out the major/minor directly. This
          * means clients can use these path without the device node actually around */
-        r = device_path_parse_major_minor(node, &st.st_mode, &st.st_rdev);
+        r = device_path_parse_major_minor(node, &mode, &rdev);
         if (r < 0) {
                 if (r != -ENODEV)
                         return log_warning_errno(r, "Couldn't parse major/minor from device path '%s': %m", node);
 
+                struct stat st;
                 if (stat(node, &st) < 0)
                         return log_warning_errno(errno, "Couldn't stat device %s: %m", node);
 
@@ -457,22 +469,24 @@ static int whitelist_device(BPFProgram *prog, const char *path, const char *node
                         log_warning("%s is not a device.", node);
                         return -ENODEV;
                 }
+                rdev = (dev_t) st.st_rdev;
+                mode = st.st_mode;
         }
 
         if (cg_all_unified() > 0) {
                 if (!prog)
                         return 0;
 
-                return cgroup_bpf_whitelist_device(prog, S_ISCHR(st.st_mode) ? BPF_DEVCG_DEV_CHAR : BPF_DEVCG_DEV_BLOCK,
-                                                   major(st.st_rdev), minor(st.st_rdev), acc);
+                return cgroup_bpf_whitelist_device(prog, S_ISCHR(mode) ? BPF_DEVCG_DEV_CHAR : BPF_DEVCG_DEV_BLOCK,
+                                                   major(rdev), minor(rdev), acc);
 
         } else {
                 char buf[2+DECIMAL_STR_MAX(dev_t)*2+2+4];
 
                 sprintf(buf,
                         "%c %u:%u %s",
-                        S_ISCHR(st.st_mode) ? 'c' : 'b',
-                        major(st.st_rdev), minor(st.st_rdev),
+                        S_ISCHR(mode) ? 'c' : 'b',
+                        major(rdev), minor(rdev),
                         acc);
 
                 /* Changing the devices list of a populated cgroup might result in EINVAL, hence ignore EINVAL here. */
@@ -647,6 +661,40 @@ static uint64_t cgroup_context_cpu_shares(CGroupContext *c, ManagerState state) 
                 return CGROUP_CPU_SHARES_DEFAULT;
 }
 
+usec_t cgroup_cpu_adjust_period(usec_t period, usec_t quota, usec_t resolution, usec_t max_period) {
+        /* kernel uses a minimum resolution of 1ms, so both period and (quota * period)
+         * need to be higher than that boundary. quota is specified in USecPerSec.
+         * Additionally, period must be at most max_period. */
+        assert(quota > 0);
+
+        return MIN(MAX3(period, resolution, resolution * USEC_PER_SEC / quota), max_period);
+}
+
+static usec_t cgroup_cpu_adjust_period_and_log(Unit *u, usec_t period, usec_t quota) {
+        usec_t new_period;
+
+        if (quota == USEC_INFINITY)
+                /* Always use default period for infinity quota. */
+                return CGROUP_CPU_QUOTA_DEFAULT_PERIOD_USEC;
+
+        if (period == USEC_INFINITY)
+                /* Default period was requested. */
+                period = CGROUP_CPU_QUOTA_DEFAULT_PERIOD_USEC;
+
+        /* Clamp to interval [1ms, 1s] */
+        new_period = cgroup_cpu_adjust_period(period, quota, USEC_PER_MSEC, USEC_PER_SEC);
+
+        if (new_period != period) {
+                char v[FORMAT_TIMESPAN_MAX];
+                log_unit_full(u, u->warned_clamping_cpu_quota_period ? LOG_DEBUG : LOG_WARNING, 0,
+                              "Clamping CPU interval for cpu.max: period is now %s",
+                              format_timespan(v, sizeof(v), new_period, 1));
+                u->warned_clamping_cpu_quota_period = true;
+        }
+
+        return new_period;
+}
+
 static void cgroup_apply_unified_cpu_weight(Unit *u, uint64_t weight) {
         char buf[DECIMAL_STR_MAX(uint64_t) + 2];
 
@@ -654,14 +702,15 @@ static void cgroup_apply_unified_cpu_weight(Unit *u, uint64_t weight) {
         (void) set_attribute_and_warn(u, "cpu", "cpu.weight", buf);
 }
 
-static void cgroup_apply_unified_cpu_quota(Unit *u, usec_t quota) {
+static void cgroup_apply_unified_cpu_quota(Unit *u, usec_t quota, usec_t period) {
         char buf[(DECIMAL_STR_MAX(usec_t) + 1) * 2 + 1];
 
+        period = cgroup_cpu_adjust_period_and_log(u, period, quota);
         if (quota != USEC_INFINITY)
                 xsprintf(buf, USEC_FMT " " USEC_FMT "\n",
-                         quota * CGROUP_CPU_QUOTA_PERIOD_USEC / USEC_PER_SEC, CGROUP_CPU_QUOTA_PERIOD_USEC);
+                         MAX(quota * period / USEC_PER_SEC, USEC_PER_MSEC), period);
         else
-                xsprintf(buf, "max " USEC_FMT "\n", CGROUP_CPU_QUOTA_PERIOD_USEC);
+                xsprintf(buf, "max " USEC_FMT "\n", period);
         (void) set_attribute_and_warn(u, "cpu", "cpu.max", buf);
 }
 
@@ -672,14 +721,16 @@ static void cgroup_apply_legacy_cpu_shares(Unit *u, uint64_t shares) {
         (void) set_attribute_and_warn(u, "cpu", "cpu.shares", buf);
 }
 
-static void cgroup_apply_legacy_cpu_quota(Unit *u, usec_t quota) {
+static void cgroup_apply_legacy_cpu_quota(Unit *u, usec_t quota, usec_t period) {
         char buf[DECIMAL_STR_MAX(usec_t) + 2];
 
-        xsprintf(buf, USEC_FMT "\n", CGROUP_CPU_QUOTA_PERIOD_USEC);
+        period = cgroup_cpu_adjust_period_and_log(u, period, quota);
+
+        xsprintf(buf, USEC_FMT "\n", period);
         (void) set_attribute_and_warn(u, "cpu", "cpu.cfs_period_us", buf);
 
         if (quota != USEC_INFINITY) {
-                xsprintf(buf, USEC_FMT "\n", quota * CGROUP_CPU_QUOTA_PERIOD_USEC / USEC_PER_SEC);
+                xsprintf(buf, USEC_FMT "\n", MAX(quota * period / USEC_PER_SEC, USEC_PER_MSEC));
                 (void) set_attribute_and_warn(u, "cpu", "cpu.cfs_quota_us", buf);
         } else
                 (void) set_attribute_and_warn(u, "cpu", "cpu.cfs_quota_us", "-1\n");
@@ -881,7 +932,7 @@ static void cgroup_context_apply(
         /* In fully unified mode these attributes don't exist on the host cgroup root. On legacy the weights exist, but
          * setting the weight makes very little sense on the host root cgroup, as there are no other cgroups at this
          * level. The quota exists there too, but any attempt to write to it is refused with EINVAL. Inside of
-         * containers we want to leave control of these to the container manager (and if cgroupsv2 delegation is used
+         * containers we want to leave control of these to the container manager (and if cgroup v2 delegation is used
          * we couldn't even write to them if we wanted to). */
         if ((apply_mask & CGROUP_MASK_CPU) && !is_local_root) {
 
@@ -902,7 +953,7 @@ static void cgroup_context_apply(
                                 weight = CGROUP_WEIGHT_DEFAULT;
 
                         cgroup_apply_unified_cpu_weight(u, weight);
-                        cgroup_apply_unified_cpu_quota(u, c->cpu_quota_per_sec_usec);
+                        cgroup_apply_unified_cpu_quota(u, c->cpu_quota_per_sec_usec, c->cpu_quota_period_usec);
 
                 } else {
                         uint64_t shares;
@@ -921,11 +972,11 @@ static void cgroup_context_apply(
                                 shares = CGROUP_CPU_SHARES_DEFAULT;
 
                         cgroup_apply_legacy_cpu_shares(u, shares);
-                        cgroup_apply_legacy_cpu_quota(u, c->cpu_quota_per_sec_usec);
+                        cgroup_apply_legacy_cpu_quota(u, c->cpu_quota_per_sec_usec, c->cpu_quota_period_usec);
                 }
         }
 
-        /* The 'io' controller attributes are not exported on the host's root cgroup (being a pure cgroupsv2
+        /* The 'io' controller attributes are not exported on the host's root cgroup (being a pure cgroup v2
          * controller), and in case of containers we want to leave control of these attributes to the container manager
          * (and we couldn't access that stuff anyway, even if we tried if proper delegation is used). */
         if ((apply_mask & CGROUP_MASK_IO) && !is_local_root) {
@@ -1067,7 +1118,7 @@ static void cgroup_context_apply(
 
         /* In unified mode 'memory' attributes do not exist on the root cgroup. In legacy mode 'memory.limit_in_bytes'
          * exists on the root cgroup, but any writes to it are refused with EINVAL. And if we run in a container we
-         * want to leave control to the container manager (and if proper cgroupsv2 delegation is used we couldn't even
+         * want to leave control to the container manager (and if proper cgroup v2 delegation is used we couldn't even
          * write to this if we wanted to.) */
         if ((apply_mask & CGROUP_MASK_MEMORY) && !is_local_root) {
 
@@ -1109,7 +1160,7 @@ static void cgroup_context_apply(
                 }
         }
 
-        /* On cgroupsv2 we can apply BPF everywhere. On cgroupsv1 we apply it everywhere except for the root of
+        /* On cgroup v2 we can apply BPF everywhere. On cgroup v1 we apply it everywhere except for the root of
          * containers, where we leave this to the manager */
         if ((apply_mask & (CGROUP_MASK_DEVICES | CGROUP_MASK_BPF_DEVICES)) &&
             (is_host_root || cg_all_unified() > 0 || !is_local_root)) {
@@ -1841,14 +1892,14 @@ static bool unit_has_mask_realized(
         /* Returns true if this unit is fully realized. We check four things:
          *
          * 1. Whether the cgroup was created at all
-         * 2. Whether the cgroup was created in all the hierarchies we need it to be created in (in case of cgroupsv1)
-         * 3. Whether the cgroup has all the right controllers enabled (in case of cgroupsv2)
+         * 2. Whether the cgroup was created in all the hierarchies we need it to be created in (in case of cgroup v1)
+         * 3. Whether the cgroup has all the right controllers enabled (in case of cgroup v2)
          * 4. Whether the invalidation mask is currently zero
          *
          * If you wonder why we mask the target realization and enable mask with CGROUP_MASK_V1/CGROUP_MASK_V2: note
-         * that there are three sets of bitmasks: CGROUP_MASK_V1 (for real cgroupv1 controllers), CGROUP_MASK_V2 (for
-         * real cgroupv2 controllers) and CGROUP_MASK_BPF (for BPF-based pseudo-controllers). Now, cgroup_realized_mask
-         * is only matters for cgroupsv1 controllers, and cgroup_enabled_mask only used for cgroupsv2, and if they
+         * that there are three sets of bitmasks: CGROUP_MASK_V1 (for real cgroup v1 controllers), CGROUP_MASK_V2 (for
+         * real cgroup v2 controllers) and CGROUP_MASK_BPF (for BPF-based pseudo-controllers). Now, cgroup_realized_mask
+         * is only matters for cgroup v1 controllers, and cgroup_enabled_mask only used for cgroup v2, and if they
          * differ in the others, we don't really care. (After all, the cgroup_enabled_mask tracks with controllers are
          * enabled through cgroup.subtree_control, and since the BPF pseudo-controllers don't show up there, they
          * simply don't matter. */
@@ -2218,7 +2269,7 @@ void unit_prune_cgroup(Unit *u) {
 
 int unit_search_main_pid(Unit *u, pid_t *ret) {
         _cleanup_fclose_ FILE *f = NULL;
-        pid_t pid = 0, npid, mypid;
+        pid_t pid = 0, npid;
         int r;
 
         assert(u);
@@ -2231,15 +2282,12 @@ int unit_search_main_pid(Unit *u, pid_t *ret) {
         if (r < 0)
                 return r;
 
-        mypid = getpid_cached();
         while (cg_read_pid(f, &npid) > 0)  {
-                pid_t ppid;
 
                 if (npid == pid)
                         continue;
 
-                /* Ignore processes that aren't our kids */
-                if (get_process_ppid(npid, &ppid) >= 0 && ppid != mypid)
+                if (pid_is_my_child(npid) == 0)
                         continue;
 
                 if (pid != 0)
@@ -2271,7 +2319,7 @@ static int unit_watch_pids_in_path(Unit *u, const char *path) {
                 pid_t pid;
 
                 while ((r = cg_read_pid(f, &pid)) > 0) {
-                        r = unit_watch_pid(u, pid);
+                        r = unit_watch_pid(u, pid, false);
                         if (r < 0 && ret >= 0)
                                 ret = r;
                 }
@@ -2771,7 +2819,7 @@ int unit_get_memory_current(Unit *u, uint64_t *ret) {
 
         /* The root cgroup doesn't expose this information, let's get it from /proc instead */
         if (unit_has_host_root_cgroup(u))
-                return procfs_memory_get_current(ret);
+                return procfs_memory_get_used(ret);
 
         if ((u->cgroup_realized_mask & CGROUP_MASK_MEMORY) == 0)
                 return -ENODATA;

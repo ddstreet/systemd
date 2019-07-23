@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <stdio.h>
 #include <sys/epoll.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "sd-bus.h"
@@ -18,9 +20,9 @@
 #include "initreq.h"
 #include "list.h"
 #include "log.h"
-#include "special.h"
-#include "util.h"
+#include "memory-util.h"
 #include "process-util.h"
+#include "special.h"
 
 #define SERVER_FD_MAX 16
 #define TIMEOUT_MSEC ((int) (DEFAULT_EXIT_USEC/USEC_PER_MSEC))
@@ -233,12 +235,8 @@ static void server_done(Server *s) {
         while (s->fifos)
                 fifo_free(s->fifos);
 
-        safe_close(s->epoll_fd);
-
-        if (s->bus) {
-                sd_bus_flush(s->bus);
-                sd_bus_unref(s->bus);
-        }
+        s->epoll_fd = safe_close(s->epoll_fd);
+        s->bus = sd_bus_flush_close_unref(s->bus);
 }
 
 static int server_init(Server *s, unsigned n_sockets) {

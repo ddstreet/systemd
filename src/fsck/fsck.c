@@ -265,6 +265,7 @@ static int fsck_progress_socket(void) {
 static int run(int argc, char *argv[]) {
         _cleanup_close_pair_ int progress_pipe[2] = { -1, -1 };
         _cleanup_(sd_device_unrefp) sd_device *dev = NULL;
+        _cleanup_free_ char *dpath = NULL;
         const char *device, *type;
         bool root_directory;
         struct stat st;
@@ -290,7 +291,11 @@ static int run(int argc, char *argv[]) {
                 return 0;
 
         if (argc > 1) {
-                device = argv[1];
+                dpath = strdup(argv[1]);
+                if (!dpath)
+                        return log_oom();
+
+                device = dpath;
 
                 if (stat(device, &st) < 0)
                         return log_error_errno(errno, "Failed to stat %s: %m", device);
@@ -414,7 +419,7 @@ static int run(int argc, char *argv[]) {
         exit_status = wait_for_terminate_and_check("fsck", pid, WAIT_LOG_ABNORMAL);
         if (exit_status < 0)
                 return exit_status;
-        if (exit_status & ~1) {
+        if ((exit_status & ~FSCK_ERROR_CORRECTED) != FSCK_SUCCESS) {
                 log_error("fsck failed with exit status %i.", exit_status);
 
                 if ((exit_status & FSCK_SYSTEM_SHOULD_REBOOT) && root_directory) {

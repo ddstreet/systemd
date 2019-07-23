@@ -1,5 +1,9 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "sd-daemon.h"
 #include "sd-event.h"
 
@@ -81,9 +85,7 @@ static int run(int argc, char *argv[]) {
         if (r < 0)
                 return log_error_errno(r, "Event loop failed: %m");
 
-        (void) sd_event_get_exit_code(m->event, &r);
-
-        return r;
+        return 0;
 }
 
 DEFINE_MAIN_FUNCTION(run);

@@ -15,6 +15,7 @@
 #include "lldp-network.h"
 #include "macro.h"
 #include "string-util.h"
+#include "tests.h"
 
 #define TEST_LLDP_PORT "em1"
 #define TEST_LLDP_TYPE_SYSTEM_NAME "systemd-lldp"
@@ -192,6 +193,8 @@ static void test_receive_oui_packet(sd_event *e) {
                 0x01, 0x02,
                 0xfe, 0x09, 0x00, 0x80, 0xc2, 0x07,     /* Link aggregation: status 1, ID 0x00140012 */
                 0x01, 0x00, 0x14, 0x00, 0x12,
+                0xfe, 0x07, 0x00, 0x12, 0x0f, 0x02,     /* 802.3 Power via MDI: PSE, MDI enabled */
+                0x07, 0x01, 0x00,
                 0x00, 0x00                              /* End of LLDPDU */
         };
 
@@ -219,6 +222,8 @@ static void test_receive_oui_packet(sd_event *e) {
         assert_se(sd_lldp_neighbor_tlv_is_oui(neighbors[0], SD_LLDP_OUI_802_1, SD_LLDP_OUI_802_1_SUBTYPE_MANAGEMENT_VID) > 0);
         assert_se(sd_lldp_neighbor_tlv_next(neighbors[0]) > 0);
         assert_se(sd_lldp_neighbor_tlv_is_oui(neighbors[0], SD_LLDP_OUI_802_1, SD_LLDP_OUI_802_1_SUBTYPE_LINK_AGGREGATION) > 0);
+        assert_se(sd_lldp_neighbor_tlv_next(neighbors[0]) > 0);
+        assert_se(sd_lldp_neighbor_tlv_is_oui(neighbors[0], SD_LLDP_OUI_802_3, SD_LLDP_OUI_802_3_SUBTYPE_POWER_VIA_MDI) > 0);
         assert_se(sd_lldp_neighbor_tlv_next(neighbors[0]) > 0);
         assert_se(sd_lldp_neighbor_tlv_is_type(neighbors[0], SD_LLDP_TYPE_END) > 0);
         assert_se(sd_lldp_neighbor_tlv_next(neighbors[0]) == 0);
@@ -361,7 +366,7 @@ static void test_multiple_neighbors_sorted(sd_event *e) {
 int main(int argc, char *argv[]) {
         _cleanup_(sd_event_unrefp) sd_event *e = NULL;
 
-        log_set_max_level(LOG_DEBUG);
+        test_setup_logging(LOG_DEBUG);
 
         /* LLDP reception tests */
         assert_se(sd_event_new(&e) == 0);

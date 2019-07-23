@@ -5,18 +5,16 @@
 #include <stdio.h>
 #include <sys/epoll.h>
 
-#include <libmount.h>
-
 #include "sd-messages.h"
 
 #include "alloc-util.h"
 #include "dbus-mount.h"
 #include "dbus-unit.h"
 #include "device.h"
-#include "escape.h"
 #include "exit-status.h"
 #include "format-util.h"
 #include "fstab-util.h"
+#include "libmount-util.h"
 #include "log.h"
 #include "manager.h"
 #include "mkdir.h"
@@ -35,9 +33,6 @@
 #include "unit.h"
 
 #define RETRY_UMOUNT_MAX 32
-
-DEFINE_TRIVIAL_CLEANUP_FUNC(struct libmnt_table*, mnt_free_table);
-DEFINE_TRIVIAL_CLEANUP_FUNC(struct libmnt_iter*, mnt_free_iter);
 
 static const UnitActiveState state_translation_table[_MOUNT_STATE_MAX] = {
         [MOUNT_DEAD] = UNIT_INACTIVE,
@@ -99,20 +94,6 @@ static bool mount_is_bind(const MountParameters *p) {
                 return true;
 
         return false;
-}
-
-static bool mount_is_auto(const MountParameters *p) {
-        assert(p);
-
-        return !fstab_test_option(p->options, "noauto\0");
-}
-
-static bool mount_is_automount(const MountParameters *p) {
-        assert(p);
-
-        return fstab_test_option(p->options,
-                                 "comment=systemd.automount\0"
-                                 "x-systemd.automount\0");
 }
 
 static bool mount_is_bound_to_device(const Mount *m) {
@@ -251,6 +232,32 @@ _pure_ static MountParameters* get_mount_parameters(Mount *m) {
         return get_mount_parameters_fragment(m);
 }
 
+static int update_parameters_proc_self_mount_info(
+                Mount *m,
+                const char *what,
+                const char *options,
+                const char *fstype) {
+
+        MountParameters *p;
+        int r, q, w;
+
+        p = &m->parameters_proc_self_mountinfo;
+
+        r = free_and_strdup(&p->what, what);
+        if (r < 0)
+                return r;
+
+        q = free_and_strdup(&p->options, options);
+        if (q < 0)
+                return q;
+
+        w = free_and_strdup(&p->fstype, fstype);
+        if (w < 0)
+                return w;
+
+        return r > 0 || q > 0 || w > 0;
+}
+
 static int mount_add_mount_dependencies(Mount *m) {
         MountParameters *pm;
         Unit *other;
@@ -312,7 +319,6 @@ static int mount_add_mount_dependencies(Mount *m) {
 }
 
 static int mount_add_device_dependencies(Mount *m) {
-        bool device_wants_mount;
         UnitDependencyMask mask;
         MountParameters *p;
         UnitDependency dep;
@@ -342,9 +348,6 @@ static int mount_add_device_dependencies(Mount *m) {
         if (path_equal(m->where, "/"))
                 return 0;
 
-        device_wants_mount =
-                mount_is_auto(p) && !mount_is_automount(p) && MANAGER_IS_SYSTEM(UNIT(m)->manager);
-
         /* Mount units from /proc/self/mountinfo are not bound to devices
          * by default since they're subject to races when devices are
          * unplugged. But the user can still force this dep with an
@@ -352,9 +355,10 @@ static int mount_add_device_dependencies(Mount *m) {
          * automatically stopped when the device disappears suddenly. */
         dep = mount_is_bound_to_device(m) ? UNIT_BINDS_TO : UNIT_REQUIRES;
 
-        mask = m->from_fragment ? UNIT_DEPENDENCY_FILE : UNIT_DEPENDENCY_MOUNTINFO_IMPLICIT;
+        /* We always use 'what' from /proc/self/mountinfo if mounted */
+        mask = m->from_proc_self_mountinfo ? UNIT_DEPENDENCY_MOUNTINFO_IMPLICIT : UNIT_DEPENDENCY_FILE;
 
-        r = unit_add_node_dependency(UNIT(m), p->what, device_wants_mount, dep, mask);
+        r = unit_add_node_dependency(UNIT(m), p->what, false, dep, mask);
         if (r < 0)
                 return r;
 
@@ -426,6 +430,7 @@ static int mount_add_default_dependencies(Mount *m) {
         const char *after, *before;
         UnitDependencyMask mask;
         MountParameters *p;
+        bool nofail;
         int r;
 
         assert(m);
@@ -444,6 +449,7 @@ static int mount_add_default_dependencies(Mount *m) {
                 return 0;
 
         mask = m->from_fragment ? UNIT_DEPENDENCY_FILE : UNIT_DEPENDENCY_MOUNTINFO_DEFAULT;
+        nofail = m->from_fragment ? fstab_test_yes_no_option(m->parameters_fragment.options, "nofail\0" "fail\0") : false;
 
         if (mount_is_network(p)) {
                 /* We order ourselves after network.target. This is
@@ -474,9 +480,11 @@ static int mount_add_default_dependencies(Mount *m) {
                 before = SPECIAL_LOCAL_FS_TARGET;
         }
 
-        r = unit_add_dependency_by_name(UNIT(m), UNIT_BEFORE, before, true, mask);
-        if (r < 0)
-                return r;
+        if (!nofail) {
+                r = unit_add_dependency_by_name(UNIT(m), UNIT_BEFORE, before, true, mask);
+                if (r < 0)
+                        return r;
+        }
 
         r = unit_add_dependency_by_name(UNIT(m), UNIT_AFTER, after, true, mask);
         if (r < 0)
@@ -691,7 +699,7 @@ static int mount_coldplug(Unit *u) {
             pid_is_unwaited(m->control_pid) &&
             MOUNT_STATE_WITH_PROCESS(new_state)) {
 
-                r = unit_watch_pid(UNIT(m), m->control_pid);
+                r = unit_watch_pid(UNIT(m), m->control_pid, false);
                 if (r < 0)
                         return r;
 
@@ -733,7 +741,7 @@ static void mount_dump(Unit *u, FILE *f, const char *prefix) {
                 "%sSloppyOptions: %s\n"
                 "%sLazyUnmount: %s\n"
                 "%sForceUnmount: %s\n"
-                "%sTimoutSec: %s\n",
+                "%sTimeoutSec: %s\n",
                 prefix, mount_state_to_string(m->state),
                 prefix, mount_result_to_string(m->result),
                 prefix, m->where,
@@ -797,9 +805,8 @@ static int mount_spawn(Mount *m, ExecCommand *c, pid_t *_pid) {
         if (r < 0)
                 return r;
 
-        r = unit_watch_pid(UNIT(m), pid);
+        r = unit_watch_pid(UNIT(m), pid, true);
         if (r < 0)
-                /* FIXME: we need to do something here */
                 return r;
 
         *_pid = pid;
@@ -823,6 +830,9 @@ static void mount_enter_dead(Mount *m, MountResult f) {
         unit_unref_uid_gid(UNIT(m), true);
 
         dynamic_creds_destroy(&m->dynamic_creds);
+
+        /* Any dependencies based on /proc/self/mountinfo are now stale */
+        unit_remove_dependencies(UNIT(m), UNIT_DEPENDENCY_MOUNTINFO_IMPLICIT);
 }
 
 static void mount_enter_mounted(Mount *m, MountResult f) {
@@ -1088,7 +1098,7 @@ static int mount_start(Unit *u) {
 
         assert(IN_SET(m->state, MOUNT_DEAD, MOUNT_FAILED));
 
-        r = unit_start_limit_test(u);
+        r = unit_test_start_limit(u);
         if (r < 0) {
                 mount_enter_dead(m, MOUNT_FAILURE_START_LIMIT_HIT);
                 return r;
@@ -1428,32 +1438,6 @@ static int mount_dispatch_timer(sd_event_source *source, usec_t usec, void *user
         return 0;
 }
 
-static int update_parameters_proc_self_mount_info(
-                Mount *m,
-                const char *what,
-                const char *options,
-                const char *fstype) {
-
-        MountParameters *p;
-        int r, q, w;
-
-        p = &m->parameters_proc_self_mountinfo;
-
-        r = free_and_strdup(&p->what, what);
-        if (r < 0)
-                return r;
-
-        q = free_and_strdup(&p->options, options);
-        if (q < 0)
-                return q;
-
-        w = free_and_strdup(&p->fstype, fstype);
-        if (w < 0)
-                return w;
-
-        return r > 0 || q > 0 || w > 0;
-}
-
 static int mount_setup_new_unit(
                 Manager *m,
                 const char *name,
@@ -1528,10 +1512,10 @@ static int mount_setup_existing_unit(
         if (r > 0)
                 flags |= MOUNT_PROC_JUST_CHANGED;
 
-        if (!MOUNT(u)->from_proc_self_mountinfo) {
+        if (!MOUNT(u)->from_proc_self_mountinfo || FLAGS_SET(MOUNT(u)->proc_flags, MOUNT_PROC_JUST_MOUNTED))
                 flags |= MOUNT_PROC_JUST_MOUNTED;
-                MOUNT(u)->from_proc_self_mountinfo = true;
-        }
+
+        MOUNT(u)->from_proc_self_mountinfo = true;
 
         if (IN_SET(u->load_state, UNIT_NOT_FOUND, UNIT_BAD_SETTING, UNIT_ERROR)) {
                 /* The unit was previously not found or otherwise not loaded. Now that the unit shows up in
@@ -1631,7 +1615,6 @@ static int mount_load_proc_self_mountinfo(Manager *m, bool set_flags) {
         for (;;) {
                 struct libmnt_fs *fs;
                 const char *device, *path, *options, *fstype;
-                _cleanup_free_ char *d = NULL, *p = NULL;
                 int k;
 
                 k = mnt_table_next_fs(t, i, &fs);
@@ -1648,15 +1631,9 @@ static int mount_load_proc_self_mountinfo(Manager *m, bool set_flags) {
                 if (!device || !path)
                         continue;
 
-                if (cunescape(device, UNESCAPE_RELAX, &d) < 0)
-                        return log_oom();
+                device_found_node(m, device, DEVICE_FOUND_MOUNT, DEVICE_FOUND_MOUNT);
 
-                if (cunescape(path, UNESCAPE_RELAX, &p) < 0)
-                        return log_oom();
-
-                device_found_node(m, d, DEVICE_FOUND_MOUNT, DEVICE_FOUND_MOUNT);
-
-                (void) mount_setup_unit(m, d, p, options, fstype, set_flags);
+                (void) mount_setup_unit(m, device, path, options, fstype, set_flags);
         }
 
         return 0;
@@ -1844,6 +1821,7 @@ static int mount_dispatch_io(sd_event_source *source, int fd, uint32_t revents, 
                         }
 
                         mount->from_proc_self_mountinfo = false;
+                        assert_se(update_parameters_proc_self_mount_info(mount, NULL, NULL, NULL) >= 0);
 
                         switch (mount->state) {
 
@@ -1929,7 +1907,7 @@ static int mount_kill(Unit *u, KillWho who, int signo, sd_bus_error *error) {
 
         assert(m);
 
-        return unit_kill_common(u, who, signo, -1, MOUNT(u)->control_pid, error);
+        return unit_kill_common(u, who, signo, -1, m->control_pid, error);
 }
 
 static int mount_control_pid(Unit *u) {

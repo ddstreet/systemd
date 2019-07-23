@@ -32,7 +32,9 @@
 #include "ioprio.h"
 #include "log.h"
 #include "macro.h"
+#include "memory-util.h"
 #include "missing.h"
+#include "namespace-util.h"
 #include "process-util.h"
 #include "raw-clone.h"
 #include "rlimit-util.h"
@@ -42,7 +44,6 @@
 #include "string-util.h"
 #include "terminal-util.h"
 #include "user-util.h"
-#include "util.h"
 
 int get_process_state(pid_t pid) {
         const char *p;
@@ -102,7 +103,8 @@ int get_process_comm(pid_t pid, char **ret) {
 int get_process_cmdline(pid_t pid, size_t max_length, bool comm_fallback, char **line) {
         _cleanup_fclose_ FILE *f = NULL;
         bool space = false;
-        char *k, *ans = NULL;
+        char *k;
+        _cleanup_free_ char *ans = NULL;
         const char *p;
         int c;
 
@@ -129,6 +131,13 @@ int get_process_cmdline(pid_t pid, size_t max_length, bool comm_fallback, char *
 
         (void) __fsetlocking(f, FSETLOCKING_BYCALLER);
 
+        if (max_length == 0) {
+                /* This is supposed to be a safety guard against runaway command lines. */
+                long l = sysconf(_SC_ARG_MAX);
+                assert(l > 0);
+                max_length = l;
+        }
+
         if (max_length == 1) {
 
                 /* If there's only room for one byte, return the empty string */
@@ -136,34 +145,8 @@ int get_process_cmdline(pid_t pid, size_t max_length, bool comm_fallback, char *
                 if (!ans)
                         return -ENOMEM;
 
-                *line = ans;
+                *line = TAKE_PTR(ans);
                 return 0;
-
-        } else if (max_length == 0) {
-                size_t len = 0, allocated = 0;
-
-                while ((c = getc(f)) != EOF) {
-
-                        if (!GREEDY_REALLOC(ans, allocated, len+3)) {
-                                free(ans);
-                                return -ENOMEM;
-                        }
-
-                        if (isprint(c)) {
-                                if (space) {
-                                        ans[len++] = ' ';
-                                        space = false;
-                                }
-
-                                ans[len++] = c;
-                        } else if (len > 0)
-                                space = true;
-               }
-
-                if (len > 0)
-                        ans[len] = '\0';
-                else
-                        ans = mfree(ans);
 
         } else {
                 bool dotdotdot = false;
@@ -227,7 +210,7 @@ int get_process_cmdline(pid_t pid, size_t max_length, bool comm_fallback, char *
                 _cleanup_free_ char *t = NULL;
                 int h;
 
-                free(ans);
+                ans = mfree(ans);
 
                 if (!comm_fallback)
                         return -ENOENT;
@@ -236,37 +219,42 @@ int get_process_cmdline(pid_t pid, size_t max_length, bool comm_fallback, char *
                 if (h < 0)
                         return h;
 
-                if (max_length == 0)
+                size_t l = strlen(t);
+
+                if (l + 3 <= max_length) {
                         ans = strjoin("[", t, "]");
-                else {
-                        size_t l;
+                        if (!ans)
+                                return -ENOMEM;
 
-                        l = strlen(t);
+                } else if (max_length <= 6) {
+                        ans = new(char, max_length);
+                        if (!ans)
+                                return -ENOMEM;
 
-                        if (l + 3 <= max_length)
-                                ans = strjoin("[", t, "]");
-                        else if (max_length <= 6) {
+                        memcpy(ans, "[...]", max_length-1);
+                        ans[max_length-1] = 0;
+                } else {
+                        t[max_length - 6] = 0;
 
-                                ans = new(char, max_length);
-                                if (!ans)
-                                        return -ENOMEM;
+                        /* Chop off final spaces */
+                        delete_trailing_chars(t, WHITESPACE);
 
-                                memcpy(ans, "[...]", max_length-1);
-                                ans[max_length-1] = 0;
-                        } else {
-                                t[max_length - 6] = 0;
-
-                                /* Chop off final spaces */
-                                delete_trailing_chars(t, WHITESPACE);
-
-                                ans = strjoin("[", t, "...]");
-                        }
+                        ans = strjoin("[", t, "...]");
+                        if (!ans)
+                                return -ENOMEM;
                 }
-                if (!ans)
-                        return -ENOMEM;
+
+                *line = TAKE_PTR(ans);
+                return 0;
         }
 
-        *line = ans;
+        k = realloc(ans, strlen(ans) + 1);
+        if (!k)
+                return -ENOMEM;
+
+        ans = NULL;
+        *line = k;
+
         return 0;
 }
 
@@ -946,6 +934,20 @@ int getenv_for_pid(pid_t pid, const char *field, char **ret) {
         return 0;
 }
 
+int pid_is_my_child(pid_t pid) {
+        pid_t ppid;
+        int r;
+
+        if (pid <= 1)
+                return false;
+
+        r = get_process_ppid(pid, &ppid);
+        if (r < 0)
+                return r;
+
+        return ppid == getpid_cached();
+}
+
 bool pid_is_unwaited(pid_t pid) {
         /* Checks whether a PID is still valid at all, including a zombie */
 
@@ -1013,7 +1015,7 @@ _noreturn_ void freeze(void) {
         log_close();
 
         /* Make sure nobody waits for us on a socket anymore */
-        close_all_fds(NULL, 0);
+        (void) close_all_fds(NULL, 0);
 
         sync();
 
@@ -1545,6 +1547,40 @@ int set_oom_score_adjust(int value) {
 
         return write_string_file("/proc/self/oom_score_adj", t,
                                  WRITE_STRING_FILE_VERIFY_ON_FAILURE|WRITE_STRING_FILE_DISABLE_BUFFER);
+}
+
+int cpus_in_affinity_mask(void) {
+        size_t n = 16;
+        int r;
+
+        for (;;) {
+                cpu_set_t *c;
+
+                c = CPU_ALLOC(n);
+                if (!c)
+                        return -ENOMEM;
+
+                if (sched_getaffinity(0, CPU_ALLOC_SIZE(n), c) >= 0) {
+                        int k;
+
+                        k = CPU_COUNT_S(CPU_ALLOC_SIZE(n), c);
+                        CPU_FREE(c);
+
+                        if (k <= 0)
+                                return -EINVAL;
+
+                        return k;
+                }
+
+                r = -errno;
+                CPU_FREE(c);
+
+                if (r != -EINVAL)
+                        return r;
+                if (n > SIZE_MAX/2)
+                        return -ENOMEM;
+                n *= 2;
+        }
 }
 
 static const char *const ioprio_class_table[] = {

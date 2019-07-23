@@ -179,7 +179,14 @@ static void test_find_binary(const char *self) {
 }
 
 static void test_prefixes(void) {
-        static const char* values[] = { "/a/b/c/d", "/a/b/c", "/a/b", "/a", "", NULL};
+        static const char* const values[] = {
+                "/a/b/c/d",
+                "/a/b/c",
+                "/a/b",
+                "/a",
+                "",
+                NULL
+        };
         unsigned i;
         char s[PATH_MAX];
         bool b;
@@ -531,7 +538,7 @@ static void test_hidden_or_backup_file(void) {
 
 static void test_systemd_installation_has_version(const char *path) {
         int r;
-        const unsigned versions[] = {0, 231, atoi(PACKAGE_VERSION), 999};
+        const unsigned versions[] = {0, 231, PROJECT_VERSION, 999};
         unsigned i;
 
         for (i = 0; i < ELEMENTSOF(versions); i++) {

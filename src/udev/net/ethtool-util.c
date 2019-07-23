@@ -9,11 +9,11 @@
 #include "ethtool-util.h"
 #include "link-config.h"
 #include "log.h"
+#include "memory-util.h"
 #include "missing.h"
 #include "socket-util.h"
 #include "string-table.h"
 #include "strxcpyx.h"
-#include "util.h"
 
 static const char* const duplex_table[_DUP_MAX] = {
         [DUP_FULL] = "full",
@@ -31,18 +31,18 @@ static const char* const wol_table[_WOL_MAX] = {
         [WOL_ARP]         = "arp",
         [WOL_MAGIC]       = "magic",
         [WOL_MAGICSECURE] = "secureon",
-        [WOL_OFF]         = "off"
+        [WOL_OFF]         = "off",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(wol, WakeOnLan);
 DEFINE_CONFIG_PARSE_ENUM(config_parse_wol, wol, WakeOnLan, "Failed to parse WakeOnLan setting");
 
-static const char* const port_table[_NET_DEV_PORT_MAX] = {
+static const char* const port_table[] = {
         [NET_DEV_PORT_TP]     = "tp",
         [NET_DEV_PORT_AUI]    = "aui",
         [NET_DEV_PORT_MII]    = "mii",
         [NET_DEV_PORT_FIBRE]  = "fibre",
-        [NET_DEV_PORT_BNC]    = "bnc"
+        [NET_DEV_PORT_BNC]    = "bnc",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(port, NetDevPort);
@@ -358,7 +358,7 @@ static int find_feature_index(struct ethtool_gstrings *strings, const char *feat
                         return i;
         }
 
-        return -1;
+        return -ENODATA;
 }
 
 int ethtool_set_features(int *fd, const char *ifname, int *features) {
@@ -583,7 +583,7 @@ int ethtool_set_glinksettings(int *fd, const char *ifname, struct link_config *l
         struct ifreq ifr = {};
         int r;
 
-        if (link->autonegotiation != 0) {
+        if (link->autonegotiation != AUTONEG_DISABLE && eqzero(link->advertise)) {
                 log_info("link_config: autonegotiation is unset or enabled, the speed and duplex are not writable.");
                 return 0;
         }
@@ -612,9 +612,11 @@ int ethtool_set_glinksettings(int *fd, const char *ifname, struct link_config *l
         if (link->port != _NET_DEV_PORT_INVALID)
                 u->base.port = link->port;
 
-        u->base.autoneg = link->autonegotiation;
+        if (link->autonegotiation >= 0)
+                u->base.autoneg = link->autonegotiation;
 
         if (!eqzero(link->advertise)) {
+                u->base.autoneg = AUTONEG_ENABLE;
                 memcpy(&u->link_modes.advertising, link->advertise, sizeof(link->advertise));
                 memzero((uint8_t*) &u->link_modes.advertising + sizeof(link->advertise),
                         ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NBYTES - sizeof(link->advertise));
@@ -773,7 +775,9 @@ int config_parse_advertise(const char *unit,
                         break;
 
                 mode = ethtool_link_mode_bit_from_string(w);
-                if (mode < 0) {
+                /* We reuse the kernel provided enum which does not contain negative value. So, the cast
+                 * below is mandatory. Otherwise, the check below always passes and access an invalid address. */
+                if ((int) mode < 0) {
                         log_syntax(unit, LOG_ERR, filename, line, 0, "Failed to parse advertise mode, ignoring: %s", w);
                         continue;
                 }

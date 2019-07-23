@@ -41,6 +41,8 @@ libudev_core_sources = '''
         net/link-config.h
         net/ethtool-util.c
         net/ethtool-util.h
+        net/naming-scheme.c
+        net/naming-scheme.h
 '''.split()
 
 if conf.get('HAVE_KMOD') == 1
@@ -178,6 +180,7 @@ foreach prog : [['ata_id/ata_id.c'],
                    prog,
                    include_directories : includes,
                    c_args : ['-DLOG_REALM=LOG_REALM_UDEV'],
+                   dependencies : [versiondep],
                    link_with : [libudev_static],
                    install_rpath : udev_rpath,
                    install : true,
@@ -187,12 +190,22 @@ endforeach
 install_data('udev.conf',
              install_dir : join_paths(sysconfdir, 'udev'))
 
-udev_pc = configure_file(
+configure_file(
         input : 'udev.pc.in',
         output : 'udev.pc',
-        configuration : substs)
-install_data(udev_pc,
-             install_dir : pkgconfigdatadir)
+        configuration : substs,
+        install_dir : pkgconfigdatadir == 'no' ? '' : pkgconfigdatadir)
 
 meson.add_install_script('sh', '-c',
                          mkdir_p.format(join_paths(sysconfdir, 'udev/rules.d')))
+
+fuzzers += [
+        [['src/udev/net/fuzz-link-parser.c',
+          'src/fuzz/fuzz.h'],
+         [libudev_core,
+          libudev_static,
+          libsystemd_network,
+          libshared],
+         [threads,
+          libacl]]
+        ]

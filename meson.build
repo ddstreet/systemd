@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1+
 
 project('systemd', 'c',
-        version : '240',
+        version : '242',
         license : 'LGPLv2+',
         default_options: [
                 'c_std=gnu99',
@@ -12,20 +12,23 @@ project('systemd', 'c',
         meson_version : '>= 0.46',
        )
 
-libsystemd_version = '0.24.0'
-libudev_version = '1.6.12'
+libsystemd_version = '0.26.0'
+libudev_version = '1.6.14'
 
 # We need the same data in two different formats, ugh!
 # Also, for hysterical reasons, we use different variable
 # names, sometimes. Not all variables are included in every
 # set. Ugh, ugh, ugh!
 conf = configuration_data()
-conf.set_quoted('PACKAGE_STRING',  meson.project_name() + ' ' + meson.project_version())
-conf.set_quoted('PACKAGE_VERSION', meson.project_version())
+conf.set('PROJECT_VERSION',        meson.project_version())
 
 substs = configuration_data()
-substs.set('PACKAGE_URL',          'https://www.freedesktop.org/wiki/Software/systemd')
-substs.set('PACKAGE_VERSION',      meson.project_version())
+substs.set('PROJECT_URL',          'https://www.freedesktop.org/wiki/Software/systemd')
+substs.set('PROJECT_VERSION',      meson.project_version())
+
+# This is to be used instead of meson.source_root(), as the latter will return
+# the wrong result when systemd is being built as a meson subproject
+project_source_root = meson.current_source_dir()
 
 want_ossfuzz = get_option('oss-fuzz')
 want_libfuzzer = get_option('llvm-fuzz')
@@ -37,7 +40,7 @@ fuzzer_build = want_ossfuzz or want_libfuzzer
 #####################################################################
 
 # Try to install the git pre-commit hook
-git_hook = run_command(join_paths(meson.source_root(), 'tools/add-git-hook.sh'))
+git_hook = run_command(join_paths(project_source_root, 'tools/add-git-hook.sh'))
 if git_hook.returncode() == 0
         message(git_hook.stdout().strip())
 endif
@@ -67,6 +70,7 @@ rootprefix_default = split_usr ? '/' : '/usr'
 if rootprefixdir == ''
         rootprefixdir = rootprefix_default
 endif
+rootprefixdir_noslash = rootprefixdir == '/' ? '' : rootprefixdir
 
 sysvinit_path = get_option('sysvinit-path')
 sysvrcnd_path = get_option('sysvrcnd-path')
@@ -77,7 +81,7 @@ conf.set10('BUMP_PROC_SYS_FS_FILE_MAX', get_option('bump-proc-sys-fs-file-max'))
 conf.set10('BUMP_PROC_SYS_FS_NR_OPEN',  get_option('bump-proc-sys-fs-nr-open'))
 conf.set('HIGH_RLIMIT_NOFILE',          512*1024)
 
-# join_paths ignore the preceding arguments if an absolute component is
+# join_paths ignores the preceding arguments if an absolute component is
 # encountered, so this should canonicalize various paths when they are
 # absolute or relative.
 prefixdir = get_option('prefix')
@@ -136,7 +140,6 @@ systemsleepdir = join_paths(rootlibexecdir, 'system-sleep')
 systemunitdir = join_paths(rootprefixdir, 'lib/systemd/system')
 systempresetdir = join_paths(rootprefixdir, 'lib/systemd/system-preset')
 udevlibexecdir = join_paths(rootprefixdir, 'lib/udev')
-udevhomedir = udevlibexecdir
 udevrulesdir = join_paths(udevlibexecdir, 'rules.d')
 udevhwdbdir = join_paths(udevlibexecdir, 'hwdb.d')
 catalogdir = join_paths(prefixdir, 'lib/systemd/catalog')
@@ -236,11 +239,13 @@ conf.set10('MEMORY_ACCOUNTING_DEFAULT',                       memory_accounting_
 conf.set_quoted('MEMORY_ACCOUNTING_DEFAULT_YES_NO',           memory_accounting_default ? 'yes' : 'no')
 
 substs.set('prefix',                                          prefixdir)
+substs.set('rootprefix',                                      rootprefixdir)
+substs.set('rootprefix_noslash',                              rootprefixdir_noslash)
 substs.set('exec_prefix',                                     prefixdir)
 substs.set('libdir',                                          libdir)
 substs.set('rootlibdir',                                      rootlibdir)
 substs.set('includedir',                                      includedir)
-substs.set('pkgsysconfdir',                                   pkgsysconfdir)
+substs.set('sysconfdir',                                      sysconfdir)
 substs.set('bindir',                                          bindir)
 substs.set('rootbindir',                                      rootbindir)
 substs.set('rootlibexecdir',                                  rootlibexecdir)
@@ -287,10 +292,8 @@ want_tests = get_option('tests')
 slow_tests = want_tests != 'false' and get_option('slow-tests')
 install_tests = get_option('install-tests')
 
-cxx = find_program('c++', required : fuzzer_build)
-if cxx.found()
+if add_languages('cpp', required : fuzzer_build)
         #  Used only for tests
-        add_languages('cpp')
         cxx_cmd = ' '.join(meson.get_compiler('cpp').cmd_array())
 else
         cxx_cmd = ''
@@ -337,6 +340,8 @@ possible_cc_flags = [
         '-Wno-missing-field-initializers',
         '-Wno-unused-result',
         '-Wno-format-signedness',
+        '-Wno-error=#warnings',  # clang
+        '-Wno-string-plus-int',  # clang
 
         # work-around for gcc 7.1 turning this on on its own.
         '-Wno-error=nonnull',
@@ -362,13 +367,6 @@ possible_link_flags = [
         '-Wl,-z,now',
 ]
 
-# the oss-fuzz fuzzers are not built with -fPIE, so don't
-# enable it when we are linking against them
-if not fuzzer_build
-        possible_cc_flags += '-fPIE'
-        possible_link_flags += '-pie'
-endif
-
 if cc.get_id() == 'clang'
         possible_cc_flags += [
                 '-Wno-typedef-redefinition',
@@ -383,6 +381,16 @@ if get_option('buildtype') != 'debug'
         ]
 
         possible_link_flags += '-Wl,--gc-sections'
+endif
+
+if get_option('b_ndebug') == 'true'
+        # With asserts disabled with get a bunch of warnings about variables which
+        # are used only in the asserts. This is not useful at all, so let's just silence
+        # those warnings.
+        possible_cc_flags += [
+                '-Wno-unused-variable',
+                '-Wno-unused-but-set-variable',
+        ]
 endif
 
 add_project_arguments(cc.get_supported_arguments(possible_cc_flags), language : 'c')
@@ -419,15 +427,11 @@ conf.set('SIZEOF_RLIM_T', cc.sizeof('rlim_t', prefix : '#include <sys/resource.h
 
 decl_headers = '''
 #include <uchar.h>
-#include <linux/ethtool.h>
-#include <linux/fib_rules.h>
 #include <sys/stat.h>
 '''
 
 foreach decl : ['char16_t',
                 'char32_t',
-                'struct fib_rule_uid_range',
-                'struct fib_rule_port_range',
                 'struct statx',
                ]
 
@@ -486,6 +490,7 @@ foreach decl : [['ETHTOOL_LINK_MODE_10baseT_Half_BIT',      'linux/ethtool.h'],
                 ['IFLA_TARGET_NETNSID',                     'linux/if_link.h'],
                 ['IFLA_NEW_IFINDEX',                        'linux/if_link.h'],
                 ['IFLA_MAX_MTU',                            'linux/if_link.h'],
+                ['IFLA_BOND_MODE',                          'linux/if_link.h'],
                 ['IFLA_BOND_ACTIVE_SLAVE',                  'linux/if_link.h'],
                 ['IFLA_BOND_AD_INFO',                       'linux/if_link.h'],
                 ['IFLA_BOND_AD_ACTOR_SYSTEM',               'linux/if_link.h'],
@@ -584,6 +589,18 @@ endif
 
 #####################################################################
 
+vcs_tagger = [project_source_root + '/tools/meson-vcs-tag.sh',
+              project_source_root,
+              get_option('version-tag'),
+              meson.project_version()]
+
+version_h = vcs_tag(
+        input : 'src/version/version.h.in',
+        output : 'version.h',
+        command: vcs_tagger)
+
+versiondep = declare_dependency(sources: version_h)
+
 sed = find_program('sed')
 awk = find_program('awk')
 m4 = find_program('m4')
@@ -592,7 +609,7 @@ git = find_program('git', required : false)
 env = find_program('env')
 perl = find_program('perl', required : false)
 
-meson_make_symlink = meson.source_root() + '/tools/meson-make-symlink.sh'
+meson_make_symlink = project_source_root + '/tools/meson-make-symlink.sh'
 mkdir_p = 'mkdir -p $DESTDIR/@0@'
 test_efi_create_disk_sh = find_program('test/test-efi-create-disk.sh')
 splash_bmp = files('test/splash.bmp')
@@ -815,7 +832,9 @@ conf.set10('ENABLE_WHEEL_GROUP', get_option('wheel-group'))
 dev_kvm_mode = get_option('dev-kvm-mode')
 substs.set('DEV_KVM_MODE', dev_kvm_mode)
 conf.set10('DEV_KVM_UACCESS', dev_kvm_mode != '0666')
-substs.set('GROUP_RENDER_MODE', get_option('group-render-mode'))
+group_render_mode = get_option('group-render-mode')
+substs.set('GROUP_RENDER_MODE', group_render_mode)
+conf.set10('GROUP_RENDER_UACCESS', group_render_mode != '0666')
 
 kill_user_processes = get_option('default-kill-user-processes')
 conf.set10('KILL_USER_PROCESSES', kill_user_processes)
@@ -829,6 +848,17 @@ substs.set('DNS_SERVERS', dns_servers)
 ntp_servers = get_option('ntp-servers')
 conf.set_quoted('NTP_SERVERS', ntp_servers)
 substs.set('NTP_SERVERS', ntp_servers)
+
+default_locale = get_option('default-locale')
+if default_locale == ''
+        if not meson.is_cross_build()
+                choose_default_locale_sh = find_program('tools/choose-default-locale.sh')
+                default_locale = run_command(choose_default_locale_sh).stdout().strip()
+        else
+                default_locale = 'C.UTF-8'
+        endif
+endif
+conf.set_quoted('SYSTEMD_DEFAULT_LOCALE', default_locale)
 
 conf.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 
@@ -1430,6 +1460,7 @@ includes = include_directories('src/basic',
                                'src/udev',
                                'src/libudev',
                                'src/core',
+                               'src/shutdown',
                                'src/libsystemd/sd-bus',
                                'src/libsystemd/sd-device',
                                'src/libsystemd/sd-event',
@@ -1461,7 +1492,7 @@ libjournal_core = static_library(
         include_directories : includes,
         install : false)
 
-libsystemd_sym_path = '@0@/@1@'.format(meson.current_source_dir(), libsystemd_sym)
+libsystemd_sym_path = '@0@/@1@'.format(project_source_root, libsystemd_sym)
 libsystemd = shared_library(
         'systemd',
         disable_mempool_c,
@@ -1516,6 +1547,7 @@ public_programs = []
 subdir('src/libudev')
 subdir('src/shared')
 subdir('src/core')
+subdir('src/shutdown')
 subdir('src/udev')
 subdir('src/network')
 
@@ -1563,7 +1595,7 @@ foreach tuple : [['myhostname', 'ENABLE_NSS_MYHOSTNAME'],
                 module = tuple[0]
 
                 sym = 'src/nss-@0@/nss-@0@.sym'.format(module)
-                version_script_arg = join_paths(meson.source_root(), sym)
+                version_script_arg = join_paths(project_source_root, sym)
 
                 nss = shared_library(
                         'nss_' + module,
@@ -1574,8 +1606,7 @@ foreach tuple : [['myhostname', 'ENABLE_NSS_MYHOSTNAME'],
                         # Note that we link NSS modules with '-z nodelete' so that mempools never get orphaned
                         link_args : ['-Wl,-z,nodelete',
                                      '-shared',
-                                     '-Wl,--version-script=' + version_script_arg,
-                                     '-Wl,--undefined'],
+                                     '-Wl,--version-script=' + version_script_arg],
                         link_with : [libsystemd_static,
                                      libbasic],
                         dependencies : [threads,
@@ -1606,7 +1637,8 @@ executable('systemd',
            include_directories : includes,
            link_with : [libcore,
                         libshared],
-           dependencies : [threads,
+           dependencies : [versiondep,
+                           threads,
                            librt,
                            libseccomp,
                            libselinux,
@@ -1625,7 +1657,8 @@ exe = executable('systemd-analyze',
                  include_directories : includes,
                  link_with : [libcore,
                               libshared],
-                 dependencies : [threads,
+                 dependencies : [versiondep,
+                                 threads,
                                  librt,
                                  libseccomp,
                                  libselinux,
@@ -1698,9 +1731,9 @@ executable('systemd-run-generator',
 
 executable('systemd-fstab-generator',
            'src/fstab-generator/fstab-generator.c',
-           'src/core/mount-setup.c',
            include_directories : includes,
-           link_with : [libshared],
+           link_with : [libcore_shared,
+                        libshared],
            install_rpath : rootlibexecdir,
            install : true,
            install_dir : systemgeneratordir)
@@ -1827,7 +1860,7 @@ if conf.get('ENABLE_LOGIND') == 1
         public_programs += exe
 
         if conf.get('HAVE_PAM') == 1
-                version_script_arg = join_paths(meson.source_root(), pam_systemd_sym)
+                version_script_arg = join_paths(project_source_root, pam_systemd_sym)
                 pam_systemd = shared_library(
                         'pam_systemd',
                         pam_systemd_c,
@@ -1926,7 +1959,10 @@ else
                                libbasic_gcrypt]
 endif
 
-exe = executable('systemctl', 'src/systemctl/systemctl.c',
+exe = executable('systemctl',
+                 'src/systemctl/systemctl.c',
+                 'src/systemctl/sysv-compat.h',
+                 'src/systemctl/sysv-compat.c',
                  include_directories : includes,
                  link_with : systemctl_link_with,
                  dependencies : [threads,
@@ -2171,7 +2207,8 @@ if conf.get('ENABLE_IMPORTD') == 1
                                   systemd_pull_sources,
                                   include_directories : includes,
                                   link_with : [libshared],
-                                  dependencies : [libcurl,
+                                  dependencies : [versiondep,
+                                                  libcurl,
                                                   libz,
                                                   libbzip2,
                                                   libxz,
@@ -2220,7 +2257,8 @@ if conf.get('ENABLE_REMOTE') == 1 and conf.get('HAVE_LIBCURL') == 1
                          systemd_journal_upload_sources,
                          include_directories : includes,
                          link_with : [libshared],
-                         dependencies : [threads,
+                         dependencies : [versiondep,
+                                         threads,
                                          libcurl,
                                          libgnutls,
                                          libxz,
@@ -2336,20 +2374,18 @@ endif
 
 executable('systemd-remount-fs',
            'src/remount-fs/remount-fs.c',
-           'src/core/mount-setup.c',
-           'src/core/mount-setup.h',
            include_directories : includes,
-           link_with : [libshared],
+           link_with : [libcore_shared,
+                        libshared],
            install_rpath : rootlibexecdir,
            install : true,
            install_dir : rootlibexecdir)
 
 executable('systemd-machine-id-setup',
            'src/machine-id-setup/machine-id-setup-main.c',
-           'src/core/machine-id-setup.c',
-           'src/core/machine-id-setup.h',
            include_directories : includes,
-           link_with : [libshared],
+           link_with : [libcore_shared,
+                        libshared],
            install_rpath : rootlibexecdir,
            install : true,
            install_dir : rootbindir)
@@ -2386,6 +2422,9 @@ executable('systemd-sleep',
            install_rpath : rootlibexecdir,
            install : true,
            install_dir : rootlibexecdir)
+
+install_data('src/sleep/sleep.conf',
+             install_dir : pkgsysconfdir)
 
 exe = executable('systemd-sysctl',
                  'src/sysctl/sysctl.c',
@@ -2543,6 +2582,7 @@ exe = executable('systemd-stdio-bridge',
                  'src/stdio-bridge/stdio-bridge.c',
                  include_directories : includes,
                  link_with : [libshared],
+                 dependencies : [versiondep],
                  install_rpath : rootlibexecdir,
                  install : true)
 public_programs += exe
@@ -2626,7 +2666,8 @@ exe = executable('systemd-udevd',
                  link_with : [libudev_core,
                               libsystemd_network,
                               libudev_static],
-                 dependencies : [threads,
+                 dependencies : [versiondep,
+                                 threads,
                                  libkmod,
                                  libidn,
                                  libacl,
@@ -2643,7 +2684,8 @@ exe = executable('udevadm',
                  link_with : [libudev_core,
                               libsystemd_network,
                               libudev_static],
-                 dependencies : [threads,
+                 dependencies : [versiondep,
+                                 threads,
                                  libkmod,
                                  libidn,
                                  libacl,
@@ -2656,7 +2698,8 @@ public_programs += exe
 executable('systemd-shutdown',
            systemd_shutdown_sources,
            include_directories : includes,
-           link_with : [libshared],
+           link_with : [libcore_shared,
+                        libshared],
            dependencies : [libmount],
            install_rpath : rootlibexecdir,
            install : true,
@@ -2697,14 +2740,12 @@ endif
 
 exe = executable('systemd-nspawn',
                  systemd_nspawn_sources,
-                 'src/core/mount-setup.c', # FIXME: use a variable?
-                 'src/core/mount-setup.h',
-                 'src/core/loopback-setup.c',
-                 'src/core/loopback-setup.h',
                  include_directories : includes,
-                 link_with : [libnspawn_core,
+                 link_with : [libcore_shared,
+                              libnspawn_core,
                               libshared],
-                 dependencies : [libblkid],
+                 dependencies : [libblkid,
+                                 libseccomp],
                  install_rpath : rootlibexecdir,
                  install : true)
 public_programs += exe
@@ -2756,7 +2797,7 @@ custom_target(
         'systemd-runtest.env',
         output : 'systemd-runtest.env',
         command : ['sh', '-c', '{ ' +
-                   'echo SYSTEMD_TEST_DATA=@0@; '.format(join_paths(meson.current_source_dir(), 'test')) +
+                   'echo SYSTEMD_TEST_DATA=@0@; '.format(join_paths(project_source_root, 'test')) +
                    'echo SYSTEMD_CATALOG_DIR=@0@; '.format(join_paths(meson.current_build_dir(), 'catalog')) +
                    '} >@OUTPUT@'],
         build_by_default : true)
@@ -2783,7 +2824,8 @@ foreach tuple : tests
                         sources,
                         include_directories : incs,
                         link_with : link_with,
-                        dependencies : dependencies,
+                        dependencies : [versiondep,
+                                        dependencies],
                         c_args : defs,
                         build_by_default : want_tests != 'false',
                         install_rpath : rootlibexecdir,
@@ -2985,7 +3027,7 @@ foreach tuple : sanitizers
                                 test('@0@:@1@:@2@'.format(b, c, sanitizer),
                                      env,
                                      args : [exe.full_path(),
-                                             join_paths(meson.source_root(), p)])
+                                             join_paths(project_source_root, p)])
                         endif
                 endforeach
         endif
@@ -2997,7 +3039,7 @@ endforeach
 if git.found()
         all_files = run_command(
                 git,
-                ['--git-dir=@0@/.git'.format(meson.source_root()),
+                ['--git-dir=@0@/.git'.format(project_source_root),
                  'ls-files',
                  ':/*.[ch]'])
         all_files = files(all_files.stdout().split())
@@ -3005,10 +3047,10 @@ if git.found()
         custom_target(
                 'tags',
                 output : 'tags',
-                command : [env, 'etags', '-o', '@0@/TAGS'.format(meson.source_root())] + all_files)
+                command : [env, 'etags', '-o', '@0@/TAGS'.format(project_source_root)] + all_files)
         run_target(
                 'ctags',
-                command : [env, 'ctags', '-o', '@0@/tags'.format(meson.source_root())] + all_files)
+                command : [env, 'ctags', '-o', '@0@/tags'.format(project_source_root)] + all_files)
 endif
 
 if git.found()
@@ -3021,17 +3063,17 @@ endif
 if git.found()
         git_head = run_command(
                 git,
-                ['--git-dir=@0@/.git'.format(meson.source_root()),
+                ['--git-dir=@0@/.git'.format(project_source_root),
                  'rev-parse', 'HEAD']).stdout().strip()
         git_head_short = run_command(
                 git,
-                ['--git-dir=@0@/.git'.format(meson.source_root()),
+                ['--git-dir=@0@/.git'.format(project_source_root),
                  'rev-parse', '--short=7', 'HEAD']).stdout().strip()
 
         run_target(
                 'git-snapshot',
                 command : ['git', 'archive',
-                           '-o', '@0@/systemd-@1@.tar.gz'.format(meson.source_root(),
+                           '-o', '@0@/systemd-@1@.tar.gz'.format(project_source_root,
                                                                  git_head_short),
                            '--prefix', 'systemd-@0@/'.format(git_head),
                            'HEAD'])
@@ -3044,10 +3086,6 @@ run_target(
         'check-api-docs',
         depends : [man, libsystemd, libudev],
         command : [meson_check_api_docs_sh, libsystemd.full_path(), libudev.full_path()])
-
-run_target(
-        'make-index-md',
-        command : ['sh', '@0@/tools/make-index-md.sh'.format(meson.source_root()), meson.source_root()])
 
 ############################################################
 
@@ -3098,7 +3136,8 @@ status = [
         'default DNS-over-TLS mode:         @0@'.format(default_dns_over_tls),
         'default cgroup hierarchy:          @0@'.format(default_hierarchy),
         'default net.naming-scheme setting: @0@'.format(default_net_naming_scheme),
-        'default KillUserProcesses setting: @0@'.format(kill_user_processes)]
+        'default KillUserProcesses setting: @0@'.format(kill_user_processes),
+        'default locale:                    @0@'.format(default_locale)]
 
 alt_dns_servers = '\n                                            '.join(dns_servers.split(' '))
 alt_ntp_servers = '\n                                            '.join(ntp_servers.split(' '))

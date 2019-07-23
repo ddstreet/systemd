@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 #pragma once
 
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/stat.h>
@@ -15,7 +16,10 @@ int is_dir(const char *path, bool follow);
 int is_dir_fd(int fd);
 int is_device_node(const char *path);
 
-int dir_is_empty(const char *path);
+int dir_is_empty_at(int dir_fd, const char *path);
+static inline int dir_is_empty(const char *path) {
+        return dir_is_empty_at(AT_FDCWD, path);
+}
 
 static inline int dir_is_populated(const char *path) {
         int r;
@@ -46,8 +50,6 @@ bool is_network_fs(const struct statfs *s) _pure_;
 
 int fd_is_temporary_fs(int fd);
 int fd_is_network_fs(int fd);
-
-int fd_is_network_ns(int fd);
 
 int path_is_temporary_fs(const char *path);
 

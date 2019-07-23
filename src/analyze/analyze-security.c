@@ -13,6 +13,7 @@
 #include "locale-util.h"
 #include "macro.h"
 #include "missing.h"
+#include "nulstr-util.h"
 #include "parse-util.h"
 #include "path-util.h"
 #include "pretty-print.h"
@@ -49,6 +50,7 @@ struct security_info {
         bool memory_deny_write_execute;
         bool no_new_privileges;
         char *notify_access;
+        bool protect_hostname;
 
         bool private_devices;
         bool private_mounts;
@@ -73,6 +75,7 @@ struct security_info {
 
         uint64_t restrict_namespaces;
         bool restrict_realtime;
+        bool restrict_suid_sgid;
 
         char *root_directory;
         char *root_image;
@@ -294,10 +297,8 @@ static int assess_root_directory(
         assert(ret_description);
 
         *ret_badness =
-                (isempty(info->root_directory) ||
-                 path_equal(info->root_directory, "/")) &&
-                (isempty(info->root_image) ||
-                 path_equal(info->root_image, "/"));
+                empty_or_root(info->root_directory) ||
+                empty_or_root(info->root_image);
         *ret_description = NULL;
 
         return 0;
@@ -485,24 +486,24 @@ static bool syscall_names_in_filter(Set *s, bool whitelist, const SyscallFilterS
         const char *syscall;
 
         NULSTR_FOREACH(syscall, f->value) {
-                bool b;
+                int id;
 
                 if (syscall[0] == '@') {
                         const SyscallFilterSet *g;
+
                         assert_se(g = syscall_filter_set_find(syscall));
-                        b = syscall_names_in_filter(s, whitelist, g);
-                } else {
-                        int id;
+                        if (syscall_names_in_filter(s, whitelist, g))
+                                return true; /* bad! */
 
-                        /* Let's see if the system call actually exists on this platform, before complaining */
-                        id = seccomp_syscall_resolve_name(syscall);
-                        if (id < 0)
-                                continue;
-
-                        b = set_contains(s, syscall);
+                        continue;
                 }
 
-                if (whitelist == b) {
+                /* Let's see if the system call actually exists on this platform, before complaining */
+                id = seccomp_syscall_resolve_name(syscall);
+                if (id < 0)
+                        continue;
+
+                if (set_contains(s, syscall) == whitelist) {
                         log_debug("Offending syscall filter item: %s", syscall);
                         return true; /* bad! */
                 }
@@ -767,6 +768,16 @@ static const struct security_assessor security_assessor_table[] = {
                 .range = 10,
                 .assess = assess_protect_home,
                 .default_dependencies_only = true,
+        },
+        {
+                .id = "ProtectHostname=",
+                .description_good = "Service cannot change system host/domainname",
+                .description_bad = "Service may change system host/domainname",
+                .url = "https://www.freedesktop.org/software/systemd/man/systemd.exec.html#ProtectHostname=",
+                .weight = 50,
+                .range = 1,
+                .assess = assess_bool,
+                .offset = offsetof(struct security_info, protect_hostname),
         },
         {
                 .id = "ProtectSystem=",
@@ -1135,6 +1146,16 @@ static const struct security_assessor security_assessor_table[] = {
                 .range = 1,
                 .assess = assess_bool,
                 .offset = offsetof(struct security_info, restrict_realtime),
+        },
+        {
+                .id = "RestrictSUIDSGID=",
+                .url = "https://www.freedesktop.org/software/systemd/man/systemd.exec.html#RestrictSUIDSGID=",
+                .description_good = "SUID/SGID file creation by service is restricted",
+                .description_bad = "Service may create SUID/SGID files",
+                .weight = 1000,
+                .range = 1,
+                .assess = assess_bool,
+                .offset = offsetof(struct security_info, restrict_suid_sgid),
         },
         {
                 .id = "RestrictNamespaces=~CLONE_NEWUSER",
@@ -1859,9 +1880,9 @@ static int acquire_security_info(sd_bus *bus, const char *name, struct security_
                 { "PrivateNetwork",          "b",       NULL,                                    offsetof(struct security_info, private_network)           },
                 { "PrivateTmp",              "b",       NULL,                                    offsetof(struct security_info, private_tmp)               },
                 { "PrivateUsers",            "b",       NULL,                                    offsetof(struct security_info, private_users)             },
-                { "PrivateUsers",            "b",       NULL,                                    offsetof(struct security_info, private_users)             },
                 { "ProtectControlGroups",    "b",       NULL,                                    offsetof(struct security_info, protect_control_groups)    },
                 { "ProtectHome",             "s",       NULL,                                    offsetof(struct security_info, protect_home)              },
+                { "ProtectHostname",         "b",       NULL,                                    offsetof(struct security_info, protect_hostname)          },
                 { "ProtectKernelModules",    "b",       NULL,                                    offsetof(struct security_info, protect_kernel_modules)    },
                 { "ProtectKernelTunables",   "b",       NULL,                                    offsetof(struct security_info, protect_kernel_tunables)   },
                 { "ProtectSystem",           "s",       NULL,                                    offsetof(struct security_info, protect_system)            },
@@ -1869,6 +1890,7 @@ static int acquire_security_info(sd_bus *bus, const char *name, struct security_
                 { "RestrictAddressFamilies", "(bas)",   property_read_restrict_address_families, 0                                                         },
                 { "RestrictNamespaces",      "t",       NULL,                                    offsetof(struct security_info, restrict_namespaces)       },
                 { "RestrictRealtime",        "b",       NULL,                                    offsetof(struct security_info, restrict_realtime)         },
+                { "RestrictSUIDSGID",        "b",       NULL,                                    offsetof(struct security_info, restrict_suid_sgid)        },
                 { "RootDirectory",           "s",       NULL,                                    offsetof(struct security_info, root_directory)            },
                 { "RootImage",               "s",       NULL,                                    offsetof(struct security_info, root_image)                },
                 { "SupplementaryGroups",     "as",      NULL,                                    offsetof(struct security_info, supplementary_groups)      },

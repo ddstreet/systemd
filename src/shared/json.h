@@ -1,14 +1,14 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
-
 #pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "macro.h"
 #include "string-util.h"
-#include "util.h"
+#include "log.h"
 
 /*
   In case you wonder why we have our own JSON implementation, here are a couple of reasons why this implementation has
@@ -154,7 +154,7 @@ typedef enum JsonFormatFlags {
         JSON_FORMAT_NEWLINE    = 1 << 0, /* suffix with newline */
         JSON_FORMAT_PRETTY     = 1 << 1, /* add internal whitespace to appeal to human readers */
         JSON_FORMAT_COLOR      = 1 << 2, /* insert ANSI color sequences */
-        JSON_FORMAT_COLOR_AUTO = 1 << 3, /* insetr ANSI color sequences if colors_enabled() says so */
+        JSON_FORMAT_COLOR_AUTO = 1 << 3, /* insert ANSI color sequences if colors_enabled() says so */
         JSON_FORMAT_SOURCE     = 1 << 4, /* prefix with source filename/line/column */
         JSON_FORMAT_SSE        = 1 << 5, /* prefix/suffix with W3C server-sent events */
         JSON_FORMAT_SEQ        = 1 << 6, /* prefix/suffix with RFC 7464 application/json-seq */
@@ -265,12 +265,12 @@ static inline int json_dispatch_level(JsonDispatchFlags flags) {
 
 int json_log_internal(JsonVariant *variant, int level, int error, const char *file, int line, const char *func, const char *format, ...)  _printf_(7, 8);
 
-#define json_log(variant, flags, error, ...)                       \
+#define json_log(variant, flags, error, ...)                            \
         ({                                                              \
-                int _level = json_dispatch_level(flags), _e = (error);    \
+                int _level = json_dispatch_level(flags), _e = (error);  \
                 (log_get_max_level() >= LOG_PRI(_level))                \
                         ? json_log_internal(variant, _level, _e, __FILE__, __LINE__, __func__, __VA_ARGS__) \
-                        : -abs(_e);                                     \
+                        : -ERRNO_VALUE(_e);                             \
         })
 
 #define JSON_VARIANT_STRING_CONST(x) _JSON_VARIANT_STRING_CONST(UNIQ, (x))

@@ -29,6 +29,7 @@
 #include "machine.h"
 #include "missing_capability.h"
 #include "mkdir.h"
+#include "namespace-util.h"
 #include "os-util.h"
 #include "path-util.h"
 #include "process-util.h"
@@ -454,7 +455,7 @@ static int container_bus_new(Machine *m, sd_bus_error *error, sd_bus **ret) {
                 break;
 
         case MACHINE_CONTAINER: {
-                _cleanup_(sd_bus_unrefp) sd_bus *bus = NULL;
+                _cleanup_(sd_bus_close_unrefp) sd_bus *bus = NULL;
                 char *address;
 
                 r = sd_bus_new(&bus);

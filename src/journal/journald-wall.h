@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 #pragma once
 
+#include <sys/socket.h>
 
 #include "journald-server.h"
 

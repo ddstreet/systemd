@@ -19,6 +19,7 @@
 #include "log.h"
 #include "macro.h"
 #include "missing.h"
+#include "nulstr-util.h"
 #include "parse-util.h"
 #include "path-util.h"
 #include "process-util.h"
@@ -137,7 +138,7 @@ static int next_assignment(
 
         /* Warn about unknown non-extension fields. */
         if (!(flags & CONFIG_PARSE_RELAXED) && !startswith(lvalue, "X-"))
-                log_syntax(unit, LOG_WARNING, filename, line, 0, "Unknown lvalue '%s' in section '%s'", lvalue, section);
+                log_syntax(unit, LOG_WARNING, filename, line, 0, "Unknown lvalue '%s' in section '%s', ignoring", lvalue, section);
 
         return 0;
 }
@@ -321,7 +322,7 @@ int config_parse(const char *unit,
                         return r;
                 }
 
-                if (strchr(COMMENTS, *buf))
+                if (strchr(COMMENTS, *skip_leading_chars(buf, WHITESPACE)))
                         continue;
 
                 l = buf;
@@ -506,6 +507,7 @@ DEFINE_PARSER(unsigned, unsigned, safe_atou);
 DEFINE_PARSER(double, double, safe_atod);
 DEFINE_PARSER(nsec, nsec_t, parse_nsec);
 DEFINE_PARSER(sec, usec_t, parse_sec);
+DEFINE_PARSER(sec_def_infinity, usec_t, parse_sec_def_infinity);
 DEFINE_PARSER(mode, mode_t, parse_mode);
 
 int config_parse_iec_size(const char* unit,

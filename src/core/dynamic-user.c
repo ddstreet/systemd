@@ -3,11 +3,14 @@
 #include <grp.h>
 #include <pwd.h>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "clean-ipc.h"
 #include "dynamic-user.h"
 #include "fd-util.h"
 #include "fileio.h"
+#include "format-util.h"
 #include "fs-util.h"
 #include "io-util.h"
 #include "nscd-flush.h"
@@ -35,7 +38,7 @@ static DynamicUser* dynamic_user_free(DynamicUser *d) {
         return mfree(d);
 }
 
-static int dynamic_user_add(Manager *m, const char *name, int storage_socket[2], DynamicUser **ret) {
+static int dynamic_user_add(Manager *m, const char *name, int storage_socket[static 2], DynamicUser **ret) {
         DynamicUser *d;
         int r;
 
@@ -707,7 +710,7 @@ int dynamic_user_lookup_uid(Manager *m, uid_t uid, char **ret) {
 
         xsprintf(lock_path, "/run/systemd/dynamic-uid/" UID_FMT, uid);
         r = read_one_line_file(lock_path, &user);
-        if (r == -ENOENT)
+        if (IN_SET(r, -ENOENT, 0))
                 return -ESRCH;
         if (r < 0)
                 return r;

@@ -1,6 +1,9 @@
 # -*- mode: meson -*-
 # SPDX-License-Identifier: LGPL-2.1+
 
+option('version-tag', type : 'string',
+       description : 'override the git version string')
+
 option('split-usr', type : 'combo', choices : ['auto', 'true', 'false'],
        description : '''/bin, /sbin aren't symlinks into /usr''')
 option('split-bin', type : 'combo', choices : ['auto', 'true', 'false'],
@@ -8,7 +11,7 @@ option('split-bin', type : 'combo', choices : ['auto', 'true', 'false'],
 option('rootlibdir', type : 'string',
        description : '''[/usr]/lib/x86_64-linux-gnu or such''')
 option('rootprefix', type : 'string',
-       description : '''override the root prefix''')
+       description : '''override the root prefix [default '/' if split-usr and '/usr' otherwise]''')
 option('link-udev-shared', type : 'boolean',
        description : 'link systemd-udev and its helpers to libsystemd-shared.so')
 option('link-systemctl-shared', type: 'boolean',
@@ -195,6 +198,8 @@ option('default-kill-user-processes', type : 'boolean',
        description : 'the default value for KillUserProcesses= setting')
 option('gshadow', type : 'boolean',
        description : 'support for shadow group')
+option('default-locale', type : 'string', value : '',
+       description : 'default locale used when /etc/locale.conf does not exist')
 
 option('default-dnssec', type : 'combo',
        description : 'default DNSSEC mode',
@@ -208,7 +213,7 @@ option('dns-over-tls', type : 'combo', choices : ['auto', 'gnutls', 'openssl', '
        description : 'DNS-over-TLS support')
 option('dns-servers', type : 'string',
        description : 'space-separated list of default DNS servers',
-       value : '8.8.8.8 8.8.4.4 2001:4860:4860::8888 2001:4860:4860::8844')
+       value : '1.1.1.1 8.8.8.8 1.0.0.1 8.8.4.4 2606:4700:4700::1111 2001:4860:4860::8888 2606:4700:4700::1001 2001:4860:4860::8844')
 option('ntp-servers', type : 'string',
        description : 'space-separated list of default NTP servers',
        value : 'time1.google.com time2.google.com time3.google.com time4.google.com')

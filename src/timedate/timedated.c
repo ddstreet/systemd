@@ -2,6 +2,8 @@
 
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "sd-bus.h"
@@ -20,6 +22,7 @@
 #include "hashmap.h"
 #include "list.h"
 #include "main-func.h"
+#include "memory-util.h"
 #include "missing_capability.h"
 #include "path-util.h"
 #include "selinux-util.h"
@@ -29,7 +32,6 @@
 #include "unit-def.h"
 #include "unit-name.h"
 #include "user-util.h"
-#include "util.h"
 
 #define NULL_ADJTIME_UTC "0.0 0 0\n0\nUTC\n"
 #define NULL_ADJTIME_LOCAL "0.0 0 0\n0\nLOCAL\n"
@@ -160,7 +162,7 @@ static int context_ntp_service_is_active(Context *c) {
         /* Call context_update_ntp_status() to update UnitStatusInfo before calling this. */
 
         LIST_FOREACH(units, info, c->units)
-                count += streq_ptr(info->active_state, "active");
+                count += !STRPTR_IN_SET(info->active_state, "inactive", "failed");
 
         return count;
 }
@@ -174,7 +176,7 @@ static int context_ntp_service_is_enabled(Context *c) {
         /* Call context_update_ntp_status() to update UnitStatusInfo before calling this. */
 
         LIST_FOREACH(units, info, c->units)
-                count += STRPTR_IN_SET(info->unit_file_state, "enabled", "enabled-runtime");
+                count += !STRPTR_IN_SET(info->unit_file_state, "masked", "masked-runtime", "disabled", "bad");
 
         return count;
 }
@@ -377,9 +379,9 @@ static int match_job_removed(sd_bus_message *m, void *userdata, sd_bus_error *er
                         n += !!u->path;
 
         if (n == 0) {
-                (void) sd_bus_emit_properties_changed(sd_bus_message_get_bus(m), "/org/freedesktop/timedate1", "org.freedesktop.timedate1", "NTP", NULL);
-
                 c->slot_job_removed = sd_bus_slot_unref(c->slot_job_removed);
+
+                (void) sd_bus_emit_properties_changed(sd_bus_message_get_bus(m), "/org/freedesktop/timedate1", "org.freedesktop.timedate1", "NTP", NULL);
         }
 
         return 0;
@@ -523,6 +525,10 @@ static int property_get_can_ntp(
         assert(reply);
         assert(error);
 
+        if (c->slot_job_removed)
+                /* When the previous request is not finished, then assume NTP is enabled. */
+                return sd_bus_message_append(reply, "b", true);
+
         r = context_update_ntp_status(c, bus, reply);
         if (r < 0)
                 return r;
@@ -547,6 +553,10 @@ static int property_get_ntp(
         assert(property);
         assert(reply);
         assert(error);
+
+        if (c->slot_job_removed)
+                /* When the previous request is not finished, then assume NTP is active. */
+                return sd_bus_message_append(reply, "b", true);
 
         r = context_update_ntp_status(c, bus, reply);
         if (r < 0)
@@ -734,6 +744,9 @@ static int method_set_time(sd_bus_message *m, void *userdata, sd_bus_error *erro
 
         assert(m);
         assert(c);
+
+        if (c->slot_job_removed)
+                return sd_bus_error_set(error, BUS_ERROR_AUTOMATIC_TIME_SYNC_ENABLED, "Previous request is not finished, refusing.");
 
         r = context_update_ntp_status(c, bus, m);
         if (r < 0)

@@ -47,6 +47,7 @@
 #include "ima-setup.h"
 #include "killall.h"
 #include "kmod-setup.h"
+#include "limits-util.h"
 #include "load-fragment.h"
 #include "log.h"
 #include "loopback-setup.h"
@@ -82,6 +83,10 @@
 #include "util.h"
 #include "virt.h"
 #include "watchdog.h"
+
+#if HAS_FEATURE_ADDRESS_SANITIZER
+#include <sanitizer/lsan_interface.h>
+#endif
 
 static enum {
         ACTION_RUN,
@@ -133,11 +138,11 @@ static EmergencyAction arg_cad_burst_action = EMERGENCY_ACTION_REBOOT_FORCE;
 
 _noreturn_ static void freeze_or_exit_or_reboot(void) {
 
-        /* If we are running in a contianer, let's prefer exiting, after all we can propagate an exit code to the
-         * container manager, and thus inform it that something went wrong. */
+        /* If we are running in a container, let's prefer exiting, after all we can propagate an exit code to
+         * the container manager, and thus inform it that something went wrong. */
         if (detect_container() > 0) {
                 log_emergency("Exiting PID 1...");
-                exit(EXIT_EXCEPTION);
+                _exit(EXIT_EXCEPTION);
         }
 
         if (arg_crash_reboot) {
@@ -1265,6 +1270,7 @@ static void bump_file_max_and_nr_open(void) {
 }
 
 static int bump_rlimit_nofile(struct rlimit *saved_rlimit) {
+        struct rlimit new_rlimit;
         int r, nr;
 
         assert(saved_rlimit);
@@ -1299,12 +1305,30 @@ static int bump_rlimit_nofile(struct rlimit *saved_rlimit) {
                 if (arg_system)
                         rl->rlim_max = MIN((rlim_t) nr, MAX(rl->rlim_max, (rlim_t) HIGH_RLIMIT_NOFILE));
 
+                /* If for some reason we were invoked with a soft limit above 1024 (which should never
+                 * happen!, but who knows what we get passed in from pam_limit when invoked as --user
+                 * instance), then lower what we pass on to not confuse our children */
+                rl->rlim_cur = MIN(rl->rlim_cur, (rlim_t) FD_SETSIZE);
+
                 arg_default_rlimit[RLIMIT_NOFILE] = rl;
+        }
+
+        /* Calculate the new limits to use for us. Never lower from what we inherited. */
+        new_rlimit = (struct rlimit) {
+                .rlim_cur = MAX((rlim_t) nr, saved_rlimit->rlim_cur),
+                .rlim_max = MAX((rlim_t) nr, saved_rlimit->rlim_max),
+        };
+
+        /* Shortcut if nothing changes. */
+        if (saved_rlimit->rlim_max >= new_rlimit.rlim_max &&
+            saved_rlimit->rlim_cur >= new_rlimit.rlim_cur) {
+                log_debug("RLIMIT_NOFILE is already as high or higher than we need it, not bumping.");
+                return 0;
         }
 
         /* Bump up the resource limit for ourselves substantially, all the way to the maximum the kernel allows, for
          * both hard and soft. */
-        r = setrlimit_closest(RLIMIT_NOFILE, &RLIMIT_MAKE_CONST(nr));
+        r = setrlimit_closest(RLIMIT_NOFILE, &new_rlimit);
         if (r < 0)
                 return log_warning_errno(r, "Setting RLIMIT_NOFILE failed, ignoring: %m");
 
@@ -1312,6 +1336,7 @@ static int bump_rlimit_nofile(struct rlimit *saved_rlimit) {
 }
 
 static int bump_rlimit_memlock(struct rlimit *saved_rlimit) {
+        struct rlimit new_rlimit;
         int r;
 
         assert(saved_rlimit);
@@ -1323,7 +1348,33 @@ static int bump_rlimit_memlock(struct rlimit *saved_rlimit) {
         if (getrlimit(RLIMIT_MEMLOCK, saved_rlimit) < 0)
                 return log_warning_errno(errno, "Reading RLIMIT_MEMLOCK failed, ignoring: %m");
 
-        r = setrlimit_closest(RLIMIT_MEMLOCK, &RLIMIT_MAKE_CONST(HIGH_RLIMIT_MEMLOCK));
+        /* Pass the original value down to invoked processes */
+        if (!arg_default_rlimit[RLIMIT_MEMLOCK]) {
+                struct rlimit *rl;
+
+                rl = newdup(struct rlimit, saved_rlimit, 1);
+                if (!rl)
+                        return log_oom();
+
+                arg_default_rlimit[RLIMIT_MEMLOCK] = rl;
+        }
+
+        /* Using MAX() on resource limits only is safe if RLIM_INFINITY is > 0. POSIX declares that rlim_t
+         * must be unsigned, hence this is a given, but let's make this clear here. */
+        assert_cc(RLIM_INFINITY > 0);
+
+        new_rlimit = (struct rlimit) {
+                .rlim_cur = MAX(HIGH_RLIMIT_MEMLOCK, saved_rlimit->rlim_cur),
+                .rlim_max = MAX(HIGH_RLIMIT_MEMLOCK, saved_rlimit->rlim_max),
+        };
+
+        if (saved_rlimit->rlim_max >= new_rlimit.rlim_cur &&
+            saved_rlimit->rlim_cur >= new_rlimit.rlim_max) {
+                log_debug("RLIMIT_MEMLOCK is already as high or higher than we need it, not bumping.");
+                return 0;
+        }
+
+        r = setrlimit_closest(RLIMIT_MEMLOCK, &new_rlimit);
         if (r < 0)
                 return log_warning_errno(r, "Setting RLIMIT_MEMLOCK failed, ignoring: %m");
 
@@ -1332,7 +1383,7 @@ static int bump_rlimit_memlock(struct rlimit *saved_rlimit) {
 
 static void test_usr(void) {
 
-        /* Check that /usr is not a separate fs */
+        /* Check that /usr is either on the same file system as / or mounted already. */
 
         if (dir_is_empty("/usr") <= 0)
                 return;
@@ -1660,12 +1711,11 @@ static void do_reexecute(
          * we do that */
         watchdog_close(true);
 
-        /* Reset the RLIMIT_NOFILE to the kernel default, so that the new systemd can pass the kernel default to its
-         * child processes */
-
-        if (saved_rlimit_nofile->rlim_cur > 0)
+        /* Reset RLIMIT_NOFILE + RLIMIT_MEMLOCK back to the kernel defaults, so that the new systemd can pass
+         * the kernel default to its child processes */
+        if (saved_rlimit_nofile->rlim_cur != 0)
                 (void) setrlimit(RLIMIT_NOFILE, saved_rlimit_nofile);
-        if (saved_rlimit_memlock->rlim_cur != (rlim_t) -1)
+        if (saved_rlimit_memlock->rlim_cur != RLIM_INFINITY)
                 (void) setrlimit(RLIMIT_MEMLOCK, saved_rlimit_memlock);
 
         if (switch_root_dir) {
@@ -1858,9 +1908,8 @@ static int invoke_main_loop(
                         *ret_shutdown_verb = NULL;
 
                         /* Steal the switch root parameters */
-                        *ret_switch_root_dir = m->switch_root;
-                        *ret_switch_root_init = m->switch_root_init;
-                        m->switch_root = m->switch_root_init = NULL;
+                        *ret_switch_root_dir = TAKE_PTR(m->switch_root);
+                        *ret_switch_root_init = TAKE_PTR(m->switch_root_init);
 
                         return 0;
 
@@ -1914,7 +1963,7 @@ static void log_execution_mode(bool *ret_first_boot) {
         if (arg_system) {
                 int v;
 
-                log_info(PACKAGE_STRING " running in %ssystem mode. (" SYSTEMD_FEATURES ")",
+                log_info("systemd " GIT_VERSION " running in %ssystem mode. (" SYSTEMD_FEATURES ")",
                          arg_action == ACTION_TEST ? "test " : "" );
 
                 v = detect_virtualization();
@@ -1942,7 +1991,7 @@ static void log_execution_mode(bool *ret_first_boot) {
                         _cleanup_free_ char *t;
 
                         t = uid_to_name(getuid());
-                        log_debug(PACKAGE_STRING " running in %suser mode for user " UID_FMT "/%s. (" SYSTEMD_FEATURES ")",
+                        log_debug("systemd " GIT_VERSION " running in %suser mode for user " UID_FMT "/%s. (" SYSTEMD_FEATURES ")",
                                   arg_action == ACTION_TEST ? " test" : "", getuid(), strna(t));
                 }
 
@@ -2071,13 +2120,13 @@ static int do_queue_default_job(
 
         assert(target->load_state == UNIT_LOADED);
 
-        r = manager_add_job(m, JOB_START, target, JOB_ISOLATE, &error, &default_unit_job);
+        r = manager_add_job(m, JOB_START, target, JOB_ISOLATE, NULL, &error, &default_unit_job);
         if (r == -EPERM) {
                 log_debug_errno(r, "Default target could not be isolated, starting instead: %s", bus_error_message(&error, r));
 
                 sd_bus_error_free(&error);
 
-                r = manager_add_job(m, JOB_START, target, JOB_REPLACE, &error, &default_unit_job);
+                r = manager_add_job(m, JOB_START, target, JOB_REPLACE, NULL, &error, &default_unit_job);
                 if (r < 0) {
                         *ret_error_message = "Failed to start default target";
                         return log_emergency_errno(r, "Failed to start default target: %s", bus_error_message(&error, r));
@@ -2298,7 +2347,11 @@ int main(int argc, char *argv[]) {
 
         dual_timestamp initrd_timestamp = DUAL_TIMESTAMP_NULL, userspace_timestamp = DUAL_TIMESTAMP_NULL, kernel_timestamp = DUAL_TIMESTAMP_NULL,
                 security_start_timestamp = DUAL_TIMESTAMP_NULL, security_finish_timestamp = DUAL_TIMESTAMP_NULL;
-        struct rlimit saved_rlimit_nofile = RLIMIT_MAKE_CONST(0), saved_rlimit_memlock = RLIMIT_MAKE_CONST((rlim_t) -1);
+        struct rlimit saved_rlimit_nofile = RLIMIT_MAKE_CONST(0),
+                saved_rlimit_memlock = RLIMIT_MAKE_CONST(RLIM_INFINITY); /* The original rlimits we passed
+                                                                          * in. Note we use different values
+                                                                          * for the two that indicate whether
+                                                                          * these fields are initialized! */
         bool skip_setup, loaded_policy = false, queue_default_job = false, first_boot = false, reexecute = false;
         char *switch_root_dir = NULL, *switch_root_init = NULL;
         usec_t before_startup, after_startup;
@@ -2326,8 +2379,7 @@ int main(int argc, char *argv[]) {
         (void) prctl(PR_SET_NAME, systemd);
 
         /* Save the original command line */
-        saved_argv = argv;
-        saved_argc = argc;
+        save_argc_argv(argc, argv);
 
         /* Make sure that if the user says "syslog" we actually log to the journal. */
         log_set_upgrade_syslog_to_journal(true);
@@ -2610,6 +2662,10 @@ finish:
                 arg_watchdog_device = mfree(arg_watchdog_device);
                 return retval;
         }
+#endif
+
+#if HAS_FEATURE_ADDRESS_SANITIZER
+        __lsan_do_leak_check();
 #endif
 
         if (shutdown_verb) {

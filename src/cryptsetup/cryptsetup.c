@@ -4,6 +4,9 @@
 #include <mntent.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "sd-device.h"
 
@@ -16,12 +19,12 @@
 #include "log.h"
 #include "main-func.h"
 #include "mount-util.h"
+#include "nulstr-util.h"
 #include "parse-util.h"
 #include "path-util.h"
+#include "pretty-print.h"
 #include "string-util.h"
 #include "strv.h"
-#include "pretty-print.h"
-#include "util.h"
 
 /* internal helper */
 #define ANY_LUKS "LUKS"
@@ -44,6 +47,8 @@ static unsigned arg_tries = 3;
 static bool arg_readonly = false;
 static bool arg_verify = false;
 static bool arg_discards = false;
+static bool arg_same_cpu_crypt = false;
+static bool arg_submit_from_crypt_cpus = false;
 static bool arg_tcrypt_hidden = false;
 static bool arg_tcrypt_system = false;
 #ifdef CRYPT_TCRYPT_VERA_MODES
@@ -199,6 +204,10 @@ static int parse_one_option(const char *option) {
                 arg_verify = true;
         else if (STR_IN_SET(option, "allow-discards", "discard"))
                 arg_discards = true;
+        else if (streq(option, "same-cpu-crypt"))
+                arg_same_cpu_crypt = true;
+        else if (streq(option, "submit-from-crypt-cpus"))
+                arg_submit_from_crypt_cpus = true;
         else if (streq(option, "luks"))
                 arg_type = ANY_LUKS;
         else if (streq(option, "tcrypt"))
@@ -408,8 +417,7 @@ static int get_password(const char *vol, const char *src, usec_t until, bool acc
                         return log_oom();
 
                 strncpy(c, *p, arg_key_size);
-                free(*p);
-                *p = c;
+                free_and_replace(*p, c);
         }
 
         *ret = TAKE_PTR(passwords);
@@ -451,7 +459,7 @@ static int attach_tcrypt(
                 r = read_one_line_file(key_file, &passphrase);
                 if (r < 0) {
                         log_error_errno(r, "Failed to read password file '%s': %m", key_file);
-                        return -EAGAIN;
+                        return -EAGAIN; /* log with the actual error, but return EAGAIN */
                 }
 
                 params.passphrase = passphrase;
@@ -461,14 +469,19 @@ static int attach_tcrypt(
 
         r = crypt_load(cd, CRYPT_TCRYPT, &params);
         if (r < 0) {
-                if (key_file && r == -EPERM)
-                        return log_error_errno(SYNTHETIC_ERRNO(EAGAIN),
-                                               "Failed to activate using password file '%s'.",
-                                               key_file);
-                return r;
+                if (key_file && r == -EPERM) {
+                        log_error_errno(r, "Failed to activate using password file '%s'. (Key data not correct?)", key_file);
+                        return -EAGAIN; /* log the actual error, but return EAGAIN */
+                }
+
+                return log_error_errno(r, "Failed to load tcrypt superblock on device %s: %m", crypt_get_device_name(cd));
         }
 
-        return crypt_activate_by_volume_key(cd, name, NULL, 0, flags);
+        r = crypt_activate_by_volume_key(cd, name, NULL, 0, flags);
+        if (r < 0)
+                return log_error_errno(r, "Failed to activate tcrypt device %s: %m", crypt_get_device_name(cd));
+
+        return 0;
 }
 
 static int attach_luks_or_plain(struct crypt_device *cd,
@@ -486,10 +499,8 @@ static int attach_luks_or_plain(struct crypt_device *cd,
 
         if (!arg_type || STR_IN_SET(arg_type, ANY_LUKS, CRYPT_LUKS1)) {
                 r = crypt_load(cd, CRYPT_LUKS, NULL);
-                if (r < 0) {
-                        log_error("crypt_load() failed on device %s.\n", crypt_get_device_name(cd));
-                        return r;
-                }
+                if (r < 0)
+                        return log_error_errno(r, "Failed to load LUKS superblock on device %s: %m", crypt_get_device_name(cd));
 
                 if (data_device)
                         r = crypt_set_data_device(cd, data_device);
@@ -530,23 +541,16 @@ static int attach_luks_or_plain(struct crypt_device *cd,
                         cipher_mode = "cbc-essiv:sha256";
                 }
 
-                /* for CRYPT_PLAIN limit reads
-                 * from keyfile to key length, and
-                 * ignore keyfile-size */
+                /* for CRYPT_PLAIN limit reads from keyfile to key length, and ignore keyfile-size */
                 arg_keyfile_size = arg_key_size;
 
-                /* In contrast to what the name
-                 * crypt_setup() might suggest this
-                 * doesn't actually format anything,
-                 * it just configures encryption
-                 * parameters when used for plain
-                 * mode. */
+                /* In contrast to what the name crypt_setup() might suggest this doesn't actually format
+                 * anything, it just configures encryption parameters when used for plain mode. */
                 r = crypt_format(cd, CRYPT_PLAIN, cipher, cipher_mode, NULL, NULL, arg_keyfile_size, &params);
 
                 /* hash == NULL implies the user passed "plain" */
                 pass_volume_key = (params.hash == NULL);
         }
-
         if (r < 0)
                 return log_error_errno(r, "Loading of cryptographic parameters failed: %m");
 
@@ -558,22 +562,34 @@ static int attach_luks_or_plain(struct crypt_device *cd,
 
         if (key_file) {
                 r = crypt_activate_by_keyfile_offset(cd, name, arg_key_slot, key_file, arg_keyfile_size, arg_keyfile_offset, flags);
-                if (r < 0) {
-                        log_error_errno(r, "Failed to activate with key file '%s': %m", key_file);
-                        return -EAGAIN;
+                if (r == -EPERM) {
+                        log_error_errno(r, "Failed to activate with key file '%s'. (Key data incorrect?)", key_file);
+                        return -EAGAIN; /* Log actual error, but return EAGAIN */
                 }
+                if (r == -EINVAL) {
+                        log_error_errno(r, "Failed to activate with key file '%s'. (Key file missing?)", key_file);
+                        return -EAGAIN; /* Log actual error, but return EAGAIN */
+                }
+                if (r < 0)
+                        return log_error_errno(r, "Failed to activate with key file '%s': %m", key_file);
         } else {
                 char **p;
 
+                r = -EINVAL;
                 STRV_FOREACH(p, passwords) {
                         if (pass_volume_key)
                                 r = crypt_activate_by_volume_key(cd, name, *p, arg_key_size, flags);
                         else
                                 r = crypt_activate_by_passphrase(cd, name, arg_key_slot, *p, strlen(*p), flags);
-
                         if (r >= 0)
                                 break;
                 }
+                if (r == -EPERM) {
+                        log_error_errno(r, "Failed to activate with specified passphrase. (Passphrase incorrect?)");
+                        return -EAGAIN; /* log actual error, but return EAGAIN */
+                }
+                if (r < 0)
+                        return log_error_errno(r, "Failed to activate with specified passphrase: %m");
         }
 
         return r;
@@ -597,6 +613,24 @@ static int help(void) {
         );
 
         return 0;
+}
+
+static uint32_t determine_flags(void) {
+        uint32_t flags = 0;
+
+        if (arg_readonly)
+                flags |= CRYPT_ACTIVATE_READONLY;
+
+        if (arg_discards)
+                flags |= CRYPT_ACTIVATE_ALLOW_DISCARDS;
+
+        if (arg_same_cpu_crypt)
+                flags |= CRYPT_ACTIVATE_SAME_CPU_CRYPT;
+
+        if (arg_submit_from_crypt_cpus)
+                flags |= CRYPT_ACTIVATE_SUBMIT_FROM_CRYPT_CPUS;
+
+        return flags;
 }
 
 static int run(int argc, char *argv[]) {
@@ -624,10 +658,8 @@ static int run(int argc, char *argv[]) {
 
                 /* Arguments: systemd-cryptsetup attach VOLUME SOURCE-DEVICE [PASSWORD] [OPTIONS] */
 
-                if (argc < 4) {
-                        log_error("attach requires at least two arguments.");
-                        return -EINVAL;
-                }
+                if (argc < 4)
+                        return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "attach requires at least two arguments.");
 
                 if (argc >= 5 &&
                     argv[4][0] &&
@@ -635,7 +667,7 @@ static int run(int argc, char *argv[]) {
                     !streq(argv[4], "none")) {
 
                         if (!path_is_absolute(argv[4]))
-                                log_error("Password file path '%s' is not absolute. Ignoring.", argv[4]);
+                                log_warning("Password file path '%s' is not absolute. Ignoring.", argv[4]);
                         else
                                 key_file = argv[4];
                 }
@@ -665,11 +697,7 @@ static int run(int argc, char *argv[]) {
                         return 0;
                 }
 
-                if (arg_readonly)
-                        flags |= CRYPT_ACTIVATE_READONLY;
-
-                if (arg_discards)
-                        flags |= CRYPT_ACTIVATE_ALLOW_DISCARDS;
+                flags = determine_flags();
 
                 if (arg_timeout == USEC_INFINITY)
                         until = 0;
@@ -709,20 +737,15 @@ static int run(int argc, char *argv[]) {
                                                          flags);
                         if (r >= 0)
                                 break;
-                        if (r == -EAGAIN) {
-                                key_file = NULL;
-                                continue;
-                        }
-                        if (r != -EPERM)
-                                return log_error_errno(r, "Failed to activate: %m");
+                        if (r != -EAGAIN)
+                                return r;
 
-                        log_warning("Invalid passphrase.");
+                        /* Passphrase not correct? Let's try again! */
+                        key_file = NULL;
                 }
 
-                if (arg_tries != 0 && tries >= arg_tries) {
-                        log_error("Too many attempts; giving up.");
-                        return -EPERM;
-                }
+                if (arg_tries != 0 && tries >= arg_tries)
+                        return log_error_errno(SYNTHETIC_ERRNO(EPERM), "Too many attempts to activate; giving up.");
 
         } else if (streq(argv[1], "detach")) {
 
@@ -740,10 +763,8 @@ static int run(int argc, char *argv[]) {
                 if (r < 0)
                         return log_error_errno(r, "Failed to deactivate: %m");
 
-        } else {
-                log_error("Unknown verb %s.", argv[1]);
-                return -EINVAL;
-        }
+        } else
+                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown verb %s.", argv[1]);
 
         return 0;
 }

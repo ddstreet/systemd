@@ -177,7 +177,7 @@ static int signal_activation_request(sd_bus_message *message, void *userdata, sd
                 goto failed;
         }
 
-        r = manager_add_job(m, JOB_START, u, JOB_REPLACE, &error, NULL);
+        r = manager_add_job(m, JOB_START, u, JOB_REPLACE, NULL, &error, NULL);
         if (r < 0)
                 goto failed;
 
@@ -611,7 +611,7 @@ static int bus_setup_disconnected_match(Manager *m, sd_bus *bus) {
 }
 
 static int bus_on_connection(sd_event_source *s, int fd, uint32_t revents, void *userdata) {
-        _cleanup_(sd_bus_unrefp) sd_bus *bus = NULL;
+        _cleanup_(sd_bus_close_unrefp) sd_bus *bus = NULL;
         _cleanup_close_ int nfd = -1;
         Manager *m = userdata;
         sd_id128_t id;
@@ -622,6 +622,9 @@ static int bus_on_connection(sd_event_source *s, int fd, uint32_t revents, void 
 
         nfd = accept4(fd, NULL, NULL, SOCK_NONBLOCK|SOCK_CLOEXEC);
         if (nfd < 0) {
+                if (ERRNO_IS_ACCEPT_AGAIN(errno))
+                        return 0;
+
                 log_warning_errno(errno, "Failed to accept private connection, ignoring: %m");
                 return 0;
         }
@@ -876,7 +879,7 @@ static int bus_setup_api(Manager *m, sd_bus *bus) {
 }
 
 int bus_init_api(Manager *m) {
-        _cleanup_(sd_bus_unrefp) sd_bus *bus = NULL;
+        _cleanup_(sd_bus_close_unrefp) sd_bus *bus = NULL;
         int r;
 
         if (m->api_bus)
@@ -940,7 +943,7 @@ static int bus_setup_system(Manager *m, sd_bus *bus) {
 }
 
 int bus_init_system(Manager *m) {
-        _cleanup_(sd_bus_unrefp) sd_bus *bus = NULL;
+        _cleanup_(sd_bus_close_unrefp) sd_bus *bus = NULL;
         int r;
 
         if (m->system_bus)
@@ -1080,8 +1083,7 @@ static void destroy_bus(Manager *m, sd_bus **bus) {
                 sd_bus_flush(*bus);
 
         /* And destroy the object */
-        sd_bus_close(*bus);
-        *bus = sd_bus_unref(*bus);
+        *bus = sd_bus_close_unref(*bus);
 }
 
 void bus_done_api(Manager *m) {

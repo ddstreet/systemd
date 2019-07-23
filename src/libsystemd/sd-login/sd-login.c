@@ -818,7 +818,7 @@ _public_ int sd_get_uids(uid_t **users) {
                                 uid_t *t;
 
                                 n = MAX(16, 2*r);
-                                t = realloc(l, sizeof(uid_t) * n);
+                                t = reallocarray(l, sizeof(uid_t), n);
                                 if (!t)
                                         return -ENOMEM;
 
@@ -945,11 +945,11 @@ _public_ int sd_machine_get_ifindices(const char *machine, int **ifindices) {
         return nr;
 }
 
-static inline int MONITOR_TO_FD(sd_login_monitor *m) {
+static int MONITOR_TO_FD(sd_login_monitor *m) {
         return (int) (unsigned long) m - 1;
 }
 
-static inline sd_login_monitor* FD_TO_MONITOR(int fd) {
+static sd_login_monitor* FD_TO_MONITOR(int fd) {
         return (sd_login_monitor*) (unsigned long) (fd + 1);
 }
 

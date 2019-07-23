@@ -12,7 +12,7 @@
 
 static bool initialized;
 
-static const struct udev_builtin *builtins[_UDEV_BUILTIN_MAX] = {
+static const struct udev_builtin *const builtins[_UDEV_BUILTIN_MAX] = {
 #if HAVE_BLKID
         [UDEV_BUILTIN_BLKID] = &udev_builtin_blkid,
 #endif
@@ -139,7 +139,7 @@ int udev_builtin_add_property(sd_device *dev, bool test, const char *key, const 
                                               key, val ? "=" : "", strempty(val));
 
         if (test)
-                printf("%s=%s\n", key, val);
+                printf("%s=%s\n", key, strempty(val));
 
         return 0;
 }

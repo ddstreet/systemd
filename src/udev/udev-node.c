@@ -181,6 +181,9 @@ static int link_find_prioritized(sd_device *dev, bool add, const char *stackdir,
                 priority = db_prio;
         }
 
+        if (!target)
+                return -ENOENT;
+
         *ret = TAKE_PTR(target);
         return 0;
 }
@@ -269,7 +272,7 @@ int udev_node_update_old_links(sd_device *dev, sd_device *dev_old) {
 
 static int node_permissions_apply(sd_device *dev, bool apply,
                                   mode_t mode, uid_t uid, gid_t gid,
-                                  Hashmap *seclabel_list) {
+                                  OrderedHashmap *seclabel_list) {
         const char *devnode, *subsystem, *id_filename = NULL;
         struct stat stats;
         dev_t devnum;
@@ -297,7 +300,7 @@ static int node_permissions_apply(sd_device *dev, bool apply,
                 return log_device_debug_errno(dev, errno, "cannot stat() node '%s' (%m)", devnode);
 
         if (((stats.st_mode & S_IFMT) != (mode & S_IFMT)) || (stats.st_rdev != devnum))
-                return log_device_debug_errno(dev, EEXIST, "Found node '%s' with non-matching devnum %s, skip handling",
+                return log_device_debug_errno(dev, SYNTHETIC_ERRNO(EEXIST), "Found node '%s' with non-matching devnum %s, skip handling",
                                               devnode, id_filename);
 
         if (apply) {
@@ -315,7 +318,7 @@ static int node_permissions_apply(sd_device *dev, bool apply,
                         log_device_debug(dev, "Preserve permissions of %s, %#o, uid=%u, gid=%u", devnode, mode, uid, gid);
 
                 /* apply SECLABEL{$module}=$label */
-                HASHMAP_FOREACH_KEY(label, name, seclabel_list, i) {
+                ORDERED_HASHMAP_FOREACH_KEY(label, name, seclabel_list, i) {
                         int q;
 
                         if (streq(name, "selinux")) {
@@ -383,7 +386,7 @@ static int xsprintf_dev_num_path_from_sd_device(sd_device *dev, char **ret) {
 
 int udev_node_add(sd_device *dev, bool apply,
                   mode_t mode, uid_t uid, gid_t gid,
-                  Hashmap *seclabel_list) {
+                  OrderedHashmap *seclabel_list) {
         const char *devnode, *devlink;
         _cleanup_free_ char *filename = NULL;
         int r;

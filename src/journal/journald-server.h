@@ -16,6 +16,7 @@ typedef struct Server Server;
 #include "journald-stream.h"
 #include "list.h"
 #include "prioq.h"
+#include "time-util.h"
 
 typedef enum Storage {
         STORAGE_AUTO,
@@ -160,6 +161,8 @@ struct Server {
         /* Caching of client metadata */
         Hashmap *client_contexts;
         Prioq *client_contexts_lru;
+
+        usec_t last_cache_pid_flush;
 
         ClientContext *my_context; /* the context of journald itself */
         ClientContext *pid1_context; /* the context of PID 1 */

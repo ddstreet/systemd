@@ -24,7 +24,6 @@
 #include "parse-util.h"
 #include "path-util.h"
 #include "process-util.h"
-#include "serialize.h"
 #include "stat-util.h"
 #include "string-util.h"
 #include "strv.h"
@@ -1032,6 +1031,15 @@ int parse_sec_fix_0(const char *t, usec_t *ret) {
         return r;
 }
 
+int parse_sec_def_infinity(const char *t, usec_t *ret) {
+        t += strspn(t, WHITESPACE);
+        if (isempty(t)) {
+                *ret = USEC_INFINITY;
+                return 0;
+        }
+        return parse_sec(t, ret);
+}
+
 static const char* extract_nsec_multiplier(const char *p, nsec_t *multiplier) {
         static const struct {
                 const char *suffix;
@@ -1206,7 +1214,7 @@ int get_timezones(char ***ret) {
         n_allocated = 2;
         n_zones = 1;
 
-        f = fopen("/usr/share/zoneinfo/zone.tab", "re");
+        f = fopen("/usr/share/zoneinfo/zone1970.tab", "re");
         if (f) {
                 for (;;) {
                         _cleanup_free_ char *line = NULL;
