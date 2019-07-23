@@ -255,9 +255,8 @@ static void test_zeroes(JsonVariant *v) {
         }
 }
 
-static void test_build(void) {
+static void test_build1(void) {
         _cleanup_(json_variant_unrefp) JsonVariant *a = NULL, *b = NULL;
-        _cleanup_free_ char *s = NULL, *t = NULL;
 
         assert_se(json_build(&a, JSON_BUILD_STRING("hallo")) >= 0);
         assert_se(json_build(&b, JSON_BUILD_LITERAL(" \"hallo\"   ")) >= 0);
@@ -271,9 +270,10 @@ static void test_build(void) {
         b = json_variant_unref(b);
         assert_se(json_build(&b, JSON_BUILD_STRING("pief")) >= 0);
         assert_se(!json_variant_equal(a, b));
+}
 
-        a = json_variant_unref(a);
-        b = json_variant_unref(b);
+static void test_build2(void) {
+        _cleanup_(json_variant_unrefp) JsonVariant *a = NULL, *b = NULL;
 
         assert_se(json_build(&a, JSON_BUILD_OBJECT(JSON_BUILD_PAIR("one", JSON_BUILD_INTEGER(7)),
                                                    JSON_BUILD_PAIR("two", JSON_BUILD_REAL(2.0)),
@@ -284,9 +284,11 @@ static void test_build(void) {
                                                    JSON_BUILD_PAIR("one", JSON_BUILD_REAL(7)))) >= 0);
 
         assert_se(json_variant_equal(a, b));
+}
 
-        a = json_variant_unref(a);
-        b = json_variant_unref(b);
+static void test_build3(void) {
+        _cleanup_(json_variant_unrefp) JsonVariant *a = NULL, *b = NULL;
+        _cleanup_free_ char *s = NULL;
 
         const char* arr_1234[] = {"one", "two", "three", "four", NULL};
         assert_se(json_build(&a, JSON_BUILD_ARRAY(JSON_BUILD_OBJECT(JSON_BUILD_PAIR("x", JSON_BUILD_BOOLEAN(true)),
@@ -304,13 +306,14 @@ static void test_build(void) {
         log_info("GOT: %s\n", s);
         assert_se(json_parse(s, &b, NULL, NULL) >= 0);
         assert_se(json_variant_equal(a, b));
+}
 
-        a = json_variant_unref(a);
-        b = json_variant_unref(b);
+static void test_build4(void) {
+        _cleanup_(json_variant_unrefp) JsonVariant *a = NULL, *b = NULL;
+        _cleanup_free_ char *s = NULL, *t = NULL;
 
         assert_se(json_build(&a, JSON_BUILD_REAL(M_PIl)) >= 0);
 
-        s = mfree(s);
         assert_se(json_variant_format(a, 0, &s) >= 0);
         log_info("GOT: %s\n", s);
         assert_se(json_parse(s, &b, NULL, NULL) >= 0);
@@ -318,9 +321,10 @@ static void test_build(void) {
         log_info("GOT: %s\n", t);
 
         assert_se(streq(s, t));
+}
 
-        a = json_variant_unref(a);
-        b = json_variant_unref(b);
+static void test_build5(void) {
+        _cleanup_(json_variant_unrefp) JsonVariant *a = NULL, *b = NULL;
 
         assert_se(json_build(&a, JSON_BUILD_OBJECT(
                                              JSON_BUILD_PAIR("x", JSON_BUILD_STRING("y")),
@@ -337,6 +341,18 @@ static void test_build(void) {
                              )) >= 0);
 
         assert_se(json_variant_equal(a, b));
+}
+
+static void test_build(void) {
+        test_build1();
+
+        test_build2();
+
+        test_build3();
+
+        test_build4();
+
+        test_build5();
 }
 
 static void test_source(void) {
