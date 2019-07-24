@@ -8,14 +8,14 @@ From https://github.com/systemd/systemd/pull/12536
 LP: #1835809
 ===================================================================
 ---
- src/basic/random-util.c | 16 +++++++++++++++-
- 1 file changed, 15 insertions(+), 1 deletion(-)
+ src/basic/random-util.c | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/src/basic/random-util.c b/src/basic/random-util.c
-index f7decf6..857027f 100644
+index ca25fd2..8430154 100644
 --- a/src/basic/random-util.c
 +++ b/src/basic/random-util.c
-@@ -37,6 +37,7 @@ int rdrand(unsigned long *ret) {
+@@ -34,6 +34,7 @@ int rdrand(unsigned long *ret) {
  
  #if defined(__i386__) || defined(__x86_64__)
          static int have_rdrand = -1;
@@ -23,14 +23,15 @@ index f7decf6..857027f 100644
          unsigned char err;
  
          if (have_rdrand < 0) {
-@@ -56,9 +57,22 @@ int rdrand(unsigned long *ret) {
+@@ -53,9 +54,23 @@ int rdrand(unsigned long *ret) {
  
          asm volatile("rdrand %0;"
                       "setc %1"
 -                     : "=r" (*ret),
 +                     : "=r" (v),
                         "=qm" (err));
- 
+         msan_unpoison(&err, sizeof(err));
++
 +       /* Apparently on some AMD CPUs RDRAND will sometimes (after a suspend/resume cycle?) report success
 +        * via the carry flag but nonetheless return the same fixed value -1 in all cases. This appears to be
 +        * a bad bug in the CPU or firmware. Let's deal with that and work-around this by explicitly checking
@@ -44,6 +45,6 @@ index f7decf6..857027f 100644
 +
 +       *ret = v;
 +
- #if HAS_FEATURE_MEMORY_SANITIZER
-         __msan_unpoison(&err, sizeof(err));
- #endif
+         if (!err)
+                 return -EAGAIN;
+ 
