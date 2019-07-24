@@ -80,10 +80,11 @@ static int retrieve_key(key_serial_t serial, char ***ret) {
                 if (n < m)
                         break;
 
-                explicit_bzero_safe(p, n);
+                explicit_bzero_safe(p, m);
 
                 if (m > LONG_MAX / 2) /* overflow check */
                         return -ENOMEM;
+
                 m *= 2;
                 if ((long) (size_t) m != m) /* make sure that this still fits if converted to size_t */
                         return -ENOMEM;
