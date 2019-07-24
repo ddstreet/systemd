@@ -1,3 +1,12 @@
+systemd (242-2ubuntu1) eoan; urgency=medium
+
+  * Merge to Ubuntu from experimental
+  * Refresh patches
+  * debian/gbp.conf: Change debian-branch to ubuntu-eoan
+  * Drop pre-bionic migration code
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Wed, 24 Jul 2019 21:04:20 +0200
+
 systemd (242-2) experimental; urgency=medium
 
   [ Michael Biebl ]
