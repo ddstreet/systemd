@@ -1,4 +1,4 @@
-systemd (242-2ubuntu1) UNRELEASED; urgency=medium
+systemd (242-2ubuntu1) eoan; urgency=medium
 
   * Merge to Ubuntu from experimental
     - Dropped changes:
