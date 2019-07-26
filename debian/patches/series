@@ -37,3 +37,5 @@ resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch
 Revert-namespace-be-more-careful-when-handling-namespacin.patch
 ask-password-prevent-buffer-overrow-when-reading-fro.patch
 rdrand-workaround-on-amd.patch
+networkd-fix-link_up-12505.patch
+network-do-not-send-ipv6-token-to-kernel.patch
