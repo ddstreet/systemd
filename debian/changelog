@@ -148,6 +148,8 @@ systemd (242-2ubuntu1) UNRELEASED; urgency=medium
         - debian/extra/dhclient-enter-resolved-hook
         - debian/rules
         https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=f3398a213f80b02bf3db0c1ce9e22d69f6d56764
+        https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=258893bae8cbb12670e4807636fe8f7e9fb5407a
+        https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=0725c1169ddde4f41cacba7af3e546704e2206be
       * Disable systemd-networkd-wait-online by default.
         File: debian/systemd.postinst
         https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=694473d812b50d2fefd6494d494ca02b91bc8785
@@ -284,12 +286,6 @@ systemd (242-2ubuntu1) UNRELEASED; urgency=medium
       * Cherrypick ask-password: prevent buffer overrow when reading from keyring.
         File: debian/patches/ask-password-prevent-buffer-overrow-when-reading-fro.patch
         https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=6d6e9cbd4fc6e018031a4762e88f2c3aa19e24e8
-      * Only restart resolved on changes in dhclient enter hook.
-        This prevents spurious restarts of resolved on rebounds when
-        the addresses did not change
-        Author: Julian Andres Klode
-        File: debian/extra/dhclient-enter-resolved-hook
-        https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=258893bae8cbb12670e4807636fe8f7e9fb5407a
       * Wait for cryptsetup unit to start, before stopping.
         File: debian/tests/storage
         https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b65aa350be7e61c65927fbc0921a750fcfaa51cd
@@ -299,9 +295,6 @@ systemd (242-2ubuntu1) UNRELEASED; urgency=medium
       * Fix typpo in storage test.
         File: debian/tests/storage
         https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=f28aa5fe4ab175b99b6ea702559c59ca473b4ca8
-      * Fix bashism
-        File: debian/extra/dhclient-enter-resolved-hook
-        https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=0725c1169ddde4f41cacba7af3e546704e2206be
       * random-util: eat up bad RDRAND values seen on AMD CPUs.
         File: debian/patches/+rdrand-workaround-on-amd.patch
         https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?h=ubuntu-eoan&id=6ab88231efca4b04b26de6cfb5d671be154aabe0
