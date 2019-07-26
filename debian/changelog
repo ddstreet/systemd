@@ -300,6 +300,12 @@ systemd (242-2ubuntu1) UNRELEASED; urgency=medium
         https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?h=ubuntu-eoan&id=6ab88231efca4b04b26de6cfb5d671be154aabe0
   * Refresh patches
   * debian/gbp.conf: Change debian-branch to ubuntu-eoan
+  * Fix networking with Linux 5.2
+    Files:
+    - debian/patches/network-do-not-send-ipv6-token-to-kernel.patch
+    - debian/patches/networkd-fix-link_up-12505.patch
+    https://github.com/systemd/systemd/commit/4eb086a38712ea98faf41e075b84555b11b54362
+    https://github.com/systemd/systemd/commit/9f6e82e6eb3b6e73d66d00d1d6eee60691fb702f
 
  -- Balint Reczey <rbalint@ubuntu.com>  Wed, 24 Jul 2019 21:04:20 +0200
 
