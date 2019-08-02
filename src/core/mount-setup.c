@@ -78,10 +78,10 @@ static const MountPoint mount_table[] = {
         { "devpts",      "/dev/pts",                  "devpts",     "mode=620,gid=" STRINGIFY(TTY_GID), MS_NOSUID|MS_NOEXEC,
           NULL,          MNT_IN_CONTAINER           },
 #if ENABLE_SMACK
-        { "tmpfs",       "/run",                      "tmpfs",      "mode=755,smackfsroot=*",  MS_NOSUID|MS_NODEV|MS_STRICTATIME,
+        { "tmpfs",       "/run",                      "tmpfs",      "mode=755,size=10%,smackfsroot=*",  MS_NOSUID|MS_NODEV|MS_STRICTATIME,
           mac_smack_use, MNT_FATAL                  },
 #endif
-        { "tmpfs",       "/run",                      "tmpfs",      "mode=755",                MS_NOSUID|MS_NODEV|MS_STRICTATIME,
+        { "tmpfs",       "/run",                      "tmpfs",      "mode=755,size=10%",                MS_NOSUID|MS_NODEV|MS_STRICTATIME,
           NULL,          MNT_FATAL|MNT_IN_CONTAINER },
         { "tmpfs",       "/run/lock",                 "tmpfs",      "mode=1777,size=5242880",  MS_NOSUID|MS_NODEV|MS_NOEXEC,
           NULL,          MNT_FATAL|MNT_IN_CONTAINER },
