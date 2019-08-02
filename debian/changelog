@@ -1,3 +1,16 @@
+systemd (242-2ubuntu2) eoan; urgency=medium
+
+  [ Dan Streetman ]
+  * d/p/lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch:
+    - Set src address for dhcp 'classless' routes (LP: #1835581)
+
+  [ Jorge Niedbalski ]
+  * d/p/lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch:
+    Allows cache=no-negative option to be set, ignoring negative
+    answers to be cached (LP: #1668771).
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 02 Aug 2019 18:35:02 -0400
+
 systemd (242-2ubuntu1) eoan; urgency=medium
 
   * Merge to Ubuntu from experimental

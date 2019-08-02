@@ -39,3 +39,5 @@ ask-password-prevent-buffer-overrow-when-reading-fro.patch
 rdrand-workaround-on-amd.patch
 networkd-fix-link_up-12505.patch
 network-do-not-send-ipv6-token-to-kernel.patch
+lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
+lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
