@@ -2,7 +2,11 @@
 #pragma once
 
 #include "conf-parser.h"
+#include "in-addr-util.h"
 #include "macro.h"
+
+/* 127.0.0.53 in native endian */
+#define INADDR_DNS_STUB ((in_addr_t) 0x7f000035U)
 
 typedef enum DnsCacheMode DnsCacheMode;
 
@@ -52,6 +56,9 @@ enum DnsOverTlsMode {
          * fallback to using an unencrypted connection */
         DNS_OVER_TLS_OPPORTUNISTIC,
 
+        /* Enforce DNS-over-TLS and require valid server certificates */
+        DNS_OVER_TLS_YES,
+
         _DNS_OVER_TLS_MODE_MAX,
         _DNS_OVER_TLS_MODE_INVALID = -1
 };
@@ -69,6 +76,8 @@ DnssecMode dnssec_mode_from_string(const char *s) _pure_;
 
 const char* dns_over_tls_mode_to_string(DnsOverTlsMode p) _const_;
 DnsOverTlsMode dns_over_tls_mode_from_string(const char *s) _pure_;
+
+bool dns_server_address_valid(int family, const union in_addr_union *sa);
 
 const char* dns_cache_mode_to_string(DnsCacheMode p) _const_;
 DnsCacheMode dns_cache_mode_from_string(const char *s) _pure_;
