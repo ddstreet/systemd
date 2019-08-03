@@ -14,7 +14,7 @@ Bug-Ubuntu: https://launchpad.net/bugs/1227520
  1 file changed, 24 insertions(+), 4 deletions(-)
 
 diff --git a/src/hostname/hostnamed.c b/src/hostname/hostnamed.c
-index c35ef55..2e40e21 100644
+index 75cba58..1383490 100644
 --- a/src/hostname/hostnamed.c
 +++ b/src/hostname/hostnamed.c
 @@ -25,6 +25,7 @@

@@ -10,10 +10,10 @@ really have no need for vga or seabios in this case.
  1 file changed, 1 insertion(+)
 
 diff --git a/test/test-functions b/test/test-functions
-index 7179f70..5d74fc7 100644
+index 37bdfd5..445964b 100644
 --- a/test/test-functions
 +++ b/test/test-functions
-@@ -183,6 +183,7 @@ $KERNEL_APPEND \
+@@ -207,6 +207,7 @@ $KERNEL_APPEND \
  -net none \
  -m $QEMU_MEM \
  -nographic \
