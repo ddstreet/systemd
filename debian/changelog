@@ -1,4 +1,4 @@
-systemd (243~rc1-1) UNRELEASED; urgency=medium
+systemd (243~rc1-0ubuntu1) UNRELEASED; urgency=medium
 
   [ Dan Streetman ]
   * d/t/boot-and-services: fix test_failing() (LP: #1831296)
@@ -22,8 +22,9 @@ systemd (243~rc1-1) UNRELEASED; urgency=medium
   * Refresh patches
   * analyze: declare dump_exit_status outside of HAVE_SECCOMP block
     This fixes the udeb build.
+  * Refresh patches
 
- -- Balint Reczey <rbalint@ubuntu.com>  Sat, 03 Aug 2019 21:39:40 +0200
+ -- Balint Reczey <rbalint@ubuntu.com>  Sat, 03 Aug 2019 22:01:14 +0200
 
 systemd (242-2ubuntu1) eoan; urgency=medium
 
