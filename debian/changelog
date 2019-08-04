@@ -1,4 +1,4 @@
-systemd (243~rc1-0ubuntu1) UNRELEASED; urgency=medium
+systemd (243~rc1-0ubuntu1) eoan; urgency=medium
 
   [ Dan Streetman ]
   * d/t/boot-and-services: fix test_failing() (LP: #1831296)
@@ -19,10 +19,29 @@ systemd (243~rc1-0ubuntu1) UNRELEASED; urgency=medium
 
   [ Balint Reczey ]
   * New upstream version 243~rc1
-  * Refresh patches
+  * Refresh patches:
+    - Dropped changes:
+      * d/p/lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch:
+        - Set src address for dhcp 'classless' routes (LP: #1835581)
+      * d/p/lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch:
+        Allows cache=no-negative option to be set, ignoring negative
+        answers to be cached (LP: #1668771).
+        * Fix networking with Linux 5.2
+          Files:
+          - debian/patches/network-do-not-send-ipv6-token-to-kernel.patch
+          - debian/patches/networkd-fix-link_up-12505.patch
+          https://github.com/systemd/systemd/commit/4eb086a38712ea98faf41e075b84555b11b54362
+          https://github.com/systemd/systemd/commit/9f6e82e6eb3b6e73d66d00d1d6eee60691fb702f
+      * Cherrypick ask-password: prevent buffer overrow when reading from keyring.
+        File: debian/patches/ask-password-prevent-buffer-overrow-when-reading-fro.patch
+        https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=6d6e9cbd4fc6e018031a4762e88f2c3aa19e24e8
+      * random-util: eat up bad RDRAND values seen on AMD CPUs.
+        File: debian/patches/+rdrand-workaround-on-amd.patch
+        https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?h=ubuntu-eoan&id=6ab88231efca4b04b26de6cfb5d671be154aabe0
+  * Merge changes from Debian Salsa's experimental branch
   * analyze: declare dump_exit_status outside of HAVE_SECCOMP block
     This fixes the udeb build.
-  * Refresh patches
+  * Update symbols
 
  -- Balint Reczey <rbalint@ubuntu.com>  Sat, 03 Aug 2019 22:01:14 +0200
 
