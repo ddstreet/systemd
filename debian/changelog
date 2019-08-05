@@ -2,26 +2,26 @@ systemd (243~rc1-1) UNRELEASED; urgency=medium
 
   [ Dan Streetman ]
   * d/t/boot-and-services: fix test_failing() (LP: #1831296)
-  * d/t/boot-and-services: check for any kernel message, not just first kernel message.
-    (LP: #1830479) (Closes: #929730)
-  * d/t/upstream: add TEST-30, TEST-34 to blacklist.
+  * d/t/boot-and-services: check for any kernel message, not just first kernel
+    message (LP: #1830479, Closes: #929730)
+  * d/t/upstream: add TEST-30, TEST-34 to blacklist
   * d/t/timedated: replace systemctl is-active with systemctl show
   * d/t/control: root-unittests can break networking, add breaks-testbed
-  * d/t/control: mark udev test skippable.
+  * d/t/control: mark udev test skippable
   * d/t/upstream: always cleanup after (and before) each test
   * d/t/control: upstream test requires dmeventd.
-  * d/e/checkout-upstream: don't remove .git.
-  * d/e/checkout-upstream: move change to debian/ files above other changes.
-  * d/e/checkout-upstream: add UPSTREAM_KEEP_CHANGELOG param.
-  * d/e/checkout-upstream: create git commits for each change.
-  * d/e/checkout-upstream: switch from 'quilt' to 'native' format.
+  * d/e/checkout-upstream: don't remove .git
+  * d/e/checkout-upstream: move change to debian/ files above other changes
+  * d/e/checkout-upstream: add UPSTREAM_KEEP_CHANGELOG param
+  * d/e/checkout-upstream: create git commits for each change
+  * d/e/checkout-upstream: switch from 'quilt' to 'native' format
   * d/e/checkout-upstream: set user.name, user.email if unset
 
   [ Balint Reczey ]
   * New upstream version 243~rc1
   * Refresh patches
-  * analyze: declare dump_exit_status outside of HAVE_SECCOMP block.
-    This fixes udeb build
+  * analyze: declare dump_exit_status outside of HAVE_SECCOMP block
+    This fixes the udeb build.
 
  -- Balint Reczey <rbalint@ubuntu.com>  Sat, 03 Aug 2019 21:39:40 +0200
 
