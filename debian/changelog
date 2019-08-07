@@ -1,3 +1,21 @@
+systemd (237-3ubuntu10.26) bionic; urgency=medium
+
+  [ You-Sheng Yang ]
+  * d/p/d/Revert-udev-network-device-renaming-immediately-give.patch:
+    - udev: drop Revert-udev-network-device-renaming-immediately-give.patch
+      The removing patch was for the already deprecated
+      "75-persistent-net-generator.rules" based interface renaming mechanism,
+      and it's causing unnecessary problem when a system happends to NICs with
+      same MAC address, e.g. Dell's MAC address pass-thru. (LP: #1837700)
+
+  [ Shih-Yuan Lee (FourDollars) ]
+  * d/p/hwdb-revert-airplane-mode-keys-handling-on-Dell.patch:
+    - hwdb: revert airplane mode keys handling on Dell
+      That reverts some commits those created double key events issues on some
+      Dell laptops. (LP: #1740894)
+
+ -- Shih-Yuan Lee (FourDollars) <sylee@canonical.com>  Wed, 07 Aug 2019 17:56:02 +0800
+
 systemd (237-3ubuntu10.25) bionic; urgency=medium
 
   [ Dan Streetman ]
