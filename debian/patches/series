@@ -42,7 +42,6 @@ debian/Add-run-initctl-support-to-SysV-compat-tools.patch
 debian/Add-note-to-udev.conf-that-changes-to-that-file-requ.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
-debian/Revert-udev-network-device-renaming-immediately-give.patch
 debian/Add-support-for-TuxOnIce-hibernation.patch
 debian/Include-additional-directories-in-ProtectSystem.patch
 debian/Re-enable-journal-forwarding-to-syslog.patch
@@ -122,3 +121,4 @@ core-execute-generators-with-manager-s-environmnet.patch
 lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
 lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
 lp1833671-networkd-keep-bond-slave-up-if-already-attached.patch
+hwdb-revert-airplane-mode-keys-handling-on-Dell.patch
