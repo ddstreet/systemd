@@ -1,0 +1,33 @@
+From: seb128 <seb128@ubuntu.com>
+Date: Fri, 9 Nov 2018 16:54:02 +0100
+Subject: hwdb: revert airplane mode keys handling on Dell
+
+That reverts the commits #8762 and #9868, those created double key events issues on some Dell laptops.
+---
+ hwdb/60-keyboard.hwdb | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/hwdb/60-keyboard.hwdb b/hwdb/60-keyboard.hwdb
+index 262e772..c4f02e9 100644
+--- a/hwdb/60-keyboard.hwdb
++++ b/hwdb/60-keyboard.hwdb
+@@ -263,7 +263,7 @@ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnDell*:pn*
+  KEYBOARD_KEY_85=brightnessdown                         # Fn+Down Brightness Down
+  KEYBOARD_KEY_86=brightnessup                           # Fn+Up Brightness Up
+  KEYBOARD_KEY_87=battery                                # Fn+F3 battery icon
+- KEYBOARD_KEY_88=!wlan                                  # Fn+(F2|PrtScr|Home) Turn On/Off Wireless
++ KEYBOARD_KEY_88=unknown                                # Fn+F2 Turn On/Off Wireless - handled in hardware
+  KEYBOARD_KEY_89=ejectclosecd                           # Fn+F10 Eject CD
+  KEYBOARD_KEY_8a=suspend                                # Fn+F1 hibernate
+  KEYBOARD_KEY_8b=switchvideomode                        # Fn+F8 CRT/LCD (high keycode: "displaytoggle")
+@@ -299,6 +299,10 @@ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnDell*:pnLatitude*2110:pvr*
+  KEYBOARD_KEY_85=unknown  # Brightness Down, also emitted by acpi-video, ignore
+  KEYBOARD_KEY_86=unknown  # Brightness Up, also emitted by acpi-video, ignore
+ 
++# Dell Inspiron 537*
++evdev:atkbd:dmi:bvn*:bvr*:bd*:svnDell*:pnInspiron537*:pvr*
++ KEYBOARD_KEY_88=!wlan                                  # Fn-PrtScr rfkill
++
+ # Latitude XT2
+ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnDell*:pnLatitude*XT2:pvr*
+  KEYBOARD_KEY_9b=up                                     # tablet rocker up
