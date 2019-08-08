@@ -2020,9 +2020,7 @@ int server_init(Server *s) {
                 .sync_interval_usec = DEFAULT_SYNC_INTERVAL_USEC,
                 .sync_scheduled = false,
 
-                .rate_limit_interval = DEFAULT_RATE_LIMIT_INTERVAL,
-                .rate_limit_burst = DEFAULT_RATE_LIMIT_BURST,
-
+                .forward_to_syslog = true,
                 .forward_to_wall = true,
 
                 .max_file_usec = DEFAULT_MAX_FILE_USEC,
