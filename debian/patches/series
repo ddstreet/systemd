@@ -1,4 +1,8 @@
 analyze-declare-dump_exit_status-outside-of-HAVE_SECCOMP-.patch
+Revert-test-unit-file-allow-printing-of-information-about.patch
+Revert-pid1-drop-unit-caches-only-based-on-mtime.patch
+Revert-pid1-use-a-cache-for-all-unit-aliases.patch
+Revert-analyze-add-unit-files-to-dump-the-unit-fragment-m.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch

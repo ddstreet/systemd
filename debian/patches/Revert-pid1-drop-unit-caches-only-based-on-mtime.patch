@@ -1,0 +1,277 @@
+From: Balint Reczey <balint.reczey@canonical.com>
+Date: Thu, 8 Aug 2019 13:39:06 +0200
+Subject: Revert "pid1: drop unit caches only based on mtime"
+
+This reverts commit 91e0ee5f16321656ed6f827742ecbeb2b36027f2.
+---
+ src/analyze/analyze.c     |  2 +-
+ src/core/load-fragment.c  |  9 --------
+ src/core/manager.c        | 14 ++++++++++--
+ src/core/manager.h        |  1 -
+ src/shared/unit-file.c    | 57 +----------------------------------------------
+ src/shared/unit-file.h    |  2 --
+ src/systemctl/systemctl.c |  2 +-
+ src/test/test-unit-file.c | 12 +---------
+ 8 files changed, 16 insertions(+), 83 deletions(-)
+
+diff --git a/src/analyze/analyze.c b/src/analyze/analyze.c
+index 4d81026..322be1a 100644
+--- a/src/analyze/analyze.c
++++ b/src/analyze/analyze.c
+@@ -1569,7 +1569,7 @@ static int do_unit_files(int argc, char *argv[], void *userdata) {
+         if (r < 0)
+                 return log_error_errno(r, "lookup_paths_init() failed: %m");
+ 
+-        r = unit_file_build_name_map(&lp, NULL, &unit_ids, &unit_names, NULL);
++        r = unit_file_build_name_map(&lp, &unit_ids, &unit_names, NULL);
+         if (r < 0)
+                 return log_error_errno(r, "unit_file_build_name_map() failed: %m");
+ 
+diff --git a/src/core/load-fragment.c b/src/core/load-fragment.c
+index 20079e1..25fc1a2 100644
+--- a/src/core/load-fragment.c
++++ b/src/core/load-fragment.c
+@@ -4607,15 +4607,6 @@ int unit_load_fragment(Unit *u) {
+                 return 0;
+         }
+ 
+-        /* Possibly rebuild the fragment map to catch new units */
+-        r = unit_file_build_name_map(&u->manager->lookup_paths,
+-                                     &u->manager->unit_cache_mtime,
+-                                     &u->manager->unit_id_map,
+-                                     &u->manager->unit_name_map,
+-                                     &u->manager->unit_path_cache);
+-        if (r < 0)
+-                log_error_errno(r, "Failed to rebuild name map: %m");
+-
+         r = unit_file_find_fragment(u->manager->unit_id_map,
+                                     u->manager->unit_name_map,
+                                     u->id,
+diff --git a/src/core/manager.c b/src/core/manager.c
+index dfe8997..646be8a 100644
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -678,7 +678,6 @@ static void manager_free_unit_name_maps(Manager *m) {
+         m->unit_id_map = hashmap_free(m->unit_id_map);
+         m->unit_name_map = hashmap_free(m->unit_name_map);
+         m->unit_path_cache = set_free_free(m->unit_path_cache);
+-        m->unit_cache_mtime =  0;
+ }
+ 
+ static int manager_setup_run_queue(Manager *m) {
+@@ -1633,6 +1632,11 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
+         if (r < 0)
+                 log_warning_errno(r, "Failed to reduce unit file paths, ignoring: %m");
+ 
++        manager_free_unit_name_maps(m);
++        r = unit_file_build_name_map(&m->lookup_paths, &m->unit_id_map, &m->unit_name_map, &m->unit_path_cache);
++        if (r < 0)
++                return log_error_errno(r, "Failed to build name map: %m");
++
+         {
+                 /* This block is (optionally) done with the reloading counter bumped */
+                 _cleanup_(manager_reloading_stopp) Manager *reloading = NULL;
+@@ -2849,6 +2853,10 @@ int manager_loop(Manager *m) {
+         assert(m);
+         assert(m->objective == MANAGER_OK); /* Ensure manager_startup() has been called */
+ 
++        /* Release the path and unit name caches */
++        manager_free_unit_name_maps(m);
++        // FIXME: once this happens, we cannot load any more units
++
+         manager_check_finished(m);
+ 
+         /* There might still be some zombies hanging around from before we were exec()'ed. Let's reap them. */
+@@ -3524,8 +3532,10 @@ int manager_reload(Manager *m) {
+         if (r < 0)
+                 log_warning_errno(r, "Failed to reduce unit file paths, ignoring: %m");
+ 
+-        /* We flushed out generated files, for which we don't watch mtime, so we should flush the old map. */
+         manager_free_unit_name_maps(m);
++        r = unit_file_build_name_map(&m->lookup_paths, &m->unit_id_map, &m->unit_name_map, &m->unit_path_cache);
++        if (r < 0)
++                log_warning_errno(r, "Failed to build name map: %m");
+ 
+         /* First, enumerate what we can from kernel and suchlike */
+         manager_enumerate_perpetual(m);
+diff --git a/src/core/manager.h b/src/core/manager.h
+index 308ee01..84c8f00 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -225,7 +225,6 @@ struct Manager {
+         Hashmap *unit_id_map;
+         Hashmap *unit_name_map;
+         Set *unit_path_cache;
+-        usec_t unit_cache_mtime;
+ 
+         char **transient_environment;  /* The environment, as determined from config files, kernel cmdline and environment generators */
+         char **client_environment;     /* Environment variables created by clients through the bus API */
+diff --git a/src/shared/unit-file.c b/src/shared/unit-file.c
+index 8a09f38..90fa949 100644
+--- a/src/shared/unit-file.c
++++ b/src/shared/unit-file.c
+@@ -152,47 +152,8 @@ static int unit_ids_map_get(
+         return -ELOOP;
+ }
+ 
+-static bool lookup_paths_mtime_exclude(const LookupPaths *lp, const char *path) {
+-        /* Paths that are under our exclusive control. Users shall not alter those directly. */
+-
+-        return streq_ptr(path, lp->generator) ||
+-               streq_ptr(path, lp->generator_early) ||
+-               streq_ptr(path, lp->generator_late) ||
+-               streq_ptr(path, lp->transient) ||
+-               streq_ptr(path, lp->persistent_control) ||
+-               streq_ptr(path, lp->runtime_control);
+-}
+-
+-static bool lookup_paths_mtime_good(const LookupPaths *lp, usec_t mtime) {
+-        char **dir;
+-
+-        STRV_FOREACH(dir, (char**) lp->search_path) {
+-                struct stat st;
+-
+-                if (lookup_paths_mtime_exclude(lp, *dir))
+-                        continue;
+-
+-                /* Determine the latest lookup path modification time */
+-                if (stat(*dir, &st) < 0) {
+-                        if (errno == ENOENT)
+-                                continue;
+-
+-                        log_debug_errno(errno, "Failed to stat %s, ignoring: %m", *dir);
+-                        continue;
+-                }
+-
+-                if (timespec_load(&st.st_mtim) > mtime) {
+-                        log_debug_errno(errno, "Unit dir %s has changed, need to update cache.", *dir);
+-                        return false;
+-                }
+-        }
+-
+-        return true;
+-}
+-
+ int unit_file_build_name_map(
+                 const LookupPaths *lp,
+-                usec_t *cache_mtime,
+                 Hashmap **ret_unit_ids_map,
+                 Hashmap **ret_unit_names_map,
+                 Set **ret_path_cache) {
+@@ -210,12 +171,6 @@ int unit_file_build_name_map(
+         _cleanup_set_free_free_ Set *paths = NULL;
+         char **dir;
+         int r;
+-        usec_t mtime = 0;
+-
+-        /* Before doing anything, check if the mtime that was passed is still valid. If
+-         * yes, do nothing. If *cache_time == 0, always build the cache. */
+-        if (cache_mtime && *cache_mtime > 0 && lookup_paths_mtime_good(lp, *cache_mtime))
+-                return 0;
+ 
+         if (ret_path_cache) {
+                 paths = set_new(&path_hash_ops);
+@@ -226,7 +181,6 @@ int unit_file_build_name_map(
+         STRV_FOREACH(dir, (char**) lp->search_path) {
+                 struct dirent *de;
+                 _cleanup_closedir_ DIR *d = NULL;
+-                struct stat st;
+ 
+                 d = opendir(*dir);
+                 if (!d) {
+@@ -235,13 +189,6 @@ int unit_file_build_name_map(
+                         continue;
+                 }
+ 
+-                /* Determine the latest lookup path modification time */
+-                if (fstat(dirfd(d), &st) < 0)
+-                        return log_error_errno(errno, "Failed to fstat %s: %m", *dir);
+-
+-                if (!lookup_paths_mtime_exclude(lp, *dir))
+-                        mtime = MAX(mtime, timespec_load(&st.st_mtim));
+-
+                 FOREACH_DIRENT(de, d, log_warning_errno(errno, "Failed to read \"%s\", ignoring: %m", *dir)) {
+                         char *filename;
+                         _cleanup_free_ char *_filename_free = NULL, *simplified = NULL;
+@@ -369,14 +316,12 @@ int unit_file_build_name_map(
+                                                  basename(dst), src);
+         }
+ 
+-        if (cache_mtime)
+-                *cache_mtime = mtime;
+         *ret_unit_ids_map = TAKE_PTR(ids);
+         *ret_unit_names_map = TAKE_PTR(names);
+         if (ret_path_cache)
+                 *ret_path_cache = TAKE_PTR(paths);
+ 
+-        return 1;
++        return 0;
+ }
+ 
+ int unit_file_find_fragment(
+diff --git a/src/shared/unit-file.h b/src/shared/unit-file.h
+index 54cc787..52e17f7 100644
+--- a/src/shared/unit-file.h
++++ b/src/shared/unit-file.h
+@@ -4,7 +4,6 @@
+ #include <stdbool.h>
+ 
+ #include "hashmap.h"
+-#include "time-util.h"
+ #include "unit-name.h"
+ 
+ typedef enum UnitFileState UnitFileState;
+@@ -43,7 +42,6 @@ int unit_validate_alias_symlink_and_warn(const char *filename, const char *targe
+ 
+ int unit_file_build_name_map(
+                 const LookupPaths *lp,
+-                usec_t *ret_time,
+                 Hashmap **ret_unit_ids_map,
+                 Hashmap **ret_unit_names_map,
+                 Set **ret_path_cache);
+diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
+index ec3e2a3..f70fc57 100644
+--- a/src/systemctl/systemctl.c
++++ b/src/systemctl/systemctl.c
+@@ -2593,7 +2593,7 @@ static int unit_find_paths(
+                 _cleanup_set_free_free_ Set *names = NULL;
+ 
+                 if (!cached_name_map) {
+-                        r = unit_file_build_name_map(lp, NULL, &cached_id_map, &cached_name_map, NULL);
++                        r = unit_file_build_name_map(lp, &cached_id_map, &cached_name_map, NULL);
+                         if (r < 0)
+                                 return r;
+                 }
+diff --git a/src/test/test-unit-file.c b/src/test/test-unit-file.c
+index 0c03713..c5144a1 100644
+--- a/src/test/test-unit-file.c
++++ b/src/test/test-unit-file.c
+@@ -31,12 +31,10 @@ static void test_unit_file_build_name_map(void) {
+         Iterator i;
+         const char *k, *dst;
+         char **v;
+-        usec_t mtime = 0;
+-        int r;
+ 
+         assert_se(lookup_paths_init(&lp, UNIT_FILE_SYSTEM, 0, NULL) >= 0);
+ 
+-        assert_se(unit_file_build_name_map(&lp, &mtime, &unit_ids, &unit_names, NULL) == 1);
++        assert_se(unit_file_build_name_map(&lp, &unit_ids, &unit_names, NULL) == 0);
+ 
+         HASHMAP_FOREACH_KEY(dst, k, unit_ids, i)
+                 log_info("ids: %s → %s", k, dst);
+@@ -45,14 +43,6 @@ static void test_unit_file_build_name_map(void) {
+                 _cleanup_free_ char *j = strv_join(v, ", ");
+                 log_info("aliases: %s ← %s", k, j);
+         }
+-
+-        char buf[FORMAT_TIMESTAMP_MAX];
+-        log_debug("Last modification time: %s", format_timestamp(buf, sizeof buf, mtime));
+-
+-        r = unit_file_build_name_map(&lp, &mtime, &unit_ids, &unit_names, NULL);
+-        assert_se(IN_SET(r, 0, 1));
+-        if (r == 0)
+-                log_debug("Cache rebuild skipped based on mtime.");
+ }
+ 
+ int main(int argc, char **argv) {

@@ -1,3 +1,16 @@
+systemd (243~rc1-0ubuntu2) eoan; urgency=medium
+
+  * Revert unit cache rework to fix regressions
+    Files:
+    - d/p/Revert-analyze-add-unit-files-to-dump-the-unit-fragment-m.patch
+    - d/p/Revert-pid1-drop-unit-caches-only-based-on-mtime.patch
+    - d/p/Revert-pid1-use-a-cache-for-all-unit-aliases.patch
+    - d/p/Revert-test-unit-file-allow-printing-of-information-about.patch
+  * Set the previous default, -Ddefault-hierarchy=hybrid at build-time.
+    This prevents breaking container managers
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Thu, 08 Aug 2019 22:34:41 +0200
+
 systemd (243~rc1-0ubuntu1) eoan; urgency=medium
 
   [ Dan Streetman ]
