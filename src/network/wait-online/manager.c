@@ -61,6 +61,7 @@ static int manager_link_is_online(Manager *m, Link *l, LinkOperationalState s) {
 
 bool manager_configured(Manager *m) {
         bool one_ready = false;
+        bool none_managed = true;
         Iterator i;
         const char *ifname;
         void *p;
@@ -105,13 +106,17 @@ bool manager_configured(Manager *m) {
                 r = manager_link_is_online(m, l, _LINK_OPERSTATE_INVALID);
                 if (r < 0 && !m->any)
                         return false;
+                if (l->state && STR_IN_SET(l->state, "configured", "failed")) {
+                        log_info("managing: %s", l->ifname);
+                        none_managed = false;
+                }
                 if (r > 0)
                         /* we wait for at least one link to be ready,
                          * regardless of who manages it */
                         one_ready = true;
         }
 
-        return one_ready;
+        return one_ready || none_managed;
 }
 
 static int manager_process_link(sd_netlink *rtnl, sd_netlink_message *mm, void *userdata) {
