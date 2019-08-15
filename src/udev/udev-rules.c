@@ -1131,7 +1131,7 @@ static int rule_add_line(UdevRules *rules, const char *line_str, unsigned line_n
         }
 
         if (rule_line->type == 0) {
-                log_token_warning(rules, "The line takes no effect, ignoring.");
+                log_token_warning(rules, "The line takes no effect, ignoring: '%s'", line_str);
                 return 0;
         }
 
