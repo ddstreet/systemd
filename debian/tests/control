@@ -94,7 +94,7 @@ Depends: systemd-tests,
   tree,
   perl,
   xz-utils,
-Restrictions: needs-root, allow-stderr, isolation-container
+Restrictions: needs-root, allow-stderr, isolation-container, skippable
 
 Tests: root-unittests
 Depends: systemd-tests,
@@ -108,7 +108,7 @@ Depends: systemd-tests,
   acl,
   iputils-ping,
   dbus-user-session,
-Restrictions: needs-root, allow-stderr, isolation-container
+Restrictions: needs-root, allow-stderr, isolation-container, breaks-testbed
 
 Tests: upstream
 Depends: libsystemd-dev,
@@ -119,6 +119,7 @@ Depends: libsystemd-dev,
   iproute2,
   liblz4-tool,
   acl,
+  dmeventd,
   kbd,
   cryptsetup-bin,
   net-tools,
