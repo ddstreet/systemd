@@ -31,7 +31,7 @@ static int test_fiemap(const char *path) {
         if (fd < 0)
                 return log_error_errno(errno, "failed to open %s: %m", path);
         r = read_fiemap(fd, &fiemap);
-        if (r == -EOPNOTSUPP)
+        if (IN_SET(r, -EOPNOTSUPP, -ENOTTY))
                 exit(log_tests_skipped("Not supported"));
         if (r < 0)
                 return log_error_errno(r, "Unable to read extent map for '%s': %m", path);
