@@ -1,3 +1,15 @@
+systemd (240-6ubuntu5.4) disco; urgency=medium
+
+  [ You-Sheng Yang ]
+  * d/p/d/Revert-udev-network-device-renaming-immediately-give.patch:
+    - udev: drop Revert-udev-network-device-renaming-immediately-give.patch.
+      The removing patch was for the already deprecated
+      "75-persistent-net-generator.rules" based interface renaming mechanism,
+      and it's causing unnecessary problem when a system happends to NICs with
+      same MAC address, e.g. Dell's MAC address pass-thru. (LP: #1837700)
+
+ -- Shih-Yuan Lee (FourDollars) <sylee@canonical.com>  Wed, 21 Aug 2019 16:15:23 +0800
+
 systemd (240-6ubuntu5.3) disco; urgency=medium
 
   [ Dan Streetman ]
