@@ -60,6 +60,20 @@ DUID* link_get_duid(Link *link) {
                 return &link->manager->duid;
 }
 
+int link_sysctl_ipv6_enabled(Link *link) {
+        _cleanup_free_ char *value = NULL;
+        int r;
+
+        r = sysctl_read_ip_property(AF_INET6, link->ifname, "disable_ipv6", &value);
+        if (r < 0)
+                return log_link_warning_errno(link, r,
+                                              "Failed to read net.ipv6.conf.%s.disable_ipv6 sysctl property: %m",
+                                              link->ifname);
+
+        link->sysctl_ipv6_enabled = value[0] == '0';
+        return link->sysctl_ipv6_enabled;
+}
+
 static bool link_dhcp6_enabled(Link *link) {
         assert(link);
 
@@ -75,7 +89,7 @@ static bool link_dhcp6_enabled(Link *link) {
         if (link->network->bond)
                 return false;
 
-        if (manager_sysctl_ipv6_enabled(link->manager) == 0)
+        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         return link->network->dhcp & ADDRESS_FAMILY_IPV6;
@@ -147,7 +161,7 @@ static bool link_ipv6ll_enabled(Link *link) {
         if (link->network->bond)
                 return false;
 
-        if (manager_sysctl_ipv6_enabled(link->manager) == 0)
+        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         return link->network->link_local & ADDRESS_FAMILY_IPV6;
@@ -162,7 +176,7 @@ static bool link_ipv6_enabled(Link *link) {
         if (link->network->bond)
                 return false;
 
-        if (manager_sysctl_ipv6_enabled(link->manager) == 0)
+        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         /* DHCPv6 client will not be started if no IPv6 link-local address is configured. */
@@ -244,7 +258,7 @@ static bool link_ipv6_forward_enabled(Link *link) {
         if (link->network->ip_forward == _ADDRESS_FAMILY_BOOLEAN_INVALID)
                 return false;
 
-        if (manager_sysctl_ipv6_enabled(link->manager) == 0)
+        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         return link->network->ip_forward & ADDRESS_FAMILY_IPV6;
@@ -560,6 +574,7 @@ static int link_new(Manager *manager, sd_netlink_message *message, Link **ret) {
                 .rtnl_extended_attrs = true,
                 .ifindex = ifindex,
                 .iftype = iftype,
+                .sysctl_ipv6_enabled = -1,
         };
 
         link->ifname = strdup(ifname);
@@ -892,8 +907,8 @@ static int link_request_set_routing_policy_rule(Link *link) {
                         link_enter_failed(link);
                         return r;
                 }
-
-                link->routing_policy_rule_messages++;
+                if (r > 0)
+                        link->routing_policy_rule_messages++;
         }
 
         routing_policy_rule_purge(link->manager, link);
@@ -967,8 +982,8 @@ static int link_request_set_routes(Link *link) {
                                 link_enter_failed(link);
                                 return r;
                         }
-
-                        link->route_messages++;
+                        if (r > 0)
+                                link->route_messages++;
                 }
 
         if (link->route_messages == 0) {
@@ -1249,8 +1264,8 @@ static int link_request_set_addresses(Link *link) {
                         link_enter_failed(link);
                         return r;
                 }
-
-                link->address_messages++;
+                if (r > 0)
+                        link->address_messages++;
         }
 
         LIST_FOREACH(labels, label, link->network->address_labels) {
@@ -1985,6 +2000,9 @@ static int link_configure_addrgen_mode(Link *link) {
         assert(link->manager);
         assert(link->manager->rtnl);
 
+        if (!socket_ipv6_is_supported())
+                return 0;
+
         log_link_debug(link, "Setting address genmode for link");
 
         r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_SETLINK, link->ifindex);
@@ -2076,31 +2094,6 @@ static int link_up(Link *link) {
                 r = sd_netlink_message_append_ether_addr(req, IFLA_ADDRESS, link->network->mac);
                 if (r < 0)
                         return log_link_error_errno(link, r, "Could not set MAC address: %m");
-        }
-
-        if (link_ipv6_enabled(link)) {
-                r = sd_netlink_message_open_container(req, IFLA_AF_SPEC);
-                if (r < 0)
-                        return log_link_error_errno(link, r, "Could not open IFLA_AF_SPEC container: %m");
-
-                /* if the kernel lacks ipv6 support setting IFF_UP fails if any ipv6 options are passed */
-                r = sd_netlink_message_open_container(req, AF_INET6);
-                if (r < 0)
-                        return log_link_error_errno(link, r, "Could not open AF_INET6 container: %m");
-
-                if (!in_addr_is_null(AF_INET6, &link->network->ipv6_token)) {
-                        r = sd_netlink_message_append_in6_addr(req, IFLA_INET6_TOKEN, &link->network->ipv6_token.in6);
-                        if (r < 0)
-                                return log_link_error_errno(link, r, "Could not append IFLA_INET6_TOKEN: %m");
-                }
-
-                r = sd_netlink_message_close_container(req);
-                if (r < 0)
-                        return log_link_error_errno(link, r, "Could not close AF_INET6 container: %m");
-
-                r = sd_netlink_message_close_container(req);
-                if (r < 0)
-                        return log_link_error_errno(link, r, "Could not close IFLA_AF_SPEC container: %m");
         }
 
         r = netlink_call_async(link->manager->rtnl, NULL, req, link_up_handler,
@@ -3189,11 +3182,9 @@ static int link_configure(Link *link) {
         if (r < 0)
                 return r;
 
-        if (socket_ipv6_is_supported()) {
-                r = link_configure_addrgen_mode(link);
-                if (r < 0)
-                        return r;
-        }
+        r = link_configure_addrgen_mode(link);
+        if (r < 0)
+                return r;
 
         return link_configure_after_setting_mtu(link);
 }
