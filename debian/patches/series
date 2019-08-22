@@ -51,10 +51,16 @@ Install-routes-after-addresses-are-ready.patch
 tests-Add-test-for-IPv6-source-routing.patch
 pam-systemd-use-secure_getenv-rather-than-getenv.patch
 core-when-we-uninstall-a-job-add-unit-to-dbus-queue.patch
+seccomp-drop-mincore-from-system-service-syscall-filter-g.patch
+seccomp-shm-get-at-dt-now-have-their-own-numbers-everywhe.patch
+seccomp-allow-shmat-to-be-a-separate-syscall-on-architect.patch
+seccomp-add-rseq-to-default-list-of-syscalls-to-whitelist.patch
+seccomp-add-new-5.1-syscall-pidfd_send_signal-to-filter-s.patch
+src-shared-seccomp-util.c-Add-mmap-definitions-for-s390.patch
+shared-seccomp-add-sync_file_range2.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
-debian/Revert-udev-network-device-renaming-immediately-give.patch
 debian/Add-support-for-TuxOnIce-hibernation.patch
 debian/Re-enable-journal-forwarding-to-syslog.patch
 debian/Don-t-enable-audit-by-default.patch
@@ -147,3 +153,6 @@ test-network-add-more-checks-in-NetworkdNetDevTests..patch
 sd-netlink-introduce-sd_netlink_message_append_socka.patch
 network-wireguard-use-sd_netlink_message_append_sock.patch
 ask-password-prevent-buffer-overrow-when-reading-fro.patch
+rdrand-workaround-on-amd.patch
+lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
+lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch

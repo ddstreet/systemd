@@ -1,3 +1,46 @@
+systemd (240-6ubuntu11) eoan; urgency=medium
+
+  [ Dan Streetman ]
+  * d/p/lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch:
+    - Set src address for dhcp 'classless' routes (LP: #1835581)
+
+  [ Jorge Niedbalski ]
+  * d/p/lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch:
+    Allows cache=no-negative option to be set, ignoring negative
+    answers to be cached (LP: #1668771).
+
+  [ Jeremy Soller ]
+  * random-util: eat up bad RDRAND values seen on AMD CPUs.
+    This fixes AMD Ryzen 3000 series failing to boot (LP: #1835809)
+
+  [ You-Sheng Yang ]
+  * d/p/d/Revert-udev-network-device-renaming-immediately-give.patch:
+    - udev: drop Revert-udev-network-device-renaming-immediately-give.patch.
+      The removing patch was for the already deprecated
+      "75-persistent-net-generator.rules" based interface renaming mechanism,
+      and it's causing unnecessary problem when a system happends to NICs with
+      same MAC address, e.g. Dell's MAC address pass-thru. (LP: #1837700)
+
+  [ Dimitri John Ledkov ]
+  * Cherrypick seccomp fixes for new kernel and glibc.
+    Files:
+    - debian/patches/seccomp-add-new-5.1-syscall-pidfd_send_signal-to-filter-s.patch
+    - debian/patches/seccomp-add-rseq-to-default-list-of-syscalls-to-whitelist.patch
+    - debian/patches/seccomp-allow-shmat-to-be-a-separate-syscall-on-architect.patch
+    - debian/patches/seccomp-drop-mincore-from-system-service-syscall-filter-g.patch
+    - debian/patches/seccomp-shm-get-at-dt-now-have-their-own-numbers-everywhe.patch
+    - debian/patches/shared-seccomp-add-sync_file_range2.patch
+    - debian/patches/src-shared-seccomp-util.c-Add-mmap-definitions-for-s390.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=627919b0cbcc7e094995f167f8c5eb899f801fd3
+
+  * Build with gcc-8, otherwise tests segfault.
+    Files:
+    - debian/control
+    - debian/rules
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=1ca0100244e46b00a97dfa10a5d980de7bdc6735
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 22 Aug 2019 15:03:45 +0100
+
 systemd (240-6ubuntu9) eoan; urgency=medium
 
   * Fix typpo in storage test.

@@ -291,6 +291,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "pause\0"
                 "prlimit64\0"
                 "restart_syscall\0"
+                "rseq\0"
                 "rt_sigreturn\0"
                 "sched_yield\0"
                 "set_robust_list\0"
@@ -648,6 +649,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "fork\0"
                 "getrusage\0"
                 "kill\0"
+                "pidfd_send_signal\0"
                 "prctl\0"
                 "rt_sigqueueinfo\0"
                 "rt_tgsigqueueinfo\0"
@@ -756,6 +758,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "msync\0"
                 "sync\0"
                 "sync_file_range\0"
+                "sync_file_range2\0"
                 "syncfs\0"
         },
         [SYSCALL_FILTER_SET_SYSTEM_SERVICE] = {
@@ -793,7 +796,6 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "ioprio_get\0"
                 "kcmp\0"
                 "madvise\0"
-                "mincore\0"
                 "mprotect\0"
                 "mremap\0"
                 "name_to_handle_at\0"
@@ -1503,14 +1505,9 @@ static int add_seccomp_syscall_filter(scmp_filter_ctx seccomp,
 assert_cc(SCMP_SYS(shmget) > 0);
 assert_cc(SCMP_SYS(shmat) > 0);
 assert_cc(SCMP_SYS(shmdt) > 0);
-#elif defined(__i386__) || defined(__powerpc64__)
-assert_cc(SCMP_SYS(shmget) < 0);
-assert_cc(SCMP_SYS(shmat) < 0);
-assert_cc(SCMP_SYS(shmdt) < 0);
 #endif
 
 int seccomp_memory_deny_write_execute(void) {
-
         uint32_t arch;
         int r;
 
@@ -1523,8 +1520,10 @@ int seccomp_memory_deny_write_execute(void) {
                 switch (arch) {
 
                 case SCMP_ARCH_X86:
+                case SCMP_ARCH_S390:
                         filter_syscall = SCMP_SYS(mmap2);
                         block_syscall = SCMP_SYS(mmap);
+                        shmat_syscall = SCMP_SYS(shmat);
                         break;
 
                 case SCMP_ARCH_PPC:
@@ -1546,13 +1545,14 @@ int seccomp_memory_deny_write_execute(void) {
                 case SCMP_ARCH_X86_64:
                 case SCMP_ARCH_X32:
                 case SCMP_ARCH_AARCH64:
-                        filter_syscall = SCMP_SYS(mmap); /* amd64, x32, and arm64 have only mmap */
+                case SCMP_ARCH_S390X:
+                        filter_syscall = SCMP_SYS(mmap); /* amd64, x32, s390x, and arm64 have only mmap */
                         shmat_syscall = SCMP_SYS(shmat);
                         break;
 
                 /* Please add more definitions here, if you port systemd to other architectures! */
 
-#if !defined(__i386__) && !defined(__x86_64__) && !defined(__powerpc__) && !defined(__powerpc64__) && !defined(__arm__) && !defined(__aarch64__)
+#if !defined(__i386__) && !defined(__x86_64__) && !defined(__powerpc__) && !defined(__powerpc64__) && !defined(__arm__) && !defined(__aarch64__) && !defined(__s390__) && !defined(__s390x__)
 #warning "Consider adding the right mmap() syscall definitions here!"
 #endif
                 }
@@ -1591,7 +1591,7 @@ int seccomp_memory_deny_write_execute(void) {
                         continue;
 #endif
 
-                if (shmat_syscall != 0) {
+                if (shmat_syscall > 0) {
                         r = add_seccomp_syscall_filter(seccomp, arch, SCMP_SYS(shmat),
                                                        1,
                                                        SCMP_A2(SCMP_CMP_MASKED_EQ, SHM_EXEC, SHM_EXEC));
