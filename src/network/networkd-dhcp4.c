@@ -115,6 +115,8 @@ static int link_set_dhcp_routes(Link *link) {
                 route->priority = link->network->dhcp_route_metric;
                 route->table = table;
                 route->scope = route_scope_from_address(route, &address);
+                if (IN_SET(route->scope, RT_SCOPE_LINK, RT_SCOPE_UNIVERSE))
+                        route->prefsrc.in = address;
 
                 r = route_configure(route, link, dhcp4_route_handler);
                 if (r < 0)
