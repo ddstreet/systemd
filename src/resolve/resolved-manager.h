@@ -36,7 +36,7 @@ struct Manager {
         ResolveSupport mdns_support;
         DnssecMode dnssec_mode;
         DnsOverTlsMode dns_over_tls_mode;
-        bool enable_cache;
+        DnsCacheMode enable_cache;
         DnsStubListenerMode dns_stub_listener_mode;
 
         /* Network */
@@ -54,7 +54,7 @@ struct Manager {
         unsigned n_dns_queries;
 
         LIST_HEAD(DnsStream, dns_streams);
-        unsigned n_dns_streams;
+        unsigned n_dns_streams[_DNS_STREAM_TYPE_MAX];
 
         /* Unicast dns */
         LIST_HEAD(DnsServer, dns_servers);

@@ -377,12 +377,12 @@ static int dns_transaction_pick_server(DnsTransaction *t) {
         if (!server)
                 return -ESRCH;
 
-        /* If we changed the server invalidate the feature level clamping, as the new server might have completely
-         * different properties. */
-        if (server != t->server)
+        /* If we changed the server invalidate the current & clamp feature levels, as the new server might have
+         * completely different properties. */
+        if (server != t->server) {
                 t->clamp_feature_level = _DNS_SERVER_FEATURE_LEVEL_INVALID;
-
-        t->current_feature_level = dns_server_possible_feature_level(server);
+                t->current_feature_level = dns_server_possible_feature_level(server);
+        }
 
         /* Clamp the feature level if that is requested. */
         if (t->clamp_feature_level != _DNS_SERVER_FEATURE_LEVEL_INVALID &&
@@ -540,12 +540,8 @@ static int on_stream_packet(DnsStream *s) {
         if (t)
                 return dns_transaction_on_stream_packet(t, p);
 
-        /* Ignore incorrect transaction id as transaction can have been canceled */
-        if (dns_packet_validate_reply(p) <= 0) {
-                log_debug("Invalid TCP reply packet.");
-                on_stream_complete(s, 0);
-        }
-
+        /* Ignore incorrect transaction id as an old transaction can have been canceled. */
+        log_debug("Received unexpected TCP reply packet with id %" PRIu16 ", ignoring.", t->id);
         return 0;
 }
 
@@ -554,9 +550,10 @@ static uint16_t dns_port_for_feature_level(DnsServerFeatureLevel level) {
 }
 
 static int dns_transaction_emit_tcp(DnsTransaction *t) {
-        _cleanup_close_ int fd = -1;
         _cleanup_(dns_stream_unrefp) DnsStream *s = NULL;
+        _cleanup_close_ int fd = -1;
         union sockaddr_union sa;
+        DnsStreamType type;
         int r;
 
         assert(t);
@@ -582,6 +579,7 @@ static int dns_transaction_emit_tcp(DnsTransaction *t) {
                 else
                         fd = dns_scope_socket_tcp(t->scope, AF_UNSPEC, NULL, t->server, dns_port_for_feature_level(t->current_feature_level), &sa);
 
+                type = DNS_STREAM_LOOKUP;
                 break;
 
         case DNS_PROTOCOL_LLMNR:
@@ -607,6 +605,7 @@ static int dns_transaction_emit_tcp(DnsTransaction *t) {
                         fd = dns_scope_socket_tcp(t->scope, family, &address, NULL, LLMNR_PORT, &sa);
                 }
 
+                type = DNS_STREAM_LLMNR_SEND;
                 break;
 
         default:
@@ -617,7 +616,7 @@ static int dns_transaction_emit_tcp(DnsTransaction *t) {
                 if (fd < 0)
                         return fd;
 
-                r = dns_stream_new(t->scope->manager, &s, t->scope->protocol, fd, &sa);
+                r = dns_stream_new(t->scope->manager, &s, type, t->scope->protocol, fd, &sa);
                 if (r < 0)
                         return r;
 
@@ -636,8 +635,8 @@ static int dns_transaction_emit_tcp(DnsTransaction *t) {
 
                 if (t->server) {
                         dns_server_unref_stream(t->server);
-                        t->server->stream = dns_stream_ref(s);
                         s->server = dns_server_ref(t->server);
+                        t->server->stream = dns_stream_ref(s);
                 }
 
                 s->complete = on_stream_complete;
@@ -674,7 +673,7 @@ static void dns_transaction_cache_answer(DnsTransaction *t) {
                 return;
 
         /* Caching disabled? */
-        if (!t->scope->manager->enable_cache)
+        if (t->scope->manager->enable_cache == DNS_CACHE_MODE_NO)
                 return;
 
         /* We never cache if this packet is from the local host, under
@@ -685,6 +684,7 @@ static void dns_transaction_cache_answer(DnsTransaction *t) {
                 return;
 
         dns_cache_put(&t->scope->cache,
+                      t->scope->manager->enable_cache,
                       t->key,
                       t->answer_rcode,
                       t->answer,
@@ -1020,6 +1020,34 @@ void dns_transaction_process_reply(DnsTransaction *t, DnsPacket *p) {
                                   dns_rcode_to_string(DNS_PACKET_RCODE(p)),
                                   dns_server_feature_level_to_string(t->clamp_feature_level));
 
+                        dns_transaction_retry(t, false /* use the same server */);
+                        return;
+                }
+
+                /* Some captive portals are special in that the Aruba/Datavalet hardware will miss replacing the
+                 * packets with the local server IP to point to the authenticated side of the network if EDNS0 is
+                 * enabled. Instead they return NXDOMAIN, with DO bit set to zero... nothing to see here, yet respond
+                 * with the captive portal IP, when using UDP level.
+                 *
+                 * Common portal names that fail like so are:
+                 * secure.datavalet.io
+                 * securelogin.arubanetworks.com
+                 * securelogin.networks.mycompany.com
+                 *
+                 * Thus retry NXDOMAIN RCODES for "secure" things with a lower feature level.
+                 *
+                 * Do not "clamp" the feature level down, as the captive portal should not be lying for the wider
+                 * internet (e.g. _other_ queries were observed fine with EDNS0 on these networks)
+                 *
+                 * This is reported as https://github.com/dns-violations/dns-violations/blob/master/2018/DVE-2018-0001.md
+                 */
+                if (DNS_PACKET_RCODE(p) == DNS_RCODE_NXDOMAIN && t->current_feature_level >= DNS_SERVER_FEATURE_LEVEL_EDNS0) {
+                        char key_str[DNS_RESOURCE_KEY_STRING_MAX];
+                        dns_resource_key_to_string(t->key, key_str, sizeof key_str);
+                        t->current_feature_level = t->current_feature_level - 1;
+                        log_warning("Server returned error %s, mitigating potential DNS violation DVE-2018-0001, retrying transaction with reduced feature level %s.",
+                                    dns_rcode_to_string(DNS_PACKET_RCODE(p)),
+                                    dns_server_feature_level_to_string(t->current_feature_level));
                         dns_transaction_retry(t, false /* use the same server */);
                         return;
                 }
