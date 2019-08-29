@@ -35,6 +35,7 @@
 #include "strv.h"
 #include "user-util.h"
 #include "util.h"
+#include "virt.h"
 
 static void test_chase_symlinks(void) {
         _cleanup_free_ char *result = NULL;
@@ -495,7 +496,7 @@ static void test_touch_file(void) {
         assert_se((st.st_mode & 0777) == 0640);
         assert_se(timespec_load(&st.st_mtim) == test_mtime);
 
-        if (geteuid() == 0) {
+        if (geteuid() == 0 && !detect_container()) {
                 a = strjoina(p, "/cdev");
                 assert_se(mknod(a, 0775 | S_IFCHR, makedev(0, 0)) >= 0);
                 assert_se(touch_file(a, false, test_mtime, test_uid, test_gid, 0640) >= 0);
