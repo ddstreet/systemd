@@ -1,3 +1,13 @@
+systemd (240-6ubuntu5.6) disco-security; urgency=medium
+
+  * SECURITY UPDATE: Unprivileged users are granted access to privileged
+    systemd-resolved D-Bus methods
+    - d/p/0001-shared-but-util-drop-trusted-annotation-from-bus_ope.patch:
+      drop trusted annotation from bus_open_system_watch_bind_with_description()
+    - CVE-2019-15718
+
+ -- Chris Coulson <chris.coulson@canonical.com>  Thu, 29 Aug 2019 23:29:13 +0100
+
 systemd (240-6ubuntu5.4) disco; urgency=medium
 
   [ You-Sheng Yang ]
