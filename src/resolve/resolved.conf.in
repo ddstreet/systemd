@@ -19,4 +19,4 @@
 #MulticastDNS=no
 #DNSSEC=@DEFAULT_DNSSEC_MODE@
 #Cache=yes
-#DNSStubListener=udp
+#DNSStubListener=yes
