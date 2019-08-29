@@ -22,6 +22,16 @@
 
 #include "macro.h"
 
+typedef enum DnsCacheMode DnsCacheMode;
+
+enum DnsCacheMode {
+        DNS_CACHE_MODE_NO,
+        DNS_CACHE_MODE_YES,
+        DNS_CACHE_MODE_NO_NEGATIVE,
+        _DNS_CACHE_MODE_MAX,
+        _DNS_CACHE_MODE_INVALID = 1
+};
+
 typedef enum ResolveSupport ResolveSupport;
 typedef enum DnssecMode DnssecMode;
 
@@ -53,9 +63,17 @@ enum DnssecMode {
 
 int config_parse_resolve_support(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_dnssec_mode(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+int config_parse_dns_cache_mode(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+
+CONFIG_PARSER_PROTOTYPE(config_parse_resolve_support);
+CONFIG_PARSER_PROTOTYPE(config_parse_dnssec_mode);
+CONFIG_PARSER_PROTOTYPE(config_parse_dns_cache_mode);
 
 const char* resolve_support_to_string(ResolveSupport p) _const_;
 ResolveSupport resolve_support_from_string(const char *s) _pure_;
 
 const char* dnssec_mode_to_string(DnssecMode p) _const_;
 DnssecMode dnssec_mode_from_string(const char *s) _pure_;
+
+const char* dns_cache_mode_to_string(DnsCacheMode p) _const_;
+DnsCacheMode dns_cache_mode_from_string(const char *s) _pure_;
