@@ -149,3 +149,4 @@ ask-password-prevent-buffer-overrow-when-reading-fro.patch
 rdrand-workaround-on-amd.patch
 lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
 lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
+0001-shared-but-util-drop-trusted-annotation-from-bus_ope.patch
