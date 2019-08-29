@@ -38,3 +38,12 @@ static const char* const dnssec_mode_table[_DNSSEC_MODE_MAX] = {
         [DNSSEC_YES] = "yes",
 };
 DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(dnssec_mode, DnssecMode, DNSSEC_YES);
+DEFINE_CONFIG_PARSE_ENUM(config_parse_dns_cache_mode, dns_cache_mode, DnsCacheMode, "Failed to parse DNS cache mode setting")
+
+static const char* const dns_cache_mode_table[_DNS_CACHE_MODE_MAX] = {
+        [DNS_CACHE_MODE_YES] = "yes",
+        [DNS_CACHE_MODE_NO] = "no",
+        [DNS_CACHE_MODE_NO_NEGATIVE] = "no-negative",
+};
+
+DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(dns_cache_mode, DnsCacheMode, DNS_CACHE_MODE_YES);
