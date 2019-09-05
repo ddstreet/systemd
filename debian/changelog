@@ -1,3 +1,12 @@
+systemd (237-3ubuntu10.29) bionic; urgency=medium
+
+  * d/p/d/Revert-udev-network-device-renaming-immediately-give.patch:
+    - udev: add Revert-udev-network-device-renaming-immediately-give.patch back
+      Dropping this patch will cause the persistent network regression.
+      (LP: #1842651)
+
+ -- Shih-Yuan Lee (FourDollars) <sylee@canonical.com>  Thu, 05 Sep 2019 11:59:51 +0800
+
 systemd (237-3ubuntu10.28) bionic-security; urgency=medium
 
   * SECURITY UPDATE: Unprivileged users are granted access to privileged
