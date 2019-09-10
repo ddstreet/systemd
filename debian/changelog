@@ -1,3 +1,44 @@
+systemd (243-1) experimental; urgency=medium
+
+  * New upstream version 243
+  * Merge changes from unstable branch
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 05 Sep 2019 01:21:49 +0200
+
+systemd (243~rc2-1) experimental; urgency=medium
+
+  * New upstream version 243~rc2
+    - man: document that "systemd-analyze blame/critical-chain" is not useful
+      to track down job latency. (Closes: #920234)
+    - systemctl: process all units matched by a glob in the cat verb by
+      default. (Closes: #904913)
+    - units: automatically revert to /run logging on shutdown if necessary.
+      Prevents /var staying busy on shutdown due to journald.
+      (Closes: #851402)
+    - bash-completion: don't sort syslog priorities. (Closes: #913222)
+    - man: add example for setting multiple properties at once.
+      (Closes: #807464)
+  * Rebase patches
+  * Update symbols file for libsystemd0
+  * core: stop removing non-existent and duplicate lookup paths
+  * Install static-nodes-permissions.conf tmpfile in udev
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 31 Aug 2019 00:20:41 +0200
+
+systemd (242-7) unstable; urgency=medium
+
+  * sleep: properly pass verb to sleep script
+  * core: factor root_directory application out of apply_working_directory.
+    Fixes RootDirectory not working when used in combination with User.
+    (Closes: #939408)
+  * shared/bus-util: drop trusted annotation from
+    bus_open_system_watch_bind_with_description().
+    This ensures that access controls on systemd-resolved's D-Bus interface
+    are enforced properly.
+    (CVE-2019-15718, Closes: #939353)
+
+ -- Michael Biebl <biebl@debian.org>  Wed, 04 Sep 2019 19:34:17 +0200
+
 systemd (242-6ubuntu1) UNRELEASED; urgency=medium
 
   [ Dan Streetman ]
