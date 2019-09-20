@@ -179,8 +179,11 @@ systemd (243-1ubuntu1) UNRELEASED; urgency=medium
     This prevents breaking container managers
     File: debian/rules
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=7dbbd631f5c723b2e91f6db4a26b4bfa659ca4d0
+  * Pick upstream fix for generated units always asking for daemon reload
+    File: debian/patches/core-restore-initialization-of-u-source_mtime.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=08ec2c0062271b9691ced6c08088d0b7dd056b4e
 
- -- Balint Reczey <rbalint@ubuntu.com>  Fri, 13 Sep 2019 14:06:50 +0200
+ -- Balint Reczey <rbalint@ubuntu.com>  Fri, 20 Sep 2019 09:53:49 +0200
 
 systemd (243-1) experimental; urgency=medium
 
