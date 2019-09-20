@@ -51,8 +51,6 @@ int net_get_unique_predictable_data(sd_device *device, bool use_sysname, uint64_
         /* net_get_name_persistent() will return one of the device names based on stable information about
          * the device. If this is not available, we fall back to using the actual device name. */
         name = net_get_name_persistent(device);
-        if (!name && use_sysname)
-                (void) sd_device_get_sysname(device, &name);
         if (!name)
                 return log_device_debug_errno(device, SYNTHETIC_ERRNO(ENODATA),
                                               "No stable identifying information found");
