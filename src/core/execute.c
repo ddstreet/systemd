@@ -2548,14 +2548,18 @@ static int apply_mount_namespace(
                         log_unit_debug(u, "Failed to set up namespace, assuming containerized execution and ignoring.");
                         return 0;
                 }
-
                 log_unit_debug(u, "Failed to set up namespace, and refusing to continue since the selected namespacing options alter mount environment non-trivially.\n"
                                "Bind mounts: %zu, temporary filesystems: %zu, root directory: %s, root image: %s, dynamic user: %s",
                                n_bind_mounts, context->n_temporary_filesystems, yes_no(root_dir), yes_no(root_image), yes_no(context->dynamic_user));
 
                 return -EOPNOTSUPP;
         }
-
+        /* If we couldn't set up the namespace this is probably due to a
+         * missing capability. In this case, silently proceeed. */
+        if (IN_SET(r, -EPERM, -EACCES)) {
+                log_unit_debug_errno(u, r, "Failed to set up namespace, assuming containerized execution, ignoring: %m");
+                return 0;
+        }
         return r;
 }
 
