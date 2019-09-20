@@ -182,8 +182,16 @@ systemd (243-1ubuntu1) UNRELEASED; urgency=medium
   * Pick upstream fix for generated units always asking for daemon reload
     File: debian/patches/core-restore-initialization-of-u-source_mtime.patch
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=08ec2c0062271b9691ced6c08088d0b7dd056b4e
+  * Revert putting bin before sbin for user instances.
+    This would break expectation on Debian, Ubuntu and other derivatives.
+    File: debian/patches/Revert-manager-put-bin-before-sbin-for-user-instances.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=02a09226d2769adc52c77a0efca9744602e1e641
+  * Skip falling back to device name when net_get_name(device) fails.
+    This fixes network-manager and netplan.io autopkgtests.
+    File: debian/patches/Skip-falling-back-to-device-name-when-net_get_name-device.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=21c0722def8c84e01b5021aae171af87f343709b
 
- -- Balint Reczey <rbalint@ubuntu.com>  Fri, 20 Sep 2019 09:53:49 +0200
+ -- Balint Reczey <rbalint@ubuntu.com>  Fri, 20 Sep 2019 15:15:17 +0200
 
 systemd (243-1) experimental; urgency=medium
 
