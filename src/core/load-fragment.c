@@ -133,6 +133,7 @@ DEFINE_CONFIG_PARSE_PTR(config_parse_cg_weight, cg_weight_parse, uint64_t, "Inva
 DEFINE_CONFIG_PARSE_PTR(config_parse_cpu_shares, cg_cpu_shares_parse, uint64_t, "Invalid CPU shares");
 DEFINE_CONFIG_PARSE_PTR(config_parse_exec_mount_flags, mount_propagation_flags_from_string, unsigned long, "Failed to parse mount flag");
 DEFINE_CONFIG_PARSE_ENUM_WITH_DEFAULT(config_parse_numa_policy, mpol, int, -1, "Invalid NUMA policy type");
+DEFINE_CONFIG_PARSE_ENUM(config_parse_status_unit_format, status_unit_format, StatusUnitFormat, "Failed to parse status unit format");
 
 int config_parse_unit_deps(
                 const char *unit,
@@ -4594,6 +4595,7 @@ static int merge_by_names(Unit **u, Set *names, const char *id) {
 int unit_load_fragment(Unit *u) {
         const char *fragment;
         _cleanup_set_free_free_ Set *names = NULL;
+        struct stat st;
         int r;
 
         assert(u);
@@ -4625,7 +4627,6 @@ int unit_load_fragment(Unit *u) {
         if (fragment) {
                 /* Open the file, check if this is a mask, otherwise read. */
                 _cleanup_fclose_ FILE *f = NULL;
-                struct stat st;
 
                 /* Try to open the file name. A symlink is OK, for example for linked files or masks. We
                  * expect that all symlinks within the lookup paths have been already resolved, but we don't
@@ -4658,6 +4659,13 @@ int unit_load_fragment(Unit *u) {
                         if (r < 0)
                                 return r;
                 }
+        }
+
+        if (u->source_path) {
+                if (stat(u->source_path, &st) >= 0)
+                        u->source_mtime = timespec_load(&st.st_mtim);
+                else
+                        u->source_mtime = 0;
         }
 
         /* We do the merge dance here because for some unit types, the unit might have aliases which are not
