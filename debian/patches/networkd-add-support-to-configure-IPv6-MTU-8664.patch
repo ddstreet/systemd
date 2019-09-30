@@ -1,0 +1,179 @@
+From: Susant Sahani <145210+ssahani@users.noreply.github.com>
+Date: Fri, 20 Apr 2018 15:08:39 +0530
+Subject: networkd: add support to configure IPv6 MTU (#8664)
+
+This patch supports to configure IPv6 MTU.
+
+Closes #8632
+
+(cherry picked from commit 11102cba69b1ed73372cbfd60164d44ecf3b11f4)
+---
+ man/systemd.network.xml                  |  6 ++++++
+ src/network/networkd-link.c              | 30 ++++++++++++++++++++++++++
+ src/network/networkd-network-gperf.gperf |  1 +
+ src/network/networkd-network.c           | 37 ++++++++++++++++++++++++++++++++
+ src/network/networkd-network.h           |  5 ++++-
+ 5 files changed, 78 insertions(+), 1 deletion(-)
+
+diff --git a/man/systemd.network.xml b/man/systemd.network.xml
+index d91346e..8127637 100644
+--- a/man/systemd.network.xml
++++ b/man/systemd.network.xml
+@@ -679,6 +679,12 @@
+           sections for more configuration options.
+           </para></listitem>
+         </varlistentry>
++        <varlistentry>
++          <term><varname>IPv6MTUBytes=</varname></term>
++          <listitem><para>Configures IPv6 maximum transmission unit (MTU).
++          An integer greater than or equal to 1280 bytes. Defaults to unset.
++          </para></listitem>
++        </varlistentry>
+         <varlistentry>
+           <term><varname>Bridge=</varname></term>
+           <listitem>
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index f789475..ad5cead 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -2554,6 +2554,32 @@ static bool link_is_static_address_configured(Link *link, Address *address) {
+         return false;
+ }
+ 
++static int link_set_ipv6_mtu(Link *link) {
++        char buf[DECIMAL_STR_MAX(unsigned) + 1];
++        const char *p = NULL;
++        int r;
++
++        /* Make this a NOP if IPv6 is not available */
++        if (!socket_ipv6_is_supported())
++                return 0;
++
++        if (link->flags & IFF_LOOPBACK)
++                return 0;
++
++        if (link->network->ipv6_mtu == 0)
++                return 0;
++
++        p = strjoina("/proc/sys/net/ipv6/conf/", link->ifname, "/mtu");
++
++        xsprintf(buf, "%u", link->network->ipv6_mtu);
++
++        r = write_string_file(p, buf, 0);
++        if (r < 0)
++                log_link_warning_errno(link, r, "Cannot set IPv6 MTU for interface: %m");
++
++        return 0;
++}
++
+ static int link_drop_foreign_config(Link *link) {
+         Address *address;
+         Route *route;
+@@ -2720,6 +2746,10 @@ static int link_configure(Link *link) {
+         if (r < 0)
+                 return r;
+ 
++        r = link_set_ipv6_mtu(link);
++        if (r < 0)
++                return r;
++
+         if (link_ipv4ll_enabled(link)) {
+                 r = ipv4ll_configure(link);
+                 if (r < 0)
+diff --git a/src/network/networkd-network-gperf.gperf b/src/network/networkd-network-gperf.gperf
+index 281ba65..ba5c5db 100644
+--- a/src/network/networkd-network-gperf.gperf
++++ b/src/network/networkd-network-gperf.gperf
+@@ -69,6 +69,7 @@ Network.IPv6AcceptRouterAdvertisements, config_parse_tristate,
+ Network.IPv6DuplicateAddressDetection,  config_parse_int,                               0,                             offsetof(Network, ipv6_dad_transmits)
+ Network.IPv6HopLimit,                   config_parse_int,                               0,                             offsetof(Network, ipv6_hop_limit)
+ Network.IPv6ProxyNDP,                   config_parse_tristate,                          0,                             offsetof(Network, ipv6_proxy_ndp)
++Network.IPv6MTUBytes,                   config_parse_ipv6_mtu,                          0,                             0
+ Network.ActiveSlave,                    config_parse_bool,                              0,                             offsetof(Network, active_slave)
+ Network.PrimarySlave,                   config_parse_bool,                              0,                             offsetof(Network, primary_slave)
+ Network.IPv4ProxyARP,                   config_parse_tristate,                          0,                             offsetof(Network, proxy_arp)
+diff --git a/src/network/networkd-network.c b/src/network/networkd-network.c
+index e320c04..be7df68 100644
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -263,6 +263,7 @@ static int network_load_one(Manager *manager, const char *filename) {
+         network->ipv6_accept_ra_use_dns = true;
+         network->ipv6_accept_ra_use_domains = DHCP_USE_DOMAINS_YES;
+         network->ipv6_accept_ra_route_table = RT_TABLE_MAIN;
++        network->ipv6_mtu = 0;
+ 
+         dropin_dirname = strjoina(network->name, ".network.d");
+ 
+@@ -1431,6 +1432,42 @@ int config_parse_dhcp_route_table(const char *unit,
+         return 0;
+ }
+ 
++int config_parse_ipv6_mtu(
++                const char *unit,
++                const char *filename,
++                unsigned line,
++                const char *section,
++                unsigned section_line,
++                const char *lvalue,
++                int ltype,
++                const char *rvalue,
++                void *data,
++                void *userdata) {
++
++        Network *network = data;
++        uint32_t mtu;
++        int r;
++
++        assert(filename);
++        assert(lvalue);
++        assert(rvalue);
++
++        r = safe_atou32(rvalue, &mtu);
++        if (r < 0) {
++                log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse IPv6 MTU, ignoring assignment: %s", rvalue);
++                return 0;
++        }
++
++        if (mtu < IPV6_MIN_MTU) {
++                log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse IPv6 MTU for interface. Allowed minimum MTU is 1280 bytes, ignoring: %s", rvalue);
++                return 0;
++        }
++
++        network->ipv6_mtu = mtu;
++
++        return 0;
++}
++
+ DEFINE_CONFIG_PARSE_ENUM(config_parse_dhcp_use_domains, dhcp_use_domains, DHCPUseDomains, "Failed to parse DHCP use domains setting");
+ 
+ static const char* const dhcp_use_domains_table[_DHCP_USE_DOMAINS_MAX] = {
+diff --git a/src/network/networkd-network.h b/src/network/networkd-network.h
+index 7b40ba5..2e59804 100644
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -46,6 +46,8 @@
+ #define BRIDGE_VLAN_BITMAP_MAX 4096
+ #define BRIDGE_VLAN_BITMAP_LEN (BRIDGE_VLAN_BITMAP_MAX / 32)
+ 
++#define IPV6_MIN_MTU 1280
++
+ typedef enum DHCPClientIdentifier {
+         DHCP_CLIENT_ID_MAC,
+         DHCP_CLIENT_ID_DUID,
+@@ -207,6 +209,7 @@ struct Network {
+         int ipv6_hop_limit;
+         int ipv6_proxy_ndp;
+         int proxy_arp;
++        unsigned ipv6_mtu;
+ 
+         bool ipv6_accept_ra_use_dns;
+         bool active_slave;
+@@ -299,7 +302,7 @@ int config_parse_dhcp_use_domains(const char *unit, const char *filename, unsign
+ int config_parse_lldp_mode(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_dhcp_route_table(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ int config_parse_ntp(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+-
++int config_parse_ipv6_mtu(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ /* Legacy IPv4LL support */
+ int config_parse_ipv4ll(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+ 
