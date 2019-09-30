@@ -1,12 +1,6 @@
-systemd (237-3ubuntu10.30) bionic; urgency=medium
+systemd (237-3ubuntu10.31) bionic; urgency=medium
 
   [ Dimitri John Ledkov ]
-  * debian/extra/start-udev: ignore failure to set sync parameter.
-    On old kernels (e.g. v4.4) the file is available but appears to be
-    non-writable. Hide error messages and ignore failure to write out sync into
-    the parameters file. This does not regress https://pad.lv/1779815 since
-    older kernel did synchronous scan anyway. But it does resolve failure to
-    start the installer on old kernels. (LP: #1784454)
   * Add conflicts with upstart and systemd-shim. (LP: #1773859)
   * d/p/debian/UBUNTU-units-disable-journald-watchdog.patch
     - units: Disable journald Watchdog (LP: #1773148)
