@@ -68,6 +68,8 @@ run_qemu() {
             && KERNEL_BIN="$EFI_MOUNT/$MACHINE_ID/$KERNEL_VER/linux"
     fi
 
+    CONSOLE=ttyS0
+
     if [[ ! "$KERNEL_BIN" ]]; then
         if [[ "$LOOKS_LIKE_ARCH" ]]; then
             KERNEL_BIN=/boot/vmlinuz-linux
@@ -76,6 +78,7 @@ run_qemu() {
             case $ARCH in
                 ppc64*)
                 KERNEL_BIN=/boot/vmlinux-$KERNEL_VER
+                CONSOLE=hvc0
                 ;;
                 *)
                 KERNEL_BIN=/boot/vmlinuz-$KERNEL_VER
@@ -127,7 +130,7 @@ root=/dev/sda1 \
 raid=noautodetect \
 loglevel=2 \
 init=$ROOTLIBDIR/systemd \
-console=ttyS0 \
+console=$CONSOLE \
 selinux=0 \
 $_cgroup_args \
 $KERNEL_APPEND \
