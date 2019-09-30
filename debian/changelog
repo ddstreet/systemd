@@ -1,3 +1,19 @@
+systemd (237-3ubuntu10.31) bionic; urgency=medium
+
+  [ Dimitri John Ledkov ]
+  * Add conflicts with upstart and systemd-shim. (LP: #1773859)
+  * d/p/debian/UBUNTU-units-disable-journald-watchdog.patch
+    - units: Disable journald Watchdog (LP: #1773148)
+  * d/p/cryptsetup-add-support-for-sector-size-option-8881.patch
+    - cryptsetup: add support for sector-size= option (LP: #1776626)
+  * d/p/systemctl-correctly-proceed-to-immediate-shutdown-if-sche.patch
+    - systemctl: correctly proceed to immediate shutdown if scheduling fails
+      (LP: #1670291)
+  * d/p/networkd-add-support-to-configure-IPv6-MTU-8664.patch
+    - networkd: add support to set IPv6MTUBytes (LP: #1671951)
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Mon, 30 Sep 2019 17:23:17 +0200
+
 systemd (237-3ubuntu10.29) bionic; urgency=medium
 
   * d/p/d/Revert-udev-network-device-renaming-immediately-give.patch:
