@@ -151,3 +151,11 @@ rdrand-workaround-on-amd.patch
 lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
 lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
 0001-shared-but-util-drop-trusted-annotation-from-bus_ope.patch
+lp1840640-shared-seccomp-add-sync_file_range2.patch
+resolved_disable-connection-downgrade-when-DNSSEC-yes.patch
+lp1847527-journal-remote-do-not-request-Content-Length-if-Tran.patch
+test-execute-Filter-dev-.lxc-in-exec-dynamicuser-statedir.patch
+lp1843381-dell_passthrough_skip_rename_retry.patch
+lp1849733/0001-resolved-if-we-can-t-append-EDNS-OPT-RR-then-indicat.patch
+lp1849733/0002-resolved-don-t-let-EDNS0-OPT-dgram-size-affect-TCP.patch
+lp1849658-resolved-set-stream-type-during-DnsStream-creation.patch
