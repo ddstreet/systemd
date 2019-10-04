@@ -1,0 +1,481 @@
+From 98767d75d7cd50bb578f50b8fc902f8ef1a8f997 Mon Sep 17 00:00:00 2001
+From: Iwan Timmer <irtimmer@gmail.com>
+Date: Sun, 22 Apr 2018 15:23:45 +0200
+Subject: [PATCH] resolved: longlived TCP connections
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849733
+
+Keep DNS over TCP connection open until it's closed by the server or after a timeout.
+---
+ src/basic/ordered-set.h                |   8 ++
+ src/resolve/resolved-dns-packet.c      |  25 +++++
+ src/resolve/resolved-dns-packet.h      |   2 +
+ src/resolve/resolved-dns-server.c      |   2 +
+ src/resolve/resolved-dns-server.h      |   1 +
+ src/resolve/resolved-dns-stream.c      |  51 ++++++---
+ src/resolve/resolved-dns-stream.h      |   6 +-
+ src/resolve/resolved-dns-transaction.c | 149 ++++++++++++++++++-------
+ src/resolve/resolved-dns-transaction.h |   1 +
+ 9 files changed, 188 insertions(+), 57 deletions(-)
+
+--- a/src/basic/ordered-set.h
++++ b/src/basic/ordered-set.h
+@@ -61,6 +61,14 @@
+         return ordered_hashmap_iterate((OrderedHashmap*) s, i, value, NULL);
+ }
+ 
++static inline void* ordered_set_remove(OrderedSet *s, void *p) {
++        return ordered_hashmap_remove((OrderedHashmap*) s, p);
++}
++
++static inline void* ordered_set_steal_first(OrderedSet *s) {
++        return ordered_hashmap_steal_first((OrderedHashmap*) s);
++}
++
+ int ordered_set_consume(OrderedSet *s, void *p);
+ int ordered_set_put_strdup(OrderedSet *s, const char *p);
+ int ordered_set_put_strdupv(OrderedSet *s, char **l);
+--- a/src/resolve/resolved-dns-packet.c
++++ b/src/resolve/resolved-dns-packet.c
+@@ -2351,6 +2351,31 @@
+         return dns_resource_key_equal(p->question->keys[0], key);
+ }
+ 
++static void dns_packet_hash_func(const void *p, struct siphash *state) {
++        const DnsPacket *s = p;
++
++        assert(s);
++
++        siphash24_compress(&s->size, sizeof(s->size), state);
++        siphash24_compress(DNS_PACKET_DATA((DnsPacket*) s), s->size, state);
++}
++
++static int dns_packet_compare_func(const void *a, const void *b) {
++        const DnsPacket *x = a, *y = b;
++
++        if (x->size < y->size)
++                return -1;
++        if (x->size > y->size)
++                return 1;
++
++        return memcmp(DNS_PACKET_DATA((DnsPacket*) x), DNS_PACKET_DATA((DnsPacket*) y), x->size);
++}
++
++const struct hash_ops dns_packet_hash_ops = {
++        .hash = dns_packet_hash_func,
++        .compare = dns_packet_compare_func
++};
++
+ static const char* const dns_rcode_table[_DNS_RCODE_MAX_DEFINED] = {
+         [DNS_RCODE_SUCCESS] = "SUCCESS",
+         [DNS_RCODE_FORMERR] = "FORMERR",
+--- a/src/resolve/resolved-dns-packet.h
++++ b/src/resolve/resolved-dns-packet.h
+@@ -286,6 +286,8 @@
+ #define MDNS_MULTICAST_IPV4_ADDRESS  ((struct in_addr) { .s_addr = htobe32(224U << 24 | 251U) })
+ #define MDNS_MULTICAST_IPV6_ADDRESS  ((struct in6_addr) { .s6_addr = { 0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfb } })
+ 
++extern const struct hash_ops dns_packet_hash_ops;
++
+ static inline uint64_t SD_RESOLVED_FLAGS_MAKE(DnsProtocol protocol, int family, bool authenticated) {
+         uint64_t f;
+ 
+--- a/src/resolve/resolved-dns-server.c
++++ b/src/resolve/resolved-dns-server.c
+@@ -136,6 +136,8 @@
+         if (s->n_ref > 0)
+                 return NULL;
+ 
++        dns_stream_unref(s->stream);
++
+         free(s->server_string);
+         return mfree(s);
+ }
+--- a/src/resolve/resolved-dns-server.h
++++ b/src/resolve/resolved-dns-server.h
+@@ -66,6 +66,7 @@
+         int ifindex; /* for IPv6 link-local DNS servers */
+ 
+         char *server_string;
++        DnsStream *stream;
+ 
+         usec_t resend_timeout;
+         usec_t max_rtt;
+--- a/src/resolve/resolved-dns-stream.c
++++ b/src/resolve/resolved-dns-stream.c
+@@ -44,6 +44,13 @@
+ 
+         if (s->write_packet && s->n_written < sizeof(s->write_size) + s->write_packet->size)
+                 f |= EPOLLOUT;
++        else if (!ordered_set_isempty(s->write_queue)) {
++                dns_packet_unref(s->write_packet);
++                s->write_packet = ordered_set_steal_first(s->write_queue);
++                s->write_size = htobe16(s->write_packet->size);
++                s->n_written = 0;
++                f |= EPOLLOUT;
++        }
+         if (!s->read_packet || s->n_read < sizeof(s->read_size) + s->read_packet->size)
+                 f |= EPOLLIN;
+ 
+@@ -304,15 +311,18 @@
+ 
+                         /* Are we done? If so, disable the event source for EPOLLIN */
+                         if (s->n_read >= sizeof(s->read_size) + be16toh(s->read_size)) {
+-                                r = dns_stream_update_io(s);
+-                                if (r < 0)
+-                                        return dns_stream_complete(s, -r);
+-
+                                 /* If there's a packet handler
+                                  * installed, call that. Note that
+                                  * this is optional... */
+-                                if (s->on_packet)
+-                                        return s->on_packet(s);
++                                if (s->on_packet) {
++                                        r = s->on_packet(s);
++                                        if (r < 0)
++                                                return r;
++                                }
++
++                                r = dns_stream_update_io(s);
++                                if (r < 0)
++                                        return dns_stream_complete(s, -r);
+                         }
+                 }
+         }
+@@ -325,6 +335,9 @@
+ }
+ 
+ DnsStream *dns_stream_unref(DnsStream *s) {
++        DnsPacket *p;
++        Iterator i;
++
+         if (!s)
+                 return NULL;
+ 
+@@ -336,19 +349,26 @@
+ 
+         dns_stream_stop(s);
+ 
++        if (s->server && s->server->stream == s)
++                s->server->stream = NULL;
++
+         if (s->manager) {
+                 LIST_REMOVE(streams, s->manager->dns_streams, s);
+                 s->manager->n_dns_streams--;
+         }
+ 
++        ORDERED_SET_FOREACH(p, s->write_queue, i)
++                dns_packet_unref(ordered_set_remove(s->write_queue, p));
++
+         dns_packet_unref(s->write_packet);
+         dns_packet_unref(s->read_packet);
++        dns_server_unref(s->server);
++
++        ordered_set_free(s->write_queue);
+ 
+         return mfree(s);
+ }
+ 
+-DEFINE_TRIVIAL_CLEANUP_FUNC(DnsStream*, dns_stream_unref);
+-
+ DnsStream *dns_stream_ref(DnsStream *s) {
+         if (!s)
+                 return NULL;
+@@ -373,6 +393,10 @@
+         if (!s)
+                 return -ENOMEM;
+ 
++        r = ordered_set_ensure_allocated(&s->write_queue, &dns_packet_hash_ops);
++        if (r < 0)
++                return r;
++
+         s->n_ref = 1;
+         s->fd = -1;
+         s->protocol = protocol;
+@@ -406,14 +430,15 @@
+ }
+ 
+ int dns_stream_write_packet(DnsStream *s, DnsPacket *p) {
++        int r;
++
+         assert(s);
+ 
+-        if (s->write_packet)
+-                return -EBUSY;
++        r = ordered_set_put(s->write_queue, p);
++        if (r < 0)
++                return r;
+ 
+-        s->write_packet = dns_packet_ref(p);
+-        s->write_size = htobe16(p->size);
+-        s->n_written = 0;
++        dns_packet_ref(p);
+ 
+         return dns_stream_update_io(s);
+ }
+--- a/src/resolve/resolved-dns-stream.h
++++ b/src/resolve/resolved-dns-stream.h
+@@ -56,11 +56,13 @@
+         be16_t write_size, read_size;
+         DnsPacket *write_packet, *read_packet;
+         size_t n_written, n_read;
++        OrderedSet *write_queue;
+ 
+         int (*on_packet)(DnsStream *s);
+         int (*complete)(DnsStream *s, int error);
+ 
+-        DnsTransaction *transaction; /* when used by the transaction logic */
++        LIST_HEAD(DnsTransaction, transactions); /* when used by the transaction logic */
++        DnsServer *server;                       /* when used by the transaction logic */
+         DnsQuery *query;             /* when used by the DNS stub logic */
+ 
+         LIST_FIELDS(DnsStream, streams);
+@@ -70,6 +72,8 @@
+ DnsStream *dns_stream_unref(DnsStream *s);
+ DnsStream *dns_stream_ref(DnsStream *s);
+ 
++DEFINE_TRIVIAL_CLEANUP_FUNC(DnsStream*, dns_stream_unref);
++
+ int dns_stream_write_packet(DnsStream *s, DnsPacket *p);
+ 
+ static inline bool DNS_STREAM_QUEUED(DnsStream *s) {
+--- a/src/resolve/resolved-dns-transaction.c
++++ b/src/resolve/resolved-dns-transaction.c
+@@ -64,9 +64,11 @@
+ 
+         if (t->stream) {
+                 /* Let's detach the stream from our transaction, in case something else keeps a reference to it. */
+-                t->stream->complete = NULL;
+-                t->stream->on_packet = NULL;
+-                t->stream->transaction = NULL;
++                LIST_REMOVE(transactions_by_stream, t->stream->transactions, t);
++
++                /* Remove packet in case it's still in the queue */
++                dns_packet_unref(ordered_set_remove(t->stream->write_queue, t->sent));
++
+                 t->stream = dns_stream_unref(t->stream);
+         }
+ 
+@@ -462,42 +464,31 @@
+         return 1;
+ }
+ 
+-static int on_stream_complete(DnsStream *s, int error) {
+-        _cleanup_(dns_packet_unrefp) DnsPacket *p = NULL;
+-        DnsTransaction *t;
+-
+-        assert(s);
+-        assert(s->transaction);
+-
+-        /* Copy the data we care about out of the stream before we
+-         * destroy it. */
+-        t = s->transaction;
+-        p = dns_packet_ref(s->read_packet);
++static void on_transaction_stream_error(DnsTransaction *t, int error) {
++        assert(t);
+ 
+         dns_transaction_close_connection(t);
+ 
+         if (ERRNO_IS_DISCONNECT(error)) {
+-                usec_t usec;
+-
+                 if (t->scope->protocol == DNS_PROTOCOL_LLMNR) {
+                         /* If the LLMNR/TCP connection failed, the host doesn't support LLMNR, and we cannot answer the
+                          * question on this scope. */
+                         dns_transaction_complete(t, DNS_TRANSACTION_NOT_FOUND);
+-                        return 0;
+                 }
+ 
+-                log_debug_errno(error, "Connection failure for DNS TCP stream: %m");
+-                assert_se(sd_event_now(t->scope->manager->event, clock_boottime_or_monotonic(), &usec) >= 0);
+-                dns_server_packet_lost(t->server, IPPROTO_TCP, t->current_feature_level, usec - t->start_usec);
+-
+                 dns_transaction_retry(t, true);
+-                return 0;
+         }
+         if (error != 0) {
+                 t->answer_errno = error;
+                 dns_transaction_complete(t, DNS_TRANSACTION_ERRNO);
+-                return 0;
+         }
++}
++
++static int dns_transaction_on_stream_packet(DnsTransaction *t, DnsPacket *p) {
++        assert(t);
++        assert(p);
++
++        dns_transaction_close_connection(t);
+ 
+         if (dns_packet_validate_reply(p) <= 0) {
+                 log_debug("Invalid TCP reply packet.");
+@@ -522,8 +513,64 @@
+         return 0;
+ }
+ 
+-static int dns_transaction_open_tcp(DnsTransaction *t) {
++static int on_stream_complete(DnsStream *s, int error) {
++        DnsTransaction *t, *n;
++        int r = 0;
++
++        /* Do not let new transactions use this stream */
++        if (s->server && s->server->stream == s)
++                s->server->stream = dns_stream_unref(s->server->stream);
++
++        if (ERRNO_IS_DISCONNECT(error) && s->protocol != DNS_PROTOCOL_LLMNR) {
++                usec_t usec;
++
++                log_debug_errno(error, "Connection failure for DNS TCP stream: %m");
++
++                if (s->transactions) {
++                        t = s->transactions;
++                        assert_se(sd_event_now(t->scope->manager->event, clock_boottime_or_monotonic(), &usec) >= 0);
++                        dns_server_packet_lost(t->server, IPPROTO_UDP, t->current_feature_level, usec - t->start_usec);
++                }
++        }
++
++        LIST_FOREACH_SAFE(transactions_by_stream, t, n, s->transactions)
++                if (error != 0)
++                        on_transaction_stream_error(t, error);
++                else if (DNS_PACKET_ID(s->read_packet) == t->id)
++                        /* As each transaction have a unique id the return code is only set once */
++                        r = dns_transaction_on_stream_packet(t, s->read_packet);
++
++        return r;
++}
++
++static int dns_stream_on_packet(DnsStream *s) {
++        _cleanup_(dns_packet_unrefp) DnsPacket *p = NULL;
++        int r = 0;
++        DnsTransaction *t;
++
++        /* Take ownership of packet to be able to receive new packets */
++        p = TAKE_PTR(s->read_packet);
++        s->n_read = 0;
++
++        t = hashmap_get(s->manager->dns_transactions, UINT_TO_PTR(DNS_PACKET_ID(p)));
++
++        /* Ignore incorrect transaction id as transaction can have been canceled */
++        if (t)
++                r = dns_transaction_on_stream_packet(t, p);
++        else {
++                if (dns_packet_validate_reply(p) <= 0) {
++                        log_debug("Invalid TCP reply packet.");
++                        on_stream_complete(s, 0);
++                }
++                return 0;
++        }
++
++        return r;
++}
++
++static int dns_transaction_emit_tcp(DnsTransaction *t) {
+         _cleanup_close_ int fd = -1;
++        _cleanup_(dns_stream_unrefp) DnsStream *s = NULL;
+         int r;
+ 
+         assert(t);
+@@ -544,7 +591,11 @@
+                 if (r < 0)
+                         return r;
+ 
+-                fd = dns_scope_socket_tcp(t->scope, AF_UNSPEC, NULL, t->server, 53);
++                if (t->server->stream)
++                        s = dns_stream_ref(t->server->stream);
++                else
++                        fd = dns_scope_socket_tcp(t->scope, AF_UNSPEC, NULL, t->server, 53);
++
+                 break;
+ 
+         case DNS_PROTOCOL_LLMNR:
+@@ -576,28 +627,40 @@
+                 return -EAFNOSUPPORT;
+         }
+ 
+-        if (fd < 0)
+-                return fd;
++        if (!s) {
++                if (fd < 0)
++                        return fd;
+ 
+-        r = dns_stream_new(t->scope->manager, &t->stream, t->scope->protocol, fd);
+-        if (r < 0)
+-                return r;
+-        fd = -1;
++                r = dns_stream_new(t->scope->manager, &s, t->scope->protocol, fd);
++                if (r < 0)
++                        return r;
++
++                fd = -1;
++
++                if (t->server) {
++                        dns_stream_unref(t->server->stream);
++                        t->server->stream = dns_stream_ref(s);
++                        s->server = dns_server_ref(t->server);
++                }
++
++                s->complete = on_stream_complete;
++                s->on_packet = dns_stream_on_packet;
++
++                /* The interface index is difficult to determine if we are
++                 * connecting to the local host, hence fill this in right away
++                 * instead of determining it from the socket */
++                s->ifindex = dns_scope_ifindex(t->scope);
++        }
++
++        t->stream = TAKE_PTR(s);
++        LIST_PREPEND(transactions_by_stream, t->stream->transactions, t);
+ 
+         r = dns_stream_write_packet(t->stream, t->sent);
+         if (r < 0) {
+-                t->stream = dns_stream_unref(t->stream);
++                dns_transaction_close_connection(t);
+                 return r;
+         }
+ 
+-        t->stream->complete = on_stream_complete;
+-        t->stream->transaction = t;
+-
+-        /* The interface index is difficult to determine if we are
+-         * connecting to the local host, hence fill this in right away
+-         * instead of determining it from the socket */
+-        t->stream->ifindex = dns_scope_ifindex(t->scope);
+-
+         dns_transaction_reset_answer(t);
+ 
+         t->tried_stream = true;
+@@ -1015,7 +1078,7 @@
+                 log_debug("Reply truncated, retrying via TCP.");
+ 
+                 /* Response was truncated, let's try again with good old TCP */
+-                r = dns_transaction_open_tcp(t);
++                r = dns_transaction_emit_tcp(t);
+                 if (r == -ESRCH) {
+                         /* No servers found? Damn! */
+                         dns_transaction_complete(t, DNS_TRANSACTION_NO_SERVERS);
+@@ -1674,7 +1737,7 @@
+ 
+                 /* RFC 4795, Section 2.4. says reverse lookups shall
+                  * always be made via TCP on LLMNR */
+-                r = dns_transaction_open_tcp(t);
++                r = dns_transaction_emit_tcp(t);
+         } else {
+                 /* Try via UDP, and if that fails due to large size or lack of
+                  * support try via TCP */
+@@ -1684,7 +1747,7 @@
+                 else if (r == -EAGAIN)
+                         log_debug("Sending query via TCP since server doesn't support UDP.");
+                 if (IN_SET(r, -EMSGSIZE, -EAGAIN))
+-                        r = dns_transaction_open_tcp(t);
++                        r = dns_transaction_emit_tcp(t);
+         }
+ 
+         if (r == -ESRCH) {
+--- a/src/resolve/resolved-dns-transaction.h
++++ b/src/resolve/resolved-dns-transaction.h
+@@ -149,6 +149,7 @@
+         unsigned block_gc;
+ 
+         LIST_FIELDS(DnsTransaction, transactions_by_scope);
++        LIST_FIELDS(DnsTransaction, transactions_by_stream);
+ };
+ 
+ int dns_transaction_new(DnsTransaction **ret, DnsScope *s, DnsResourceKey *key);
