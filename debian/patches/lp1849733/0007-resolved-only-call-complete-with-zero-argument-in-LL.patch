@@ -1,0 +1,31 @@
+From 9c9e017067a6889458e1df557a8d9e1c599fce33 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 21 Jan 2019 19:32:32 +0100
+Subject: [PATCH] resolved: only call complete() with zero argument in
+ LLMNR client cases
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849733
+
+In all other cases (i.e. classic DNS connection towards an upstream
+server, or incoming stub connection, or incoming LMMNR connection) we
+want long-running connections, hence keep the connection open for good.
+Only in the LLMNR client case let's close the stream as soon as we are
+done.
+---
+ src/resolve/resolved-dns-stream.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+--- a/src/resolve/resolved-dns-stream.c
++++ b/src/resolve/resolved-dns-stream.c
+@@ -332,7 +332,11 @@
+                 }
+         }
+ 
+-        if ((s->write_packet && s->n_written >= sizeof(s->write_size) + s->write_packet->size) &&
++        /* Call "complete" callback if finished reading and writing one packet, and there's nothing else left
++         * to write. */
++        if (s->type == DNS_STREAM_LLMNR_SEND &&
++            (s->write_packet && s->n_written >= sizeof(s->write_size) + s->write_packet->size) &&
++            ordered_set_isempty(s->write_queue) &&
+             (s->read_packet && s->n_read >= sizeof(s->read_size) + s->read_packet->size))
+                 return dns_stream_complete(s, 0);
+ 

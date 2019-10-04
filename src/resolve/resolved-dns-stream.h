@@ -24,6 +24,15 @@
 
 typedef struct DnsStream DnsStream;
 
+typedef enum DnsStreamType {
+        DNS_STREAM_LOOKUP,        /* Outgoing connection to a classic DNS server */
+        DNS_STREAM_LLMNR_SEND,    /* Outgoing LLMNR TCP lookup */
+        DNS_STREAM_LLMNR_RECV,    /* Incoming LLMNR TCP lookup */
+        DNS_STREAM_STUB,          /* Incoming DNS stub connection */
+        _DNS_STREAM_TYPE_MAX,
+        _DNS_STREAM_TYPE_INVALID = -1,
+} DnsStreamType;
+
 #include "resolved-dns-packet.h"
 #include "resolved-dns-transaction.h"
 #include "resolved-manager.h"
@@ -39,6 +48,7 @@ struct DnsStream {
         Manager *manager;
         int n_ref;
 
+        DnsStreamType type;
         DnsProtocol protocol;
 
         int fd;
@@ -56,19 +66,23 @@ struct DnsStream {
         be16_t write_size, read_size;
         DnsPacket *write_packet, *read_packet;
         size_t n_written, n_read;
+        OrderedSet *write_queue;
 
         int (*on_packet)(DnsStream *s);
         int (*complete)(DnsStream *s, int error);
 
-        DnsTransaction *transaction; /* when used by the transaction logic */
-        DnsQuery *query;             /* when used by the DNS stub logic */
+        LIST_HEAD(DnsTransaction, transactions); /* when used by the transaction logic */
+        DnsServer *server;                       /* when used by the transaction logic */
+        Set *queries;                            /* when used by the DNS stub logic */
 
         LIST_FIELDS(DnsStream, streams);
 };
 
-int dns_stream_new(Manager *m, DnsStream **s, DnsProtocol protocol, int fd);
+int dns_stream_new(Manager *m, DnsStream **s, DnsStreamType type, DnsProtocol protocol, int fd);
 DnsStream *dns_stream_unref(DnsStream *s);
 DnsStream *dns_stream_ref(DnsStream *s);
+
+DEFINE_TRIVIAL_CLEANUP_FUNC(DnsStream*, dns_stream_unref);
 
 int dns_stream_write_packet(DnsStream *s, DnsPacket *p);
 
@@ -80,3 +94,5 @@ static inline bool DNS_STREAM_QUEUED(DnsStream *s) {
 
         return !!s->write_packet;
 }
+
+DnsPacket *dns_stream_take_read_packet(DnsStream *s);

@@ -1,0 +1,41 @@
+From 72c2500b2ade34d02ee5d2701e954d40ca6b0837 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 8 Aug 2018 20:21:07 +0900
+Subject: [PATCH] network: drop redundant lines
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1850704
+
+Follow-up for 44b598a1c9d11c23420a5ef45ff11bcb0ed195eb.
+---
+ src/network/networkd-link.c | 12 ++++--------
+ 1 file changed, 4 insertions(+), 8 deletions(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1358,23 +1358,19 @@
+                 return log_link_error_errno(link, r, "Could not allocate RTM_SETLINK message: %m");
+ 
+         /* If IPv6 not configured (no static IPv6 address and IPv6LL autoconfiguration is disabled)
+-           for this interface, or if it is a bridge slave, then disable IPv6 else enable it. */
++         * for this interface, or if it is a bridge slave, then disable IPv6 else enable it. */
+         (void) link_enable_ipv6(link);
+ 
+         /* IPv6 protocol requires a minimum MTU of IPV6_MTU_MIN(1280) bytes
+-           on the interface. Bump up MTU bytes to IPV6_MTU_MIN. */
+-        if (link_ipv6_enabled(link) && link->network->mtu < IPV6_MIN_MTU) {
++         * on the interface. Bump up MTU bytes to IPV6_MTU_MIN. */
++        if (link_ipv6_enabled(link) && mtu < IPV6_MIN_MTU) {
+ 
+                 log_link_warning(link, "Bumping MTU to " STRINGIFY(IPV6_MIN_MTU) ", as "
+                                  "IPv6 is requested and requires a minimum MTU of " STRINGIFY(IPV6_MIN_MTU) " bytes: %m");
+ 
+-                link->network->mtu = IPV6_MIN_MTU;
++                mtu = IPV6_MIN_MTU;
+         }
+ 
+-        r = sd_netlink_message_append_u32(req, IFLA_MTU, link->network->mtu);
+-        if (r < 0)
+-                return log_link_error_errno(link, r, "Could not set MTU: %m");
+-
+         r = sd_netlink_message_append_u32(req, IFLA_MTU, mtu);
+         if (r < 0)
+                 return log_link_error_errno(link, r, "Could not append MTU: %m");
