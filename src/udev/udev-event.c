@@ -722,6 +722,12 @@ static int rename_netif(UdevEvent *event) {
         if (r != -EEXIST)
                 goto out;
 
+        /* This is something bad Dell does, https://bugs.launchpad.net/bugs/1843381 */
+        if (sd_device_get_property_value(dev, "DELL_MAC_PASSTHROUGH", NULL) >= 0) {
+                log_device_warning(dev, "Dell MAC passthrough detected, leaving interface name as '%s'", oldname);
+                goto out;
+        }
+
         /* free our own name, another process may wait for us */
         snprintf(name, IFNAMSIZ, "rename%u", ifindex);
         r = rtnl_set_link_name(&event->rtnl, ifindex, name);

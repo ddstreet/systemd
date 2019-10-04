@@ -1,3 +1,38 @@
+systemd (240-6ubuntu5.8) disco; urgency=medium
+
+  [ Victor Tapia ]
+  * d/p/resolved_disable-connection-downgrade-when-DNSSEC-yes.patch
+    Fix regression introduced by
+    resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch when
+    DNSSEC=yes (LP: #1796501)
+
+  [ Dan Streetman ]
+  * d/p/lp1840640-shared-seccomp-add-sync_file_range2.patch:
+    allow sync_file_range2 in nspawn container (LP: #1840640)
+  * d/p/lp1847527-journal-remote-do-not-request-Content-Length-if-Tran.patch:
+    do not request Content-Length if Transfer-Encoding is chunked
+    (LP: #1847527)
+  * d/t/storage: fix flaky test
+    (LP: #1847815)
+  * d/p/lp1843381-dell_passthrough_skip_rename_retry.patch,
+    debian/extra/rules/73-usb-net-by-mac.rules:
+    fix rename delay for systems using "Dell MAC passthrough"
+    (LP: #1843381)
+  * d/p/lp1849733/0001-resolved-if-we-can-t-append-EDNS-OPT-RR-then-indicat.patch,
+    d/p/lp1849733/0002-resolved-don-t-let-EDNS0-OPT-dgram-size-affect-TCP.patch:
+    ignore EDNS0 payload limit when responding over TCP (LP: #1849733)
+  * d/p/lp1849658-resolved-set-stream-type-during-DnsStream-creation.patch:
+    - Fix bug in refcounting TCP stream types (LP: #1849658)
+  * d/extra/dhclient-enter-resolved-hook:
+    - only restart resolved if dhclient conf changed (LP: #1805183)
+
+  [ Balint Reczey ]
+  * d/p/test-execute-Filter-dev-.lxc-in-exec-dynamicuser-statedir.patch:
+    fix test breakage due to running in nested lxd container
+    (LP: #1845337)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 04 Oct 2019 09:06:58 -0400
+
 systemd (240-6ubuntu5.7) disco; urgency=medium
 
   * d/p/d/Revert-udev-network-device-renaming-immediately-give.patch:
