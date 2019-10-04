@@ -1,0 +1,83 @@
+From 44b598a1c9d11c23420a5ef45ff11bcb0ed195eb Mon Sep 17 00:00:00 2001
+From: Susant Sahani <susant@redhat.com>
+Date: Thu, 14 Jun 2018 22:49:25 +0530
+Subject: [PATCH] networkd: Unify set MTU
+Origin: upstream, https://github.com/systemd/systemd/pull/9310
+Bug: https://github.com/systemd/systemd/issues/9254
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1850704
+
+Now the setting MTU is embedded into the link_up message which makes it
+incapable of setting MTU if link is up. MTU can be set while Link is up.
+
+Closes #9254
+---
+ src/network/networkd-link.c | 44 ++++++++++++++++++++-----------------
+ 1 file changed, 24 insertions(+), 20 deletions(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1357,6 +1357,24 @@
+         if (r < 0)
+                 return log_link_error_errno(link, r, "Could not allocate RTM_SETLINK message: %m");
+ 
++        /* If IPv6 not configured (no static IPv6 address and IPv6LL autoconfiguration is disabled)
++           for this interface, or if it is a bridge slave, then disable IPv6 else enable it. */
++        (void) link_enable_ipv6(link);
++
++        /* IPv6 protocol requires a minimum MTU of IPV6_MTU_MIN(1280) bytes
++           on the interface. Bump up MTU bytes to IPV6_MTU_MIN. */
++        if (link_ipv6_enabled(link) && link->network->mtu < IPV6_MIN_MTU) {
++
++                log_link_warning(link, "Bumping MTU to " STRINGIFY(IPV6_MIN_MTU) ", as "
++                                 "IPv6 is requested and requires a minimum MTU of " STRINGIFY(IPV6_MIN_MTU) " bytes: %m");
++
++                link->network->mtu = IPV6_MIN_MTU;
++        }
++
++        r = sd_netlink_message_append_u32(req, IFLA_MTU, link->network->mtu);
++        if (r < 0)
++                return log_link_error_errno(link, r, "Could not set MTU: %m");
++
+         r = sd_netlink_message_append_u32(req, IFLA_MTU, mtu);
+         if (r < 0)
+                 return log_link_error_errno(link, r, "Could not append MTU: %m");
+@@ -1802,26 +1820,6 @@
+                         return log_link_error_errno(link, r, "Could not set MAC address: %m");
+         }
+ 
+-        /* If IPv6 not configured (no static IPv6 address and IPv6LL autoconfiguration is disabled)
+-           for this interface, or if it is a bridge slave, then disable IPv6 else enable it. */
+-        (void) link_enable_ipv6(link);
+-
+-        if (link->network->mtu) {
+-                /* IPv6 protocol requires a minimum MTU of IPV6_MTU_MIN(1280) bytes
+-                   on the interface. Bump up MTU bytes to IPV6_MTU_MIN. */
+-                if (link_ipv6_enabled(link) && link->network->mtu < IPV6_MIN_MTU) {
+-
+-                        log_link_warning(link, "Bumping MTU to " STRINGIFY(IPV6_MIN_MTU) ", as "
+-                                         "IPv6 is requested and requires a minimum MTU of " STRINGIFY(IPV6_MIN_MTU) " bytes: %m");
+-
+-                        link->network->mtu = IPV6_MIN_MTU;
+-                }
+-
+-                r = sd_netlink_message_append_u32(req, IFLA_MTU, link->network->mtu);
+-                if (r < 0)
+-                        return log_link_error_errno(link, r, "Could not set MTU: %m");
+-        }
+-
+         r = sd_netlink_message_open_container(req, IFLA_AF_SPEC);
+         if (r < 0)
+                 return log_link_error_errno(link, r, "Could not open IFLA_AF_SPEC container: %m");
+@@ -2827,6 +2825,12 @@
+                 if (r < 0)
+                         return r;
+         }
++
++        if (link->network->mtu > 0) {
++                r = link_set_mtu(link, link->network->mtu);
++                if (r < 0)
++                        return r;
++        }
+ 
+         if (link_has_carrier(link) || link->network->configure_without_carrier) {
+                 r = link_acquire_conf(link);

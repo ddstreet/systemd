@@ -1,0 +1,26 @@
+From b27a32a0def7dfd32aa9c311cdf14fd90b8d1297 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 4 Dec 2018 19:26:54 +0100
+Subject: [PATCH] resolved: line split dns_stream_new() function signature
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849733
+
+---
+ src/resolve/resolved-dns-stream.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+--- a/src/resolve/resolved-dns-stream.c
++++ b/src/resolve/resolved-dns-stream.c
+@@ -379,7 +379,12 @@
+         return s;
+ }
+ 
+-int dns_stream_new(Manager *m, DnsStream **ret, DnsProtocol protocol, int fd) {
++int dns_stream_new(
++                Manager *m,
++                DnsStream **ret,
++                DnsProtocol protocol,
++                int fd) {
++
+         _cleanup_(dns_stream_unrefp) DnsStream *s = NULL;
+         int r;
+ 
