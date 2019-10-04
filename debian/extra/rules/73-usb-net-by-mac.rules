@@ -12,4 +12,15 @@ ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="usb", NAME=="", \
     TEST!="/etc/systemd/network/99-default.link", \
     IMPORT{builtin}="net_id", NAME="$env{ID_NET_NAME_MAC}"
 
+# Some Dell BIOS perform "MAC passthrough" which forces the same MAC address
+# for the onboard nic and the in-dock nic, which obviously prevents naming
+# the interfaces by mac.  Since those nics are usb, we have to prevent trying
+# to rename both of them to the same name.  This sets a value that will
+# cause udevd to skip its repeated attempts at renaming the interface if the
+# first rename attempt fails.
+ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="usb", \
+    ATTR{[dmi/id]sys_vendor}=="Dell Inc.", \
+    ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="8153", \
+    ENV{DELL_MAC_PASSTHROUGH}="1"
+
 LABEL="usb_net_by_mac_end"
