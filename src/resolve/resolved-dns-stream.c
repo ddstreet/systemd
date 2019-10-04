@@ -29,6 +29,8 @@
 #define DNS_STREAM_TIMEOUT_USEC (10 * USEC_PER_SEC)
 #define DNS_STREAMS_MAX 128
 
+#define DNS_QUERIES_PER_STREAM 32
+
 static void dns_stream_stop(DnsStream *s) {
         assert(s);
 
@@ -44,7 +46,18 @@ static int dns_stream_update_io(DnsStream *s) {
 
         if (s->write_packet && s->n_written < sizeof(s->write_size) + s->write_packet->size)
                 f |= EPOLLOUT;
-        if (!s->read_packet || s->n_read < sizeof(s->read_size) + s->read_packet->size)
+        else if (!ordered_set_isempty(s->write_queue)) {
+                dns_packet_unref(s->write_packet);
+                s->write_packet = ordered_set_steal_first(s->write_queue);
+                s->write_size = htobe16(s->write_packet->size);
+                s->n_written = 0;
+                f |= EPOLLOUT;
+        }
+
+        /* Let's read a packet if we haven't queued any yet. Except if we already hit a limit of parallel
+         * queries for this connection. */
+        if ((!s->read_packet || s->n_read < sizeof(s->read_size) + s->read_packet->size) &&
+                set_size(s->queries) < DNS_QUERIES_PER_STREAM)
                 f |= EPOLLIN;
 
         return sd_event_source_set_io_events(s->io_event_source, f);
@@ -52,6 +65,10 @@ static int dns_stream_update_io(DnsStream *s) {
 
 static int dns_stream_complete(DnsStream *s, int error) {
         assert(s);
+        assert(error >= 0);
+
+        /* Error is > 0 when the connection failed for some reason in the network stack. It's == 0 if we sent
+         * and receieved exactly one packet each (in the LLMNR client case). */
 
         dns_stream_stop(s);
 
@@ -198,6 +215,7 @@ static int on_stream_timeout(sd_event_source *es, usec_t usec, void *userdata) {
 
 static int on_stream_io(sd_event_source *es, int fd, uint32_t revents, void *userdata) {
         DnsStream *s = userdata;
+        bool progressed = false;
         int r;
 
         assert(s);
@@ -224,8 +242,10 @@ static int on_stream_io(sd_event_source *es, int fd, uint32_t revents, void *use
                 if (ss < 0) {
                         if (!IN_SET(errno, EINTR, EAGAIN))
                                 return dns_stream_complete(s, errno);
-                } else
+                } else {
+                        progressed = true;
                         s->n_written += ss;
+                }
 
                 /* Are we done? If so, disable the event source for EPOLLOUT */
                 if (s->n_written >= sizeof(s->write_size) + s->write_packet->size) {
@@ -248,8 +268,10 @@ static int on_stream_io(sd_event_source *es, int fd, uint32_t revents, void *use
                                         return dns_stream_complete(s, errno);
                         } else if (ss == 0)
                                 return dns_stream_complete(s, ECONNRESET);
-                        else
+                        else {
+                                progressed = true;
                                 s->n_read += ss;
+                        }
                 }
 
                 if (s->n_read >= sizeof(s->read_size)) {
@@ -304,27 +326,44 @@ static int on_stream_io(sd_event_source *es, int fd, uint32_t revents, void *use
 
                         /* Are we done? If so, disable the event source for EPOLLIN */
                         if (s->n_read >= sizeof(s->read_size) + be16toh(s->read_size)) {
-                                r = dns_stream_update_io(s);
-                                if (r < 0)
-                                        return dns_stream_complete(s, -r);
-
                                 /* If there's a packet handler
                                  * installed, call that. Note that
                                  * this is optional... */
-                                if (s->on_packet)
-                                        return s->on_packet(s);
+                                if (s->on_packet) {
+                                        r = s->on_packet(s);
+                                        if (r < 0)
+                                                return r;
+                                }
+
+                                r = dns_stream_update_io(s);
+                                if (r < 0)
+                                        return dns_stream_complete(s, -r);
                         }
                 }
         }
 
-        if ((s->write_packet && s->n_written >= sizeof(s->write_size) + s->write_packet->size) &&
+        /* Call "complete" callback if finished reading and writing one packet, and there's nothing else left
+         * to write. */
+        if (s->type == DNS_STREAM_LLMNR_SEND &&
+            (s->write_packet && s->n_written >= sizeof(s->write_size) + s->write_packet->size) &&
+            ordered_set_isempty(s->write_queue) &&
             (s->read_packet && s->n_read >= sizeof(s->read_size) + s->read_packet->size))
                 return dns_stream_complete(s, 0);
+
+        /* If we did something, let's restart the timeout event source */
+        if (progressed && s->timeout_event_source) {
+                r = sd_event_source_set_time(s->timeout_event_source, now(clock_boottime_or_monotonic()) + DNS_STREAM_TIMEOUT_USEC);
+                if (r < 0)
+                        log_warning_errno(errno, "Couldn't restart TCP connection timeout, ignoring: %m");
+        }
 
         return 0;
 }
 
 DnsStream *dns_stream_unref(DnsStream *s) {
+        DnsPacket *p;
+        Iterator i;
+
         if (!s)
                 return NULL;
 
@@ -336,18 +375,25 @@ DnsStream *dns_stream_unref(DnsStream *s) {
 
         dns_stream_stop(s);
 
+        if (s->server && s->server->stream == s)
+                s->server->stream = NULL;
+
         if (s->manager) {
                 LIST_REMOVE(streams, s->manager->dns_streams, s);
-                s->manager->n_dns_streams--;
+                s->manager->n_dns_streams[s->type]--;
         }
+
+        ORDERED_SET_FOREACH(p, s->write_queue, i)
+                dns_packet_unref(ordered_set_remove(s->write_queue, p));
 
         dns_packet_unref(s->write_packet);
         dns_packet_unref(s->read_packet);
+        dns_server_unref(s->server);
+
+        ordered_set_free(s->write_queue);
 
         return mfree(s);
 }
-
-DEFINE_TRIVIAL_CLEANUP_FUNC(DnsStream*, dns_stream_unref);
 
 DnsStream *dns_stream_ref(DnsStream *s) {
         if (!s)
@@ -359,23 +405,39 @@ DnsStream *dns_stream_ref(DnsStream *s) {
         return s;
 }
 
-int dns_stream_new(Manager *m, DnsStream **ret, DnsProtocol protocol, int fd) {
+int dns_stream_new(
+                Manager *m,
+                DnsStream **ret,
+                DnsStreamType type,
+                DnsProtocol protocol,
+                int fd) {
+
         _cleanup_(dns_stream_unrefp) DnsStream *s = NULL;
         int r;
 
         assert(m);
+        assert(ret);
+        assert(type >= 0);
+        assert(type < _DNS_STREAM_TYPE_MAX);
+        assert(protocol >= 0);
+        assert(protocol < _DNS_PROTOCOL_MAX);
         assert(fd >= 0);
 
-        if (m->n_dns_streams > DNS_STREAMS_MAX)
+        if (m->n_dns_streams[type] > DNS_STREAMS_MAX)
                 return -EBUSY;
 
         s = new0(DnsStream, 1);
         if (!s)
                 return -ENOMEM;
 
+        r = ordered_set_ensure_allocated(&s->write_queue, &dns_packet_hash_ops);
+        if (r < 0)
+                return r;
+
         s->n_ref = 1;
         s->fd = -1;
         s->protocol = protocol;
+        s->type = type;
 
         r = sd_event_add_io(m->event, &s->io_event_source, fd, EPOLLIN, on_stream_io, s);
         if (r < 0)
@@ -397,7 +459,7 @@ int dns_stream_new(Manager *m, DnsStream **ret, DnsProtocol protocol, int fd) {
         LIST_PREPEND(streams, m->dns_streams, s);
         s->manager = m;
         s->fd = fd;
-        m->n_dns_streams++;
+        m->n_dns_streams[type]++;
 
         *ret = s;
         s = NULL;
@@ -406,14 +468,32 @@ int dns_stream_new(Manager *m, DnsStream **ret, DnsProtocol protocol, int fd) {
 }
 
 int dns_stream_write_packet(DnsStream *s, DnsPacket *p) {
+        int r;
+
         assert(s);
+        assert(p);
 
-        if (s->write_packet)
-                return -EBUSY;
+        r = ordered_set_put(s->write_queue, p);
+        if (r < 0)
+                return r;
 
-        s->write_packet = dns_packet_ref(p);
-        s->write_size = htobe16(p->size);
-        s->n_written = 0;
+        dns_packet_ref(p);
 
         return dns_stream_update_io(s);
+}
+
+DnsPacket *dns_stream_take_read_packet(DnsStream *s) {
+        assert(s);
+
+        if (!s->read_packet)
+                return NULL;
+
+        if (s->n_read < sizeof(s->read_size))
+                return NULL;
+
+        if (s->n_read < sizeof(s->read_size) + be16toh(s->read_size))
+                return NULL;
+
+        s->n_read = 0;
+        return TAKE_PTR(s->read_packet);
 }

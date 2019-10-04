@@ -326,18 +326,21 @@ fail:
 }
 
 static int on_llmnr_stream_packet(DnsStream *s) {
+        _cleanup_(dns_packet_unrefp) DnsPacket *p = NULL;
         DnsScope *scope;
 
         assert(s);
-        assert(s->read_packet);
 
-        scope = manager_find_scope(s->manager, s->read_packet);
+        p = dns_stream_take_read_packet(s);
+        assert(p);
+
+        scope = manager_find_scope(s->manager, p);
         if (!scope)
                 log_debug("Got LLMNR TCP packet on unknown scope. Ignoring.");
-        else if (dns_packet_validate_query(s->read_packet) > 0) {
-                log_debug("Got LLMNR TCP query packet for id %u", DNS_PACKET_ID(s->read_packet));
+        else if (dns_packet_validate_query(p) > 0) {
+                log_debug("Got LLMNR TCP query packet for id %u", DNS_PACKET_ID(p));
 
-                dns_scope_process_query(scope, s, s->read_packet);
+                dns_scope_process_query(scope, s, p);
         } else
                 log_debug("Invalid LLMNR TCP packet, ignoring.");
 
@@ -358,13 +361,15 @@ static int on_llmnr_stream(sd_event_source *s, int fd, uint32_t revents, void *u
                 return -errno;
         }
 
-        r = dns_stream_new(m, &stream, DNS_PROTOCOL_LLMNR, cfd);
+        r = dns_stream_new(m, &stream, DNS_STREAM_LLMNR_RECV, DNS_PROTOCOL_LLMNR, cfd);
         if (r < 0) {
                 safe_close(cfd);
                 return r;
         }
 
         stream->on_packet = on_llmnr_stream_packet;
+        /* We don't configure a "complete" handler here, we rely on the default handler than simply drops the
+         * reference to the stream, thus freeing it */
         return 0;
 }
 

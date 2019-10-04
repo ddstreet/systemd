@@ -1,0 +1,23 @@
+From a8fb09f57395613d472d7b555db6e0ce802a8c84 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Mon, 19 Aug 2019 08:51:39 +0200
+Subject: [PATCH] shared/seccomp: add sync_file_range2
+Origin: upstream, https://github.com/systemd/systemd/pull/13352
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1840640
+
+Some architectures need the arguments to be reordered because of alignment
+issues. Otherwise, it's the same as sync_file_range.
+---
+ src/shared/seccomp-util.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/src/shared/seccomp-util.c
++++ b/src/shared/seccomp-util.c
+@@ -772,6 +772,7 @@
+                 "msync\0"
+                 "sync\0"
+                 "sync_file_range\0"
++                "sync_file_range2\0"
+                 "syncfs\0"
+         },
+         [SYSCALL_FILTER_SET_TIMER] = {

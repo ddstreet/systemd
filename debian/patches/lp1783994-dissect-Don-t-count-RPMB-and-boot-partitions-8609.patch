@@ -1,0 +1,75 @@
+From cde942f61bf231ea4a0d50780cdb4e744458daeb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jo=C3=A3o=20Paulo=20Rechi=20Vita?= <jprvita@gmail.com>
+Date: Tue, 3 Apr 2018 05:51:18 -0700
+Subject: [PATCH] dissect: Don't count RPMB and boot partitions (#8609)
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1783994
+Origin: upstream, https://github.com/systemd/systemd/pull/8609
+
+Filter-out RPMB partitions and boot partitions from MMC devices when
+counting partitions enumerated by the kernel. Also factor out the now
+duplicated code into a separate function.
+
+This complement the previous fixes to the problem reported in
+https://github.com/systemd/systemd/issues/5806
+---
+ src/shared/dissect-image.c | 27 ++++++++++++++++++++-------
+ 1 file changed, 20 insertions(+), 7 deletions(-)
+
+--- a/src/shared/dissect-image.c
++++ b/src/shared/dissect-image.c
+@@ -108,6 +108,14 @@
+ #endif
+ }
+ 
++/* Detect RPMB and Boot partitions, which are not listed by blkid.
++ * See https://github.com/systemd/systemd/issues/5806. */
++static bool device_is_mmc_special_partition(struct udev_device *d) {
++        const char *sysname = udev_device_get_sysname(d);
++        return (sysname && startswith(sysname, "mmcblk") &&
++                (endswith(sysname, "rpmb") || endswith(sysname, "boot0") || endswith(sysname, "boot1")));
++}
++
+ int dissect_image(int fd, const void *root_hash, size_t root_hash_size, DissectImageFlags flags, DissectedImage **ret) {
+ 
+ #if HAVE_BLKID
+@@ -277,8 +285,17 @@
+                 /* Count the partitions enumerated by the kernel */
+                 n = 0;
+                 first = udev_enumerate_get_list_entry(e);
+-                udev_list_entry_foreach(item, first)
++                udev_list_entry_foreach(item, first) {
++                        _cleanup_udev_device_unref_ struct udev_device *q;
++
++                        q = udev_device_new_from_syspath(udev, udev_list_entry_get_name(item));
++                        if (!q)
++                                return -errno;
++
++                        if (device_is_mmc_special_partition(q))
++                                continue;
+                         n++;
++                }
+ 
+                 /* Count the partitions enumerated by blkid */
+                 z = blkid_partlist_numof_partitions(pl);
+@@ -337,7 +354,7 @@
+                 _cleanup_udev_device_unref_ struct udev_device *q;
+                 unsigned long long pflags;
+                 blkid_partition pp;
+-                const char *node, *sysname;
++                const char *node;
+                 dev_t qn;
+                 int nr;
+ 
+@@ -352,11 +369,7 @@
+                 if (st.st_rdev == qn)
+                         continue;
+ 
+-                /* Filter out weird MMC RPMB partitions, which cannot reasonably be read, see
+-                 * https://github.com/systemd/systemd/issues/5806 */
+-                sysname = udev_device_get_sysname(q);
+-                if (sysname && startswith(sysname, "mmcblk") &&
+-                        (endswith(sysname, "rpmb") || endswith(sysname, "boot0" ) || endswith(sysname, "boot1")))
++                if (device_is_mmc_special_partition(q))
+                         continue;
+ 
+                 node = udev_device_get_devnode(q);
