@@ -1,3 +1,53 @@
+systemd (237-3ubuntu10.32) bionic; urgency=medium
+
+  [ Victor Tapia ]
+  * d/p/resolved_disable-connection-downgrade-when-DNSSEC-yes.patch
+    Fix regression introduced by
+    resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch when
+    DNSSEC=yes (LP: #1796501)
+
+  [ Dan Streetman ]
+  * d/p/fix-typo-lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch:
+    - Fix typo in previous patch
+  * d/p/lp1840640-shared-seccomp-add-sync_file_range2.patch:
+    - allow sync_file_range2 in nspawn container
+      (LP: #1840640)
+  * d/p/lp1783994-dissect-Don-t-count-RPMB-and-boot-partitions-8609.patch:
+    - avoid systemd-gpt-auto-generator failure if mmc dev present
+      (LP: #1783994)
+  * d/p/lp1832672-resolved-rework-parsing-of-etc-hosts.patch:
+    - do not fail entire file on error when parsing /etc/hosts
+    - parse # char anywhere in line as start of comment
+      (LP: #1832672)
+  * d/p/lp1843381-dell_passthrough_skip_rename_retry.patch,
+    debian/extra/rules/73-usb-net-by-mac.rules:
+    - fix rename delay for systems using "Dell MAC passthrough"
+      (LP: #1843381)
+  * d/p/lp1849733/0001-resolved-longlived-TCP-connections.patch,
+    d/p/lp1849733/0002-resolved-line-split-dns_stream_new-function-signatur.patch,
+    d/p/lp1849733/0003-resolved-add-some-assert-s.patch,
+    d/p/lp1849733/0004-stream-track-type-of-DnsStream-object.patch,
+    d/p/lp1849733/0005-llmnr-add-comment-why-we-install-no-complete-handler.patch,
+    d/p/lp1849733/0006-resolved-restart-stream-timeout-whenever-we-managed-.patch,
+    d/p/lp1849733/0007-resolved-only-call-complete-with-zero-argument-in-LL.patch,
+    d/p/lp1849733/0008-resolved-add-comment-to-dns_stream_complete-about-it.patch,
+    d/p/lp1849733/0009-resolved-keep-stub-stream-connections-up-for-as-long.patch,
+    d/p/lp1849733/0010-resolved-if-we-can-t-append-EDNS-OPT-RR-then-indicat.patch,
+    d/p/lp1849733/0011-resolved-don-t-let-EDNS0-OPT-dgram-size-affect-TCP.patch,
+    d/p/lp1849733/0012-resolved-add-new-accessor-dns_stream_take_read_packe.patch,
+    d/p/lp1849733/0013-resolve-do-not-complete-stream-transaction-when-it-i.patch:
+    - add TCP pipelining to handle getaddrinfo() fallback to TCP
+    - ignore EDNS0 payload limit when responding over TCP (LP: #1849733)
+  * d/p/lp1849658-resolved-set-stream-type-during-DnsStream-creation.patch:
+    - Fix bug in refcounting TCP stream types (LP: #1849658)
+  * d/p/lp1850704/0001-networkd-Unify-set-MTU.patch,
+    d/p/lp1850704/0002-network-drop-redundant-lines.patch:
+    - Fix setting mtu if interface already up (LP: #1850704)
+  * d/extra/dhclient-enter-resolved-hook:
+    - only restart resolved if dhclient conf changed (LP: #1805183)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 04 Oct 2019 09:06:58 -0400
+
 systemd (237-3ubuntu10.31) bionic; urgency=medium
 
   [ Dimitri John Ledkov ]

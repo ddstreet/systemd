@@ -1,0 +1,93 @@
+From bd0052777981044cf54a1e9d6e3acb1c3d813656 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Fri, 23 Nov 2018 15:52:38 +0100
+Subject: [PATCH] resolved: rework parsing of /etc/hosts
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1832672
+Bug: https://github.com/systemd/systemd/issues/10779
+Origin: upstream, https://github.com/systemd/systemd/commit/bd0052777981044cf54a1e9d6e3acb1c3d813656
+
+Do not treat various errors (missing hostname, invalid address) as fatal,
+just warn and continue. /etc/hosts is written by humans and we should not
+reject the whole file just because a singly entry is not to our liking.
+
+Handle comments as described in hosts(5):
+everything from the comment character until the end of the line should be
+ignored.
+
+Fixes #10779.
+
+Add tests.
+---
+ src/resolve/resolved-etc-hosts.c      | 41 ++++++------
+ src/resolve/test-resolved-etc-hosts.c | 95 +++++++++++++++++++++------
+ 2 files changed, 98 insertions(+), 38 deletions(-)
+
+--- a/src/resolve/resolved-etc-hosts.c
++++ b/src/resolve/resolved-etc-hosts.c
+@@ -196,28 +196,29 @@
+ 
+         r = extract_first_word(&line, &address, NULL, EXTRACT_RELAX);
+         if (r < 0)
+-                return log_error_errno(r, "Couldn't extract address, in line /etc/hosts:%u.", nr);
+-        if (r == 0) {
+-                log_error("Premature end of line, in line /etc/hosts:%u.", nr);
+-                return -EINVAL;
+-        }
++                return log_error_errno(r, "/etc/hosts:%u: failed to extract address: %m", nr);
++        assert(r > 0); /* We already checked that the line is not empty, so it should contain *something* */
+ 
+         r = in_addr_from_string_auto(address, &family, &in);
+-        if (r < 0)
+-                return log_error_errno(r, "Address '%s' is invalid, in line /etc/hosts:%u.", address, nr);
++        if (r < 0) {
++                log_warning_errno(r, "/etc/hosts:%u: address '%s' is invalid, ignoring: %m", nr, address);
++                return 0;
++        }
+ 
+         for (;;) {
+                 _cleanup_free_ char *name = NULL;
+ 
+                 r = extract_first_word(&line, &name, NULL, EXTRACT_RELAX);
+                 if (r < 0)
+-                        return log_error_errno(r, "Couldn't extract host name, in line /etc/hosts:%u.", nr);
++                        return log_error_errno(r, "/etc/hosts:%u: couldn't extract host name: %m", nr);
+                 if (r == 0)
+                         break;
+ 
+                 r = dns_name_is_valid(name);
+-                if (r <= 0)
+-                        return log_error_errno(r, "Hostname %s is not valid, ignoring, in line /etc/hosts:%u.", name, nr);
++                if (r <= 0) {
++                        log_warning_errno(r, "/etc/hosts:%u: hostname \"%s\" is not valid, ignoring.", nr, name);
++                        continue;
++                }
+ 
+                 if (is_localhost(name)) {
+                         /* Suppress the "localhost" line that is often seen */
+@@ -237,8 +238,8 @@
+                 if (suppressed)
+                         return 0;
+ 
+-                log_error("Line is missing any host names, in line /etc/hosts:%u.", nr);
+-                return -EINVAL;
++                log_warning("/etc/hosts:%u: line is missing any host names", nr);
++                return 0;
+         }
+ 
+         /* Takes possession of the names strv */
+@@ -304,11 +305,13 @@
+ 
+                 nr++;
+ 
++                l = strchr(line, '#');
++                if (l)
++                        *l = '\0';
++
+                 l = strstrip(line);
+                 if (isempty(l))
+                         continue;
+-                if (l[0] == '#')
+-                        continue;
+ 
+                 r = parse_line(m, nr, l);
+                 if (r == -ENOMEM) /* On OOM we abandon the half-built-up structure. All other errors we ignore and proceed */

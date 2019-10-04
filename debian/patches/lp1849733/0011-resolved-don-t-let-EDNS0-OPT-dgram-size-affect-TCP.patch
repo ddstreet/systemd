@@ -1,0 +1,29 @@
+From acd74d61d2906a57ec37bfdc793c56b403d18324 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 13 Mar 2019 19:28:38 +0100
+Subject: [PATCH] resolved: don't let EDNS0 OPT dgram size affect TCP
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849733
+
+Fixes: #11884
+---
+ src/resolve/resolved-dns-packet.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+--- a/src/resolve/resolved-dns-packet.h
++++ b/src/resolve/resolved-dns-packet.h
+@@ -138,12 +138,12 @@
+ 
+         /* Returns the advertised maximum size for replies, or the DNS default if there's nothing defined. */
+ 
++        if (p->ipproto == IPPROTO_TCP) /* we ignore EDNS(0) size data on TCP, like everybody else */
++                return DNS_PACKET_SIZE_MAX;
++
+         if (p->opt)
+                 return MAX(DNS_PACKET_UNICAST_SIZE_MAX, p->opt->key->class);
+ 
+-        if (p->ipproto == IPPROTO_TCP)
+-                return DNS_PACKET_SIZE_MAX;
+-
+         return DNS_PACKET_UNICAST_SIZE_MAX;
+ }
+ 

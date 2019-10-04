@@ -1,0 +1,22 @@
+From 31f2a5e2b8c72b95c5fd965c6768755d5cba657f Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 21 Jan 2019 18:36:14 +0100
+Subject: [PATCH] llmnr: add comment why we install no complete() handler
+ on stream
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849733
+
+---
+ src/resolve/resolved-llmnr.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/src/resolve/resolved-llmnr.c
++++ b/src/resolve/resolved-llmnr.c
+@@ -365,6 +365,8 @@
+         }
+ 
+         stream->on_packet = on_llmnr_stream_packet;
++        /* We don't configure a "complete" handler here, we rely on the default handler than simply drops the
++         * reference to the stream, thus freeing it */
+         return 0;
+ }
+ 

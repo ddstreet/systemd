@@ -1,0 +1,29 @@
+From: Dan Streetman <ddstreet@canonical.com>
+Bug-Ubuntu: https://launchpad.net/bugs/1843381
+Forwarded: not-needed
+Subject: Dell system takes a long time to connect network with external dock
+
+This is partially taken from:
+https://salsa.debian.org/systemd-team/systemd/merge_requests/55
+provided by ChunKim, TeN cktenn@gmail.com
+
+I adjusted that because the rule as-is would break the interface names
+for existing users of the specific system/hardware, so instead it
+only sets an ENV that is later checked by udevd after an interface
+rename failure with EEXIST, to avoid the rename retries for 90 seconds.
+
+--- a/src/udev/udev-event.c
++++ b/src/udev/udev-event.c
+@@ -848,6 +848,12 @@
+         if (r != -EEXIST)
+                 goto out;
+ 
++        /* This is something bad Dell does, https://bugs.launchpad.net/bugs/1843381 */
++        if (udev_device_get_property_value(dev, "DELL_MAC_PASSTHROUGH")) {
++                log_warning("Dell MAC passthrough detected, leaving interface name as '%s'", oldname);
++                goto out;
++        }
++
+         /* free our own name, another process may wait for us */
+         snprintf(name, IFNAMSIZ, "rename%u", udev_device_get_ifindex(dev));
+         r = rtnl_set_link_name(&event->rtnl, udev_device_get_ifindex(dev), name);

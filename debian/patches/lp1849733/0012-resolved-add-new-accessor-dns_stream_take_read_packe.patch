@@ -1,0 +1,139 @@
+From aa337a5e729829058888a4da0b5ad5813dd1d5b4 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 4 Dec 2018 20:18:11 +0100
+Subject: [PATCH] resolved: add new accessor dns_stream_take_read_packet() for
+ taking read packet from stream
+
+This ensures the packet is complete when it is taken out, and resets
+n_read so that we can start reading the next one.
+---
+ src/resolve/resolved-dns-stream.c      | 16 ++++++++++++++++
+ src/resolve/resolved-dns-stream.h      |  2 ++
+ src/resolve/resolved-dns-stub.c        | 12 ++++++++----
+ src/resolve/resolved-dns-transaction.c | 22 ++++++++++------------
+ src/resolve/resolved-llmnr.c           | 13 ++++++++-----
+ 5 files changed, 44 insertions(+), 21 deletions(-)
+
+--- a/src/resolve/resolved-dns-stream.c
++++ b/src/resolve/resolved-dns-stream.c
+@@ -480,3 +480,19 @@
+ 
+         return dns_stream_update_io(s);
+ }
++
++DnsPacket *dns_stream_take_read_packet(DnsStream *s) {
++        assert(s);
++
++        if (!s->read_packet)
++                return NULL;
++
++        if (s->n_read < sizeof(s->read_size))
++                return NULL;
++
++        if (s->n_read < sizeof(s->read_size) + be16toh(s->read_size))
++                return NULL;
++
++        s->n_read = 0;
++        return TAKE_PTR(s->read_packet);
++}
+--- a/src/resolve/resolved-dns-stream.h
++++ b/src/resolve/resolved-dns-stream.h
+@@ -94,3 +94,5 @@
+ 
+         return !!s->write_packet;
+ }
++
++DnsPacket *dns_stream_take_read_packet(DnsStream *s);
+--- a/src/resolve/resolved-dns-stub.c
++++ b/src/resolve/resolved-dns-stub.c
+@@ -452,13 +452,17 @@
+ }
+ 
+ static int on_dns_stub_stream_packet(DnsStream *s) {
++        _cleanup_(dns_packet_unrefp) DnsPacket *p = NULL;
++
+         assert(s);
+-        assert(s->read_packet);
+ 
+-        if (dns_packet_validate_query(s->read_packet) > 0) {
+-                log_debug("Got DNS stub TCP query packet for id %u", DNS_PACKET_ID(s->read_packet));
++        p = dns_stream_take_read_packet(s);
++        assert(p);
++
++        if (dns_packet_validate_query(p) > 0) {
++                log_debug("Got DNS stub TCP query packet for id %u", DNS_PACKET_ID(p));
+ 
+-                dns_stub_process_query(s->manager, s, s->read_packet);
++                dns_stub_process_query(s->manager, s, p);
+         } else
+                 log_debug("Invalid DNS stub TCP packet, ignoring.");
+ 
+--- a/src/resolve/resolved-dns-transaction.c
++++ b/src/resolve/resolved-dns-transaction.c
+@@ -545,27 +545,25 @@
+ 
+ static int dns_stream_on_packet(DnsStream *s) {
+         _cleanup_(dns_packet_unrefp) DnsPacket *p = NULL;
+-        int r = 0;
+         DnsTransaction *t;
+ 
++        assert(s);
++
+         /* Take ownership of packet to be able to receive new packets */
+-        p = TAKE_PTR(s->read_packet);
+-        s->n_read = 0;
++        p = dns_stream_take_read_packet(s);
++        assert(p);
+ 
+         t = hashmap_get(s->manager->dns_transactions, UINT_TO_PTR(DNS_PACKET_ID(p)));
++        if (t)
++                return dns_transaction_on_stream_packet(t, p);
+ 
+         /* Ignore incorrect transaction id as transaction can have been canceled */
+-        if (t)
+-                r = dns_transaction_on_stream_packet(t, p);
+-        else {
+-                if (dns_packet_validate_reply(p) <= 0) {
+-                        log_debug("Invalid TCP reply packet.");
+-                        on_stream_complete(s, 0);
+-                }
+-                return 0;
++        if (dns_packet_validate_reply(p) <= 0) {
++                log_debug("Invalid TCP reply packet.");
++                on_stream_complete(s, 0);
+         }
+ 
+-        return r;
++        return 0;
+ }
+ 
+ static int dns_transaction_emit_tcp(DnsTransaction *t) {
+--- a/src/resolve/resolved-llmnr.c
++++ b/src/resolve/resolved-llmnr.c
+@@ -326,18 +326,21 @@
+ }
+ 
+ static int on_llmnr_stream_packet(DnsStream *s) {
++        _cleanup_(dns_packet_unrefp) DnsPacket *p = NULL;
+         DnsScope *scope;
+ 
+         assert(s);
+-        assert(s->read_packet);
+ 
+-        scope = manager_find_scope(s->manager, s->read_packet);
++        p = dns_stream_take_read_packet(s);
++        assert(p);
++
++        scope = manager_find_scope(s->manager, p);
+         if (!scope)
+                 log_debug("Got LLMNR TCP packet on unknown scope. Ignoring.");
+-        else if (dns_packet_validate_query(s->read_packet) > 0) {
+-                log_debug("Got LLMNR TCP query packet for id %u", DNS_PACKET_ID(s->read_packet));
++        else if (dns_packet_validate_query(p) > 0) {
++                log_debug("Got LLMNR TCP query packet for id %u", DNS_PACKET_ID(p));
+ 
+-                dns_scope_process_query(scope, s, s->read_packet);
++                dns_scope_process_query(scope, s, p);
+         } else
+                 log_debug("Invalid LLMNR TCP packet, ignoring.");
+ 

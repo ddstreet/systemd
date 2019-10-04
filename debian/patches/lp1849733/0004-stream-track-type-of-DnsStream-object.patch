@@ -1,0 +1,169 @@
+From 652ba568c6624bf40d735645f029d83d21bdeaa6 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 21 Jan 2019 17:57:43 +0100
+Subject: [PATCH] stream: track type of DnsStream object
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849733
+
+We use stream objects in four different cases: let's track them.
+
+This in particular allows us to make sure the limit on outgoing streams
+cannot be exhausted by having incoming streams as this means we can
+neatly separate the counters for all four types.
+---
+ src/resolve/resolved-dns-stream.c      | 11 ++++++++---
+ src/resolve/resolved-dns-stream.h      | 12 +++++++++++-
+ src/resolve/resolved-dns-stub.c        |  2 +-
+ src/resolve/resolved-dns-transaction.c |  7 +++++--
+ src/resolve/resolved-llmnr.c           |  2 +-
+ src/resolve/resolved-manager.h         |  2 +-
+ 6 files changed, 27 insertions(+), 9 deletions(-)
+
+--- a/src/resolve/resolved-dns-stream.c
++++ b/src/resolve/resolved-dns-stream.c
+@@ -354,7 +354,7 @@
+ 
+         if (s->manager) {
+                 LIST_REMOVE(streams, s->manager->dns_streams, s);
+-                s->manager->n_dns_streams--;
++                s->manager->n_dns_streams[s->type]--;
+         }
+ 
+         ORDERED_SET_FOREACH(p, s->write_queue, i)
+@@ -382,6 +382,7 @@
+ int dns_stream_new(
+                 Manager *m,
+                 DnsStream **ret,
++                DnsStreamType type,
+                 DnsProtocol protocol,
+                 int fd) {
+ 
+@@ -390,9 +391,13 @@
+ 
+         assert(m);
+         assert(ret);
++        assert(type >= 0);
++        assert(type < _DNS_STREAM_TYPE_MAX);
++        assert(protocol >= 0);
++        assert(protocol < _DNS_PROTOCOL_MAX);
+         assert(fd >= 0);
+ 
+-        if (m->n_dns_streams > DNS_STREAMS_MAX)
++        if (m->n_dns_streams[type] > DNS_STREAMS_MAX)
+                 return -EBUSY;
+ 
+         s = new0(DnsStream, 1);
+@@ -427,7 +432,7 @@
+         LIST_PREPEND(streams, m->dns_streams, s);
+         s->manager = m;
+         s->fd = fd;
+-        m->n_dns_streams++;
++        m->n_dns_streams[type]++;
+ 
+         *ret = s;
+         s = NULL;
+--- a/src/resolve/resolved-dns-stream.h
++++ b/src/resolve/resolved-dns-stream.h
+@@ -24,6 +24,15 @@
+ 
+ typedef struct DnsStream DnsStream;
+ 
++typedef enum DnsStreamType {
++        DNS_STREAM_LOOKUP,        /* Outgoing connection to a classic DNS server */
++        DNS_STREAM_LLMNR_SEND,    /* Outgoing LLMNR TCP lookup */
++        DNS_STREAM_LLMNR_RECV,    /* Incoming LLMNR TCP lookup */
++        DNS_STREAM_STUB,          /* Incoming DNS stub connection */
++        _DNS_STREAM_TYPE_MAX,
++        _DNS_STREAM_TYPE_INVALID = -1,
++} DnsStreamType;
++
+ #include "resolved-dns-packet.h"
+ #include "resolved-dns-transaction.h"
+ #include "resolved-manager.h"
+@@ -39,6 +48,7 @@
+         Manager *manager;
+         int n_ref;
+ 
++        DnsStreamType type;
+         DnsProtocol protocol;
+ 
+         int fd;
+@@ -68,7 +78,7 @@
+         LIST_FIELDS(DnsStream, streams);
+ };
+ 
+-int dns_stream_new(Manager *m, DnsStream **s, DnsProtocol protocol, int fd);
++int dns_stream_new(Manager *m, DnsStream **s, DnsStreamType type, DnsProtocol protocol, int fd);
+ DnsStream *dns_stream_unref(DnsStream *s);
+ DnsStream *dns_stream_ref(DnsStream *s);
+ 
+--- a/src/resolve/resolved-dns-stub.c
++++ b/src/resolve/resolved-dns-stub.c
+@@ -484,7 +484,7 @@
+                 return -errno;
+         }
+ 
+-        r = dns_stream_new(m, &stream, DNS_PROTOCOL_DNS, cfd);
++        r = dns_stream_new(m, &stream, DNS_STREAM_STUB, DNS_PROTOCOL_DNS, cfd);
+         if (r < 0) {
+                 safe_close(cfd);
+                 return r;
+--- a/src/resolve/resolved-dns-transaction.c
++++ b/src/resolve/resolved-dns-transaction.c
+@@ -569,8 +569,9 @@
+ }
+ 
+ static int dns_transaction_emit_tcp(DnsTransaction *t) {
+-        _cleanup_close_ int fd = -1;
+         _cleanup_(dns_stream_unrefp) DnsStream *s = NULL;
++        _cleanup_close_ int fd = -1;
++        DnsStreamType type;
+         int r;
+ 
+         assert(t);
+@@ -596,6 +596,7 @@
+                 else
+                         fd = dns_scope_socket_tcp(t->scope, AF_UNSPEC, NULL, t->server, 53);
+ 
++                type = DNS_STREAM_LOOKUP;
+                 break;
+ 
+         case DNS_PROTOCOL_LLMNR:
+@@ -621,6 +622,7 @@
+                         fd = dns_scope_socket_tcp(t->scope, family, &address, NULL, LLMNR_PORT);
+                 }
+ 
++                type = DNS_STREAM_LLMNR_SEND;
+                 break;
+ 
+         default:
+@@ -631,7 +633,7 @@
+                 if (fd < 0)
+                         return fd;
+ 
+-                r = dns_stream_new(t->scope->manager, &s, t->scope->protocol, fd);
++                r = dns_stream_new(t->scope->manager, &s, type, t->scope->protocol, fd);
+                 if (r < 0)
+                         return r;
+ 
+--- a/src/resolve/resolved-llmnr.c
++++ b/src/resolve/resolved-llmnr.c
+@@ -358,7 +358,7 @@
+                 return -errno;
+         }
+ 
+-        r = dns_stream_new(m, &stream, DNS_PROTOCOL_LLMNR, cfd);
++        r = dns_stream_new(m, &stream, DNS_STREAM_LLMNR_RECV, DNS_PROTOCOL_LLMNR, cfd);
+         if (r < 0) {
+                 safe_close(cfd);
+                 return r;
+--- a/src/resolve/resolved-manager.h
++++ b/src/resolve/resolved-manager.h
+@@ -66,7 +66,7 @@
+         unsigned n_dns_queries;
+ 
+         LIST_HEAD(DnsStream, dns_streams);
+-        unsigned n_dns_streams;
++        unsigned n_dns_streams[_DNS_STREAM_TYPE_MAX];
+ 
+         /* Unicast dns */
+         LIST_HEAD(DnsServer, dns_servers);

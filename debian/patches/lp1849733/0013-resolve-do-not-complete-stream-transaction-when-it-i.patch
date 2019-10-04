@@ -1,0 +1,24 @@
+From daab72ea445f5941e4b0a077115e6785b430a9ff Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 13 Jun 2018 13:43:36 +0900
+Subject: [PATCH] resolve: do not complete stream transaction when it is under
+ retrying
+
+---
+ src/resolve/resolved-dns-transaction.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/src/resolve/resolved-dns-transaction.c
++++ b/src/resolve/resolved-dns-transaction.c
+@@ -474,9 +474,11 @@
+                         /* If the LLMNR/TCP connection failed, the host doesn't support LLMNR, and we cannot answer the
+                          * question on this scope. */
+                         dns_transaction_complete(t, DNS_TRANSACTION_NOT_FOUND);
++                        return;
+                 }
+ 
+                 dns_transaction_retry(t, true);
++                return;
+         }
+         if (error != 0) {
+                 t->answer_errno = error;

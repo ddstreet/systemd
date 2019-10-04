@@ -1,0 +1,28 @@
+From 499aa1d31b1607a4dcd81b9b19c757ee4f4243b9 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 4 Dec 2018 19:29:15 +0100
+Subject: [PATCH] resolved: add some assert()s
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849733
+
+---
+ src/resolve/resolved-dns-stream.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/src/resolve/resolved-dns-stream.c
++++ b/src/resolve/resolved-dns-stream.c
+@@ -389,6 +389,7 @@
+         int r;
+ 
+         assert(m);
++        assert(ret);
+         assert(fd >= 0);
+ 
+         if (m->n_dns_streams > DNS_STREAMS_MAX)
+@@ -438,6 +439,7 @@
+         int r;
+ 
+         assert(s);
++        assert(p);
+ 
+         r = ordered_set_put(s->write_queue, p);
+         if (r < 0)
