@@ -1,3 +1,10 @@
+systemd (229-4ubuntu21.23) xenial; urgency=medium
+
+  * d/p/core-use-an-AF_UNIX-SOCK_DGRAM-socket-for-cgroup-age.patch:
+    - prevent logind from leaking session files (LP: #1846787)
+
+ -- Heitor Alves de Siqueira <halves@canonical.com>  Mon, 07 Oct 2019 07:44:13 -0300
+
 systemd (229-4ubuntu21.22) xenial; urgency=medium
 
   [ Dan Streetman ]
