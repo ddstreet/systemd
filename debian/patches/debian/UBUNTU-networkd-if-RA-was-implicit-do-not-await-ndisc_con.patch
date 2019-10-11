@@ -14,7 +14,7 @@ LP: #1765173
  1 file changed, 13 insertions(+), 4 deletions(-)
 
 diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
-index 75131d8..15e5c72 100644
+index 2f4dc92..d793f06 100644
 --- a/src/network/networkd-link.c
 +++ b/src/network/networkd-link.c
 @@ -279,7 +279,7 @@ static bool link_proxy_arp_enabled(Link *link) {
