@@ -41,6 +41,7 @@ debian/Let-graphical-session-pre.target-be-manually-started.patch
 debian/Add-env-variable-for-machine-ID-path.patch
 debian/Drop-seccomp-system-call-filter-for-udev.patch
 debian/Ubuntu-UseDomains-by-default.patch
+debian/Ubuntu-test-UseDomains-true-default-setting.patch
 debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
 debian/Ubuntu-units-set-ConditionVirtualization-private-users-on-j.patch
 debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
