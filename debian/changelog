@@ -1,3 +1,15 @@
+systemd (242-7ubuntu3) eoan; urgency=medium
+
+  * Fix using domain set by DHCP as search domain (LP: #1846509)
+    File: debian/patches/network-do-not-use-ordered_set_printf-for-DOMAINS-or-ROUT.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=210e1f979d27c7eeaff87c0f16240ec415d0a043
+  * Add test for UseDomains=true default setting
+    File: debian/patches/debian/Ubuntu-test-UseDomains-true-default-setting.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a2c01a848969d3c5cbe67b3c26ff641e367edba7
+  * Refresh patches
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Fri, 11 Oct 2019 16:19:01 +0200
+
 systemd (242-7ubuntu2) eoan; urgency=medium
 
   [ Bryan Quigley ]
