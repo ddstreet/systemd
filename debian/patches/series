@@ -24,6 +24,7 @@ Revert-core-check-start-limit-on-condition-checks-too.patch
 sleep-properly-pass-verb-to-sleep-script.patch
 core-factor-root_directory-application-out-of-apply_worki.patch
 shared-bus-util-drop-trusted-annotation-from-bus_open_sys.patch
+network-do-not-use-ordered_set_printf-for-DOMAINS-or-ROUT.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
@@ -40,6 +41,7 @@ debian/Let-graphical-session-pre.target-be-manually-started.patch
 debian/Add-env-variable-for-machine-ID-path.patch
 debian/Drop-seccomp-system-call-filter-for-udev.patch
 debian/Ubuntu-UseDomains-by-default.patch
+debian/Ubuntu-test-UseDomains-true-default-setting.patch
 debian/Ubuntu-core-in-execute-soft-fail-setting-Nice-priority-when.patch
 debian/Ubuntu-units-set-ConditionVirtualization-private-users-on-j.patch
 debian/UBUNTU-drop-kernel.-settings-from-sysctl-defaults-shipped.patch
