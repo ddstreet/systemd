@@ -27,6 +27,7 @@ MemoryDenyWriteExecute=yes
 NoNewPrivileges=yes
 Restart=always
 RestartSec=0
+Nice=-1
 RestrictAddressFamilies=AF_UNIX AF_NETLINK
 RestrictNamespaces=yes
 RestrictRealtime=yes
@@ -37,7 +38,6 @@ SystemCallArchitectures=native
 SystemCallErrorNumber=EPERM
 SystemCallFilter=@system-service
 Type=notify
-WatchdogSec=3min
 
 # If there are many split up journal files we need a lot of fds to access them
 # all in parallel.
