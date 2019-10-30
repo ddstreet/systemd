@@ -40,6 +40,7 @@ CONFFLAGS = \
 	-Db_pie=true \
 	-Drootlibdir=/lib/$(DEB_HOST_MULTIARCH) \
 	-Dsplit-usr=true \
+	-Dversion-tag="$(DEB_VERSION)" \
 	-Dquotaon-path=/sbin/quotaon \
 	-Dquotacheck-path=/sbin/quotacheck \
 	-Dkmod-path=/bin/kmod \
@@ -58,6 +59,7 @@ CONFFLAGS = \
 	-Ddbuspolicydir=/usr/share/dbus-1/system.d/ \
 	-Dsupport-url=$(SUPPORT_URL) \
 	-Ddefault-kill-user-processes=false \
+	-Ddefault-hierarchy=hybrid \
 	-Dpamconfdir=no \
 	-Drpmmacrosdir=no \
 	-Dqrencode=false \
@@ -215,7 +217,6 @@ override_dh_install:
 	rm -f debian/install/*/usr/share/doc/systemd/LICENSE.*
 	rm -f debian/install/*/var/log/README
 	rm -f debian/install/*/etc/init.d/README
-	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
 	# remove files related to factory-reset feature
@@ -266,13 +267,15 @@ ifeq ($(DEB_VENDOR),Ubuntu)
 	install --mode=644 debian/extra/rules-ubuntu/*.rules debian/udev/lib/udev/rules.d/
 	cp -a debian/extra/units-ubuntu/* debian/systemd/lib/systemd/system/
 	install --mode=755 debian/extra/set-cpufreq debian/systemd/lib/systemd/
+	install -D --mode=755 debian/extra/dhclient-enter-resolved-hook debian/systemd/etc/dhcp/dhclient-enter-hooks.d/resolved
 endif
 
 override_dh_missing:
 	dh_missing --sourcedir debian/install/deb $(DH_MISSING)
 
 override_dh_installinit:
-	dh_installinit --no-start
+	dh_installinit --no-scripts -psystemd
+	dh_installinit --no-start -Nsystemd
 
 PROJECT_VERSION ?= $(shell awk '/(PROJECT|PACKAGE)_VERSION/ {print $$3}' build-deb/config.h | tr -d \")
 
