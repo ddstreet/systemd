@@ -1,0 +1,20 @@
+From 5b11f372f02f31bb38e8d3a18dc92ecfa8813cd7 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 24 May 2019 14:14:12 +0900
+Subject: [PATCH] network: lower log level about critical connection
+
+---
+ src/network/networkd-dhcp4.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/src/network/networkd-dhcp4.c
++++ b/src/network/networkd-dhcp4.c
+@@ -544,7 +544,7 @@
+                 case SD_DHCP_CLIENT_EVENT_STOP:
+                 case SD_DHCP_CLIENT_EVENT_IP_CHANGE:
+                         if (link->network->dhcp_critical) {
+-                                log_link_error(link, "DHCPv4 connection considered system critical, ignoring request to reconfigure it.");
++                                log_link_notice(link, "DHCPv4 connection considered system critical, ignoring request to reconfigure it.");
+                                 return;
+                         }
+ 

@@ -1,0 +1,194 @@
+Description: networkd: add support to keep configuration
+Author: Susant Sahani <ssahani@vmware.com>
+Origin: backport, https://github.com/systemd/systemd/commit/7da377ef16a2112a673247b39041a180b07e973a
+Bug-Ubuntu: https://bugs.launchpad.net/netplan/+bug/1815101
+Reviewed-by: Rafael David Tinoco <rafaeldtinoco@ubuntu.com>
+Last-Update: 2019-10-10
+
+networkd: add support to keep configuration
+
+---
+ src/network/networkd-dhcp4.c                  |  6 ++--
+ src/network/networkd-link.c                   |  3 +-
+ src/network/networkd-network-gperf.gperf      |  3 +-
+ src/network/networkd-network.c                | 29 +++++++++++++++++++
+ src/network/networkd-network.h                | 16 +++++++++-
+ .../fuzz-network-parser/directives.network    |  1 +
+ 6 files changed, 52 insertions(+), 6 deletions(-)
+
+--- a/src/network/networkd-dhcp4.c
++++ b/src/network/networkd-dhcp4.c
+@@ -468,7 +468,7 @@
+         if (r < 0)
+                 return log_link_warning_errno(link, r, "DHCP error: no netmask: %m");
+ 
+-        if (!link->network->dhcp_critical) {
++        if (!FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP)) {
+                 r = sd_dhcp_lease_get_lifetime(link->dhcp_lease, &lifetime);
+                 if (r < 0)
+                         return log_link_warning_errno(link, r, "DHCP error: no lifetime: %m");
+@@ -583,7 +583,7 @@
+                 }
+         }
+ 
+-        if (!link->network->dhcp_critical) {
++        if (!FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP)) {
+                 r = sd_dhcp_lease_get_lifetime(link->dhcp_lease, &lifetime);
+                 if (r < 0)
+                         return log_link_warning_errno(link, r, "DHCP error: no lifetime: %m");
+@@ -613,7 +613,7 @@
+                 case SD_DHCP_CLIENT_EVENT_EXPIRED:
+                 case SD_DHCP_CLIENT_EVENT_STOP:
+                 case SD_DHCP_CLIENT_EVENT_IP_CHANGE:
+-                        if (link->network->dhcp_critical) {
++                        if (FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP)) {
+                                 log_link_notice(link, "DHCPv4 connection considered system critical, ignoring request to reconfigure it.");
+                                 return;
+                         }
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -3063,7 +3063,8 @@
+ 
+         /* Drop foreign config, but ignore loopback or critical devices.
+          * We do not want to remove loopback address or addresses used for root NFS. */
+-        if (!(link->flags & IFF_LOOPBACK) && !(link->network->dhcp_critical)) {
++        if (!(link->flags & IFF_LOOPBACK) &&
++            !(link->network->keep_configuration & (KEEP_CONFIGURATION_DHCP | KEEP_CONFIGURATION_STATIC))) {
+                 r = link_drop_foreign_config(link);
+                 if (r < 0)
+                         return r;
+--- a/src/network/networkd-network-gperf.gperf
++++ b/src/network/networkd-network-gperf.gperf
+@@ -83,6 +83,7 @@
+ Network.BindCarrier,                    config_parse_strv,                              0,                             offsetof(Network, bind_carrier)
+ Network.ConfigureWithoutCarrier,        config_parse_bool,                              0,                             offsetof(Network, configure_without_carrier)
+ Network.IgnoreCarrierLoss,              config_parse_bool,                              0,                             offsetof(Network, ignore_carrier_loss)
++Network.KeepConfiguration,              config_parse_keep_configuration,                0,                             offsetof(Network, keep_configuration)
+ Address.Address,                        config_parse_address,                           0,                             0
+ Address.Peer,                           config_parse_address,                           0,                             0
+ Address.Broadcast,                      config_parse_broadcast,                         0,                             0
+@@ -137,7 +138,7 @@
+ DHCP.SendHostname,                      config_parse_bool,                              0,                             offsetof(Network, dhcp_send_hostname)
+ DHCP.Hostname,                          config_parse_hostname,                          0,                             offsetof(Network, dhcp_hostname)
+ DHCP.RequestBroadcast,                  config_parse_bool,                              0,                             offsetof(Network, dhcp_broadcast)
+-DHCP.CriticalConnection,                config_parse_bool,                              0,                             offsetof(Network, dhcp_critical)
++DHCP.CriticalConnection,                config_parse_tristate,                          0,                             offsetof(Network, dhcp_critical) /* deprecated */
+ DHCP.VendorClassIdentifier,             config_parse_string,                            0,                             offsetof(Network, dhcp_vendor_class_identifier)
+ DHCP.UserClass,                         config_parse_dhcp_user_class,                   0,                             offsetof(Network, dhcp_user_class)
+ DHCP.DUIDType,                          config_parse_duid_type,                         0,                             offsetof(Network, duid)
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -252,6 +252,20 @@
+                 network->dhcp_use_mtu = false;
+         }
+ 
++        if (network->dhcp_critical >= 0) {
++                if (network->keep_configuration >= 0)
++                        log_warning("%s: Both KeepConfiguration= and deprecated CriticalConnection= are set. "
++                                    "Ignoring CriticalConnection=.", network->filename);
++                else if (network->dhcp_critical)
++                        /* CriticalConnection=yes also preserve foreign static configurations. */
++                        network->keep_configuration = KEEP_CONFIGURATION_YES;
++                else
++                        network->keep_configuration = KEEP_CONFIGURATION_NO;
++        }
++
++        if (network->keep_configuration < 0)
++                network->keep_configuration = KEEP_CONFIGURATION_NO;
++
+         LIST_FOREACH_SAFE(addresses, address, address_next, network->static_addresses)
+                 if (address_section_verify(address) < 0)
+                         address_free(address);
+@@ -334,6 +348,7 @@
+                 .required_for_online = true,
+                 .required_operstate_for_online = LINK_OPERSTATE_DEGRADED,
+                 .dhcp = ADDRESS_FAMILY_NO,
++                .dhcp_critical = -1,
+                 .dhcp_use_ntp = true,
+                 .dhcp_use_dns = true,
+                 .dhcp_use_hostname = true,
+@@ -401,6 +416,8 @@
+                 .ipv6_accept_ra_route_table = RT_TABLE_MAIN,
+                 .ipv6_accept_ra_route_table_set = false,
+ 
++                .keep_configuration = _KEEP_CONFIGURATION_INVALID,
++
+                 .can_triple_sampling = -1,
+         };
+ 
+@@ -1645,3 +1662,15 @@
+ 
+         return 0;
+ }
++
++DEFINE_CONFIG_PARSE_ENUM(config_parse_keep_configuration, keep_configuration, KeepConfiguration,
++                         "Failed to parse KeepConfiguration= setting");
++
++static const char* const keep_configuration_table[_KEEP_CONFIGURATION_MAX] = {
++        [KEEP_CONFIGURATION_NO]     = "no",
++        [KEEP_CONFIGURATION_DHCP]   = "dhcp",
++        [KEEP_CONFIGURATION_STATIC] = "static",
++        [KEEP_CONFIGURATION_YES]    = "yes",
++};
++
++DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(keep_configuration, KeepConfiguration, KEEP_CONFIGURATION_YES);
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -84,6 +84,15 @@
+         _RADV_PREFIX_DELEGATION_INVALID = -1,
+ } RADVPrefixDelegation;
+ 
++typedef enum KeepConfiguration {
++        KEEP_CONFIGURATION_NO     = 0,
++        KEEP_CONFIGURATION_DHCP   = 1 << 0,
++        KEEP_CONFIGURATION_STATIC = 1 << 1,
++        KEEP_CONFIGURATION_YES    = KEEP_CONFIGURATION_DHCP | KEEP_CONFIGURATION_STATIC,
++        _KEEP_CONFIGURATION_MAX,
++        _KEEP_CONFIGURATION_INVALID = -1,
++} KeepConfiguration;
++
+ typedef struct Manager Manager;
+ 
+ struct Network {
+@@ -122,7 +131,7 @@
+         bool dhcp_anonymize;
+         bool dhcp_send_hostname;
+         bool dhcp_broadcast;
+-        bool dhcp_critical;
++        int dhcp_critical;
+         bool dhcp_use_dns;
+         bool dhcp_use_ntp;
+         bool dhcp_use_mtu;
+@@ -223,6 +232,7 @@
+         bool unmanaged;
+         bool configure_without_carrier;
+         bool ignore_carrier_loss;
++        KeepConfiguration keep_configuration;
+         uint32_t iaid;
+         DUID duid;
+ 
+@@ -315,6 +325,7 @@
+ CONFIG_PARSER_PROTOTYPE(config_parse_ntp);
+ CONFIG_PARSER_PROTOTYPE(config_parse_iaid);
+ CONFIG_PARSER_PROTOTYPE(config_parse_required_for_online);
++CONFIG_PARSER_PROTOTYPE(config_parse_keep_configuration);
+ /* Legacy IPv4LL support */
+ CONFIG_PARSER_PROTOTYPE(config_parse_ipv4ll);
+ 
+@@ -336,3 +347,6 @@
+ 
+ const char* radv_prefix_delegation_to_string(RADVPrefixDelegation i) _const_;
+ RADVPrefixDelegation radv_prefix_delegation_from_string(const char *s) _pure_;
++
++const char* keep_configuration_to_string(KeepConfiguration i) _const_;
++KeepConfiguration keep_configuration_from_string(const char *s) _pure_;
+--- a/test/fuzz/fuzz-network-parser/directives.network
++++ b/test/fuzz/fuzz-network-parser/directives.network
+@@ -122,6 +122,7 @@
+ BindCarrier=
+ VRF=
+ IgnoreCarrierLoss=
++KeepConfiguration=
+ [IPv6Prefix]
+ Prefix=
+ OnLink=
