@@ -1,0 +1,72 @@
+From b5799eeb0787deacb30d5984f6ac78f88f23b97e Mon Sep 17 00:00:00 2001
+From: Susant Sahani <ssahani@redhat.com>
+Date: Mon, 29 Apr 2019 10:32:34 +0530
+Subject: [PATCH] networkd: Add back static routes after DHCPv4 lease expires.
+
+1. When the DHCPv4 lease expires kernel removes the route. So add it back
+when we gain lease again.
+
+Closes https://github.com/systemd/systemd/issues/12426
+
+2. When UseRoutes=false do not remove router
+---
+ src/network/networkd-dhcp4.c | 9 ++++++---
+ src/network/networkd-link.c  | 2 +-
+ src/network/networkd-link.h  | 1 +
+ 3 files changed, 8 insertions(+), 4 deletions(-)
+
+--- a/src/network/networkd-dhcp4.c
++++ b/src/network/networkd-dhcp4.c
+@@ -214,10 +214,7 @@
+                                 }
+                         }
+                 }
+-        }
+ 
+-        r = address_new(&address);
+-        if (r >= 0) {
+                 r = sd_dhcp_lease_get_router(link->dhcp_lease, &router);
+                 if (r > 0 && !in4_addr_is_null(&router[0])) {
+                         _cleanup_(route_freep) Route *route_gw = NULL;
+@@ -241,7 +238,10 @@
+                                 route_remove(route, link, NULL);
+                         }
+                 }
++        }
+ 
++        r = address_new(&address);
++        if (r >= 0) {
+                 r = sd_dhcp_lease_get_address(link->dhcp_lease, &addr);
+                 if (r >= 0) {
+                         r = sd_dhcp_lease_get_netmask(link->dhcp_lease, &netmask);
+@@ -308,6 +308,9 @@
+ 
+         link_set_dhcp_routes(link);
+ 
++        /* Add back static routes since kernel removes while DHCPv4 address is removed from when lease expires */
++        link_request_set_routes(link);
++
+         if (link->dhcp4_messages == 0) {
+                 link->dhcp4_configured = true;
+                 link_check_ready(link);
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -954,7 +954,7 @@
+         return 1;
+ }
+ 
+-static int link_request_set_routes(Link *link) {
++int link_request_set_routes(Link *link) {
+         enum {
+                 PHASE_NON_GATEWAY, /* First phase: Routes without a gateway */
+                 PHASE_GATEWAY,     /* Second phase: Routes with a gateway */
+--- a/src/network/networkd-link.h
++++ b/src/network/networkd-link.h
+@@ -181,6 +181,7 @@
+ uint32_t link_get_vrf_table(Link *link);
+ uint32_t link_get_dhcp_route_table(Link *link);
+ uint32_t link_get_ipv6_accept_ra_route_table(Link *link);
++int link_request_set_routes(Link *link);
+ 
+ int link_sysctl_ipv6_enabled(Link *link);
+ 

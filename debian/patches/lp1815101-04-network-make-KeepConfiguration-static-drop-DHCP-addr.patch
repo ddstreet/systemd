@@ -1,0 +1,93 @@
+Description: network: make KeepConfiguration=static drop DHCP addresses and routes
+Author: Yu Watanabe <watanabe.yu+github@gmail.com>
+Origin: backport, https://github.com/systemd/systemd/commit/db51778f85cb076e9ed1fe7f7e29cc740365c245
+Bug-Ubuntu: https://bugs.launchpad.net/netplan/+bug/1815101
+Reviewed-by: Rafael David Tinoco <rafaeldtinoco@ubuntu.com>
+Last-Update: 2019-10-11
+
+network: make KeepConfiguration=static drop DHCP addresses and routes
+
+Also, KeepConfiguration=dhcp drops static foreign addresses and routes.
+
+---
+ src/network/networkd-link.c | 43 ++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 42 insertions(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index 01ef248d6..1a9539c5d 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -2921,6 +2921,33 @@ static bool link_is_static_route_configured(Link *link, Route *route) {
+         return false;
+ }
+ 
++static bool link_address_is_dynamic(Link *link, Address *address) {
++        Route *route;
++        Iterator i;
++
++        assert(link);
++        assert(address);
++
++        if (address->cinfo.ifa_prefered != CACHE_INFO_INFINITY_LIFE_TIME)
++                return true;
++
++        /* Even when the address is leased from a DHCP server, networkd assign the address
++         * without lifetime when KeepConfiguration=dhcp. So, let's check that we have
++         * corresponding routes with RTPROT_DHCP. */
++        SET_FOREACH(route, link->routes_foreign, i) {
++                if (route->protocol != RTPROT_DHCP)
++                        continue;
++
++                if (address->family != route->family)
++                        continue;
++
++                if (in_addr_equal(address->family, &address->in_addr, &route->prefsrc))
++                        return true;
++        }
++
++        return false;
++}
++
+ static int link_drop_foreign_config(Link *link) {
+         Address *address;
+         Route *route;
+@@ -2932,6 +2959,12 @@ static int link_drop_foreign_config(Link *link) {
+                 if (address->family == AF_INET6 && in_addr_is_link_local(AF_INET6, &address->in_addr) == 1)
+                         continue;
+ 
++                if (link_address_is_dynamic(link, address)) {
++                        if (FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP))
++                                continue;
++                } else if (FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_STATIC))
++                        continue;
++
+                 if (link_is_static_address_configured(link, address)) {
+                         r = address_add(link, address->family, &address->in_addr, address->prefixlen, NULL);
+                         if (r < 0)
+@@ -2948,6 +2981,14 @@ static int link_drop_foreign_config(Link *link) {
+                 if (route->protocol == RTPROT_KERNEL)
+                         continue;
+ 
++                if (route->protocol == RTPROT_STATIC &&
++                    FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_STATIC))
++                        continue;
++
++                if (route->protocol == RTPROT_DHCP &&
++                    FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP))
++                        continue;
++
+                 if (link_is_static_route_configured(link, route)) {
+                         r = route_add(link, route->family, &route->dst, route->dst_prefixlen, route->tos, route->priority, route->table, NULL);
+                         if (r < 0)
+@@ -3065,7 +3106,7 @@ static int link_configure(Link *link) {
+         /* Drop foreign config, but ignore loopback or critical devices.
+          * We do not want to remove loopback address or addresses used for root NFS. */
+         if (!(link->flags & IFF_LOOPBACK) &&
+-            !(link->network->keep_configuration & (KEEP_CONFIGURATION_DHCP_ON_START | KEEP_CONFIGURATION_STATIC))) {
++            link->network->keep_configuration != KEEP_CONFIGURATION_YES) {
+                 r = link_drop_foreign_config(link);
+                 if (r < 0)
+                         return r;
+-- 
+2.20.1
+

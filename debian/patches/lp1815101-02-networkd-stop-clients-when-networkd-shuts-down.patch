@@ -1,0 +1,94 @@
+Description: networkd: stop clients when networkd shuts down (#12463)
+Author: Susant Sahani <ssahani@redhat.com>
+Origin: backport, https://github.com/systemd/systemd/commit/946f8e14d59ec1262f1779bc9a65d1c048d6544b
+Bug-Ubuntu: https://bugs.launchpad.net/netplan/+bug/1815101
+Reviewed-by: Rafael David Tinoco <rafaeldtinoco@ubuntu.com>
+Last-Update: 2019-10-11
+
+networkd: stop clients when networkd shuts down (#12463)
+
+We not stopping the clients when networkd stops. They
+should shut down cleanly and then we need to clean the DS.
+
+One of requirements to implement
+https://github.com/systemd/systemd/issues/10820.
+
+```
+^CBus bus-api-network: changing state RUNNING → CLOSED
+DHCP SERVER: UNREF
+DHCP SERVER: STOPPED
+DHCP CLIENT (0x60943df0): STOPPED
+veth-test: DHCP lease lost
+veth-test: Removing address 192.168.5.31
+NDISC: Stopping IPv6 Router Solicitation client
+DHCP CLIENT (0x0): FREE
+==24308==
+==24308== HEAP SUMMARY:
+==24308==     in use at exit: 8,192 bytes in 2 blocks
+==24308==   total heap usage: 4,230 allocs, 4,228 frees, 1,209,732 bytes allocated
+==24308==
+==24308== LEAK SUMMARY:
+==24308==    definitely lost: 0 bytes in 0 blocks
+==24308==    indirectly lost: 0 bytes in 0 blocks
+==24308==      possibly lost: 0 bytes in 0 blocks
+==24308==    still reachable: 8,192 bytes in 2 blocks
+==24308==         suppressed: 0 bytes in 0 blocks
+==24308== Rerun with --leak-check=full to see details of leaked memory
+==24308==
+==24308== For lists of detected and suppressed errors, rerun with: -s
+==24308== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==24308== could not unlink /tmp/vgdb-pipe-from-vgdb-to-24308-by-sus-on-Zeus
+==24308== could not unlink /tmp/vgdb-pipe-to-vgdb-from-24308-by-sus-on-Zeus
+==24308== could not unlink /tmp/vgdb-pipe-shared-mem-vgdb-24308-by-sus-on-Zeus
+
+```
+
+---
+ src/network/networkd-link.c    | 2 +-
+ src/network/networkd-link.h    | 2 ++
+ src/network/networkd-manager.c | 3 +++
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index 35e3806b2..0ac415a0e 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -759,7 +759,7 @@ static void link_enter_unmanaged(Link *link) {
+         link_dirty(link);
+ }
+ 
+-static int link_stop_clients(Link *link) {
++int link_stop_clients(Link *link) {
+         int r = 0, k;
+ 
+         assert(link);
+diff --git a/src/network/networkd-link.h b/src/network/networkd-link.h
+index f2e53cc57..031a90eac 100644
+--- a/src/network/networkd-link.h
++++ b/src/network/networkd-link.h
+@@ -169,6 +169,8 @@ int dhcp6_configure(Link *link);
+ int dhcp6_request_address(Link *link, int ir);
+ int dhcp6_lease_pd_prefix_lost(sd_dhcp6_client *client, Link* link);
+ 
++int link_stop_clients(Link *link);
++
+ const char* link_state_to_string(LinkState s) _const_;
+ LinkState link_state_from_string(const char *s) _pure_;
+ 
+diff --git a/src/network/networkd-manager.c b/src/network/networkd-manager.c
+index 05107da83..e1bbde233 100644
+--- a/src/network/networkd-manager.c
++++ b/src/network/networkd-manager.c
+@@ -1446,6 +1446,9 @@ void manager_free(Manager *m) {
+         while ((link = hashmap_steal_first(m->links))) {
+                 if (link->dhcp6_client)
+                         (void) dhcp6_lease_pd_prefix_lost(link->dhcp6_client, link);
++
++                link_stop_clients(link);
++
+                 link_unref(link);
+         }
+ 
+-- 
+2.20.1
+
