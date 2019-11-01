@@ -181,6 +181,7 @@ int link_send_changed(Link *link, const char *property, ...) _sentinel_;
 uint32_t link_get_vrf_table(Link *link);
 uint32_t link_get_dhcp_route_table(Link *link);
 uint32_t link_get_ipv6_accept_ra_route_table(Link *link);
+int link_request_set_routes(Link *link);
 
 int link_sysctl_ipv6_enabled(Link *link);
 
