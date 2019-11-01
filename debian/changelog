@@ -1,3 +1,51 @@
+systemd (242-7ubuntu3.2) eoan; urgency=medium
+
+  [ Dan Streetman ]
+  * d/extra/dhclient-enter-resolved-hook:
+    - Replace use of bash-only &> with > and 2> (LP: #1849608)
+  * d/p/lp1849658-resolved-set-stream-type-during-DnsStream-creation.patch:
+    - Fix bug in refcounting TCP stream types (LP: #1849658)
+  * d/extra/dhclient-enter-resolved-hook: cleanup temp $newstate file
+
+  [ Rafael David Tinoco ]
+  * Add support to KeepConfiguration= fixing behaviour for HA (LP: #1815101)
+    - d/p/lp1815101-01-networkd-add-support-to-keep-configuration.patch
+    - d/p/lp1815101-02-networkd-stop-clients-when-networkd-shuts-down.patch
+    - d/p/lp1815101-03-network-add-KeepConfiguration-dhcp-on-stop.patch
+    - d/p/lp1815101-04-network-make-KeepConfiguration-static-drop-DHCP-addr.patch
+    - d/p/lp1815101-05-man-add-documentation-about-KeepConfiguration.patch
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 01 Nov 2019 16:33:08 -0400
+
+systemd (242-7ubuntu3.1) eoan; urgency=medium
+
+  [ Balint Reczey ]
+  * Fix shutdown and related actions from the login screen (LP: #1847896)
+    File: debian/patches/logind-consider-greeter-sessions-suitable-as-display-sess.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b407dfd8c9dc81594553c27467c35b383333d74c
+  * debian/gbp.conf: Set debian-branch to ubuntu-eoan
+    File: debian/gbp.conf
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=f399ce2cf4701a2dbb4b3505d2dd17a210d62f5c
+
+  [ Dan Streetman ]
+  * Fix bogus routes after DHCP lease change (LP: #1831787)
+    Files:
+    - debian/patches/lp1831787/0001-networkd-Add-back-static-routes-after-DHCPv4-lease-e.patch
+    - debian/patches/lp1831787/0002-network-set-preferred-source-in-removing-route-entry.patch
+    - debian/patches/lp1831787/0003-network-lower-log-level-about-critical-connection.patch
+    - debian/patches/lp1831787/0004-network-reset-Link-dhcp4_configured-flag-earlier.patch
+    - debian/patches/lp1831787/0005-network-split-dhcp_lease_lost-into-small-pieces.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ced3f5c2f619083f7beb164d94d4ccfe52222fe8
+  * Set src address for dhcp 'classless' routes (LP: #1835581)
+    File: debian/patches/lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=6a7ef370fb1335548448920be4ae6176b67044a8
+  * Allows cache=no-negative option to be set, ignoring negative answers to
+    be cached (LP: #1668771)
+    File: debian/patches/lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=27def26f5b1d1b8ba314c4a925fc1b7c43837f86
+
+ -- Balint Reczey <rbalint@ubuntu.com>  Fri, 18 Oct 2019 16:35:53 +0200
+
 systemd (242-7ubuntu3) eoan; urgency=medium
 
   * Fix using domain set by DHCP as search domain (LP: #1846509)

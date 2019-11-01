@@ -169,6 +169,8 @@ int dhcp6_configure(Link *link);
 int dhcp6_request_address(Link *link, int ir);
 int dhcp6_lease_pd_prefix_lost(sd_dhcp6_client *client, Link* link);
 
+int link_stop_clients(Link *link, bool may_keep_dhcp);
+
 const char* link_state_to_string(LinkState s) _const_;
 LinkState link_state_from_string(const char *s) _pure_;
 
@@ -181,6 +183,7 @@ int link_send_changed(Link *link, const char *property, ...) _sentinel_;
 uint32_t link_get_vrf_table(Link *link);
 uint32_t link_get_dhcp_route_table(Link *link);
 uint32_t link_get_ipv6_accept_ra_route_table(Link *link);
+int link_request_set_routes(Link *link);
 
 int link_sysctl_ipv6_enabled(Link *link);
 

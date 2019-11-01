@@ -84,6 +84,17 @@ typedef enum RADVPrefixDelegation {
         _RADV_PREFIX_DELEGATION_INVALID = -1,
 } RADVPrefixDelegation;
 
+typedef enum KeepConfiguration {
+        KEEP_CONFIGURATION_NO            = 0,
+        KEEP_CONFIGURATION_DHCP_ON_START = 1 << 0,
+        KEEP_CONFIGURATION_DHCP_ON_STOP  = 1 << 1,
+        KEEP_CONFIGURATION_DHCP          = KEEP_CONFIGURATION_DHCP_ON_START | KEEP_CONFIGURATION_DHCP_ON_STOP,
+        KEEP_CONFIGURATION_STATIC        = 1 << 2,
+        KEEP_CONFIGURATION_YES           = KEEP_CONFIGURATION_DHCP | KEEP_CONFIGURATION_STATIC,
+        _KEEP_CONFIGURATION_MAX,
+        _KEEP_CONFIGURATION_INVALID = -1,
+} KeepConfiguration;
+
 typedef struct Manager Manager;
 
 struct Network {
@@ -122,7 +133,7 @@ struct Network {
         bool dhcp_anonymize;
         bool dhcp_send_hostname;
         bool dhcp_broadcast;
-        bool dhcp_critical;
+        int dhcp_critical;
         bool dhcp_use_dns;
         bool dhcp_use_ntp;
         bool dhcp_use_mtu;
@@ -223,6 +234,7 @@ struct Network {
         bool unmanaged;
         bool configure_without_carrier;
         bool ignore_carrier_loss;
+        KeepConfiguration keep_configuration;
         uint32_t iaid;
         DUID duid;
 
@@ -315,6 +327,7 @@ CONFIG_PARSER_PROTOTYPE(config_parse_dhcp_user_class);
 CONFIG_PARSER_PROTOTYPE(config_parse_ntp);
 CONFIG_PARSER_PROTOTYPE(config_parse_iaid);
 CONFIG_PARSER_PROTOTYPE(config_parse_required_for_online);
+CONFIG_PARSER_PROTOTYPE(config_parse_keep_configuration);
 /* Legacy IPv4LL support */
 CONFIG_PARSER_PROTOTYPE(config_parse_ipv4ll);
 
@@ -336,3 +349,6 @@ LLDPMode lldp_mode_from_string(const char *s) _pure_;
 
 const char* radv_prefix_delegation_to_string(RADVPrefixDelegation i) _const_;
 RADVPrefixDelegation radv_prefix_delegation_from_string(const char *s) _pure_;
+
+const char* keep_configuration_to_string(KeepConfiguration i) _const_;
+KeepConfiguration keep_configuration_from_string(const char *s) _pure_;
