@@ -25,6 +25,7 @@ sleep-properly-pass-verb-to-sleep-script.patch
 core-factor-root_directory-application-out-of-apply_worki.patch
 shared-bus-util-drop-trusted-annotation-from-bus_open_sys.patch
 network-do-not-use-ordered_set_printf-for-DOMAINS-or-ROUT.patch
+logind-consider-greeter-sessions-suitable-as-display-sess.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
@@ -64,3 +65,16 @@ ask-password-prevent-buffer-overrow-when-reading-fro.patch
 rdrand-workaround-on-amd.patch
 Skip-falling-back-to-device-name-when-net_get_name-device.patch
 test-execute-Filter-dev-.lxc-in-exec-dynamicuser-statedir.patch
+lp1831787/0001-networkd-Add-back-static-routes-after-DHCPv4-lease-e.patch
+lp1831787/0002-network-set-preferred-source-in-removing-route-entry.patch
+lp1831787/0003-network-lower-log-level-about-critical-connection.patch
+lp1831787/0004-network-reset-Link-dhcp4_configured-flag-earlier.patch
+lp1831787/0005-network-split-dhcp_lease_lost-into-small-pieces.patch
+lp1835581-src-network-networkd-dhcp4.c-set-prefsrc-for-classle.patch
+lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
+lp1849658-resolved-set-stream-type-during-DnsStream-creation.patch
+lp1815101-01-networkd-add-support-to-keep-configuration.patch
+lp1815101-02-networkd-stop-clients-when-networkd-shuts-down.patch
+lp1815101-03-network-add-KeepConfiguration-dhcp-on-stop.patch
+lp1815101-04-network-make-KeepConfiguration-static-drop-DHCP-addr.patch
+lp1815101-05-man-add-documentation-about-KeepConfiguration.patch
