@@ -1,0 +1,25 @@
+From ee4931068e3e7a722327399db91ee020a74b3592 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 8 Aug 2018 21:14:20 +0900
+Subject: [PATCH] network: do not re-set MTU when current and requested MTU are
+ same
+Bug: https://github.com/systemd/systemd/issues/9831
+Bug-Ubuntu: https://bugs.launchpad.net/systemd/+bug/1852754
+Origin: upstream, https://github.com/systemd/systemd/pull/9832/commits
+
+---
+ src/network/networkd-link.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1351,6 +1351,9 @@
+         assert(link->manager);
+         assert(link->manager->rtnl);
+ 
++        if (link->mtu == mtu)
++                return 0;
++
+         log_link_debug(link, "Setting MTU: %" PRIu32, mtu);
+ 
+         r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_SETLINK, link->ifindex);
