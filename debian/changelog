@@ -1,3 +1,12 @@
+systemd (237-3ubuntu10.33) bionic; urgency=medium
+
+  * d/p/lp1852754/0001-network-do-not-re-set-MTU-when-current-and-requested.patch,
+    d/p/lp1852754/0002-network-call-link_acquire_conf-and-link_enter_join_n.patch,
+    d/p/lp1852754/0003-network-prohibit-to-set-MTUBytes-and-UseMTU-simultan.patch:
+    - Complete link setup after setting mtu (LP: #1852754)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 15 Nov 2019 10:01:16 -0500
+
 systemd (237-3ubuntu10.32) bionic; urgency=medium
 
   [ Victor Tapia ]

@@ -1,4 +1,5 @@
 Fix typo added in lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1852591
 
 --- systemd-237.orig/src/shared/resolve-util.h
 +++ systemd-237/src/shared/resolve-util.h
