@@ -1,0 +1,38 @@
+From 7169cdc8b971485751e4d92a1cae2d706293ecf9 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 13 Aug 2018 16:12:56 +0900
+Subject: [PATCH] network: prohibit to set MTUBytes= and UseMTU= simultaneously
+Bug: https://github.com/systemd/systemd/issues/9831
+Bug-Ubuntu: https://bugs.launchpad.net/systemd/+bug/1852754
+Origin: upstream, https://github.com/systemd/systemd/pull/9832/commits
+
+---
+ man/systemd.network.xml        | 1 +
+ src/network/networkd-network.c | 6 ++++++
+ 2 files changed, 7 insertions(+)
+
+--- a/man/systemd.network.xml
++++ b/man/systemd.network.xml
+@@ -1144,6 +1144,7 @@
+           <listitem>
+             <para>When true, the interface maximum transmission unit
+             from the DHCP server will be used on the current link.
++            If <varname>MTUBytes=</varname> is set, then this setting is ignored.
+             Defaults to false.</para>
+           </listitem>
+         </varlistentry>
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -296,6 +296,12 @@
+         if (network->ip_masquerade)
+                 network->ip_forward |= ADDRESS_FAMILY_IPV4;
+ 
++        if (network->mtu > 0 && network->dhcp_use_mtu) {
++                log_warning("MTUBytes= in [Link] section and UseMTU= in [DHCP] section are set in %s. "
++                            "Disabling UseMTU=.", filename);
++                network->dhcp_use_mtu = false;
++        }
++
+         LIST_PREPEND(networks, manager->networks, network);
+ 
+         r = hashmap_ensure_allocated(&manager->networks_by_name, &string_hash_ops);

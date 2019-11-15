@@ -150,3 +150,6 @@ lp1849733/0013-resolve-do-not-complete-stream-transaction-when-it-i.patch
 lp1849658-resolved-set-stream-type-during-DnsStream-creation.patch
 lp1850704/0001-networkd-Unify-set-MTU.patch
 lp1850704/0002-network-drop-redundant-lines.patch
+lp1852754/0001-network-do-not-re-set-MTU-when-current-and-requested.patch
+lp1852754/0002-network-call-link_acquire_conf-and-link_enter_join_n.patch
+lp1852754/0003-network-prohibit-to-set-MTUBytes-and-UseMTU-simultan.patch
