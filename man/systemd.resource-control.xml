@@ -91,7 +91,7 @@
       <variablelist>
 
         <varlistentry>
-          <term><option>CPU</option></term>
+          <term>CPU</term>
           <listitem>
             <para><varname>CPUWeight=</varname> and <varname>StartupCPUWeight=</varname> replace
             <varname>CPUShares=</varname> and <varname>StartupCPUShares=</varname>, respectively.</para>
@@ -101,7 +101,7 @@
         </varlistentry>
 
         <varlistentry>
-          <term><option>Memory</option></term>
+          <term>Memory</term>
           <listitem>
             <para><varname>MemoryMax=</varname> replaces <varname>MemoryLimit=</varname>. <varname>MemoryLow=</varname>
             and <varname>MemoryHigh=</varname> are effective only on unified hierarchy.</para>
@@ -109,10 +109,11 @@
         </varlistentry>
 
         <varlistentry>
-          <term><option>IO</option></term>
+          <term>IO</term>
           <listitem>
-            <para><varname>IO</varname> prefixed settings are a superset of and replace <varname>BlockIO</varname>
-            prefixed ones. On unified hierarchy, IO resource control also applies to buffered writes.</para>
+            <para><literal>IO</literal>-prefixed settings are a superset of and replace
+            <literal>BlockIO</literal>-prefixed ones. On unified hierarchy, IO resource control also applies
+            to buffered writes.</para>
           </listitem>
         </varlistentry>
 
@@ -211,6 +212,36 @@
           <ulink url="https://www.kernel.org/doc/Documentation/scheduler/sched-design-CFS.txt">sched-design-CFS.txt</ulink>.</para>
 
           <para>Example: <varname>CPUQuotaPeriodSec=10ms</varname> to request that the CPU quota is measured in periods of 10ms.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><varname>AllowedCPUs=</varname></term>
+
+        <listitem>
+          <para>Restrict processes to be executed on specific CPUs. Takes a list of CPU indices or ranges separated by either
+          whitespace or commas. CPU ranges are specified by the lower and upper CPU indices separated by a dash.</para>
+
+          <para>Setting <varname>AllowedCPUs=</varname> doesn't guarantee that all of the CPUs will be used by the processes
+          as it may be limited by parent units. The effective configuration is reported as <varname>EffectiveCPUs=</varname>.</para>
+
+          <para>This setting is supported only with the unified control group hierarchy.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><varname>AllowedMemoryNodes=</varname></term>
+
+        <listitem>
+          <para>Restrict processes to be executed on specific memory NUMA nodes. Takes a list of memory NUMA nodes indices
+          or ranges separated by either whitespace or commas. Memory NUMA nodes ranges are specified by the lower and upper
+          CPU indices separated by a dash.</para>
+
+          <para>Setting <varname>AllowedMemoryNodes=</varname> doesn't guarantee that all of the memory NUMA nodes will
+          be used by the processes as it may be limited by parent units. The effective configuration is reported as
+          <varname>EffectiveMemoryNodes=</varname>.</para>
+
+          <para>This setting is supported only with the unified control group hierarchy.</para>
         </listitem>
       </varlistentry>
 

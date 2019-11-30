@@ -6,11 +6,9 @@
 #include <netinet/ip.h>
 #include <resolv.h>
 #include <stdlib.h>
-#include <sys/socket.h>
 #include <sys/timerfd.h>
 #include <sys/timex.h>
 #include <sys/types.h>
-#include <time.h>
 
 #include "sd-daemon.h"
 
@@ -21,7 +19,6 @@
 #include "fs-util.h"
 #include "list.h"
 #include "log.h"
-#include "missing.h"
 #include "network-util.h"
 #include "ratelimit.h"
 #include "resolve-private.h"
@@ -1094,7 +1091,7 @@ int manager_new(Manager **ret) {
 
         m->server_socket = m->clock_watch_fd = -1;
 
-        RATELIMIT_INIT(m->ratelimit, RATELIMIT_INTERVAL_USEC, RATELIMIT_BURST);
+        m->ratelimit = (RateLimit) { RATELIMIT_INTERVAL_USEC, RATELIMIT_BURST };
 
         r = sd_event_default(&m->event);
         if (r < 0)

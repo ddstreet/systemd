@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 
 #include <errno.h>
-#include <pwd.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -20,6 +18,7 @@
 #include "device-util.h"
 #include "dirent-util.h"
 #include "efivars.h"
+#include "efi-loader.h"
 #include "env-util.h"
 #include "escape.h"
 #include "fd-util.h"

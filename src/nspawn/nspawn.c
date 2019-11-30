@@ -1,22 +1,15 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 
 #if HAVE_BLKID
-#include <blkid.h>
 #endif
 #include <errno.h>
 #include <getopt.h>
-#include <grp.h>
 #include <linux/fs.h>
 #include <linux/loop.h>
-#include <pwd.h>
-#include <sched.h>
 #if HAVE_SELINUX
 #include <selinux/selinux.h>
 #endif
-#include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/file.h>
 #include <sys/personality.h>
 #include <sys/prctl.h>
@@ -58,7 +51,7 @@
 #include "machine-image.h"
 #include "macro.h"
 #include "main-func.h"
-#include "missing.h"
+#include "missing_sched.h"
 #include "mkdir.h"
 #include "mount-util.h"
 #include "mountpoint-util.h"
@@ -103,6 +96,7 @@
 #include "terminal-util.h"
 #include "tmpfile-util.h"
 #include "umask-util.h"
+#include "unit-name.h"
 #include "user-util.h"
 #include "util.h"
 
@@ -261,6 +255,30 @@ STATIC_DESTRUCTOR_REGISTER(arg_seccomp, seccomp_releasep);
 STATIC_DESTRUCTOR_REGISTER(arg_cpu_set, cpu_set_reset);
 STATIC_DESTRUCTOR_REGISTER(arg_sysctl, strv_freep);
 
+static int handle_arg_console(const char *arg) {
+        if (streq(arg, "help")) {
+                puts("interactive\n"
+                     "read-only\n"
+                     "passive\n"
+                     "pipe");
+                return 0;
+        }
+
+        if (streq(arg, "interactive"))
+                arg_console_mode = CONSOLE_INTERACTIVE;
+        else if (streq(arg, "read-only"))
+                arg_console_mode = CONSOLE_READ_ONLY;
+        else if (streq(arg, "passive"))
+                arg_console_mode = CONSOLE_PASSIVE;
+        else if (streq(arg, "pipe"))
+                arg_console_mode = CONSOLE_PIPE;
+        else
+                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown console mode: %s", optarg);
+
+        arg_settings_mask |= SETTING_CONSOLE_MODE;
+        return 1;
+}
+
 static int help(void) {
         _cleanup_free_ char *link = NULL;
         int r;
@@ -272,7 +290,7 @@ static int help(void) {
                 return log_oom();
 
         printf("%1$s [OPTIONS...] [PATH] [ARGUMENTS...]\n\n"
-               "Spawn a command or OS in a light-weight container.\n\n"
+               "%5$sSpawn a command or OS in a light-weight container.%6$s\n\n"
                "  -h --help                 Show this help\n"
                "     --version              Print version string\n"
                "  -q --quiet                Do not show status information\n"
@@ -387,7 +405,9 @@ static int help(void) {
                "\nSee the %2$s for details.\n"
                , program_invocation_short_name
                , link
-               , ansi_underline(), ansi_normal());
+               , ansi_underline(), ansi_normal()
+               , ansi_highlight(), ansi_normal()
+        );
 
         return 0;
 }
@@ -412,15 +432,22 @@ static int custom_mount_check_all(void) {
 }
 
 static int detect_unified_cgroup_hierarchy_from_environment(void) {
-        const char *e;
+        const char *e, *var = "SYSTEMD_NSPAWN_UNIFIED_HIERARCHY";
         int r;
 
         /* Allow the user to control whether the unified hierarchy is used */
-        e = getenv("UNIFIED_CGROUP_HIERARCHY");
-        if (e) {
+
+        e = getenv(var);
+        if (!e) {
+                /* $UNIFIED_CGROUP_HIERARCHY has been renamed to $SYSTEMD_NSPAWN_UNIFIED_HIERARCHY. */
+                var = "UNIFIED_CGROUP_HIERARCHY";
+                e = getenv(var);
+        }
+
+        if (!isempty(e)) {
                 r = parse_boolean(e);
                 if (r < 0)
-                        return log_error_errno(r, "Failed to parse $UNIFIED_CGROUP_HIERARCHY.");
+                        return log_error_errno(r, "Failed to parse $%s: %m", var);
                 if (r > 0)
                         arg_unified_cgroup_hierarchy = CGROUP_UNIFIED_ALL;
                 else
@@ -465,6 +492,46 @@ static int detect_unified_cgroup_hierarchy_from_image(const char *directory) {
                   arg_unified_cgroup_hierarchy == CGROUP_UNIFIED_SYSTEMD ? "hybrid" : "unified");
 
         return 0;
+}
+
+static int parse_capability_spec(const char *spec, uint64_t *ret_mask) {
+        uint64_t mask = 0;
+        int r;
+
+        for (;;) {
+                _cleanup_free_ char *t = NULL;
+
+                r = extract_first_word(&spec, &t, ",", 0);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to parse capability %s.", t);
+                if (r == 0)
+                        break;
+
+                if (streq(t, "help")) {
+                        for (int i = 0; i < capability_list_length(); i++) {
+                                const char *name;
+
+                                name = capability_to_name(i);
+                                if (name)
+                                        puts(name);
+                        }
+
+                        return 0; /* quit */
+                }
+
+                if (streq(t, "all"))
+                        mask = (uint64_t) -1;
+                else {
+                        r = capability_from_name(t);
+                        if (r < 0)
+                                return log_error_errno(r, "Failed to parse capability %s.", t);
+
+                        mask |= 1ULL << r;
+                }
+        }
+
+        *ret_mask = mask;
+        return 1; /* continue */
 }
 
 static int parse_share_ns_env(const char *name, unsigned long ns_flag) {
@@ -670,7 +737,6 @@ static int parse_argv(int argc, char *argv[]) {
         };
 
         int c, r;
-        const char *p;
         uint64_t plus = 0, minus = 0;
         bool mask_all_settings = false, mask_no_settings = false;
 
@@ -855,13 +921,17 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_settings_mask |= SETTING_MACHINE_ID;
                         break;
 
-                case 'S':
-                        r = free_and_strdup(&arg_slice, optarg);
+                case 'S': {
+                        _cleanup_free_ char *mangled = NULL;
+
+                        r = unit_name_mangle_with_suffix(optarg, NULL, UNIT_NAME_MANGLE_WARN, ".slice", &mangled);
                         if (r < 0)
                                 return log_oom();
 
+                        free_and_replace(arg_slice, mangled);
                         arg_settings_mask |= SETTING_SLICE;
                         break;
+                }
 
                 case 'M':
                         if (isempty(optarg))
@@ -908,37 +978,18 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case ARG_CAPABILITY:
                 case ARG_DROP_CAPABILITY: {
-                        p = optarg;
-                        for (;;) {
-                                _cleanup_free_ char *t = NULL;
+                        uint64_t m;
+                        r = parse_capability_spec(optarg, &m);
+                        if (r <= 0)
+                                return r;
 
-                                r = extract_first_word(&p, &t, ",", 0);
-                                if (r < 0)
-                                        return log_error_errno(r, "Failed to parse capability %s.", t);
-                                if (r == 0)
-                                        break;
-
-                                if (streq(t, "all")) {
-                                        if (c == ARG_CAPABILITY)
-                                                plus = (uint64_t) -1;
-                                        else
-                                                minus = (uint64_t) -1;
-                                } else {
-                                        r = capability_from_name(t);
-                                        if (r < 0)
-                                                return log_error_errno(r, "Failed to parse capability %s.", t);
-
-                                        if (c == ARG_CAPABILITY)
-                                                plus |= 1ULL << r;
-                                        else
-                                                minus |= 1ULL << r;
-                                }
-                        }
-
+                        if (c == ARG_CAPABILITY)
+                                plus |= m;
+                        else
+                                minus |= m;
                         arg_settings_mask |= SETTING_CAPABILITY;
                         break;
                 }
-
                 case ARG_NO_NEW_PRIVILEGES:
                         r = parse_boolean(optarg);
                         if (r < 0)
@@ -1377,29 +1428,16 @@ static int parse_argv(int argc, char *argv[]) {
                         break;
 
                 case ARG_CONSOLE:
-                        if (streq(optarg, "interactive"))
-                                arg_console_mode = CONSOLE_INTERACTIVE;
-                        else if (streq(optarg, "read-only"))
-                                arg_console_mode = CONSOLE_READ_ONLY;
-                        else if (streq(optarg, "passive"))
-                                arg_console_mode = CONSOLE_PASSIVE;
-                        else if (streq(optarg, "pipe"))
-                                arg_console_mode = CONSOLE_PIPE;
-                        else if (streq(optarg, "help"))
-                                puts("interactive\n"
-                                     "read-only\n"
-                                     "passive\n"
-                                     "pipe");
-                        else
-                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown console mode: %s", optarg);
-
-                        arg_settings_mask |= SETTING_CONSOLE_MODE;
+                        r = handle_arg_console(optarg);
+                        if (r <= 0)
+                                return r;
                         break;
 
                 case 'P':
                 case ARG_PIPE:
-                        arg_console_mode = CONSOLE_PIPE;
-                        arg_settings_mask |= SETTING_CONSOLE_MODE;
+                        r = handle_arg_console("pipe");
+                        if (r <= 0)
+                                return r;
                         break;
 
                 case ARG_NO_PAGER:
@@ -1645,7 +1683,7 @@ static int setup_timezone(const char *dest) {
         if (m == TIMEZONE_OFF)
                 return 0;
 
-        r = chase_symlinks("/etc", dest, CHASE_PREFIX_ROOT, &etc);
+        r = chase_symlinks("/etc", dest, CHASE_PREFIX_ROOT, &etc, NULL);
         if (r < 0) {
                 log_warning_errno(r, "Failed to resolve /etc path in container, ignoring: %m");
                 return 0;
@@ -1676,7 +1714,7 @@ static int setup_timezone(const char *dest) {
                         return 0; /* Already pointing to the right place? Then do nothing .. */
 
                 check = strjoina(dest, "/usr/share/zoneinfo/", z);
-                r = chase_symlinks(check, dest, 0, NULL);
+                r = chase_symlinks(check, dest, 0, NULL, NULL);
                 if (r < 0)
                         log_debug_errno(r, "Timezone %s does not exist (or is not accessible) in container, not creating symlink: %m", z);
                 else {
@@ -1703,7 +1741,7 @@ static int setup_timezone(const char *dest) {
                 _cleanup_free_ char *resolved = NULL;
                 int found;
 
-                found = chase_symlinks(where, dest, CHASE_NONEXISTENT, &resolved);
+                found = chase_symlinks(where, dest, CHASE_NONEXISTENT, &resolved, NULL);
                 if (found < 0) {
                         log_warning_errno(found, "Failed to resolve /etc/localtime path in container, ignoring: %m");
                         return 0;
@@ -1809,7 +1847,7 @@ static int setup_resolv_conf(const char *dest) {
         if (m == RESOLV_CONF_OFF)
                 return 0;
 
-        r = chase_symlinks("/etc", dest, CHASE_PREFIX_ROOT, &etc);
+        r = chase_symlinks("/etc", dest, CHASE_PREFIX_ROOT, &etc, NULL);
         if (r < 0) {
                 log_warning_errno(r, "Failed to resolve /etc path in container, ignoring: %m");
                 return 0;
@@ -1833,7 +1871,7 @@ static int setup_resolv_conf(const char *dest) {
                 _cleanup_free_ char *resolved = NULL;
                 int found;
 
-                found = chase_symlinks(where, dest, CHASE_NONEXISTENT, &resolved);
+                found = chase_symlinks(where, dest, CHASE_NONEXISTENT, &resolved, NULL);
                 if (found < 0) {
                         log_warning_errno(found, "Failed to resolve /etc/resolv.conf path in container, ignoring: %m");
                         return 0;
@@ -2362,7 +2400,8 @@ static int drop_capabilities(uid_t uid) {
                 /* If we're not using OCI, proceed with mangled capabilities (so we don't error out)
                  * in order to maintain the same behavior as systemd < 242. */
                 if (capability_quintet_mangle(&q))
-                        log_warning("Some capabilities will not be set because they are not in the current bounding set.");
+                        log_full(arg_quiet ? LOG_DEBUG : LOG_WARNING,
+                                 "Some capabilities will not be set because they are not in the current bounding set.");
 
         }
 
@@ -2710,12 +2749,11 @@ static int chase_symlinks_and_update(char **p, unsigned flags) {
         if (!*p)
                 return 0;
 
-        r = chase_symlinks(*p, NULL, flags, &chased);
+        r = chase_symlinks(*p, NULL, flags, &chased, NULL);
         if (r < 0)
                 return log_error_errno(r, "Failed to resolve path %s: %m", *p);
 
-        free_and_replace(*p, chased);
-        return r; /* r might be an fd here in case we ever use CHASE_OPEN in flags */
+        return free_and_replace(*p, chased);
 }
 
 static int determine_uid_shift(const char *directory) {
@@ -3754,6 +3792,7 @@ static int merge_settings(Settings *settings, const char *path) {
 
         if ((arg_settings_mask & SETTING_CAPABILITY) == 0) {
                 uint64_t plus, minus;
+                uint64_t network_minus = 0;
 
                 /* Note that we copy both the simple plus/minus caps here, and the full quintet from the
                  * Settings structure */
@@ -3765,14 +3804,16 @@ static int merge_settings(Settings *settings, const char *path) {
                         if (settings_private_network(settings))
                                 plus |= UINT64_C(1) << CAP_NET_ADMIN;
                         else
-                                minus |= UINT64_C(1) << CAP_NET_ADMIN;
+                                network_minus |= UINT64_C(1) << CAP_NET_ADMIN;
                 }
 
                 if (!arg_settings_trusted && plus != 0) {
                         if (settings->capability != 0)
                                 log_warning("Ignoring Capability= setting, file %s is not trusted.", path);
-                } else
+                } else {
+                        arg_caps_retain &= ~network_minus;
                         arg_caps_retain |= plus;
+                }
 
                 arg_caps_retain &= ~minus;
 
@@ -4596,18 +4637,18 @@ static int run_container(
         }
 
         /* Kill if it is not dead yet anyway */
-        if (bus) {
-                if (arg_register)
-                        terminate_machine(bus, arg_machine);
-                else if (!arg_keep_unit)
-                        terminate_scope(bus, arg_machine);
-        }
+        if (!arg_register && !arg_keep_unit && bus)
+                terminate_scope(bus, arg_machine);
 
         /* Normally redundant, but better safe than sorry */
         (void) kill(*pid, SIGKILL);
 
         r = wait_for_container(*pid, &container_status);
         *pid = 0;
+
+        /* Tell machined that we are gone. */
+        if (bus)
+                (void) unregister_machine(bus, arg_machine);
 
         if (r < 0)
                 /* We failed to wait for the container, or the container exited abnormally. */
@@ -4749,7 +4790,7 @@ static int run(int argc, char *argv[]) {
         if (r < 0)
                 goto finish;
 
-        r = cg_unified_flush();
+        r = cg_unified();
         if (r < 0) {
                 log_error_errno(r, "Failed to determine whether the unified cgroups hierarchy is used: %m");
                 goto finish;

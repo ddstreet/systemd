@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 
 #include <errno.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -278,26 +277,40 @@ static int context_read_data(Context *c) {
 
 static int context_write_data_timezone(Context *c) {
         _cleanup_free_ char *p = NULL;
+        const char *source;
         int r = 0;
         struct stat st;
 
         assert(c);
 
-        if (isempty(c->zone)) {
-                if (unlink("/etc/localtime") < 0 && errno != ENOENT)
-                        r = -errno;
+        /* No timezone is very similar to UTC. Hence in either of these cases link the UTC file in. Except if
+         * it isn't installed, in which case we remove the symlink altogether. Since glibc defaults to an
+         * internal version of UTC in that case behaviour is mostly equivalent. We still prefer creating the
+         * symlink though, since things are more self explanatory then. */
 
-                if (unlink("/etc/timezone") < 0 && errno != ENOENT)
-                        r = -errno;
+        if (isempty(c->zone) || streq(c->zone, "UTC")) {
 
-                return r;
+                if (access("/usr/share/zoneinfo/UTC", F_OK) < 0) {
+
+                        if (unlink("/etc/localtime") < 0 && errno != ENOENT)
+                                r = -errno;
+
+                        if (unlink("/etc/timezone") < 0 && errno != ENOENT)
+                                r = -errno;
+
+                        return r;
+                }
+
+                source = "../usr/share/zoneinfo/UTC";
+        } else {
+                p = path_join("../usr/share/zoneinfo", c->zone);
+                if (!p)
+                        return -ENOMEM;
+
+                source = p;
         }
 
-        p = path_join("../usr/share/zoneinfo", c->zone);
-        if (!p)
-                return log_oom();
-
-        r = symlink_atomic(p, "/etc/localtime");
+        r = symlink_atomic(source, "/etc/localtime");
         if (r < 0)
                 return r;
 
@@ -655,7 +668,7 @@ static int method_set_timezone(sd_bus_message *m, void *userdata, sd_bus_error *
                 return r;
 
         if (!timezone_is_valid(z, LOG_DEBUG))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid time zone '%s'", z);
+                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid or not installed time zone '%s'", z);
 
         if (streq_ptr(z, c->zone))
                 return sd_bus_reply_method_return(m, NULL);

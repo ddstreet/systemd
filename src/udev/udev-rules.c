@@ -3,6 +3,7 @@
 #include <ctype.h>
 
 #include "alloc-util.h"
+#include "architecture.h"
 #include "conf-files.h"
 #include "def.h"
 #include "device-util.h"
@@ -28,6 +29,7 @@
 #include "udev-event.h"
 #include "udev-rules.h"
 #include "user-util.h"
+#include "virt.h"
 
 #define RULES_DIRS (const char* const*) CONF_PATHS_STRV("udev/rules.d")
 
@@ -69,6 +71,7 @@ typedef enum {
         TK_M_DEVLINK,                       /* strv, sd_device_get_devlink_first(), sd_device_get_devlink_next() */
         TK_M_NAME,                          /* string, name of network interface */
         TK_M_ENV,                           /* string, device property, takes key through attribute */
+        TK_M_CONST,                         /* string, system-specific hard-coded constant */
         TK_M_TAG,                           /* strv, sd_device_get_tag_first(), sd_device_get_tag_next() */
         TK_M_SUBSYSTEM,                     /* string, sd_device_get_subsystem() */
         TK_M_DRIVER,                        /* string, sd_device_get_driver() */
@@ -618,6 +621,12 @@ static int parse_token(UdevRules *rules, const char *key, char *attr, UdevRuleOp
                         r = rule_line_add_token(rule_line, TK_A_ENV, op, value, attr);
                 } else
                         r = rule_line_add_token(rule_line, TK_M_ENV, op, value, attr);
+        } else if (streq(key, "CONST")) {
+                if (isempty(attr) || !STR_IN_SET(attr, "arch", "virt"))
+                        return log_token_invalid_attr(rules, key);
+                if (!is_match)
+                        return log_token_invalid_op(rules, key);
+                r = rule_line_add_token(rule_line, TK_M_CONST, op, value, attr);
         } else if (streq(key, "TAG")) {
                 if (attr)
                         return log_token_invalid_attr(rules, key);
@@ -1568,6 +1577,17 @@ static int udev_rule_apply_token_to_event(
                         val = hashmap_get(properties_list, token->data);
 
                 return token_match_string(token, val);
+        case TK_M_CONST: {
+                const char *k = token->data;
+
+                if (streq(k, "arch"))
+                        val = architecture_to_string(uname_architecture());
+                else if (streq(k, "virt"))
+                        val = virtualization_to_string(detect_virtualization());
+                else
+                        assert_not_reached("Invalid CONST key");
+                return token_match_string(token, val);
+        }
         case TK_M_TAG:
         case TK_M_PARENTS_TAG:
                 FOREACH_DEVICE_TAG(dev, val)
@@ -1645,10 +1665,13 @@ static int udev_rule_apply_token_to_event(
                 log_rule_debug(dev, rules, "Running PROGRAM '%s'", buf);
 
                 r = udev_event_spawn(event, timeout_usec, true, buf, result, sizeof(result));
-                if (r < 0)
-                        return log_rule_error_errno(dev, rules, r, "Failed to execute '%s': %m", buf);
-                if (r > 0)
+                if (r != 0) {
+                        if (r < 0)
+                                log_rule_warning_errno(dev, rules, r, "Failed to execute '%s', ignoring: %m", buf);
+                        else /* returned value is positive when program fails */
+                                log_rule_debug(dev, rules, "Command \"%s\" returned %d (error), ignoring", buf, r);
                         return token->op == OP_NOMATCH;
+                }
 
                 delete_trailing_chars(result, "\n");
                 count = util_replace_chars(result, UDEV_ALLOWED_CHARS_INPUT);
@@ -1712,10 +1735,11 @@ static int udev_rule_apply_token_to_event(
                 log_rule_debug(dev, rules, "Importing properties from results of '%s'", buf);
 
                 r = udev_event_spawn(event, timeout_usec, true, buf, result, sizeof result);
-                if (r < 0)
-                        return log_rule_error_errno(dev, rules, r, "Failed to execute '%s': %m", buf);
-                if (r > 0) {
-                        log_rule_debug(dev, rules, "Command \"%s\" returned %d (error), ignoring", buf, r);
+                if (r != 0) {
+                        if (r < 0)
+                                log_rule_warning_errno(dev, rules, r, "Failed to execute '%s', ignoring: %m", buf);
+                        else /* returned value is positive when program fails */
+                                log_rule_debug(dev, rules, "Command \"%s\" returned %d (error), ignoring", buf, r);
                         return token->op == OP_NOMATCH;
                 }
 
@@ -2320,7 +2344,7 @@ static int apply_static_dev_perms(const char *devnode, uid_t uid, gid_t gid, mod
 
 static int udev_rule_line_apply_static_dev_perms(UdevRuleLine *rule_line) {
         UdevRuleToken *token;
-        _cleanup_free_ char **tags = NULL;
+        _cleanup_strv_free_ char **tags = NULL;
         uid_t uid = UID_INVALID;
         gid_t gid = GID_INVALID;
         mode_t mode = MODE_INVALID;
