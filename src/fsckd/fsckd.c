@@ -48,7 +48,6 @@
 #include "util.h"
 #include "alloc-util.h"
 #include "locale-util.h"
-#include "plymouth-util.h"
 
 #define FSCKD_SOCKET_PATH "/run/systemd/fsck.progress"
 #define IDLE_TIME_SECONDS 30
@@ -108,6 +107,10 @@ static void manager_free(Manager *m);
 
 DEFINE_TRIVIAL_CLEANUP_FUNC(Client*, client_free);
 DEFINE_TRIVIAL_CLEANUP_FUNC(Manager*, manager_free);
+
+static bool plymouth_running(void) {
+        return access("/run/plymouth/pid", F_OK) >= 0;
+}
 
 static int manager_write_console(Manager *m, const char *message) {
         _cleanup_fclose_ FILE *console = NULL;

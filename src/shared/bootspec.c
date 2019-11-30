@@ -15,6 +15,7 @@
 #include "device-nodes.h"
 #include "dirent-util.h"
 #include "efivars.h"
+#include "efi-loader.h"
 #include "env-file.h"
 #include "env-util.h"
 #include "fd-util.h"
@@ -257,7 +258,7 @@ static int boot_entries_find(
         assert(entries);
         assert(n_entries);
 
-        r = conf_files_list(&files, ".conf", NULL, 0, dir, NULL);
+        r = conf_files_list(&files, ".conf", NULL, 0, dir);
         if (r < 0)
                 return log_error_errno(r, "Failed to list files in \"%s\": %m", dir);
 
