@@ -42,7 +42,7 @@ else
     echo "waiting to boot..."
     TIMEOUT=35
     while [ $TIMEOUT -ge 0 ]; do
-        state="$(systemctl is-system-running || true)"
+        state="$(systemctl --wait is-system-running || true)"
         case $state in
             running|degraded)
                 break
@@ -72,6 +72,29 @@ else
     echo "checking for connection timeouts"
     if journalctl -b | grep "Connection timed out"; then
         fail "found connection timeout in journal for this boot"
+    fi
+
+    echo "checking that polkitd runs"
+    if ! pidof polkitd; then
+        fail "polkitd is NOT running"
+    fi
+
+    echo "checking failed jobs (non fatal)"
+    if [ "$state" != "running" ]; then
+        echo "systemctl is-system-running returns: $state"
+        systemctl --no-pager --no-legend list-jobs > $AUTOPKGTEST_ARTIFACTS/running-jobs.txt || true
+    fi
+
+    echo "checking that there are no running jobs"
+    TIMEOUT=$JOBS_TIMEOUT
+    while [ $TIMEOUT -ge 0 ]; do
+        running="$(systemctl --no-pager --no-legend list-jobs || true)"
+        [ -n "$running" ] || break
+        sleep 1
+        TIMEOUT=$((TIMEOUT - 1))
+    done
+    if [ -n "$running" ]; then
+        fail "running jobs after remaining timeout $TIMEOUT: $running"
     fi
 
     echo "checking that NetworkManager runs"
