@@ -36,7 +36,6 @@
 #include "qdisc.h"
 #include "set.h"
 #include "socket-util.h"
-#include "stat-util.h"
 #include "stdio-util.h"
 #include "string-table.h"
 #include "strv.h"
@@ -44,6 +43,7 @@
 #include "tmpfile-util.h"
 #include "udev-util.h"
 #include "util.h"
+#include "virt.h"
 #include "vrf.h"
 
 uint32_t link_get_vrf_table(Link *link) {
@@ -1296,7 +1296,7 @@ static int link_set_proxy_arp(Link *link) {
         return 0;
 }
 
-static int link_configure_after_setting_mtu(Link *link);
+static int link_configure_continue(Link *link);
 
 static int set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
         int r;
@@ -1317,7 +1317,7 @@ static int set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) 
                 log_link_debug(link, "Setting MTU done.");
 
         if (link->state == LINK_STATE_PENDING) {
-                r = link_configure_after_setting_mtu(link);
+                r = link_configure_continue(link);
                 if (r < 0)
                         link_enter_failed(link);
         }
@@ -1586,12 +1586,22 @@ static int link_address_genmode_handler(sd_netlink *rtnl, sd_netlink_message *m,
 
         assert(link);
 
+        link->setting_genmode = false;
+
         if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
                 return 1;
 
         r = sd_netlink_message_get_errno(m);
         if (r < 0)
                 log_link_warning_errno(link, r, "Could not set address genmode for interface, ignoring: %m");
+        else
+                log_link_debug(link, "Setting address genmode done.");
+
+        if (link->state == LINK_STATE_PENDING) {
+                r = link_configure_continue(link);
+                if (r < 0)
+                        link_enter_failed(link);
+        }
 
         return 1;
 }
@@ -1606,7 +1616,7 @@ static int link_configure_addrgen_mode(Link *link) {
         assert(link->manager);
         assert(link->manager->rtnl);
 
-        if (!socket_ipv6_is_supported())
+        if (!socket_ipv6_is_supported() || link->setting_genmode)
                 return 0;
 
         log_link_debug(link, "Setting address genmode for link");
@@ -1650,6 +1660,7 @@ static int link_configure_addrgen_mode(Link *link) {
                 return log_link_error_errno(link, r, "Could not send rtnetlink message: %m");
 
         link_ref(link);
+        link->setting_genmode = true;
 
         return 0;
 }
@@ -2483,12 +2494,62 @@ static bool link_address_is_dynamic(Link *link, Address *address) {
         return false;
 }
 
+static int link_enumerate_ipv6_tentative_addresses(Link *link) {
+        _cleanup_(sd_netlink_message_unrefp) sd_netlink_message *req = NULL, *reply = NULL;
+        sd_netlink_message *addr;
+        int r;
+
+        assert(link);
+        assert(link->manager);
+        assert(link->manager->rtnl);
+
+        r = sd_rtnl_message_new_addr(link->manager->rtnl, &req, RTM_GETADDR, 0, AF_INET6);
+        if (r < 0)
+                return r;
+
+        r = sd_netlink_call(link->manager->rtnl, req, 0, &reply);
+        if (r < 0)
+                return r;
+
+        for (addr = reply; addr; addr = sd_netlink_message_next(addr)) {
+                unsigned char flags;
+                int ifindex;
+
+                r = sd_rtnl_message_addr_get_ifindex(addr, &ifindex);
+                if (r < 0) {
+                        log_link_warning_errno(link, r, "rtnl: invalid ifindex, ignoring: %m");
+                        continue;
+                } else if (link->ifindex != ifindex)
+                        continue;
+
+                r = sd_rtnl_message_addr_get_flags(addr, &flags);
+                if (r < 0) {
+                        log_link_warning_errno(link, r, "rtnl: received address message with invalid flags, ignoring: %m");
+                        continue;
+                } else if (!(flags & IFA_F_TENTATIVE))
+                        continue;
+
+                log_link_debug(link, "Found tentative ipv6 link-local address");
+                (void) manager_rtnl_process_address(link->manager->rtnl, addr, link->manager);
+        }
+
+        return 0;
+}
+
 static int link_drop_foreign_config(Link *link) {
         Address *address;
         Neighbor *neighbor;
         Route *route;
         Iterator i;
         int r;
+
+        /* The kernel doesn't notify us about tentative addresses;
+         * so if ipv6ll is disabled, we need to enumerate them now so we can drop them below */
+        if (!link_ipv6ll_enabled(link)) {
+                r = link_enumerate_ipv6_tentative_addresses(link);
+                if (r < 0)
+                        return r;
+        }
 
         SET_FOREACH(address, link->addresses_foreign, i) {
                 /* we consider IPv6LL addresses to be managed by the kernel */
@@ -2643,15 +2704,6 @@ static int link_configure(Link *link) {
         if (link->iftype == ARPHRD_CAN)
                 return link_configure_can(link);
 
-        /* Drop foreign config, but ignore loopback or critical devices.
-         * We do not want to remove loopback address or addresses used for root NFS. */
-        if (!(link->flags & IFF_LOOPBACK) &&
-            link->network->keep_configuration != KEEP_CONFIGURATION_YES) {
-                r = link_drop_foreign_config(link);
-                if (r < 0)
-                        return r;
-        }
-
         /* If IPv6 configured that is static IPv6 address and IPv6LL autoconfiguration is enabled
          * for this interface, then enable IPv6 */
         (void) link_update_ipv6_sysctl(link);
@@ -2751,18 +2803,39 @@ static int link_configure(Link *link) {
         if (r < 0)
                 return r;
 
-        return link_configure_after_setting_mtu(link);
+        return link_configure_continue(link);
 }
 
-static int link_configure_after_setting_mtu(Link *link) {
+/* The configuration continues in this separate function, instead of
+ * including this in the above link_configure() function, for two
+ * reasons:
+ * 1) some devices reset the link when the mtu is set, which caused
+ *    an infinite loop here in networkd; see:
+ *    https://github.com/systemd/systemd/issues/6593
+ *    https://github.com/systemd/systemd/issues/9831
+ * 2) if ipv6ll is disabled, then bringing the interface up must be
+ *    delayed until after we get confirmation from the kernel that
+ *    the addr_gen_mode parameter has been set (via netlink), see:
+ *    https://github.com/systemd/systemd/issues/13882
+ */
+static int link_configure_continue(Link *link) {
         int r;
 
         assert(link);
         assert(link->network);
         assert(link->state == LINK_STATE_PENDING);
 
-        if (link->setting_mtu)
+        if (link->setting_mtu || link->setting_genmode)
                 return 0;
+
+        /* Drop foreign config, but ignore loopback or critical devices.
+         * We do not want to remove loopback address or addresses used for root NFS. */
+        if (!(link->flags & IFF_LOOPBACK) &&
+            link->network->keep_configuration != KEEP_CONFIGURATION_YES) {
+                r = link_drop_foreign_config(link);
+                if (r < 0)
+                        return r;
+        }
 
         /* The kernel resets ipv6 mtu after changing device mtu;
          * we must set this here, after we've set device mtu */
@@ -3315,8 +3388,8 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
         if (r < 0)
                 return r;
 
-        if (path_is_read_only_fs("/sys") <= 0) {
-                /* udev should be around */
+        if (detect_container() <= 0) {
+                /* not in a container, udev will be around */
                 sprintf(ifindex_str, "n%d", link->ifindex);
                 r = sd_device_new_from_device_id(&device, ifindex_str);
                 if (r < 0) {
@@ -3326,7 +3399,7 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = sd_device_get_is_initialized(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized: %m");
+                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized or not: %m");
                         goto failed;
                 }
                 if (r == 0) {
@@ -3337,11 +3410,11 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = device_is_renaming(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Failed to determine the device is being renamed: %m");
+                        log_link_warning_errno(link, r, "Failed to determine the device is renamed or not: %m");
                         goto failed;
                 }
                 if (r > 0) {
-                        log_link_debug(link, "Interface is being renamed, pending initialization.");
+                        log_link_debug(link, "Interface is under renaming, pending initialization.");
                         return 0;
                 }
 

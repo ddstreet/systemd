@@ -1,4 +1,5 @@
 pstore-Don-t-start-systemd-pstore.service-in-containers.patch
+shutdown-do-not-detach-autoclear-loopback-devices.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
@@ -41,3 +42,15 @@ Revert-network-fix-assertion-when-link-get-carrier.patch
 Revert-network-prevent-interfaces-to-be-initialized-multi.patch
 debian/UBUNTU-resolved-default-no-negative-caching.patch
 Revert-network-do-not-drop-foreign-config-if-interface-is.patch
+shutdown-modernizations-pr-14409.patch
+lp1845909/0001-network-rename-linux_configure_after_setting_mtu-to-linux.patch
+lp1845909/0002-network-add-link-setting_genmode-flag.patch
+lp1845909/0003-network-if-ipv6ll-is-disabled-enumerate-tentative-ipv6-ad.patch
+lp1845909/0004-network-drop-foreign-config-after-addr_gen_mode-has-been-.patch
+lp1762391/0001-user-util-Add-helper-functions-for-gid-lists-operati.patch
+lp1762391/0002-execute-Restore-call-to-pam_setcred.patch
+lp1762391/0003-execute-Detect-groups-added-by-PAM-and-merge-them-wi.patch
+lp1762391/0004-test-Add-tests-for-gid-list-ops.patch
+lp1762391/0005-execute-add-const-to-array-parameters-where-possible.patch
+lp1762391/0006-execute-allow-pam_setcred-to-fail-ignore-errors.patch
+Revert-network-if-sys-is-rw-then-udev-should-be-around.patch
