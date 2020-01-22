@@ -1,3 +1,48 @@
+systemd (237-3ubuntu10.34) bionic; urgency=medium
+
+  [ Dariusz Gadomski ]
+  * d/p/lp1762391/0001-Call-getgroups-to-know-size-of-supplementary-groups-.patch,
+    d/p/lp1762391/0002-user-util-tweak-to-in_gid.patch,
+    d/p/lp1762391/0003-user-util-Add-helper-functions-for-gid-lists-operati.patch,
+    d/p/lp1762391/0004-execute-Restore-call-to-pam_setcred.patch,
+    d/p/lp1762391/0005-execute-Detect-groups-added-by-PAM-and-merge-them-wi.patch,
+    d/p/lp1762391/0006-test-Add-tests-for-gid-list-ops.patch,
+    d/p/lp1762391/0007-execute-add-const-to-array-parameters-where-possible.patch,
+    d/p/lp1762391/0008-execute-allow-pam_setcred-to-fail-ignore-errors.patch:
+    - Restore call to pam_setcred (LP: #1762391)
+
+  [ Ioanna Alifieraki ]
+  * d/p/lp1860548/0001-Revert-Replace-use-of-snprintf-with-xsprintf.patch,
+    d/p/lp1860548/0002-job-truncate-unit-description.patch:
+    - use snprintf instead of xsprintf (LP: #1860548)
+
+  [ Dan Streetman ]
+  * d/p/lp1833193-network-update-address-when-static-address-was-alrea.patch:
+    - Update lft when static addr was cfg by dhcp (LP: #1833193)
+  * d/p/lp1849261/0001-core-when-we-can-t-enqueue-OnFailure-job-show-full-e.patch,
+    d/p/lp1849261/0002-core-don-t-trigger-OnFailure-deps-when-a-unit-is-goi.patch:
+    - Only trigger OnFailure= if Restart= is not in effect (LP: #1849261)
+  * d/p/lp1671951-network-set-ipv6-mtu-after-link-up-or-device-mtu-cha.patch:
+    - set ipv6 mtu at correct time (LP: #1671951)
+  * d/p/lp1845909/0001-networkd-honour-LinkLocalAddressing.patch,
+    d/p/lp1845909/0002-networkd-fix-link_up-12505.patch,
+    d/p/lp1845909/0003-network-do-not-send-ipv6-token-to-kernel.patch,
+    d/p/lp1845909/0004-network-rename-linux_configure_after_setting_mtu-to-linux.patch,
+    d/p/lp1845909/0005-network-add-link-setting_genmode-flag.patch,
+    d/p/lp1845909/0006-network-if-ipv6ll-is-disabled-enumerate-tentative-ipv6-ad.patch,
+    d/p/lp1845909/0007-network-drop-foreign-config-after-addr_gen_mode-has-been-.patch,
+    d/p/lp1845909/0008-network-drop-IPv6LL-address-when-LinkLocalAddressing.patch:
+    - if LinkLocalAddressing=no prevent creation of ipv6ll (LP: #1845909)
+  * d/p/lp1859862-network-Do-not-disable-IPv6-by-writing-to-sysctl.patch:
+    - enable ipv6 when needed (LP: #1859862)
+  * d/p/lp1836695-networkd-Add-back-static-routes-after-DHCPv4-lease-e.patch:
+    - (re)add static routes after getting dhcp4 addr (LP: #1836695)
+  * d/t/storage:
+    - fix buggy test (LP: #1831459)
+    - without scsi_debug, skip test (LP: #1847816)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 22 Jan 2020 17:31:23 -0500
+
 systemd (237-3ubuntu10.33) bionic; urgency=medium
 
   * d/p/lp1852754/0001-network-do-not-re-set-MTU-when-current-and-requested.patch,

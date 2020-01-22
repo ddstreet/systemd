@@ -1,0 +1,90 @@
+From f810b631cd69c73a2f27a4adccfa7ed940fbb711 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Origin: Upstream, https://github.com/systemd/systemd/commit/e68eedbbdc98fa13449756b7fee3bed689d76493
+Bug: https://github.com/systemd/systemd/issues/4534
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1860548
+Date: Thu, 22 Feb 2018 22:03:15 +0100
+Subject: [PATCH] Revert "Replace use of snprintf with xsprintf"
+
+This reverts commit a7419dbc59da5c8cc9e90b3d96bc947cad91ae16.
+
+_All_ changes in that commit were wrong.
+
+Fixes #8211.
+---
+ src/basic/log.c                | 4 ++--
+ src/core/unit.c                | 2 +-
+ src/udev/collect/collect.c     | 2 +-
+ src/udev/udev-builtin-net_id.c | 4 ++--
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+Index: systemd-237/src/basic/log.c
+===================================================================
+--- systemd-237.orig/src/basic/log.c
++++ systemd-237/src/basic/log.c
+@@ -362,7 +362,7 @@ static int write_to_console(
+         highlight = LOG_PRI(level) <= LOG_ERR && show_color;
+ 
+         if (show_location) {
+-                xsprintf(location, "(%s:%i) ", file, line);
++                snprintf(location, sizeof(location), "(%s:%i) ", file, line);
+                 iovec[n++] = IOVEC_MAKE_STRING(location);
+         }
+ 
+@@ -800,7 +800,7 @@ static void log_assert(
+                 return;
+ 
+         DISABLE_WARNING_FORMAT_NONLITERAL;
+-        xsprintf(buffer, format, text, file, line, func);
++        snprintf(buffer, sizeof buffer, format, text, file, line, func);
+         REENABLE_WARNING;
+ 
+         log_abort_msg = buffer;
+Index: systemd-237/src/core/unit.c
+===================================================================
+--- systemd-237.orig/src/core/unit.c
++++ systemd-237/src/core/unit.c
+@@ -1697,7 +1697,7 @@ static void unit_status_log_starting_sto
+         format = unit_get_status_message_format(u, t);
+ 
+         DISABLE_WARNING_FORMAT_NONLITERAL;
+-        xsprintf(buf, format, unit_description(u));
++        snprintf(buf, sizeof buf, format, unit_description(u));
+         REENABLE_WARNING;
+ 
+         mid = t == JOB_START ? "MESSAGE_ID=" SD_MESSAGE_UNIT_STARTING_STR :
+Index: systemd-237/src/udev/collect/collect.c
+===================================================================
+--- systemd-237.orig/src/udev/collect/collect.c
++++ systemd-237/src/udev/collect/collect.c
+@@ -94,7 +94,7 @@ static int prepare(char *dir, char *file
+         if (r < 0 && errno != EEXIST)
+                 return -errno;
+ 
+-        xsprintf(buf, "%s/%s", dir, filename);
++        snprintf(buf, sizeof buf, "%s/%s", dir, filename);
+ 
+         fd = open(buf, O_RDWR|O_CREAT|O_CLOEXEC, S_IRUSR|S_IWUSR);
+         if (fd < 0)
+Index: systemd-237/src/udev/udev-builtin-net_id.c
+===================================================================
+--- systemd-237.orig/src/udev/udev-builtin-net_id.c
++++ systemd-237/src/udev/udev-builtin-net_id.c
+@@ -275,7 +275,7 @@ static int dev_pci_slot(struct udev_devi
+                 goto out;
+         }
+ 
+-        xsprintf(slots, "%s/slots", udev_device_get_syspath(pci));
++        snprintf(slots, sizeof slots, "%s/slots", udev_device_get_syspath(pci));
+         dir = opendir(slots);
+         if (!dir) {
+                 err = -errno;
+@@ -294,7 +294,7 @@ static int dev_pci_slot(struct udev_devi
+                 if (i < 1)
+                         continue;
+ 
+-                xsprintf(str, "%s/%s/address", slots, dent->d_name);
++                snprintf(str, sizeof str, "%s/%s/address", slots, dent->d_name);
+                 if (read_one_line_file(str, &address) >= 0) {
+                         /* match slot address with device by stripping the function */
+                         if (strneq(address, udev_device_get_sysname(names->pcidev), strlen(address)))
