@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 set -e
 
@@ -15,7 +15,7 @@ _update_catalog() {
 # Update Message Catalogs database and reload in response to dpkg triggers
 if [ "$1" = "triggered" ]; then
     shift
-    for trigger in "$@"; do
+    for trigger in $@; do
         case $trigger in
             /usr/lib/systemd/catalog)
                 _update_catalog
@@ -91,6 +91,12 @@ systemd-machine-id-setup
 
 # Setup system users and groups
 addgroup --quiet --system systemd-journal
+
+# Enable persistent journal, in auto-mode, by default on new installs and upgrades
+if dpkg --compare-versions "$2" lt "244.1-2~"; then
+    mkdir -p /var/log/journal
+    systemd-tmpfiles --create --prefix /var/log/journal
+fi
 
 # We need to stop running services before we call adduser
 RESTART=""
