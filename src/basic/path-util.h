@@ -24,6 +24,7 @@
 #include <stddef.h>
 
 #include "macro.h"
+#include "string-util.h"
 #include "time-util.h"
 
 #define DEFAULT_PATH_NORMAL "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
@@ -39,6 +40,7 @@ bool is_path(const char *p) _pure_;
 int path_split_and_make_absolute(const char *p, char ***ret);
 bool path_is_absolute(const char *p) _pure_;
 char* path_make_absolute(const char *p, const char *prefix);
+int safe_getcwd(char **ret);
 int path_make_absolute_cwd(const char *p, char **ret);
 int path_make_relative(const char *from_dir, const char *to_path, char **_r);
 char* path_kill_slashes(char *path);
@@ -109,3 +111,6 @@ bool hidden_file_allow_backup(const char *filename);
 bool hidden_file(const char *filename) _pure_;
 
 bool is_device_path(const char *path);
+static inline const char *empty_to_root(const char *path) {
+        return isempty(path) ? "/" : path;
+}
