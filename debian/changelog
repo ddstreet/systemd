@@ -1,3 +1,49 @@
+systemd (237-3ubuntu10.38) bionic-security; urgency=medium
+
+  * SECURITY UPDATE: local privilege escalation via DynamicUser
+    - debian/patches/CVE-2019-384x-1.patch: introduce
+      seccomp_restrict_suid_sgid() for blocking chmod() for suid/sgid files
+      in src/shared/seccomp-util.c, src/shared/seccomp-util.h.
+    - debian/patches/CVE-2019-384x-2.patch: add test case for
+      restrict_suid_sgid() in src/test/test-seccomp.c.
+    - debian/patches/CVE-2019-384x-3.patch: expose SUID/SGID restriction as
+      new unit setting RestrictSUIDSGID= in src/core/dbus-execute.c,
+      src/core/execute.c, src/core/execute.h,
+      src/core/load-fragment-gperf.gperf.m4, src/shared/bus-unit-util.c.
+    - debian/patches/CVE-2019-384x-4.patch: document the new
+      RestrictSUIDSGID= setting in man/systemd.exec.xml.
+    - debian/patches/CVE-2019-384x-5.patch: turn on RestrictSUIDSGID= in
+      most of our long-running daemons in units/systemd-*.service.in.
+    - debian/patches/CVE-2019-384x-6.patch: imply NNP and SUID/SGID
+      restriction for DynamicUser=yes service in man/systemd.exec.xml,
+      src/core/unit.c.
+    - debian/patches/CVE-2019-384x-7.patch: fix compilation on arm64 in
+      src/test/test-seccomp.c.
+    - CVE-2019-3843
+    - CVE-2019-3844
+  * SECURITY UPDATE: memory leak in button_open
+    - debian/patches/CVE-2019-20386.patch: fix event in
+      src/login/logind-button.c.
+    - CVE-2019-20386
+  * SECURITY UPDATE: heap use-after-free with async polkit queries
+    - debian/patches/CVE-2020-1712-1.patch: on async pk requests,
+      re-validate action/details in src/shared/bus-util.c.
+    - debian/patches/CVE-2020-1712-2.patch: introduce API for re-enqueuing
+      incoming messages in src/libsystemd/libsystemd.sym,
+      src/libsystemd/sd-bus/sd-bus.c, src/systemd/sd-bus.h.
+    - debian/patches/CVE-2020-1712-3.patch: when authorizing via PK
+      re-resolve callback/userdata instead of caching it in
+      src/shared/bus-util.c.
+    - debian/patches/CVE-2020-1712-4.patch: fix typo in function name in
+      src/libsystemd/libsystemd.sym, src/libsystemd/sd-bus/sd-bus.c,
+      src/systemd/sd-bus.h, src/shared/bus-util.c.
+    - debian/libsystemd0.symbols: added new symbols.
+    - CVE-2020-1712
+  * This package does _not_ contain the changes from 237-3ubuntu10.34 in
+    bionic-proposed.
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Tue, 04 Feb 2020 20:07:56 -0500
+
 systemd (237-3ubuntu10.33) bionic; urgency=medium
 
   * d/p/lp1852754/0001-network-do-not-re-set-MTU-when-current-and-requested.patch,
