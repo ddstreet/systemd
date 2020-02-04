@@ -78,3 +78,8 @@ lp1815101-02-networkd-stop-clients-when-networkd-shuts-down.patch
 lp1815101-03-network-add-KeepConfiguration-dhcp-on-stop.patch
 lp1815101-04-network-make-KeepConfiguration-static-drop-DHCP-addr.patch
 lp1815101-05-man-add-documentation-about-KeepConfiguration.patch
+CVE-2019-20386.patch
+CVE-2020-1712-1.patch
+CVE-2020-1712-2.patch
+CVE-2020-1712-3.patch
+CVE-2020-1712-4.patch
