@@ -122,6 +122,7 @@ DHCPServer=
 BindCarrier=
 VRF=
 IgnoreCarrierLoss=
+KeepConfiguration=
 [IPv6Prefix]
 Prefix=
 OnLink=
