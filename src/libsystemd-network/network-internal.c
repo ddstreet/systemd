@@ -51,8 +51,6 @@ int net_get_unique_predictable_data(sd_device *device, uint64_t *result) {
          * device. If this is not available, we fall back to using the device name. */
         name = net_get_name(device);
         if (!name)
-                (void) sd_device_get_sysname(device, &name);
-        if (!name)
                 return log_device_debug_errno(device, SYNTHETIC_ERRNO(ENODATA),
                                               "No stable identifying information found");
 
