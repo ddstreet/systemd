@@ -94,3 +94,5 @@ static inline bool DNS_STREAM_QUEUED(DnsStream *s) {
 
         return !!s->write_packet;
 }
+
+DnsPacket *dns_stream_take_read_packet(DnsStream *s);
