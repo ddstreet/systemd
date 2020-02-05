@@ -1,3 +1,36 @@
+systemd (229-4ubuntu21.27) xenial-security; urgency=medium
+
+  * SECURITY UPDATE: incorrect PIDFile verification
+    - debian/patches/CVE-2018-16888.patch: be stricter when handling PID
+      files and MAINPID sd_notify() messages in man/systemd.service.xml,
+      src/core/manager.c, src/core/service.c, src/core/unit.h,
+      test/TEST-20-MAINPIDGAMES/Makefile,
+      test/TEST-20-MAINPIDGAMES/test.sh,
+      test/TEST-20-MAINPIDGAMES/testsuite.sh, test/test-functions.
+    - debian/patches/CVE-2018-16888-2.patch: relax PID file symlink chain
+      checks a bit in src/core/service.c.
+    - CVE-2018-16888
+  * SECURITY UPDATE: memory leak in button_open
+    - debian/patches/CVE-2019-20386.patch: fix event in
+      src/login/logind-button.c.
+    - CVE-2019-20386
+  * SECURITY UPDATE: heap use-after-free with async polkit queries
+    - debian/patches/CVE-2020-1712-1.patch: on async pk requests,
+      re-validate action/details in src/shared/bus-util.c.
+    - debian/patches/CVE-2020-1712-2.patch: introduce API for re-enqueuing
+      incoming messages in src/libsystemd/libsystemd.sym,
+      src/libsystemd/sd-bus/sd-bus.c, src/systemd/sd-bus.h.
+    - debian/patches/CVE-2020-1712-3.patch: when authorizing via PK
+      re-resolve callback/userdata instead of caching it in
+      src/shared/bus-util.c.
+    - debian/patches/CVE-2020-1712-4.patch: fix typo in function name in
+      src/libsystemd/libsystemd.sym, src/libsystemd/sd-bus/sd-bus.c,
+      src/systemd/sd-bus.h, src/shared/bus-util.c.
+    - debian/libsystemd0.symbols: added new symbols.
+    - CVE-2020-1712
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Tue, 04 Feb 2020 20:07:56 -0500
+
 systemd (229-4ubuntu21.23) xenial; urgency=medium
 
   * d/p/core-use-an-AF_UNIX-SOCK_DGRAM-socket-for-cgroup-age.patch:
