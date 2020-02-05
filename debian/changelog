@@ -1,3 +1,28 @@
+systemd (242-7ubuntu3.6) eoan-security; urgency=medium
+
+  * SECURITY UPDATE: memory leak in button_open
+    - debian/patches/CVE-2019-20386.patch: fix event in
+      src/login/logind-button.c.
+    - CVE-2019-20386
+  * SECURITY UPDATE: heap use-after-free with async polkit queries
+    - debian/patches/CVE-2020-1712-1.patch: on async pk requests,
+      re-validate action/details in src/shared/bus-util.c.
+    - debian/patches/CVE-2020-1712-2.patch: introduce API for re-enqueuing
+      incoming messages in src/libsystemd/libsystemd.sym,
+      src/libsystemd/sd-bus/sd-bus.c, src/systemd/sd-bus.h.
+    - debian/patches/CVE-2020-1712-3.patch: when authorizing via PK
+      re-resolve callback/userdata instead of caching it in
+      src/shared/bus-util.c.
+    - debian/patches/CVE-2020-1712-4.patch: fix typo in function name in
+      src/libsystemd/libsystemd.sym, src/libsystemd/sd-bus/sd-bus.c,
+      src/systemd/sd-bus.h, src/shared/bus-util.c.
+    - debian/libsystemd0.symbols: added new symbols.
+    - CVE-2020-1712
+  * This package does _not_ contain the changes from 242-7ubuntu3.3 in
+    eoan-proposed.
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Tue, 04 Feb 2020 20:04:45 -0500
+
 systemd (242-7ubuntu3.2) eoan; urgency=medium
 
   [ Dan Streetman ]
