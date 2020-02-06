@@ -1,0 +1,46 @@
+From f5e0b942af1e86993c21f4e5c84342bb10403dac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Renaud=20M=C3=A9trich?= <rmetrich@redhat.com>
+Date: Fri, 13 Sep 2019 11:18:18 +0200
+Subject: [PATCH] Call getgroups() to know size of supplementary groups array
+ to allocate
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1762391
+Origin: upstream, https://github.com/systemd/systemd/commit/f5e0b942af1e86993c21f4e5c84342bb10403dac
+
+Resolves RHBZ #1743230 - journalctl dumps core when stack limit is reduced to 256 KB
+---
+ src/basic/user-util.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+--- a/src/basic/user-util.c
++++ b/src/basic/user-util.c
+@@ -408,9 +408,8 @@ char* gid_to_name(gid_t gid) {
+ }
+ 
+ int in_gid(gid_t gid) {
+-        long ngroups_max;
+         gid_t *gids;
+-        int r, i;
++        int ngroups, r, i;
+ 
+         if (getgid() == gid)
+                 return 1;
+@@ -421,12 +420,15 @@ int in_gid(gid_t gid) {
+         if (!gid_is_valid(gid))
+                 return -EINVAL;
+ 
+-        ngroups_max = sysconf(_SC_NGROUPS_MAX);
+-        assert(ngroups_max > 0);
++        ngroups = getgroups(0, NULL);
++        if (ngroups < 0)
++                return -errno;
++        if (ngroups == 0)
++                return 0;
+ 
+-        gids = newa(gid_t, ngroups_max);
++        gids = newa(gid_t, ngroups);
+ 
+-        r = getgroups(ngroups_max, gids);
++        r = getgroups(ngroups, gids);
+         if (r < 0)
+                 return -errno;
+ 
