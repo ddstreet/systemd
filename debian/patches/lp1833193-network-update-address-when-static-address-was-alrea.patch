@@ -1,0 +1,29 @@
+From a47a6daebe0af26c07d8d423225eb4add110793c Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 17 Jan 2019 14:15:46 +0900
+Subject: [PATCH] network: update address when static address was already
+ configured by DHCP
+Bug: https://github.com/systemd/systemd/issues/11458
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1833193
+Origin: upstream, https://github.com/systemd/systemd/pull/11460/commits
+
+Fixes #11458.
+---
+ src/network/networkd-link.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1115,7 +1115,11 @@
+                 return r;
+ 
+         LIST_FOREACH(addresses, ad, link->network->static_addresses) {
+-                r = address_configure(ad, link, address_handler, false);
++                bool update;
++
++                update = address_get(link, ad->family, &ad->in_addr, ad->prefixlen, NULL) > 0;
++
++                r = address_configure(ad, link, address_handler, update);
+                 if (r < 0) {
+                         log_link_warning_errno(link, r, "Could not set addresses: %m");
+                         link_enter_failed(link);
