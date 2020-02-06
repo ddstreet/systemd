@@ -97,6 +97,8 @@ typedef struct Link {
         bool static_routes_configured;
         bool routing_policy_rules_configured;
         bool setting_mtu;
+        bool setting_genmode;
+        bool ipv6_mtu_set;
 
         LIST_HEAD(Address, pool_addresses);
 
@@ -158,7 +160,7 @@ bool link_has_carrier(Link *link);
 
 int link_ipv6ll_gained(Link *link, const struct in6_addr *address);
 
-int link_set_mtu(Link *link, uint32_t mtu, bool force);
+int link_set_mtu(Link *link, uint32_t mtu);
 
 int ipv4ll_configure(Link *link);
 int dhcp4_configure(Link *link);

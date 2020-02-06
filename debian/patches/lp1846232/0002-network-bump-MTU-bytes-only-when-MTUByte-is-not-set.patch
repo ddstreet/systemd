@@ -1,0 +1,72 @@
+From f6fcc1c2a41eae749467de58453174296b635a69 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 16 May 2019 11:42:46 +0900
+Subject: [PATCH 2/2] network: bump MTU bytes only when MTUByte= is not set
+Bug: https://github.com/systemd/systemd/issues/12552
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1846232
+Origin: upstream, https://github.com/systemd/systemd/pull/12574/commits
+
+---
+ src/network/networkd-link.c | 44 ++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 43 insertions(+), 1 deletion(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1532,6 +1532,48 @@
+         return 0;
+ }
+ 
++static bool link_reduces_vlan_mtu(Link *link) {
++        /* See netif_reduces_vlan_mtu() in kernel. */
++        return streq_ptr(link->kind, "macsec");
++}
++
++static uint32_t link_get_requested_mtu_by_stacked_netdevs(Link *link) {
++        uint32_t mtu = 0;
++        NetDev *dev;
++        Iterator i;
++
++        HASHMAP_FOREACH(dev, link->network->stacked_netdevs, i)
++                if (dev->kind == NETDEV_KIND_VLAN && dev->mtu > 0)
++                        /* See vlan_dev_change_mtu() in kernel. */
++                        mtu = MAX(mtu, link_reduces_vlan_mtu(link) ? dev->mtu + 4 : dev->mtu);
++
++                else if (dev->kind == NETDEV_KIND_MACVLAN && dev->mtu > mtu)
++                        /* See macvlan_change_mtu() in kernel. */
++                        mtu = dev->mtu;
++
++        return mtu;
++}
++
++static int link_configure_mtu(Link *link) {
++        uint32_t mtu;
++
++        assert(link);
++        assert(link->network);
++
++        if (link->network->mtu > 0)
++                return link_set_mtu(link, link->network->mtu);
++
++        mtu = link_get_requested_mtu_by_stacked_netdevs(link);
++        if (link->mtu >= mtu)
++                return 0;
++
++        log_link_notice(link, "Bumping MTU bytes from %"PRIu32" to %"PRIu32" because of stacked device. "
++                        "If it is not desired, then please explicitly specify MTUBytes= setting.",
++                        link->mtu, mtu);
++
++        return link_set_mtu(link, mtu);
++}
++
+ static int set_flags_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
+         int r;
+ 
+@@ -3230,7 +3272,7 @@
+                         return r;
+         }
+ 
+-        r = link_set_mtu(link, link->network->mtu);
++        r = link_configure_mtu(link);
+         if (r < 0)
+                 return r;
+ 
