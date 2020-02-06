@@ -1,0 +1,240 @@
+From 2ad2e41a72ec19159c0746a78e15ff880fe32a63 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 1 Jun 2018 19:06:19 +0200
+Subject: [PATCH 2/3] core: don't trigger OnFailure= deps when a unit is going
+ to restart
+Bug: https://github.com/systemd/systemd/issues/8398
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1849261
+Origin: upstream, https://github.com/systemd/systemd/pull/9158
+
+This adds a flags parameter to unit_notify() which can be used to pass
+additional notification information to the function. We the make the old
+reload_failure boolean parameter one of these flags, and then add a new
+flag that let's unit_notify() if we are configured to restart the
+service.
+
+Note that this adjusts behaviour of systemd to match what the docs say.
+
+Fixes: #8398
+---
+ src/core/automount.c |  2 +-
+ src/core/device.c    |  2 +-
+ src/core/mount.c     |  3 ++-
+ src/core/path.c      |  2 +-
+ src/core/scope.c     |  2 +-
+ src/core/service.c   |  5 ++++-
+ src/core/slice.c     |  2 +-
+ src/core/socket.c    |  2 +-
+ src/core/swap.c      |  2 +-
+ src/core/target.c    |  2 +-
+ src/core/timer.c     |  2 +-
+ src/core/unit.c      | 10 ++++++----
+ src/core/unit.h      |  7 ++++++-
+ 13 files changed, 27 insertions(+), 16 deletions(-)
+
+--- a/src/core/automount.c
++++ b/src/core/automount.c
+@@ -265,7 +265,7 @@
+         if (state != old_state)
+                 log_unit_debug(UNIT(a), "Changed %s -> %s", automount_state_to_string(old_state), automount_state_to_string(state));
+ 
+-        unit_notify(UNIT(a), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(a), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static int automount_coldplug(Unit *u) {
+--- a/src/core/device.c
++++ b/src/core/device.c
+@@ -136,7 +136,7 @@
+         if (state != old_state)
+                 log_unit_debug(UNIT(d), "Changed %s -> %s", device_state_to_string(old_state), device_state_to_string(state));
+ 
+-        unit_notify(UNIT(d), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(d), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static int device_coldplug(Unit *u) {
+--- a/src/core/mount.c
++++ b/src/core/mount.c
+@@ -667,7 +667,8 @@
+         if (state != old_state)
+                 log_unit_debug(UNIT(m), "Changed %s -> %s", mount_state_to_string(old_state), mount_state_to_string(state));
+ 
+-        unit_notify(UNIT(m), state_translation_table[old_state], state_translation_table[state], m->reload_result == MOUNT_SUCCESS);
++        unit_notify(UNIT(m), state_translation_table[old_state], state_translation_table[state],
++                    m->reload_result == MOUNT_SUCCESS ? 0 : UNIT_NOTIFY_RELOAD_FAILURE);
+ }
+ 
+ static int mount_coldplug(Unit *u) {
+--- a/src/core/path.c
++++ b/src/core/path.c
+@@ -437,7 +437,7 @@
+         if (state != old_state)
+                 log_unit_debug(UNIT(p), "Changed %s -> %s", path_state_to_string(old_state), path_state_to_string(state));
+ 
+-        unit_notify(UNIT(p), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(p), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static void path_enter_waiting(Path *p, bool initial, bool recheck);
+--- a/src/core/scope.c
++++ b/src/core/scope.c
+@@ -111,7 +111,7 @@
+         if (state != old_state)
+                 log_debug("%s changed %s -> %s", UNIT(s)->id, scope_state_to_string(old_state), scope_state_to_string(state));
+ 
+-        unit_notify(UNIT(s), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(s), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static int scope_add_default_dependencies(Scope *s) {
+--- a/src/core/service.c
++++ b/src/core/service.c
+@@ -1074,7 +1074,9 @@
+         if (old_state != state)
+                 log_unit_debug(UNIT(s), "Changed %s -> %s", service_state_to_string(old_state), service_state_to_string(state));
+ 
+-        unit_notify(UNIT(s), table[old_state], table[state], s->reload_result == SERVICE_SUCCESS);
++        unit_notify(UNIT(s), table[old_state], table[state],
++                    (s->reload_result == SERVICE_SUCCESS ? 0 : UNIT_NOTIFY_RELOAD_FAILURE) |
++                    (s->will_auto_restart ? UNIT_NOTIFY_WILL_AUTO_RESTART : 0));
+ }
+ 
+ static usec_t service_coldplug_timeout(Service *s) {
+@@ -1588,6 +1590,7 @@
+                 return false;
+         if (UNIT(s)->job->type == JOB_START)
+                 return true;
++
+         return false;
+ }
+ 
+--- a/src/core/slice.c
++++ b/src/core/slice.c
+@@ -55,7 +55,7 @@
+                           slice_state_to_string(old_state),
+                           slice_state_to_string(state));
+ 
+-        unit_notify(UNIT(t), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(t), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static int slice_add_parent_slice(Slice *s) {
+--- a/src/core/socket.c
++++ b/src/core/socket.c
+@@ -1813,7 +1813,7 @@
+         if (state != old_state)
+                 log_unit_debug(UNIT(s), "Changed %s -> %s", socket_state_to_string(old_state), socket_state_to_string(state));
+ 
+-        unit_notify(UNIT(s), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(s), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static int socket_coldplug(Unit *u) {
+--- a/src/core/swap.c
++++ b/src/core/swap.c
+@@ -508,7 +508,7 @@
+         if (state != old_state)
+                 log_unit_debug(UNIT(s), "Changed %s -> %s", swap_state_to_string(old_state), swap_state_to_string(state));
+ 
+-        unit_notify(UNIT(s), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(s), state_translation_table[old_state], state_translation_table[state], 0);
+ 
+         /* If there other units for the same device node have a job
+            queued it might be worth checking again if it is runnable
+--- a/src/core/target.c
++++ b/src/core/target.c
+@@ -44,7 +44,7 @@
+                           target_state_to_string(old_state),
+                           target_state_to_string(state));
+ 
+-        unit_notify(UNIT(t), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(t), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static int target_add_default_dependencies(Target *t) {
+--- a/src/core/timer.c
++++ b/src/core/timer.c
+@@ -277,7 +277,7 @@
+         if (state != old_state)
+                 log_unit_debug(UNIT(t), "Changed %s -> %s", timer_state_to_string(old_state), timer_state_to_string(state));
+ 
+-        unit_notify(UNIT(t), state_translation_table[old_state], state_translation_table[state], true);
++        unit_notify(UNIT(t), state_translation_table[old_state], state_translation_table[state], 0);
+ }
+ 
+ static void timer_enter_waiting(Timer *t, bool initial);
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -1957,7 +1957,7 @@
+ 
+         if (!UNIT_VTABLE(u)->reload) {
+                 /* Unit doesn't have a reload function, but we need to propagate the reload anyway */
+-                unit_notify(u, unit_active_state(u), unit_active_state(u), true);
++                unit_notify(u, unit_active_state(u), unit_active_state(u), 0);
+                 return 0;
+         }
+ 
+@@ -2326,7 +2326,7 @@
+ 
+ }
+ 
+-static bool unit_process_job(Job *j, UnitActiveState ns, bool reload_success) {
++static bool unit_process_job(Job *j, UnitActiveState ns, UnitNotifyFlags flags) {
+         bool unexpected = false;
+ 
+         assert(j);
+@@ -2364,7 +2364,7 @@
+ 
+                 if (j->state == JOB_RUNNING) {
+                         if (ns == UNIT_ACTIVE)
+-                                job_finish_and_invalidate(j, reload_success ? JOB_DONE : JOB_FAILED, true, false);
++                                job_finish_and_invalidate(j, (flags & UNIT_NOTIFY_RELOAD_FAILURE) ? JOB_FAILED : JOB_DONE, true, false);
+                         else if (!IN_SET(ns, UNIT_ACTIVATING, UNIT_RELOADING)) {
+                                 unexpected = true;
+ 
+@@ -2395,7 +2395,7 @@
+         return unexpected;
+ }
+ 
+-void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success) {
++void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, UnitNotifyFlags flags) {
+         Manager *m;
+ 
+         assert(u);
+@@ -2441,7 +2441,7 @@
+ 
+                 /* Let's propagate state changes to the job */
+                 if (u->job)
+-                        unexpected = unit_process_job(u->job, ns, reload_success);
++                        unexpected = unit_process_job(u->job, ns, flags);
+                 else
+                         unexpected = true;
+ 
+@@ -2469,7 +2469,9 @@
+ 
+                 if (ns != os && ns == UNIT_FAILED) {
+                         log_unit_debug(u, "Unit entered failed state.");
+-                        unit_start_on_failure(u);
++
++                        if (!(flags & UNIT_NOTIFY_WILL_AUTO_RESTART))
++                                unit_start_on_failure(u);
+                 }
+         }
+ 
+--- a/src/core/unit.h
++++ b/src/core/unit.h
+@@ -664,7 +664,12 @@
+ int unit_kill(Unit *u, KillWho w, int signo, sd_bus_error *error);
+ int unit_kill_common(Unit *u, KillWho who, int signo, pid_t main_pid, pid_t control_pid, sd_bus_error *error);
+ 
+-void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success);
++typedef enum UnitNotifyFlags {
++        UNIT_NOTIFY_RELOAD_FAILURE    = 1U << 0,
++        UNIT_NOTIFY_WILL_AUTO_RESTART = 1U << 1,
++} UnitNotifyFlags;
++
++void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, UnitNotifyFlags flags);
+ 
+ int unit_watch_pid(Unit *u, pid_t pid);
+ void unit_unwatch_pid(Unit *u, pid_t pid);
