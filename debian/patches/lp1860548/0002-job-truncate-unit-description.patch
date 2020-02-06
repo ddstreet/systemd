@@ -1,0 +1,38 @@
+From 574432f889ce3de126bbc6736bcbd22ee170ff82 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Iago=20L=C3=B3pez=20Galeiras?= <iago@kinvolk.io>
+Origin: Upstream, https://github.com/systemd/systemd/commit/574432f889ce3de126bbc6736bcbd22ee170ff82
+Bug: https://github.com/systemd/systemd/issues/4534
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1860548
+Date: Fri, 16 Feb 2018 14:32:44 +0100
+Subject: [PATCH] job: truncate unit description
+
+The comment above says we're truncating the string but that's not true,
+an assert will fail in xsprintf if the description is longer than
+LINE_MAX.
+
+Let's use snprintf instead of xsprintf to make sure it's truncated.
+We'll cast its result to void to tell static checkers we're fine with
+truncation.
+---
+ src/core/job.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+Index: systemd-237/src/core/job.c
+===================================================================
+--- systemd-237.orig/src/core/job.c
++++ systemd-237/src/core/job.c
+@@ -798,9 +798,12 @@ static void job_log_status_message(Unit
+         if (!format)
+                 return;
+ 
+-        /* The description might be longer than the buffer, but that's OK, we'll just truncate it here */
++        /* The description might be longer than the buffer, but that's OK,
++         * we'll just truncate it here. Note that we use snprintf() rather than
++         * xsprintf() on purpose here: we are fine with truncation and don't
++         * consider that an error. */
+         DISABLE_WARNING_FORMAT_NONLITERAL;
+-        xsprintf(buf, format, unit_description(u));
++        (void) snprintf(buf, sizeof(buf), format, unit_description(u));
+         REENABLE_WARNING;
+ 
+         switch (t) {
