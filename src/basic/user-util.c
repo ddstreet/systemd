@@ -361,10 +361,16 @@ char* gid_to_name(gid_t gid) {
         return ret;
 }
 
+static bool gid_list_has(const gid_t *list, size_t size, gid_t val) {
+        for (size_t i = 0; i < size; i++)
+                if (list[i] == val)
+                        return true;
+        return false;
+}
+
 int in_gid(gid_t gid) {
-        long ngroups_max;
-        gid_t *gids;
-        int r, i;
+        _cleanup_free_ gid_t *gids = NULL;
+        int ngroups;
 
         if (getgid() == gid)
                 return 1;
@@ -375,20 +381,11 @@ int in_gid(gid_t gid) {
         if (!gid_is_valid(gid))
                 return -EINVAL;
 
-        ngroups_max = sysconf(_SC_NGROUPS_MAX);
-        assert(ngroups_max > 0);
+        ngroups = getgroups_alloc(&gids);
+        if (ngroups < 0)
+                return ngroups;
 
-        gids = newa(gid_t, ngroups_max);
-
-        r = getgroups(ngroups_max, gids);
-        if (r < 0)
-                return -errno;
-
-        for (i = 0; i < r; i++)
-                if (gids[i] == gid)
-                        return 1;
-
-        return 0;
+        return gid_list_has(gids, ngroups, gid);
 }
 
 int in_group(const char *name) {
@@ -400,6 +397,71 @@ int in_group(const char *name) {
                 return r;
 
         return in_gid(gid);
+}
+
+int merge_gid_lists(const gid_t *list1, size_t size1, const gid_t *list2, size_t size2, gid_t **ret) {
+        size_t nresult = 0;
+        assert(ret);
+
+        if (size2 > INT_MAX - size1)
+                return -ENOBUFS;
+
+        gid_t *buf = new(gid_t, size1 + size2);
+        if (!buf)
+                return -ENOMEM;
+
+        /* Duplicates need to be skipped on merging, otherwise they'll be passed on and stored in the kernel. */
+        for (size_t i = 0; i < size1; i++)
+                if (!gid_list_has(buf, nresult, list1[i]))
+                        buf[nresult++] = list1[i];
+        for (size_t i = 0; i < size2; i++)
+                if (!gid_list_has(buf, nresult, list2[i]))
+                        buf[nresult++] = list2[i];
+        *ret = buf;
+        return (int)nresult;
+}
+
+int getgroups_alloc(gid_t** gids) {
+        gid_t *allocated;
+        _cleanup_free_  gid_t *p = NULL;
+        int ngroups = 8;
+        unsigned attempt = 0;
+
+        allocated = new(gid_t, ngroups);
+        if (!allocated)
+                return -ENOMEM;
+        p = allocated;
+
+        for (;;) {
+                ngroups = getgroups(ngroups, p);
+                if (ngroups >= 0)
+                        break;
+                if (errno != EINVAL)
+                        return -errno;
+
+                /* Give up eventually */
+                if (attempt++ > 10)
+                        return -EINVAL;
+
+                /* Get actual size needed, and size the array explicitly. Note that this is potentially racy
+                 * to use (in multi-threaded programs), hence let's call this in a loop. */
+                ngroups = getgroups(0, NULL);
+                if (ngroups < 0)
+                        return -errno;
+                if (ngroups == 0)
+                        return false;
+
+                free(allocated);
+
+                allocated = new(gid_t, ngroups);
+                if (!allocated)
+                        return -ENOMEM;
+
+                p = allocated;
+        }
+
+        *gids = TAKE_PTR(p);
+        return ngroups;
 }
 
 int get_home_dir(char **_h) {
