@@ -24,13 +24,12 @@
 #include "set.h"
 
 typedef enum LinkState {
-        LINK_STATE_PENDING,     /* udev has not initialized the link */
-        LINK_STATE_INITIALIZED, /* udev has initialized the link */
-        LINK_STATE_CONFIGURING, /* configuring addresses, routes, etc. */
-        LINK_STATE_CONFIGURED,  /* everything is configured */
-        LINK_STATE_UNMANAGED,   /* Unmanaged=yes is set */
-        LINK_STATE_FAILED,      /* at least one configuration process failed */
-        LINK_STATE_LINGER,      /* RTM_DELLINK for the link has been received */
+        LINK_STATE_PENDING,
+        LINK_STATE_CONFIGURING,
+        LINK_STATE_CONFIGURED,
+        LINK_STATE_UNMANAGED,
+        LINK_STATE_FAILED,
+        LINK_STATE_LINGER,
         _LINK_STATE_MAX,
         _LINK_STATE_INVALID = -1
 } LinkState;
@@ -116,6 +115,7 @@ typedef struct Link {
         bool routing_policy_rules_configured:1;
         bool qdiscs_configured:1;
         bool setting_mtu:1;
+        bool setting_genmode:1;
         bool ipv6_mtu_set:1;
 
         LIST_HEAD(Address, pool_addresses);
