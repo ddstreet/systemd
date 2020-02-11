@@ -4208,7 +4208,7 @@ _public_ int sd_bus_get_close_on_exit(sd_bus *bus) {
         return bus->close_on_exit;
 }
 
-int sd_bus_enqueue_for_read(sd_bus *bus, sd_bus_message *m) {
+_public_ int sd_bus_enqueue_for_read(sd_bus *bus, sd_bus_message *m) {
         int r;
 
         assert_return(bus, -EINVAL);
