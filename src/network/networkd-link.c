@@ -36,7 +36,6 @@
 #include "qdisc.h"
 #include "set.h"
 #include "socket-util.h"
-#include "stat-util.h"
 #include "stdio-util.h"
 #include "string-table.h"
 #include "strv.h"
@@ -44,6 +43,7 @@
 #include "tmpfile-util.h"
 #include "udev-util.h"
 #include "util.h"
+#include "virt.h"
 #include "vrf.h"
 
 uint32_t link_get_vrf_table(Link *link) {
@@ -259,7 +259,7 @@ static bool link_proxy_arp_enabled(Link *link) {
         return true;
 }
 
-static bool link_ipv6_accept_ra_enabled(Link *link) {
+static bool link_ipv6_accept_ra_enabled_implicit(Link *link, bool * implicit) {
         assert(link);
 
         if (!socket_ipv6_is_supported())
@@ -278,15 +278,22 @@ static bool link_ipv6_accept_ra_enabled(Link *link) {
          * disabled if local forwarding is enabled).
          * If set, ignore or enforce RA independent of local forwarding state.
          */
-        if (link->network->ipv6_accept_ra < 0)
+        if (link->network->ipv6_accept_ra < 0) {
                 /* default to accept RA if ip_forward is disabled and ignore RA if ip_forward is enabled */
+                if (implicit)
+                        *implicit = true;
                 return !link_ipv6_forward_enabled(link);
+        }
         else if (link->network->ipv6_accept_ra > 0)
                 /* accept RA even if ip_forward is enabled */
                 return true;
         else
                 /* ignore RA */
                 return false;
+}
+
+static bool link_ipv6_accept_ra_enabled(Link *link) {
+        return link_ipv6_accept_ra_enabled_implicit(link, NULL);
 }
 
 static IPv6PrivacyExtensions link_ipv6_privacy_extensions(Link *link) {
@@ -1115,8 +1122,10 @@ void link_check_ready(Link *link) {
                          * an IPv4ll fallback address must be configured. */
                         return;
 
-                if (link_ipv6_accept_ra_enabled(link) && !link->ndisc_configured)
-                        return;
+                 bool implicit = false;
+                 if (link_ipv6_accept_ra_enabled_implicit(link, &implicit) && !link->ndisc_configured)
+                         if (!implicit)
+                                 return;
         }
 
         if (link->state != LINK_STATE_CONFIGURED)
@@ -1287,7 +1296,7 @@ static int link_set_proxy_arp(Link *link) {
         return 0;
 }
 
-static int link_configure_after_setting_mtu(Link *link);
+static int link_configure_continue(Link *link);
 
 static int set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
         int r;
@@ -1307,8 +1316,8 @@ static int set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) 
         else
                 log_link_debug(link, "Setting MTU done.");
 
-        if (link->state == LINK_STATE_INITIALIZED) {
-                r = link_configure_after_setting_mtu(link);
+        if (link->state == LINK_STATE_PENDING) {
+                r = link_configure_continue(link);
                 if (r < 0)
                         link_enter_failed(link);
         }
@@ -1577,12 +1586,22 @@ static int link_address_genmode_handler(sd_netlink *rtnl, sd_netlink_message *m,
 
         assert(link);
 
+        link->setting_genmode = false;
+
         if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
                 return 1;
 
         r = sd_netlink_message_get_errno(m);
         if (r < 0)
                 log_link_warning_errno(link, r, "Could not set address genmode for interface, ignoring: %m");
+        else
+                log_link_debug(link, "Setting address genmode done.");
+
+        if (link->state == LINK_STATE_PENDING) {
+                r = link_configure_continue(link);
+                if (r < 0)
+                        link_enter_failed(link);
+        }
 
         return 1;
 }
@@ -1597,7 +1616,7 @@ static int link_configure_addrgen_mode(Link *link) {
         assert(link->manager);
         assert(link->manager->rtnl);
 
-        if (!socket_ipv6_is_supported())
+        if (!socket_ipv6_is_supported() || link->setting_genmode)
                 return 0;
 
         log_link_debug(link, "Setting address genmode for link");
@@ -1641,6 +1660,7 @@ static int link_configure_addrgen_mode(Link *link) {
                 return log_link_error_errno(link, r, "Could not send rtnetlink message: %m");
 
         link_ref(link);
+        link->setting_genmode = true;
 
         return 0;
 }
@@ -2141,7 +2161,7 @@ static int link_enter_join_netdev(Link *link) {
 
         assert(link);
         assert(link->network);
-        assert(link->state == LINK_STATE_INITIALIZED);
+        assert(link->state == LINK_STATE_PENDING);
 
         link_set_state(link, LINK_STATE_CONFIGURING);
 
@@ -2474,12 +2494,62 @@ static bool link_address_is_dynamic(Link *link, Address *address) {
         return false;
 }
 
+static int link_enumerate_ipv6_tentative_addresses(Link *link) {
+        _cleanup_(sd_netlink_message_unrefp) sd_netlink_message *req = NULL, *reply = NULL;
+        sd_netlink_message *addr;
+        int r;
+
+        assert(link);
+        assert(link->manager);
+        assert(link->manager->rtnl);
+
+        r = sd_rtnl_message_new_addr(link->manager->rtnl, &req, RTM_GETADDR, 0, AF_INET6);
+        if (r < 0)
+                return r;
+
+        r = sd_netlink_call(link->manager->rtnl, req, 0, &reply);
+        if (r < 0)
+                return r;
+
+        for (addr = reply; addr; addr = sd_netlink_message_next(addr)) {
+                unsigned char flags;
+                int ifindex;
+
+                r = sd_rtnl_message_addr_get_ifindex(addr, &ifindex);
+                if (r < 0) {
+                        log_link_warning_errno(link, r, "rtnl: invalid ifindex, ignoring: %m");
+                        continue;
+                } else if (link->ifindex != ifindex)
+                        continue;
+
+                r = sd_rtnl_message_addr_get_flags(addr, &flags);
+                if (r < 0) {
+                        log_link_warning_errno(link, r, "rtnl: received address message with invalid flags, ignoring: %m");
+                        continue;
+                } else if (!(flags & IFA_F_TENTATIVE))
+                        continue;
+
+                log_link_debug(link, "Found tentative ipv6 link-local address");
+                (void) manager_rtnl_process_address(link->manager->rtnl, addr, link->manager);
+        }
+
+        return 0;
+}
+
 static int link_drop_foreign_config(Link *link) {
         Address *address;
         Neighbor *neighbor;
         Route *route;
         Iterator i;
         int r;
+
+        /* The kernel doesn't notify us about tentative addresses;
+         * so if ipv6ll is disabled, we need to enumerate them now so we can drop them below */
+        if (!link_ipv6ll_enabled(link)) {
+                r = link_enumerate_ipv6_tentative_addresses(link);
+                if (r < 0)
+                        return r;
+        }
 
         SET_FOREACH(address, link->addresses_foreign, i) {
                 /* we consider IPv6LL addresses to be managed by the kernel */
@@ -2625,7 +2695,7 @@ static int link_configure(Link *link) {
 
         assert(link);
         assert(link->network);
-        assert(link->state == LINK_STATE_INITIALIZED);
+        assert(link->state == LINK_STATE_PENDING);
 
         r = link_configure_qdiscs(link);
         if (r < 0)
@@ -2633,15 +2703,6 @@ static int link_configure(Link *link) {
 
         if (link->iftype == ARPHRD_CAN)
                 return link_configure_can(link);
-
-        /* Drop foreign config, but ignore loopback or critical devices.
-         * We do not want to remove loopback address or addresses used for root NFS. */
-        if (!(link->flags & IFF_LOOPBACK) &&
-            link->network->keep_configuration != KEEP_CONFIGURATION_YES) {
-                r = link_drop_foreign_config(link);
-                if (r < 0)
-                        return r;
-        }
 
         /* If IPv6 configured that is static IPv6 address and IPv6LL autoconfiguration is enabled
          * for this interface, then enable IPv6 */
@@ -2742,18 +2803,39 @@ static int link_configure(Link *link) {
         if (r < 0)
                 return r;
 
-        return link_configure_after_setting_mtu(link);
+        return link_configure_continue(link);
 }
 
-static int link_configure_after_setting_mtu(Link *link) {
+/* The configuration continues in this separate function, instead of
+ * including this in the above link_configure() function, for two
+ * reasons:
+ * 1) some devices reset the link when the mtu is set, which caused
+ *    an infinite loop here in networkd; see:
+ *    https://github.com/systemd/systemd/issues/6593
+ *    https://github.com/systemd/systemd/issues/9831
+ * 2) if ipv6ll is disabled, then bringing the interface up must be
+ *    delayed until after we get confirmation from the kernel that
+ *    the addr_gen_mode parameter has been set (via netlink), see:
+ *    https://github.com/systemd/systemd/issues/13882
+ */
+static int link_configure_continue(Link *link) {
         int r;
 
         assert(link);
         assert(link->network);
-        assert(link->state == LINK_STATE_INITIALIZED);
+        assert(link->state == LINK_STATE_PENDING);
 
-        if (link->setting_mtu)
+        if (link->setting_mtu || link->setting_genmode)
                 return 0;
+
+        /* Drop foreign config, but ignore loopback or critical devices.
+         * We do not want to remove loopback address or addresses used for root NFS. */
+        if (!(link->flags & IFF_LOOPBACK) &&
+            link->network->keep_configuration != KEEP_CONFIGURATION_YES) {
+                r = link_drop_foreign_config(link);
+                if (r < 0)
+                        return r;
+        }
 
         /* The kernel resets ipv6 mtu after changing device mtu;
          * we must set this here, after we've set device mtu */
@@ -2940,7 +3022,7 @@ int link_reconfigure(Link *link, bool force) {
         if (r < 0)
                 return r;
 
-        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING, LINK_STATE_INITIALIZED)) {
+        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING)) {
                 log_link_debug(link, "State is %s, dropping config", link_state_to_string(link->state));
                 r = link_drop_foreign_config(link);
                 if (r < 0)
@@ -2960,7 +3042,7 @@ int link_reconfigure(Link *link, bool force) {
         if (r < 0)
                 return r;
 
-        link_set_state(link, LINK_STATE_INITIALIZED);
+        link_set_state(link, LINK_STATE_PENDING);
 
         /* link_configure_duid() returns 0 if it requests product UUID. In that case,
          * link_configure() is called later asynchronously. */
@@ -2985,11 +3067,10 @@ static int link_initialized_and_synced(Link *link) {
 
         /* We may get called either from the asynchronous netlink callback,
          * or directly for link_add() if running in a container. See link_add(). */
-        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_INITIALIZED))
+        if (link->state != LINK_STATE_PENDING)
                 return 0;
 
         log_link_debug(link, "Link state is up-to-date");
-        link_set_state(link, LINK_STATE_INITIALIZED);
 
         r = link_new_bound_by_list(link);
         if (r < 0)
@@ -3073,7 +3154,6 @@ int link_initialized(Link *link, sd_device *device) {
                 return 0;
 
         log_link_debug(link, "udev initialized link");
-        link_set_state(link, LINK_STATE_INITIALIZED);
 
         link->sd_device = sd_device_ref(device);
 
@@ -3308,8 +3388,8 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
         if (r < 0)
                 return r;
 
-        if (path_is_read_only_fs("/sys") <= 0) {
-                /* udev should be around */
+        if (detect_container() <= 0) {
+                /* not in a container, udev will be around */
                 sprintf(ifindex_str, "n%d", link->ifindex);
                 r = sd_device_new_from_device_id(&device, ifindex_str);
                 if (r < 0) {
@@ -3319,7 +3399,7 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = sd_device_get_is_initialized(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized: %m");
+                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized or not: %m");
                         goto failed;
                 }
                 if (r == 0) {
@@ -3330,11 +3410,11 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = device_is_renaming(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Failed to determine the device is being renamed: %m");
+                        log_link_warning_errno(link, r, "Failed to determine the device is renamed or not: %m");
                         goto failed;
                 }
                 if (r > 0) {
-                        log_link_debug(link, "Interface is being renamed, pending initialization.");
+                        log_link_debug(link, "Interface is under renaming, pending initialization.");
                         return 0;
                 }
 
@@ -3363,7 +3443,7 @@ int link_ipv6ll_gained(Link *link, const struct in6_addr *address) {
         link->ipv6ll_address = *address;
         link_check_ready(link);
 
-        if (IN_SET(link->state, LINK_STATE_CONFIGURING, LINK_STATE_CONFIGURED)) {
+        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_UNMANAGED, LINK_STATE_FAILED)) {
                 r = link_acquire_ipv6_conf(link);
                 if (r < 0) {
                         link_enter_failed(link);
@@ -3388,7 +3468,7 @@ static int link_carrier_gained(Link *link) {
                         return r;
         }
 
-        if (IN_SET(link->state, LINK_STATE_CONFIGURING, LINK_STATE_CONFIGURED)) {
+        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_UNMANAGED, LINK_STATE_FAILED)) {
                 r = link_acquire_conf(link);
                 if (r < 0) {
                         link_enter_failed(link);
@@ -3435,7 +3515,7 @@ static int link_carrier_lost(Link *link) {
         if (r < 0)
                 return r;
 
-        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING, LINK_STATE_INITIALIZED)) {
+        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING)) {
                 log_link_debug(link, "State is %s, dropping config", link_state_to_string(link->state));
                 r = link_drop_foreign_config(link);
                 if (r < 0)
@@ -4089,7 +4169,6 @@ void link_clean(Link *link) {
 
 static const char* const link_state_table[_LINK_STATE_MAX] = {
         [LINK_STATE_PENDING] = "pending",
-        [LINK_STATE_INITIALIZED] = "initialized",
         [LINK_STATE_CONFIGURING] = "configuring",
         [LINK_STATE_CONFIGURED] = "configured",
         [LINK_STATE_UNMANAGED] = "unmanaged",
