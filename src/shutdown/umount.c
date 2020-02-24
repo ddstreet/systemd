@@ -245,6 +245,10 @@ static int loopback_list_get(MountPoint **head) {
         if (r < 0)
                 return r;
 
+        r = sd_device_enumerator_add_match_sysattr(e, "loop/autoclear", "0", true);
+        if (r < 0)
+                return r;
+
         FOREACH_DEVICE(e, d) {
                 _cleanup_free_ char *p = NULL;
                 const char *dn;
