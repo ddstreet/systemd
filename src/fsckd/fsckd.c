@@ -41,6 +41,7 @@
 #include "log.h"
 #include "list.h"
 #include "macro.h"
+#include "socket-netlink.h"
 #include "socket-util.h"
 #include "fd-util.h"
 #include "string-util.h"
