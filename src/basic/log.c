@@ -828,7 +828,7 @@ void log_assert_failed_return_realm(
                 int line,
                 const char *func) {
         PROTECT_ERRNO;
-        log_assert(LOG_REALM_PLUS_LEVEL(realm, LOG_DEBUG), text, file, line, func,
+        log_assert(LOG_REALM_PLUS_LEVEL(realm, LOG_WARNING), text, file, line, func,
                    "Assertion '%s' failed at %s:%u, function %s(). Ignoring.");
 }
 
