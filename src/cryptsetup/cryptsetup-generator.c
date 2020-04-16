@@ -372,8 +372,8 @@ static int create_disk(
 
         if (swap)
                 fprintf(f,
-                        "ExecStartPost=/sbin/mkswap '/dev/mapper/%s'\n",
-                        name_escaped);
+                        "ExecStartPost=/usr/bin/flock -F '/dev/mapper/%s' /sbin/mkswap '/dev/mapper/%s'\n",
+                        name_escaped, name_escaped);
 
         if (keydev)
                 fprintf(f,
