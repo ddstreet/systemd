@@ -1,0 +1,29 @@
+From 26d7cf3daf08b279bdd2e484936268e1e88648d4 Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Thu, 22 Nov 2018 14:06:46 +0800
+Subject: [PATCH] 70-mouse.hwdb: Set DPI for MS Classic IntelliMouse
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Origin: upstream, https://github.com/systemd/systemd/commit/26d7cf3daf08b279bdd2e484936268e1e88648d4
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1867421
+
+It defaults to 3200 DPI and 1000 Hz. Note the ?? is required to
+match the multibyte UTF-8 character '®'.
+---
+ hwdb/70-mouse.hwdb | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+--- a/hwdb/70-mouse.hwdb
++++ b/hwdb/70-mouse.hwdb
+@@ -410,6 +410,10 @@ mouse:bluetooth:v045ep0702:name:Microsof
+ mouse:bluetooth:v045ep07f3:name:Arc Touch Mouse SE:
+  MOUSE_DPI=1000@2000
+ 
++# Microsoft Classic IntelliMouse
++mouse:usb:v045ep0823:name:Microsoft Microsoft?? Classic IntelliMouse??:
++ MOUSE_DPI=3200@1000
++
+ ##########################################
+ # Mionix
+ ##########################################

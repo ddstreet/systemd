@@ -1,0 +1,34 @@
+From c488660e6edb3c1375ab62514a8df035c3d712bf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Sat, 2 Nov 2019 16:42:01 +0100
+Subject: [PATCH] journalctl: allow running vacuum on remote journals, too
+Origin: upstream, https://github.com/systemd/systemd/commit/c488660e6edb3c1375ab62514a8df035c3d712bf
+Bug: https://github.com/systemd/systemd/issues/2376
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1858412
+
+Right now the `systemd-journal-remote` service does not constrain its
+resource usage (I just run out of space on my 100GB partition, for
+example). This patch does not change that, but it at least makes it
+possible to run something like:
+
+  journalctl --directory /var/log/journal/remote --rotate --vacuum-size=90G
+
+fixes #2376
+
+Co-authored-by: Mike Auty <ikelos@gentoo.org>
+---
+ src/journal/journalctl.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+--- a/src/journal/journalctl.c
++++ b/src/journal/journalctl.c
+@@ -2163,9 +2163,6 @@ int main(int argc, char *argv[]) {
+                 HASHMAP_FOREACH(d, j->directories_by_path, i) {
+                         int q;
+ 
+-                        if (d->is_root)
+-                                continue;
+-
+                         q = journal_directory_vacuum(d->path, arg_vacuum_size, arg_vacuum_n_files, arg_vacuum_time, NULL, true);
+                         if (q < 0) {
+                                 log_error_errno(q, "Failed to vacuum %s: %m", d->path);
