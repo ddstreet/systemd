@@ -1,0 +1,26 @@
+From 37b9966e2525790843ab302a5b8009853a7905a0 Mon Sep 17 00:00:00 2001
+From: dann frazier <dann.frazier@canonical.com>
+Date: Mon, 27 Jan 2020 18:45:17 -0700
+Subject: [PATCH] test: Synchronize journal before reading from it
+Origin: upstream, https://github.com/systemd/systemd/commit/37b9966e2525790843ab302a5b8009853a7905a0
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1776654
+
+There's a race condition in the sysuser test where it may try to read
+entries from the journal before they are available. Fix it by adding a
+`journalctl --sync` call.
+
+BugLink: https://bugs.launchpad.net/bugs/1776654
+---
+ test/TEST-21-SYSUSERS/test.sh | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/test/TEST-21-SYSUSERS/test.sh
++++ b/test/TEST-21-SYSUSERS/test.sh
+@@ -37,6 +37,7 @@ test_run() {
+                 rm -f $TESTDIR/etc/*
+                 cp $f $TESTDIR/usr/lib/sysusers.d/test.conf
+                 systemd-sysusers --root=$TESTDIR 2> /dev/null
++                journalctl --sync
+                 journalctl -t systemd-sysusers -o cat | tail -n1 > $TESTDIR/tmp/err
+                 if ! diff -u $TESTDIR/tmp/err  ${f%.*}.expected-err; then
+                         echo "**** Unexpected error output for $f"
