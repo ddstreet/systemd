@@ -1,3 +1,22 @@
+systemd (242-7ubuntu3.8) eoan; urgency=medium
+
+  * d/t/logind: skip if nonexistent /sys/power/state (LP: #1862657)
+  * d/p/lp1859862-network-Do-not-disable-IPv6-by-writing-to-sysctl.patch:
+    - enable ipv6 when needed (LP: #1859862)
+  * d/p/lp1858412-journalctl-allow-running-vacuum-on-remote-journals-t.patch:
+    - allow vacuuming journal 'root' dir (LP: #1858412)
+  * d/rules: use meson --print-errorlogs instead of cat testlog
+    - (LP: #1870811)
+  * d/p/lp1776654-test-Synchronize-journal-before-reading-from-it.patch:
+    - sync journal before reading from it (LP: #1776654)
+  * d/p/lp1837914-journal-do-not-trigger-assertion-when-journal_file_c.patch:
+    - do not crash if NULL passted to journal destructor (LP: #1837914)
+  * d/e/initramfs-tools/hooks/udev:
+    - Follow symlinks when finding link files to copy into initramfs
+      (LP: #1868892)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Mon, 20 Apr 2020 09:44:51 -0400
+
 systemd (242-7ubuntu3.7) eoan; urgency=medium
 
   [ Dariusz Gadomski ]
