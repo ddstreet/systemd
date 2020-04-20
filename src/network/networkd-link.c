@@ -731,7 +731,7 @@ static void link_enter_configured(Link *link) {
         assert(link);
         assert(link->network);
 
-        if (link->state != LINK_STATE_SETTING_ROUTES)
+        if (link->state != LINK_STATE_CONFIGURING)
                 return;
 
         log_link_info(link, "Configured");
@@ -837,9 +837,8 @@ static int route_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata
         int r;
 
         assert(link->route_messages > 0);
-        assert(IN_SET(link->state, LINK_STATE_SETTING_ADDRESSES,
-                      LINK_STATE_SETTING_ROUTES, LINK_STATE_FAILED,
-                      LINK_STATE_LINGER));
+        assert(IN_SET(link->state, LINK_STATE_CONFIGURING,
+                      LINK_STATE_FAILED, LINK_STATE_LINGER));
 
         link->route_messages--;
 
@@ -859,7 +858,7 @@ static int route_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata
         return 1;
 }
 
-static int link_enter_set_routes(Link *link) {
+static int link_request_set_routes(Link *link) {
         Route *rt;
         int r;
 
@@ -867,11 +866,11 @@ static int link_enter_set_routes(Link *link) {
         assert(link->network);
         assert(link->addresses_configured);
         assert(link->address_messages == 0);
-        assert(link->state == LINK_STATE_SETTING_ADDRESSES);
+        assert(link->state != _LINK_STATE_INVALID);
+
+        link_set_state(link, LINK_STATE_CONFIGURING);
 
         (void) link_set_routing_policy_rule(link);
-
-        link_set_state(link, LINK_STATE_SETTING_ROUTES);
 
         LIST_FOREACH(routes, rt, link->network->static_routes) {
                 r = route_configure(rt, link, route_handler);
@@ -920,7 +919,7 @@ static int address_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userda
         assert(link);
         assert(link->ifname);
         assert(link->address_messages > 0);
-        assert(IN_SET(link->state, LINK_STATE_SETTING_ADDRESSES,
+        assert(IN_SET(link->state, LINK_STATE_CONFIGURING,
                LINK_STATE_FAILED, LINK_STATE_LINGER));
 
         link->address_messages--;
@@ -937,7 +936,7 @@ static int address_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userda
         if (link->address_messages == 0) {
                 log_link_debug(link, "Addresses set");
                 link->addresses_configured = true;
-                link_enter_set_routes(link);
+                link_request_set_routes(link);
         }
 
         return 1;
@@ -1081,7 +1080,7 @@ static int link_set_bridge_fdb(Link *link) {
         return 0;
 }
 
-static int link_enter_set_addresses(Link *link) {
+static int link_request_set_addresses(Link *link) {
         AddressLabel *label;
         Address *ad;
         int r;
@@ -1094,7 +1093,7 @@ static int link_enter_set_addresses(Link *link) {
         if (r < 0)
                 return r;
 
-        link_set_state(link, LINK_STATE_SETTING_ADDRESSES);
+        link_set_state(link, LINK_STATE_CONFIGURING);
 
         LIST_FOREACH(addresses, ad, link->network->static_addresses) {
                 r = address_configure(ad, link, address_handler, false);
@@ -1240,7 +1239,7 @@ static int link_enter_set_addresses(Link *link) {
 
         if (link->address_messages == 0) {
                 link->addresses_configured = true;
-                link_enter_set_routes(link);
+                link_request_set_routes(link);
         } else
                 log_link_debug(link, "Setting addresses");
 
@@ -2217,7 +2216,7 @@ static int link_joined(Link *link) {
         if (!link_has_carrier(link) && !link->network->configure_without_carrier)
                 return 0;
 
-        return link_enter_set_addresses(link);
+        return link_request_set_addresses(link);
 }
 
 static int netdev_join_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
@@ -2255,7 +2254,7 @@ static int link_enter_join_netdev(Link *link) {
         assert(link->network);
         assert(link->state == LINK_STATE_PENDING);
 
-        link_set_state(link, LINK_STATE_ENSLAVING);
+        link_set_state(link, LINK_STATE_CONFIGURING);
 
         link_dirty(link);
 
@@ -3122,7 +3121,7 @@ static int link_carrier_gained(Link *link) {
                         return r;
                 }
 
-                r = link_enter_set_addresses(link);
+                r = link_request_set_addresses(link);
                 if (r < 0)
                         return r;
         }
@@ -3206,7 +3205,7 @@ int link_update(Link *link, sd_netlink_message *m) {
         if (link->state == LINK_STATE_LINGER) {
                 link_ref(link);
                 log_link_info(link, "Link readded");
-                link_set_state(link, LINK_STATE_ENSLAVING);
+                link_set_state(link, LINK_STATE_CONFIGURING);
 
                 r = link_new_carrier_maps(link);
                 if (r < 0)
@@ -3751,9 +3750,7 @@ void link_clean(Link *link) {
 
 static const char* const link_state_table[_LINK_STATE_MAX] = {
         [LINK_STATE_PENDING] = "pending",
-        [LINK_STATE_ENSLAVING] = "configuring",
-        [LINK_STATE_SETTING_ADDRESSES] = "configuring",
-        [LINK_STATE_SETTING_ROUTES] = "configuring",
+        [LINK_STATE_CONFIGURING] = "configuring",
         [LINK_STATE_CONFIGURED] = "configured",
         [LINK_STATE_UNMANAGED] = "unmanaged",
         [LINK_STATE_FAILED] = "failed",
