@@ -222,6 +222,7 @@ DEFINE_TRIVIAL_CLEANUP_FUNC(Link*, link_unref);
 
 #define LOG_LINK_MESSAGE(link, fmt, ...) "MESSAGE=%s: " fmt, (link)->ifname, ##__VA_ARGS__
 #define LOG_LINK_INTERFACE(link) "INTERFACE=%s", (link)->ifname
+int link_request_set_routes(Link *link);
 
 #define ADDRESS_FMT_VAL(address)                   \
         be32toh((address).s_addr) >> 24,           \
