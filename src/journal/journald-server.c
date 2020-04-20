@@ -1920,11 +1920,8 @@ void server_done(Server *s) {
         while (s->stdout_streams)
                 stdout_stream_free(s->stdout_streams);
 
-        if (s->system_journal)
-                journal_file_close(s->system_journal);
-
-        if (s->runtime_journal)
-                journal_file_close(s->runtime_journal);
+        journal_file_close(s->system_journal);
+        journal_file_close(s->runtime_journal);
 
         while ((f = ordered_hashmap_steal_first(s->user_journals)))
                 journal_file_close(f);
