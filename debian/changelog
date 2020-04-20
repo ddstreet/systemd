@@ -1,3 +1,27 @@
+systemd (229-4ubuntu21.28) xenial; urgency=medium
+
+  * d/t/logind: skip if nonexistent /sys/power/state (LP: #1862657)
+  * d/p/lp1839290-Change-job-mode-of-manager-triggered-restarts-to-JOB.patch:
+    - when restarting service after failure, replace existing queued jobs
+      (LP: #1839290)
+  * d/t/storage:
+    - fix buggy test (LP: #1831459)
+    - without scsi_debug, skip test (LP: #1847816)
+  * d/p/lp1867421-70-mouse.hwdb-Set-DPI-for-MS-Classic-IntelliMouse.patch:
+    - fix resolution of IntelliMouse (LP: #1867421)
+  * d/p/lp1858412-journalctl-allow-running-vacuum-on-remote-journals-t.patch:
+    - allow vacuuming journal 'root' dir (LP: #1858412)
+  * d/p/lp1862232-network-DHCP-ignore-error-in-setting-hostname-when-i.patch:
+    - do not let invalid hostname break dhcpv4 (LP: #1862232)
+  * d/t/systemd-fsckd: Skip test on arm64 (LP: #1870194)
+  * d/p/lp1837914-journal-do-not-trigger-assertion-when-journal_file_c.patch:
+    - do not crash if NULL passted to journal destructor (LP: #1837914)
+  * d/e/initramfs-tools/hooks/udev:
+    - Follow symlinks when finding link files to copy into initramfs
+      (LP: #1868892)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Mon, 20 Apr 2020 10:17:40 -0400
+
 systemd (229-4ubuntu21.27) xenial-security; urgency=medium
 
   * SECURITY UPDATE: incorrect PIDFile verification
