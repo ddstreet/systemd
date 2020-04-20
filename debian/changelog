@@ -1,3 +1,36 @@
+systemd (237-3ubuntu10.40) bionic; urgency=medium
+
+  * d/t/logind: skip if nonexistent /sys/power/state (LP: #1862657)
+  * d/p/lp1839290-Change-job-mode-of-manager-triggered-restarts-to-JOB.patch:
+    - when restarting service after failure, replace existing queued jobs
+      (LP: #1839290)
+  * d/p/lp1867421-70-mouse.hwdb-Set-DPI-for-MS-Classic-IntelliMouse.patch:
+    - fix resolution of IntelliMouse (LP: #1867421)
+  * d/p/lp1858412-journalctl-allow-running-vacuum-on-remote-journals-t.patch:
+    - allow vacuuming journal 'root' dir (LP: #1858412)
+  * d/p/lp1862232/0001-network-add-more-log-messages-in-configuring-DHCP4-c.patch,
+    d/p/lp1862232/0002-network-add-more-log-messages-in-configuring-DHCP6-c.patch,
+    d/p/lp1862232/0003-network-also-check-that-Hostname-is-a-valid-DNS-doma.patch,
+    d/p/lp1862232/0004-network-use-free_and_replace.patch,
+    d/p/lp1862232/0005-network-DHCP-ignore-error-in-setting-hostname-when-i.patch,
+    d/p/lp1862232/0006-man-mention-that-Hostname-for-DHCP-must-be-a-valid-D.patch,
+    d/p/lp1862232/0007-resolve-fix-error-handling-of-dns_name_is_valid.patch:
+    - do not fail network setup if hostname is not valid (LP: #1862232)
+  * d/t/systemd-fsckd: Skip test on arm64 (LP: #1870194)
+  * d/p/lp1870589-seccomp-rework-how-the-S-UG-ID-filter-is-installed.patch:
+    - fix test-seccomp failure (LP: #1870589)
+  * d/rules: use meson --print-errorlogs instead of cat testlog
+    - (LP: #1870811)
+  * d/p/lp1776654-test-Synchronize-journal-before-reading-from-it.patch:
+    - sync journal before reading from it (LP: #1776654)
+  * d/p/lp1837914-journal-do-not-trigger-assertion-when-journal_file_c.patch:
+    - do not crash if NULL passted to journal destructor (LP: #1837914)
+  * d/e/initramfs-tools/hooks/udev:
+    - Follow symlinks when finding link files to copy into initramfs
+      (LP: #1868892)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Mon, 20 Apr 2020 10:12:49 -0400
+
 systemd (237-3ubuntu10.39) bionic; urgency=medium
 
   [ Dariusz Gadomski ]

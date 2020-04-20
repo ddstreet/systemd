@@ -1,0 +1,53 @@
+From 31ee39732705b74c43b2352132e3af205a876c99 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 2 Aug 2018 16:32:42 +0900
+Subject: [PATCH 6/7] man: mention that Hostname= for DHCP must be a valid DNS
+ domain name
+Origin: upstream, https://github.com/systemd/systemd/pull/9775/commits
+Bug: https://github.com/systemd/systemd/issues/9759
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1862232
+
+---
+ man/systemd.network.xml | 21 ++++++++++++---------
+ 1 file changed, 12 insertions(+), 9 deletions(-)
+
+--- a/man/systemd.network.xml
++++ b/man/systemd.network.xml
+@@ -1172,25 +1172,28 @@
+         <varlistentry>
+           <term><varname>SendHostname=</varname></term>
+           <listitem>
+-            <para>When true (the default), the machine's hostname will
+-            be sent to the DHCP server.</para>
++            <para>When true (the default), the machine's hostname will be sent to the DHCP server.
++            Note that the machine's hostname must consist only of 7-bit ASCII lower-case characters and
++            no spaces or dots, and be formatted as a valid DNS domain name. Otherwise, the hostname is not
++            send even if this is set to true.</para>
+           </listitem>
+         </varlistentry>
+         <varlistentry>
+           <term><varname>UseHostname=</varname></term>
+           <listitem>
+             <para>When true (the default), the hostname received from
+-            the DHCP server will be set as the transient hostname of the system
++            the DHCP server will be set as the transient hostname of the system.
+             </para>
+           </listitem>
+         </varlistentry>
+         <varlistentry>
+-        <term><varname>Hostname=</varname></term>
+-        <listitem>
+-          <para>Use this value for the hostname which is sent to the
+-          DHCP server, instead of machine's hostname.</para>
+-        </listitem>
+-      </varlistentry>
++          <term><varname>Hostname=</varname></term>
++          <listitem>
++            <para>Use this value for the hostname which is sent to the DHCP server, instead of machine's hostname.
++            Note that the specified hostname must consist only of 7-bit ASCII lower-case characters and
++            no spaces or dots, and be formatted as a valid DNS domain name.</para>
++          </listitem>
++        </varlistentry>
+         <varlistentry>
+           <term><varname>UseDomains=</varname></term>
+           <listitem>
