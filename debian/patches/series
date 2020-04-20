@@ -99,3 +99,7 @@ lp1762391/0005-execute-Detect-groups-added-by-PAM-and-merge-them-wi.patch
 lp1762391/0006-test-Add-tests-for-gid-list-ops.patch
 lp1762391/0007-execute-add-const-to-array-parameters-where-possible.patch
 lp1762391/0008-execute-allow-pam_setcred-to-fail-ignore-errors.patch
+lp1859862-network-Do-not-disable-IPv6-by-writing-to-sysctl.patch
+lp1858412-journalctl-allow-running-vacuum-on-remote-journals-t.patch
+lp1776654-test-Synchronize-journal-before-reading-from-it.patch
+lp1837914-journal-do-not-trigger-assertion-when-journal_file_c.patch
