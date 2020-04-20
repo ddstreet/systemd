@@ -1957,7 +1957,7 @@ int unit_reload(Unit *u) {
 
         if (!UNIT_VTABLE(u)->reload) {
                 /* Unit doesn't have a reload function, but we need to propagate the reload anyway */
-                unit_notify(u, unit_active_state(u), unit_active_state(u), true);
+                unit_notify(u, unit_active_state(u), unit_active_state(u), 0);
                 return 0;
         }
 
@@ -2326,7 +2326,7 @@ static void unit_update_on_console(Unit *u) {
 
 }
 
-static bool unit_process_job(Job *j, UnitActiveState ns, bool reload_success) {
+static bool unit_process_job(Job *j, UnitActiveState ns, UnitNotifyFlags flags) {
         bool unexpected = false;
 
         assert(j);
@@ -2364,7 +2364,7 @@ static bool unit_process_job(Job *j, UnitActiveState ns, bool reload_success) {
 
                 if (j->state == JOB_RUNNING) {
                         if (ns == UNIT_ACTIVE)
-                                job_finish_and_invalidate(j, reload_success ? JOB_DONE : JOB_FAILED, true, false);
+                                job_finish_and_invalidate(j, (flags & UNIT_NOTIFY_RELOAD_FAILURE) ? JOB_FAILED : JOB_DONE, true, false);
                         else if (!IN_SET(ns, UNIT_ACTIVATING, UNIT_RELOADING)) {
                                 unexpected = true;
 
@@ -2395,7 +2395,7 @@ static bool unit_process_job(Job *j, UnitActiveState ns, bool reload_success) {
         return unexpected;
 }
 
-void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success) {
+void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, UnitNotifyFlags flags) {
         Manager *m;
 
         assert(u);
@@ -2441,7 +2441,7 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
 
                 /* Let's propagate state changes to the job */
                 if (u->job)
-                        unexpected = unit_process_job(u->job, ns, reload_success);
+                        unexpected = unit_process_job(u->job, ns, flags);
                 else
                         unexpected = true;
 
@@ -2469,7 +2469,9 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
 
                 if (ns != os && ns == UNIT_FAILED) {
                         log_unit_debug(u, "Unit entered failed state.");
-                        unit_start_on_failure(u);
+
+                        if (!(flags & UNIT_NOTIFY_WILL_AUTO_RESTART))
+                                unit_start_on_failure(u);
                 }
         }
 
