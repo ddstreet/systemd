@@ -189,3 +189,16 @@ lp1762391/0005-execute-Detect-groups-added-by-PAM-and-merge-them-wi.patch
 lp1762391/0006-test-Add-tests-for-gid-list-ops.patch
 lp1762391/0007-execute-add-const-to-array-parameters-where-possible.patch
 lp1762391/0008-execute-allow-pam_setcred-to-fail-ignore-errors.patch
+lp1839290-Change-job-mode-of-manager-triggered-restarts-to-JOB.patch
+lp1867421-70-mouse.hwdb-Set-DPI-for-MS-Classic-IntelliMouse.patch
+lp1858412-journalctl-allow-running-vacuum-on-remote-journals-t.patch
+lp1862232/0001-network-add-more-log-messages-in-configuring-DHCP4-c.patch
+lp1862232/0002-network-add-more-log-messages-in-configuring-DHCP6-c.patch
+lp1862232/0003-network-also-check-that-Hostname-is-a-valid-DNS-doma.patch
+lp1862232/0004-network-use-free_and_replace.patch
+lp1862232/0005-network-DHCP-ignore-error-in-setting-hostname-when-i.patch
+lp1862232/0006-man-mention-that-Hostname-for-DHCP-must-be-a-valid-D.patch
+lp1862232/0007-resolve-fix-error-handling-of-dns_name_is_valid.patch
+lp1870589-seccomp-rework-how-the-S-UG-ID-filter-is-installed.patch
+lp1776654-test-Synchronize-journal-before-reading-from-it.patch
+lp1837914-journal-do-not-trigger-assertion-when-journal_file_c.patch

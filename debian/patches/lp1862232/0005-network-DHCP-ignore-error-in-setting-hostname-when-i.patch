@@ -1,0 +1,69 @@
+From a8494759b4f14af5337391727ba295ab708b92f9 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 2 Aug 2018 16:31:10 +0900
+Subject: [PATCH 5/7] network: DHCP: ignore error in setting hostname when it
+ is given by uname()
+Origin: upstream, https://github.com/systemd/systemd/pull/9775/commits
+Bug: https://github.com/systemd/systemd/issues/9759
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1862232
+
+C.f. #9759.
+---
+ src/network/networkd-dhcp4.c | 11 +++++++++--
+ src/network/networkd-dhcp6.c | 11 +++++++++--
+ 2 files changed, 18 insertions(+), 4 deletions(-)
+
+--- a/src/network/networkd-dhcp4.c
++++ b/src/network/networkd-dhcp4.c
+@@ -622,7 +622,14 @@ static int dhcp4_set_hostname(Link *link
+                 hn = hostname;
+         }
+ 
+-        return sd_dhcp_client_set_hostname(link->dhcp_client, hn);
++        r = sd_dhcp_client_set_hostname(link->dhcp_client, hn);
++        if (r == -EINVAL && hostname)
++                /* Ignore error when the machine's hostname is not suitable to send in DHCP packet. */
++                log_link_warning_errno(link, r, "DHCP4 CLIENT: Failed to set hostname from kernel hostname, ignoring: %m");
++        else if (r < 0)
++                return log_link_error_errno(link, r, "DHCP4 CLIENT: Failed to set hostname: %m");
++
++        return 0;
+ }
+ 
+ static bool promote_secondaries_enabled(const char *ifname) {
+@@ -760,7 +767,7 @@ int dhcp4_configure(Link *link) {
+ 
+         r = dhcp4_set_hostname(link);
+         if (r < 0)
+-                return log_link_error_errno(link, r, "DHCP4 CLIENT: Failed to set hostname: %m");
++                return r;
+ 
+         if (link->network->dhcp_vendor_class_identifier) {
+                 r = sd_dhcp_client_set_vendor_class_identifier(link->dhcp_client,
+--- a/src/network/networkd-dhcp6.c
++++ b/src/network/networkd-dhcp6.c
+@@ -466,7 +466,14 @@ static int dhcp6_set_hostname(sd_dhcp6_c
+                 hn = hostname;
+         }
+ 
+-        return sd_dhcp6_client_set_fqdn(client, hn);
++        r = sd_dhcp6_client_set_fqdn(client, hn);
++        if (r == -EINVAL && hostname)
++                /* Ignore error when the machine's hostname is not suitable to send in DHCP packet. */
++                log_link_warning_errno(link, r, "DHCP6 CLIENT: Failed to set hostname from kernel hostname, ignoring: %m");
++        else if (r < 0)
++                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set hostname: %m");
++
++        return 0;
+ }
+ 
+ int dhcp6_configure(Link *link) {
+@@ -510,7 +517,7 @@ int dhcp6_configure(Link *link) {
+ 
+         r = dhcp6_set_hostname(client, link);
+         if (r < 0)
+-                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set hostname: %m");
++                return r;
+ 
+         r = sd_dhcp6_client_set_ifindex(client, link->ifindex);
+         if (r < 0)

@@ -1,0 +1,40 @@
+From 19f9e4e2c8e413927e84b0cd528235a4af836878 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 2 Aug 2018 16:28:44 +0900
+Subject: [PATCH 4/7] network: use free_and_replace()
+Origin: upstream, https://github.com/systemd/systemd/pull/9775/commits
+Bug: https://github.com/systemd/systemd/issues/9759
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1862232
+
+---
+ src/network/networkd-network.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -1027,7 +1027,8 @@ int config_parse_timezone(
+                 void *data,
+                 void *userdata) {
+ 
+-        char **datap = data, *tz = NULL;
++        _cleanup_free_ char *tz = NULL;
++        char **datap = data;
+         int r;
+ 
+         assert(filename);
+@@ -1040,14 +1041,10 @@ int config_parse_timezone(
+ 
+         if (!timezone_is_valid(tz)) {
+                 log_syntax(unit, LOG_ERR, filename, line, 0, "Timezone is not valid, ignoring assignment: %s", rvalue);
+-                free(tz);
+                 return 0;
+         }
+ 
+-        free(*datap);
+-        *datap = tz;
+-
+-        return 0;
++        return free_and_replace(*datap, tz);
+ }
+ 
+ int config_parse_dhcp_server_dns(

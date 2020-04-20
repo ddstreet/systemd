@@ -466,11 +466,18 @@ static int dhcp6_set_hostname(sd_dhcp6_client *client, Link *link) {
                 hn = hostname;
         }
 
-        return sd_dhcp6_client_set_fqdn(client, hn);
+        r = sd_dhcp6_client_set_fqdn(client, hn);
+        if (r == -EINVAL && hostname)
+                /* Ignore error when the machine's hostname is not suitable to send in DHCP packet. */
+                log_link_warning_errno(link, r, "DHCP6 CLIENT: Failed to set hostname from kernel hostname, ignoring: %m");
+        else if (r < 0)
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set hostname: %m");
+
+        return 0;
 }
 
 int dhcp6_configure(Link *link) {
-        sd_dhcp6_client *client = NULL;
+        _cleanup_(sd_dhcp6_client_unrefp) sd_dhcp6_client *client = NULL;
         const DUID *duid;
         int r;
 
@@ -481,22 +488,24 @@ int dhcp6_configure(Link *link) {
                 return 0;
 
         r = sd_dhcp6_client_new(&client);
+        if (r == -ENOMEM)
+                return log_oom();
         if (r < 0)
-                return r;
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to create DHCP6 client: %m");
 
         r = sd_dhcp6_client_attach_event(client, NULL, 0);
         if (r < 0)
-                goto error;
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to attach event: %m");
 
         r = sd_dhcp6_client_set_mac(client,
                                     (const uint8_t *) &link->mac,
                                     sizeof (link->mac), ARPHRD_ETHER);
         if (r < 0)
-                goto error;
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set MAC address: %m");
 
         r = sd_dhcp6_client_set_iaid(client, link->network->iaid);
         if (r < 0)
-                goto error;
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set IAID: %m");
 
         duid = link_duid(link);
         r = sd_dhcp6_client_set_duid(client,
@@ -504,37 +513,33 @@ int dhcp6_configure(Link *link) {
                                      duid->raw_data_len > 0 ? duid->raw_data : NULL,
                                      duid->raw_data_len);
         if (r < 0)
-                goto error;
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set DUID: %m");
 
         r = dhcp6_set_hostname(client, link);
         if (r < 0)
-                goto error;
+                return r;
 
         r = sd_dhcp6_client_set_ifindex(client, link->ifindex);
         if (r < 0)
-                goto error;
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set ifindex: %m");
 
         if (link->network->rapid_commit) {
                 r = sd_dhcp6_client_set_request_option(client, SD_DHCP6_OPTION_RAPID_COMMIT);
                 if (r < 0)
-                        goto error;
+                        return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set request flag for rapid commit: %m");
         }
 
         r = sd_dhcp6_client_set_callback(client, dhcp6_handler, link);
         if (r < 0)
-                goto error;
+                return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set callback: %m");
 
         if (dhcp6_enable_prefix_delegation(link)) {
                 r = sd_dhcp6_client_set_prefix_delegation(client, true);
                 if (r < 0)
-                        goto error;
+                        return log_link_error_errno(link, r, "DHCP6 CLIENT: Failed to set prefix delegation: %m");
         }
 
-        link->dhcp6_client = client;
+        link->dhcp6_client = TAKE_PTR(client);
 
         return 0;
-
-error:
-        sd_dhcp6_client_unref(client);
-        return r;
 }
