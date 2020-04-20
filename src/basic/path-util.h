@@ -31,9 +31,9 @@
 #define DEFAULT_PATH_SPLIT_USR DEFAULT_PATH_NORMAL ":/sbin:/bin"
 
 #ifdef HAVE_SPLIT_USR
-#  define DEFAULT_PATH DEFAULT_PATH_SPLIT_USR
+#  define DEFAULT_PATH DEFAULT_PATH_SPLIT_USR ":/snap/bin"
 #else
-#  define DEFAULT_PATH DEFAULT_PATH_NORMAL
+#  define DEFAULT_PATH DEFAULT_PATH_NORMAL ":/snap/bin"
 #endif
 
 bool is_path(const char *p) _pure_;
