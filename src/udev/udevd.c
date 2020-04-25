@@ -125,6 +125,7 @@ struct event {
 };
 
 static void event_queue_cleanup(Manager *manager, enum event_state type);
+static int synthesize_change(sd_device *dev);
 
 enum worker_state {
         WORKER_UNDEF,
@@ -319,13 +320,15 @@ static int worker_send_message(int fd) {
         return loop_write(fd, &message, sizeof(message), false);
 }
 
-static int worker_lock_block_device(sd_device *dev, int *ret_fd) {
+static int worker_lock_and_watch_block_device(sd_device *dev, int *ret_fd, int *watch_fd) {
         _cleanup_close_ int fd = -1;
+        _cleanup_close_ int ifd = -1;
         const char *val;
         int r;
 
         assert(dev);
         assert(ret_fd);
+        assert(watch_fd);
 
         /*
          * Take a shared lock on the device node; this establishes
@@ -377,13 +380,22 @@ static int worker_lock_block_device(sd_device *dev, int *ret_fd) {
         if (flock(fd, LOCK_SH|LOCK_NB) < 0)
                 return log_device_debug_errno(dev, errno, "Failed to flock(%s): %m", val);
 
+        ifd = inotify_init1(IN_NONBLOCK|IN_CLOEXEC);
+        if (ifd < 0)
+                return log_device_debug_errno(dev, errno, "Failed to inotify_init: %m");
+
+        if (inotify_add_watch(ifd, val, IN_CLOSE_WRITE) < 0)
+                return log_device_debug_errno(dev, errno, "Failed to inotify_add_watch(%s): %m", val);
+
         *ret_fd = TAKE_FD(fd);
+        *watch_fd = TAKE_FD(ifd);
         return 1;
 }
 
 static int worker_process_device(Manager *manager, sd_device *dev) {
         _cleanup_(udev_event_freep) UdevEvent *udev_event = NULL;
         _cleanup_close_ int fd_lock = -1;
+        _cleanup_close_ int fd_watch = -1;
         DeviceAction action;
         uint64_t seqnum;
         int r;
@@ -406,7 +418,18 @@ static int worker_process_device(Manager *manager, sd_device *dev) {
         if (!udev_event)
                 return -ENOMEM;
 
-        r = worker_lock_block_device(dev, &fd_lock);
+        /* We take a shared flock on any block devices, so any external program that modifies the block
+         * device race with us while we're processing it, below, if the external program takes an
+         * exclusive flock on the block device.  However, any external program that modifies the block
+         * device *without* taking an exclusive flock can still race with us, and we may miss an update
+         * of the block device (leading to missing /dev/disk symlinks, etc).  So we also set a inotify
+         * watch that we check after processing.
+         *
+         * Note that we can't use the real watch this early, because 1) udev_event_execute_rules removes
+         * the watch and 2) we don't know if we should start the real watch yet, as ->inotify_watch is
+         * set during udev_event_execute_rules.
+         */
+        r = worker_lock_and_watch_block_device(dev, &fd_lock, &fd_watch);
         if (r < 0)
                 return r;
 
@@ -431,6 +454,30 @@ static int worker_process_device(Manager *manager, sd_device *dev) {
 
         log_device_debug(dev, "Device (SEQNUM=%"PRIu64", ACTION=%s) processed",
                          seqnum, device_action_to_string(action));
+
+        /* We've processed the block device now, and we started the real watch, so we just
+         * need to check if there was any IN_CLOSE_WRITE that we missed while processing,
+         * before the real watch was started.
+         */
+        if (fd_watch >=0) {
+                union inotify_event_buffer buffer;
+                struct inotify_event *e;
+                bool change = false;
+
+                while (!change) {
+                        r = read(fd_watch, &buffer, sizeof(buffer));
+                        if (r < 0)
+                                break;
+                        FOREACH_INOTIFY_EVENT(e, buffer, r)
+                                if (e->mask & IN_CLOSE_WRITE) {
+                                        change = true;
+                                        break;
+                                }
+                }
+
+                if (change)
+                        synthesize_change(dev);
+        }
 
         return 0;
 }
