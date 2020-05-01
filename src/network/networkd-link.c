@@ -1014,6 +1014,25 @@ static int route_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
         return 1;
 }
 
+bool link_should_continue_configuration(Link *link) {
+        if (link_has_carrier(link))
+                return true;
+
+        if (!link->network->configure_without_carrier)
+                return false;
+
+        if (link->had_carrier && !link->network->ignore_carrier_loss)
+                /* configure_without_carrier is set, and our link had carrier before,
+                 * but does not anymore.  Since ignore_carrier_loss is not set, we
+                 * must not configure anything until carrier returns. */
+                return false;
+
+        /* link does not have carrier, but configure_without_carrier is set,
+         * and we either never had carrier before, or ignore_carrier_loss is set.
+         * So we can continue configuration. */
+        return true;
+}
+
 int link_request_set_routes(Link *link) {
         enum {
                 PHASE_NON_GATEWAY, /* First phase: Routes without a gateway */
@@ -1032,9 +1051,7 @@ int link_request_set_routes(Link *link) {
         link->static_routes_configured = false;
         link->static_routes_ready = false;
 
-        if (!link_has_carrier(link) && !link->network->configure_without_carrier)
-                /* During configuring addresses, the link lost its carrier. As networkd is dropping
-                 * the addresses now, let's not configure the routes either. */
+        if (!link_should_continue_configuration(link))
                 return 0;
 
         r = link_request_set_routing_policy_rule(link);
@@ -2174,7 +2191,7 @@ static int link_joined(Link *link) {
         /* Skip setting up addresses until it gets carrier,
            or it would try to set addresses twice,
            which is bad for non-idempotent steps. */
-        if (!link_has_carrier(link) && !link->network->configure_without_carrier)
+        if (!link_should_continue_configuration(link))
                 return 0;
 
         link_set_state(link, LINK_STATE_CONFIGURING);
@@ -2922,7 +2939,7 @@ static int link_configure_continue(Link *link) {
         if (r < 0)
                 return r;
 
-        if (link_has_carrier(link) || link->network->configure_without_carrier) {
+        if (link_should_continue_configuration(link)) {
                 r = link_acquire_conf(link);
                 if (r < 0)
                         return r;
@@ -3616,6 +3633,8 @@ static int link_carrier_gained(Link *link) {
         int r;
 
         assert(link);
+
+        link->had_carrier = true;
 
         r = wifi_get_info(link);
         if (r < 0)

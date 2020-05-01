@@ -120,6 +120,7 @@ typedef struct Link {
         bool setting_mtu:1;
         bool setting_genmode:1;
         bool ipv6_mtu_set:1;
+        bool had_carrier:1;
 
         LIST_HEAD(Address, pool_addresses);
 
@@ -214,6 +215,8 @@ uint32_t link_get_dhcp_route_table(Link *link);
 uint32_t link_get_ipv6_accept_ra_route_table(Link *link);
 int link_request_set_routes(Link *link);
 int link_request_set_nexthop(Link *link);
+
+bool link_should_continue_configuration(Link *link);
 
 int link_reconfigure(Link *link, bool force);
 

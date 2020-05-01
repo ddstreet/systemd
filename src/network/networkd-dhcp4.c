@@ -243,7 +243,7 @@ static int link_set_dhcp_routes(Link *link) {
         if (!link->network) /* link went down while we configured the IP addresses? */
                 return 0;
 
-        if (!link_has_carrier(link) && !link->network->configure_without_carrier)
+        if (!link_should_continue_configuration(link))
                 /* During configuring addresses, the link lost its carrier. As networkd is dropping
                  * the addresses now, let's not configure the routes either. */
                 return 0;
