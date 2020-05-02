@@ -162,7 +162,7 @@ static void test_basic_request(sd_event *e) {
         assert_se(sd_ipv4ll_start(ll) == 0);
 
         sd_event_run(e, (uint64_t) -1);
-        assert_se(sd_ipv4ll_start(ll) == -EBUSY);
+        assert_se(sd_ipv4ll_start(ll) == 0);
 
         assert_se(sd_ipv4ll_is_running(ll));
 
