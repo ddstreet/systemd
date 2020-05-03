@@ -98,6 +98,8 @@ typedef struct Link {
 
         bool addresses_configured;
 
+        bool addresses_ready;
+
         sd_dhcp_client *dhcp_client;
         sd_dhcp_lease *dhcp_lease;
         char *lease_file;
