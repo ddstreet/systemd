@@ -810,7 +810,7 @@ static int route_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata
         return 1;
 }
 
-static int link_request_set_routes(Link *link) {
+int link_request_set_routes(Link *link) {
         Route *rt;
         int r;
 
