@@ -2774,6 +2774,8 @@ static int exec_child(
         unsigned n_fds;
         ExecDirectoryType dt;
         int secure_bits;
+        _cleanup_free_ gid_t *gids_after_pam = NULL;
+        int ngids_after_pam = 0;
 
         assert(unit);
         assert(command);
@@ -3142,6 +3144,12 @@ static int exec_child(
                                 *exit_status = EXIT_PAM;
                                 return log_unit_error_errno(unit, r, "Failed to set up PAM session: %m");
                         }
+
+                        ngids_after_pam = getgroups_alloc(&gids_after_pam);
+                        if (ngids_after_pam < 0) {
+                                *exit_status = EXIT_MEMORY;
+                                return log_unit_error_errno(unit, ngids_after_pam, "Failed to obtain groups after setting up PAM: %m");
+                        }
                 }
         }
 
@@ -3172,7 +3180,22 @@ static int exec_child(
 
         /* Drop groups as early as possbile */
         if (needs_setuid) {
-                r = enforce_groups(gid, supplementary_gids, ngids);
+                _cleanup_free_ gid_t *gids_to_enforce = NULL;
+                int ngids_to_enforce = 0;
+
+                ngids_to_enforce = merge_gid_lists(supplementary_gids,
+                                                   ngids,
+                                                   gids_after_pam,
+                                                   ngids_after_pam,
+                                                   &gids_to_enforce);
+                if (ngids_to_enforce < 0) {
+                        *exit_status = EXIT_MEMORY;
+                        return log_unit_error_errno(unit,
+                                                    ngids_to_enforce,
+                                                    "Failed to merge group lists. Group membership might be incorrect: %m");
+                }
+
+                r = enforce_groups(gid, gids_to_enforce, ngids_to_enforce);
                 if (r < 0) {
                         *exit_status = EXIT_GROUP;
                         return log_unit_error_errno(unit, r, "Changing group credentials failed: %m");
