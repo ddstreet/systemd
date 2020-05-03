@@ -1,3 +1,27 @@
+systemd (237-3ubuntu10.41) bionic; urgency=medium
+
+  [ Dan Streetman ]
+  * d/p/lp1867375/0001-network-Allow-to-configure-GW-even-UseRoutes-false.patch,
+    d/p/lp1867375/0002-network-add-a-flag-to-ignore-gateway-provided-by-DHC.patch,
+    d/p/lp1867375/0003-network-change-UseGateway-default-to-UseRoutes-setti.patch:
+    - Move gateway ignoring from UseRoutes= to UseGateway= (LP: #1867375)
+   * d/p/lp1873607/0002-core-make-sure-to-restore-the-control-command-id-too.patch:
+     - Avoid segfault during serialization (LP: #1873607)
+   * d/p/lp1529152/0001-bash-completion-systemctl-use-systemctl-no-pager.patch,
+     d/p/lp1529152/0002-bash-completion-systemctl-pass-current-partial-unit-.patch,
+     d/p/lp1529152/0003-shell-completion-systemctl-pass-current-word-to-all-.patch,
+     d/p/lp1529152/0004-bash-completion-systemctl-re-implement-__filter_unit.patch,
+     d/p/lp1529152/0005-strip-value-from-property-names.patch:
+     - fix slow systemctl tab completion (LP: #1529152)
+   * d/p/lp1877159-networkd-fix-attribute-length-for-wireguard-10380.patch:
+     - avoid kernel err msg setting wireguard param (LP: #1877159)
+
+  [ Heitor Alves de Siqueira ]
+  * d/p/lp1876600-sd-bus-deal-with-cookie-overruns.patch:
+    - deal with dbus cookie overruns (LP: #1876600)
+
+ -- Heitor Alves de Siqueira <halves@canonical.com>  Sun, 03 May 2020 11:30:25 +0000
+
 systemd (237-3ubuntu10.40) bionic; urgency=medium
 
   * d/t/logind: skip if nonexistent /sys/power/state (LP: #1862657)
