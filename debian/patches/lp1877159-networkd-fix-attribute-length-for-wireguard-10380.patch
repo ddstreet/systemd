@@ -1,0 +1,49 @@
+From 7d0b26a027118ca063780421cb31c74e9d2664ee Mon Sep 17 00:00:00 2001
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Sat, 13 Oct 2018 10:28:49 +0200
+Subject: [PATCH] networkd: fix attribute length for wireguard (#10380)
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1877159
+Origin: upstream, https://github.com/systemd/systemd/commit/7d0b26a027118ca063780421cb31c74e9d2664ee
+
+This is actually a u16, not a u32, so the kernel complains:
+
+kernel: netlink: 'systemd-network': attribute type 5 has an invalid length
+
+This is due to:
+
+if (nla_attr_len[pt->type] && attrlen != nla_attr_len[pt->type]) {
+        pr_warn_ratelimited("netlink: '%s': attribute type %d has an invalid length.\n",
+                            current->comm, type);
+}
+
+Presumably this has been working fine in functionality on little-endian
+systems, but nobody bothered to try on big-endian systems.
+
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+---
+ src/libsystemd/sd-netlink/netlink-types.c | 2 +-
+ src/network/netdev/wireguard.c            | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+--- a/src/libsystemd/sd-netlink/netlink-types.c
++++ b/src/libsystemd/sd-netlink/netlink-types.c
+@@ -685,7 +685,7 @@ static const NLType genl_wireguard_peer_
+         [WGPEER_A_PUBLIC_KEY] = { .size = WG_KEY_LEN  },
+         [WGPEER_A_FLAGS] = { .type = NETLINK_TYPE_U32 },
+         [WGPEER_A_PRESHARED_KEY] = { .size = WG_KEY_LEN },
+-        [WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL] = { .type = NETLINK_TYPE_U32 },
++        [WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL] = { .type = NETLINK_TYPE_U16 },
+         [WGPEER_A_ENDPOINT] = { /* either size of sockaddr_in or sockaddr_in6 depending on address family */ },
+         [WGPEER_A_ALLOWEDIPS] = { .type = NETLINK_TYPE_NESTED, .type_system = &genl_wireguard_allowedip_type_system },
+ };
+--- a/src/network/netdev/wireguard.c
++++ b/src/network/netdev/wireguard.c
+@@ -122,7 +122,7 @@ static int set_wireguard_interface(NetDe
+                                 if (r < 0)
+                                         break;
+ 
+-                                r = sd_netlink_message_append_u32(message, WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL, peer->persistent_keepalive_interval);
++                                r = sd_netlink_message_append_u16(message, WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL, peer->persistent_keepalive_interval);
+                                 if (r < 0)
+                                         break;
+ 
