@@ -29,6 +29,8 @@
 #define DNS_STREAM_TIMEOUT_USEC (10 * USEC_PER_SEC)
 #define DNS_STREAMS_MAX 128
 
+#define DNS_QUERIES_PER_STREAM 32
+
 static void dns_stream_stop(DnsStream *s) {
         assert(s);
 
@@ -51,7 +53,11 @@ static int dns_stream_update_io(DnsStream *s) {
                 s->n_written = 0;
                 f |= EPOLLOUT;
         }
-        if (!s->read_packet || s->n_read < sizeof(s->read_size) + s->read_packet->size)
+
+        /* Let's read a packet if we haven't queued any yet. Except if we already hit a limit of parallel
+         * queries for this connection. */
+        if ((!s->read_packet || s->n_read < sizeof(s->read_size) + s->read_packet->size) &&
+                set_size(s->queries) < DNS_QUERIES_PER_STREAM)
                 f |= EPOLLIN;
 
         return sd_event_source_set_io_events(s->io_event_source, f);
