@@ -1,0 +1,24 @@
+From aedd48160f79de3372eb233ebbf9d8d47c22072a Mon Sep 17 00:00:00 2001
+From: Emil Velikov <emil.velikov@collabora.com>
+Date: Mon, 30 Apr 2018 12:37:29 +0100
+Subject: [PATCH 1/6] bash-completion: systemctl: use systemctl --no-pager
+Bug: https://github.com/systemd/systemd/issues/7185
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1529152
+Origin: upstream, https://github.com/systemd/systemd/pull/8863
+
+Signed-off-by: Emil Velikov <emil.velikov@collabora.com>
+---
+ shell-completion/bash/systemctl.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/shell-completion/bash/systemctl.in
++++ b/shell-completion/bash/systemctl.in
+@@ -20,7 +20,7 @@
+ 
+ __systemctl() {
+         local mode=$1; shift 1
+-        systemctl $mode --full --no-legend "$@" 2>/dev/null
++        systemctl $mode --full --no-legend --no-pager "$@" 2>/dev/null
+ }
+ 
+ __systemd_properties() {
