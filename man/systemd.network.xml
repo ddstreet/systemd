@@ -815,8 +815,9 @@
       <varlistentry>
         <term><varname>IgnoreCarrierLoss=</varname></term>
         <listitem>
-          <para>A boolean. Allows networkd to retain both the static and dynamic configuration of the
-          interface even if its carrier is lost. Defaults to false.
+          <para>Takes a boolean. Allows networkd to retain both the static and dynamic configuration
+          of the interface even if its carrier is lost. When unset, the value specified with
+          <option>ConfigureWithoutCarrier=</option> is used.
           </para>
         </listitem>
       </varlistentry>
@@ -1474,7 +1475,14 @@
               "link" scope will be used. For anything else, scope defaults to "global".</para>
           </listitem>
         </varlistentry>
-
+        <varlistentry>
+          <term><varname>UseGateway=</varname></term>
+          <listitem>
+            <para>When true, the gateway will be requested from the DHCP server and added to the routing table with a
+            metric of 1024, and a scope of "link".  When unset, the value specified with <option>UseRoutes=</option>
+            is used.</para>
+          </listitem>
+        </varlistentry>
         <varlistentry>
           <term><varname>UseTimezone=</varname></term>
 
