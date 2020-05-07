@@ -40,7 +40,6 @@ SystemCallArchitectures=native
 SystemCallErrorNumber=EPERM
 SystemCallFilter=@system-service
 Type=notify
-@SERVICE_WATCHDOG@
 
 # If there are many split up journal files we need a lot of fds to access them
 # all in parallel.
