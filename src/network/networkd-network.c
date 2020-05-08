@@ -327,6 +327,7 @@ int network_load_one(Manager *manager, const char *filename) {
                 .dhcp_use_dns = true,
                 .dhcp_use_hostname = true,
                 .dhcp_use_routes = true,
+                .dhcp_use_gateway = true,
                 /* NOTE: this var might be overwriten by network_apply_anonymize_if_set */
                 .dhcp_send_hostname = true,
                 .dhcp_use_domains = DHCP_USE_DOMAINS_YES,
