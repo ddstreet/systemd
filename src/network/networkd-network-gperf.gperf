@@ -82,7 +82,7 @@ Network.ProxyARP,                       config_parse_tristate,                  
 Network.IPv6ProxyNDPAddress,            config_parse_ipv6_proxy_ndp_address,            0,                             0
 Network.BindCarrier,                    config_parse_strv,                              0,                             offsetof(Network, bind_carrier)
 Network.ConfigureWithoutCarrier,        config_parse_bool,                              0,                             offsetof(Network, configure_without_carrier)
-Network.IgnoreCarrierLoss,              config_parse_bool,                              0,                             offsetof(Network, ignore_carrier_loss)
+Network.IgnoreCarrierLoss,              config_parse_tristate,                          0,                             offsetof(Network, ignore_carrier_loss)
 Network.KeepConfiguration,              config_parse_keep_configuration,                0,                             offsetof(Network, keep_configuration)
 Address.Address,                        config_parse_address,                           0,                             0
 Address.Peer,                           config_parse_address,                           0,                             0
@@ -134,6 +134,7 @@ DHCP.UseMTU,                            config_parse_bool,                      
 DHCP.UseHostname,                       config_parse_bool,                              0,                             offsetof(Network, dhcp_use_hostname)
 DHCP.UseDomains,                        config_parse_dhcp_use_domains,                  0,                             offsetof(Network, dhcp_use_domains)
 DHCP.UseRoutes,                         config_parse_bool,                              0,                             offsetof(Network, dhcp_use_routes)
+DHCP.UseGateway,                        config_parse_tristate,                          0,                             offsetof(Network, dhcp_use_gateway)
 DHCP.Anonymize,                         config_parse_bool,                              0,                             offsetof(Network, dhcp_anonymize)
 DHCP.SendHostname,                      config_parse_bool,                              0,                             offsetof(Network, dhcp_send_hostname)
 DHCP.Hostname,                          config_parse_hostname,                          0,                             offsetof(Network, dhcp_hostname)

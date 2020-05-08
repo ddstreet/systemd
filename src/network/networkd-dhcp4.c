@@ -64,9 +64,6 @@ static int link_set_dhcp_routes(Link *link) {
         if (!link->network) /* link went down while we configured the IP addresses? */
                 return 0;
 
-        if (!link->network->dhcp_use_routes)
-                return 0;
-
         table = link_get_dhcp_route_table(link);
 
         r = sd_dhcp_lease_get_address(link->dhcp_lease, &address);
@@ -90,94 +87,98 @@ static int link_set_dhcp_routes(Link *link) {
                 }
         }
 
-        for (i = 0; i < n; i++) {
-                _cleanup_(route_freep) Route *route = NULL;
+        if (link->network->dhcp_use_routes) {
+                for (i = 0; i < n; i++) {
+                        _cleanup_(route_freep) Route *route = NULL;
 
-                /* if the DHCP server returns both a Classless Static Routes option and a Static Routes option,
-                   the DHCP client MUST ignore the Static Routes option. */
-                if (classless_route &&
-                    sd_dhcp_route_get_option(static_routes[i]) != SD_DHCP_OPTION_CLASSLESS_STATIC_ROUTE)
-                        continue;
+                        /* if the DHCP server returns both a Classless Static Routes option and a Static Routes option,
+                           the DHCP client MUST ignore the Static Routes option. */
+                        if (classless_route &&
+                            sd_dhcp_route_get_option(static_routes[i]) != SD_DHCP_OPTION_CLASSLESS_STATIC_ROUTE)
+                                continue;
 
-                r = route_new(&route);
-                if (r < 0)
-                        return log_link_error_errno(link, r, "Could not allocate route: %m");
+                        r = route_new(&route);
+                        if (r < 0)
+                                return log_link_error_errno(link, r, "Could not allocate route: %m");
 
-                route->family = AF_INET;
-                route->protocol = RTPROT_DHCP;
-                assert_se(sd_dhcp_route_get_gateway(static_routes[i], &route->gw.in) >= 0);
-                assert_se(sd_dhcp_route_get_destination(static_routes[i], &route->dst.in) >= 0);
-                assert_se(sd_dhcp_route_get_destination_prefix_length(static_routes[i], &route->dst_prefixlen) >= 0);
-                route->priority = link->network->dhcp_route_metric;
-                route->table = table;
-                route->scope = route_scope_from_address(route, &address);
-                if (IN_SET(route->scope, RT_SCOPE_LINK, RT_SCOPE_UNIVERSE))
-                        route->prefsrc.in = address;
+                        route->family = AF_INET;
+                        route->protocol = RTPROT_DHCP;
+                        assert_se(sd_dhcp_route_get_gateway(static_routes[i], &route->gw.in) >= 0);
+                        assert_se(sd_dhcp_route_get_destination(static_routes[i], &route->dst.in) >= 0);
+                        assert_se(sd_dhcp_route_get_destination_prefix_length(static_routes[i], &route->dst_prefixlen) >= 0);
+                        route->priority = link->network->dhcp_route_metric;
+                        route->table = table;
+                        route->scope = route_scope_from_address(route, &address);
+                        if (IN_SET(route->scope, RT_SCOPE_LINK, RT_SCOPE_UNIVERSE))
+                                route->prefsrc.in = address;
 
-                r = route_configure(route, link, dhcp4_route_handler);
-                if (r < 0)
-                        return log_link_warning_errno(link, r, "Could not set host route: %m");
+                        r = route_configure(route, link, dhcp4_route_handler);
+                        if (r < 0)
+                                return log_link_warning_errno(link, r, "Could not set host route: %m");
 
-                link->dhcp4_messages++;
+                        link->dhcp4_messages++;
+                }
         }
 
-        r = sd_dhcp_lease_get_router(link->dhcp_lease, &router);
-        if (IN_SET(r, 0, -ENODATA))
-                log_link_info(link, "DHCP: No gateway received from DHCP server.");
-        else if (r < 0)
-                log_link_warning_errno(link, r, "DHCP error: could not get gateway: %m");
-        else if (in4_addr_is_null(&router[0]))
-                log_link_info(link, "DHCP: Received gateway is null.");
+        if (link->network->dhcp_use_gateway) {
+                r = sd_dhcp_lease_get_router(link->dhcp_lease, &router);
+                if (IN_SET(r, 0, -ENODATA))
+                        log_link_info(link, "DHCP: No gateway received from DHCP server.");
+                else if (r < 0)
+                        log_link_warning_errno(link, r, "DHCP error: could not get gateway: %m");
+                else if (in4_addr_is_null(&router[0]))
+                        log_link_info(link, "DHCP: Received gateway is null.");
 
-        /* According to RFC 3442: If the DHCP server returns both a Classless Static Routes option and
-           a Router option, the DHCP client MUST ignore the Router option. */
-        if (classless_route && static_route)
-                log_link_warning(link, "Classless static routes received from DHCP server: ignoring static-route option and router option");
+                /* According to RFC 3442: If the DHCP server returns both a Classless Static Routes option and
+                   a Router option, the DHCP client MUST ignore the Router option. */
+                if (classless_route && static_route)
+                        log_link_warning(link, "Classless static routes received from DHCP server: ignoring static-route option and router option");
 
-        if (r > 0 && !classless_route && !in4_addr_is_null(&router[0])) {
-                _cleanup_(route_freep) Route *route = NULL, *route_gw = NULL;
+                if (r > 0 && !classless_route && !in4_addr_is_null(&router[0])) {
+                        _cleanup_(route_freep) Route *route = NULL, *route_gw = NULL;
 
-                r = route_new(&route_gw);
-                if (r < 0)
-                        return log_link_error_errno(link, r,  "Could not allocate route: %m");
+                        r = route_new(&route_gw);
+                        if (r < 0)
+                                return log_link_error_errno(link, r,  "Could not allocate route: %m");
 
-                /* The dhcp netmask may mask out the gateway. Add an explicit
-                 * route for the gw host so that we can route no matter the
-                 * netmask or existing kernel route tables. */
-                route_gw->family = AF_INET;
-                route_gw->dst.in = router[0];
-                route_gw->dst_prefixlen = 32;
-                route_gw->prefsrc.in = address;
-                route_gw->scope = RT_SCOPE_LINK;
-                route_gw->protocol = RTPROT_DHCP;
-                route_gw->priority = link->network->dhcp_route_metric;
-                route_gw->table = table;
+                        /* The dhcp netmask may mask out the gateway. Add an explicit
+                         * route for the gw host so that we can route no matter the
+                         * netmask or existing kernel route tables. */
+                        route_gw->family = AF_INET;
+                        route_gw->dst.in = router[0];
+                        route_gw->dst_prefixlen = 32;
+                        route_gw->prefsrc.in = address;
+                        route_gw->scope = RT_SCOPE_LINK;
+                        route_gw->protocol = RTPROT_DHCP;
+                        route_gw->priority = link->network->dhcp_route_metric;
+                        route_gw->table = table;
 
-                r = route_configure(route_gw, link, dhcp4_route_handler);
-                if (r < 0)
-                        return log_link_warning_errno(link, r, "Could not set host route: %m");
+                        r = route_configure(route_gw, link, dhcp4_route_handler);
+                        if (r < 0)
+                                return log_link_warning_errno(link, r, "Could not set host route: %m");
 
-                link->dhcp4_messages++;
+                        link->dhcp4_messages++;
 
-                r = route_new(&route);
-                if (r < 0)
-                        return log_link_error_errno(link, r, "Could not allocate route: %m");
+                        r = route_new(&route);
+                        if (r < 0)
+                                return log_link_error_errno(link, r, "Could not allocate route: %m");
 
-                route->family = AF_INET;
-                route->gw.in = router[0];
-                route->prefsrc.in = address;
-                route->protocol = RTPROT_DHCP;
-                route->priority = link->network->dhcp_route_metric;
-                route->table = table;
+                        route->family = AF_INET;
+                        route->gw.in = router[0];
+                        route->prefsrc.in = address;
+                        route->protocol = RTPROT_DHCP;
+                        route->priority = link->network->dhcp_route_metric;
+                        route->table = table;
 
-                r = route_configure(route, link, dhcp4_route_handler);
-                if (r < 0) {
-                        log_link_warning_errno(link, r, "Could not set routes: %m");
-                        link_enter_failed(link);
-                        return r;
+                        r = route_configure(route, link, dhcp4_route_handler);
+                        if (r < 0) {
+                                log_link_warning_errno(link, r, "Could not set routes: %m");
+                                link_enter_failed(link);
+                                return r;
+                        }
+
+                        link->dhcp4_messages++;
                 }
-
-                link->dhcp4_messages++;
         }
 
         return 0;
@@ -235,7 +236,7 @@ static int dhcp_remove_router(Link *link, struct in_addr *address) {
         assert(link);
         assert(address);
 
-        if (!link->network->dhcp_use_routes)
+        if (!link->network->dhcp_use_gateway)
                 return 0;
 
         r = sd_dhcp_lease_get_router(link->dhcp_lease, &router);
