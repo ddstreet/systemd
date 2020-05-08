@@ -676,3 +676,8 @@ LIBSYSTEMD_241 {
 global:
         sd_bus_close_unref;
 } LIBSYSTEMD_240;
+
+LIBSYSTEMD_245 {
+global:
+        sd_bus_enqeue_for_read;
+} LIBSYSTEMD_241;
