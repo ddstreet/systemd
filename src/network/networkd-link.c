@@ -60,20 +60,6 @@ DUID* link_get_duid(Link *link) {
                 return &link->manager->duid;
 }
 
-int link_sysctl_ipv6_enabled(Link *link) {
-        _cleanup_free_ char *value = NULL;
-        int r;
-
-        r = sysctl_read_ip_property(AF_INET6, link->ifname, "disable_ipv6", &value);
-        if (r < 0)
-                return log_link_warning_errno(link, r,
-                                              "Failed to read net.ipv6.conf.%s.disable_ipv6 sysctl property: %m",
-                                              link->ifname);
-
-        link->sysctl_ipv6_enabled = value[0] == '0';
-        return link->sysctl_ipv6_enabled;
-}
-
 static bool link_dhcp6_enabled(Link *link) {
         assert(link);
 
@@ -87,9 +73,6 @@ static bool link_dhcp6_enabled(Link *link) {
                 return false;
 
         if (link->network->bond)
-                return false;
-
-        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         return link->network->dhcp & ADDRESS_FAMILY_IPV6;
@@ -161,9 +144,6 @@ static bool link_ipv6ll_enabled(Link *link) {
         if (link->network->bond)
                 return false;
 
-        if (link_sysctl_ipv6_enabled(link) == 0)
-                return false;
-
         return link->network->link_local & ADDRESS_FAMILY_IPV6;
 }
 
@@ -174,9 +154,6 @@ static bool link_ipv6_enabled(Link *link) {
                 return false;
 
         if (link->network->bond)
-                return false;
-
-        if (link_sysctl_ipv6_enabled(link) == 0)
                 return false;
 
         /* DHCPv6 client will not be started if no IPv6 link-local address is configured. */
@@ -258,9 +235,6 @@ static bool link_ipv6_forward_enabled(Link *link) {
         if (link->network->ip_forward == _ADDRESS_FAMILY_BOOLEAN_INVALID)
                 return false;
 
-        if (link_sysctl_ipv6_enabled(link) == 0)
-                return false;
-
         return link->network->ip_forward & ADDRESS_FAMILY_IPV6;
 }
 
@@ -331,7 +305,7 @@ static IPv6PrivacyExtensions link_ipv6_privacy_extensions(Link *link) {
         return link->network->ipv6_privacy_extensions;
 }
 
-static int link_enable_ipv6(Link *link) {
+static int link_update_ipv6_sysctl(Link *link) {
         bool enabled;
         int r;
 
@@ -342,9 +316,9 @@ static int link_enable_ipv6(Link *link) {
         if (enabled) {
                 r = sysctl_write_ip_property_boolean(AF_INET6, link->ifname, "disable_ipv6", false);
                 if (r < 0)
-                        log_link_warning_errno(link, r, "Cannot enable IPv6: %m");
-                else
-                        log_link_info(link, "IPv6 successfully enabled");
+                        return log_link_warning_errno(link, r, "Cannot enable IPv6: %m");
+
+                log_link_info(link, "IPv6 successfully enabled");
         }
 
         return 0;
@@ -581,7 +555,6 @@ static int link_new(Manager *manager, sd_netlink_message *message, Link **ret) {
                 .rtnl_extended_attrs = true,
                 .ifindex = ifindex,
                 .iftype = iftype,
-                .sysctl_ipv6_enabled = -1,
         };
 
         link->ifname = strdup(ifname);
@@ -3218,7 +3191,7 @@ static int link_configure(Link *link) {
 
         /* If IPv6 configured that is static IPv6 address and IPv6LL autoconfiguration is enabled
          * for this interface, then enable IPv6 */
-        (void) link_enable_ipv6(link);
+        (void) link_update_ipv6_sysctl(link);
 
         r = link_set_proxy_arp(link);
         if (r < 0)
