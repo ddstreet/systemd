@@ -1,3 +1,20 @@
+systemd (242-7ubuntu3.9) eoan; urgency=medium
+
+  * d/p/lp1867375/0001-network-Allow-to-configure-GW-even-UseRoutes-false.patch,
+    d/p/lp1867375/0002-network-add-a-flag-to-ignore-gateway-provided-by-DHC.patch,
+    d/p/lp1867375/0003-network-change-UseGateway-default-to-UseRoutes-setti.patch,
+    d/p/lp1867375/0004-network-honor-SetDNSRoutes-even-if-UseGateway-False.patch:
+    - Move gateway ignoring from UseRoutes= to UseGateway= (LP: #1867375)
+   * d/p/lp1873607/0001-core-some-minor-clean-ups-modernizations.patch,
+     d/p/lp1873607/0002-core-make-sure-to-restore-the-control-command-id-too.patch:
+     - Avoid segfault during serialization (LP: #1873607)
+   * d/p/lp1877271-network-drop-all-checks-of-ipv6_disabled-sysctl.patch:
+     - enable ipv6 for interface when needed (LP: #1877271)
+   * d/p/lp1860926-network-Change-IgnoreCarrierLoss-default-to-value-of.patch:
+     - IgnoreCarrierLoss default to ConfigureWithoutCarrier (LP: #1860926)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 08 May 2020 12:28:53 -0400
+
 systemd (242-7ubuntu3.8) eoan; urgency=medium
 
   * d/t/logind: skip if nonexistent /sys/power/state (LP: #1862657)
