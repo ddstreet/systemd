@@ -795,6 +795,12 @@ Domains= ~company ~lab''')
             self.print_server_log()
             raise
 
+    def test_dhcp_search_domains(self):
+        self.create_iface(dnsmasq_opts=['--domain=example.com'])
+        self.do_test(coldplug=None)
+        out = subprocess.check_output(['resolvectl', 'domain'])
+        self.assertIn(b'example.com', out)
+
 
 class NetworkdClientTest(ClientTestBase, unittest.TestCase):
     '''Test networkd client against networkd server'''
