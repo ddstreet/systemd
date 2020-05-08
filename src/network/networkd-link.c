@@ -279,7 +279,7 @@ static bool link_proxy_arp_enabled(Link *link) {
         return true;
 }
 
-static bool link_ipv6_accept_ra_enabled(Link *link) {
+static bool link_ipv6_accept_ra_enabled_implicit(Link *link, bool * implicit) {
         assert(link);
 
         if (!socket_ipv6_is_supported())
@@ -298,15 +298,22 @@ static bool link_ipv6_accept_ra_enabled(Link *link) {
          * disabled if local forwarding is enabled).
          * If set, ignore or enforce RA independent of local forwarding state.
          */
-        if (link->network->ipv6_accept_ra < 0)
+        if (link->network->ipv6_accept_ra < 0) {
                 /* default to accept RA if ip_forward is disabled and ignore RA if ip_forward is enabled */
+                if (implicit)
+                        *implicit = true;
                 return !link_ipv6_forward_enabled(link);
+        }
         else if (link->network->ipv6_accept_ra > 0)
                 /* accept RA even if ip_forward is enabled */
                 return true;
         else
                 /* ignore RA */
                 return false;
+}
+
+static bool link_ipv6_accept_ra_enabled(Link *link) {
+        return link_ipv6_accept_ra_enabled_implicit(link, NULL);
 }
 
 static IPv6PrivacyExtensions link_ipv6_privacy_extensions(Link *link) {
@@ -1045,8 +1052,10 @@ void link_check_ready(Link *link) {
              !link->dhcp4_configured && !link->dhcp6_configured))
                 return;
 
-        if (link_ipv6_accept_ra_enabled(link) && !link->ndisc_configured)
-                return;
+        bool implicit = false;
+        if (link_ipv6_accept_ra_enabled_implicit(link, &implicit) && !link->ndisc_configured)
+                if (!implicit)
+                        return;
 
         if (link->state != LINK_STATE_CONFIGURED)
                 link_enter_configured(link);
