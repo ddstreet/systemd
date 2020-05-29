@@ -1,0 +1,55 @@
+From 9740eae694e93b06658ff3b3045b22b591561e7c Mon Sep 17 00:00:00 2001
+From: Stefan Agner <falstaff@deheime.ch>
+Date: Thu, 16 Nov 2017 10:05:44 +0100
+Subject: [PATCH] sd-dhcp-client: validate hostnames stricter (#7308)
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/xenial/+source/systemd/+bug/1877176
+Origin: upstream, https://github.com/systemd/systemd/commit/9740eae694e93b06658ff3b3045b22b591561e7c
+
+Technically DNS allows any ASCII character to be used in the
+domain name. Also the DHCP specification for the FQDN option
+(RFC 4702) does not put restriction on labels.
+
+However, hostnames do have stricter requirements and typically
+should only use characters from a-z (case insensitve), 0-9 and
+minus.
+
+Currently we require hostname/FQDN to be either a hostname or
+a valid DNS name. Since dns_name_is_valid() allows any ASCII
+characters this allows to specify hostnames which are typically
+not valid.
+
+Check hostname/FQDN more strictly and require them to pass both
+tests. Specifically this requires the entire FQDN to be below 63.
+---
+ src/libsystemd-network/sd-dhcp-client.c   | 4 ++--
+ src/libsystemd-network/test-dhcp-client.c | 6 ++++++
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+--- a/src/libsystemd-network/sd-dhcp-client.c
++++ b/src/libsystemd-network/sd-dhcp-client.c
+@@ -389,7 +389,9 @@ int sd_dhcp_client_set_hostname(
+ 
+         assert_return(client, -EINVAL);
+ 
+-        if (!hostname_is_valid(hostname, false) && !dns_name_is_valid(hostname))
++        /* Make sure hostnames qualify as DNS and as Linux hostnames */
++        if (hostname &&
++            !(hostname_is_valid(hostname, false) && dns_name_is_valid(hostname) > 0))
+                 return -EINVAL;
+ 
+         if (streq_ptr(client->hostname, hostname))
+--- a/src/libsystemd-network/test-dhcp-client.c
++++ b/src/libsystemd-network/test-dhcp-client.c
+@@ -74,6 +74,12 @@ static void test_request_basic(sd_event
+         assert_se(sd_dhcp_client_set_ifindex(client, 0) == -EINVAL);
+         assert_se(sd_dhcp_client_set_ifindex(client, 1) == 0);
+ 
++        assert_se(sd_dhcp_client_set_hostname(client, "host") == 0);
++        assert_se(sd_dhcp_client_set_hostname(client, "host.domain") == 0);
++        assert_se(sd_dhcp_client_set_hostname(client, NULL) == 0);
++        assert_se(sd_dhcp_client_set_hostname(client, "~host") == -EINVAL);
++        assert_se(sd_dhcp_client_set_hostname(client, "~host.domain") == -EINVAL);
++
+         assert_se(sd_dhcp_client_set_request_option(client,
+                                         SD_DHCP_OPTION_SUBNET_MASK) == -EEXIST);
+         assert_se(sd_dhcp_client_set_request_option(client,
