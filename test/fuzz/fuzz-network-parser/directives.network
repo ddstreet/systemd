@@ -35,6 +35,7 @@ MACAddress=
 [DHCP]
 UseDomains=
 UseRoutes=
+UseGateway=
 IAID=
 UserClass=
 UseNTP=
