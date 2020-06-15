@@ -111,3 +111,6 @@ lp1873607/0001-core-some-minor-clean-ups-modernizations.patch
 lp1873607/0002-core-make-sure-to-restore-the-control-command-id-too.patch
 lp1877271-network-drop-all-checks-of-ipv6_disabled-sysctl.patch
 lp1860926-network-Change-IgnoreCarrierLoss-default-to-value-of.patch
+lp-1853852-seccomp-fix-multiplexed-system-calls.patch
+lp-1853852-seccomp-mmap-test-results-depend-on-kernel-libseccom.patch
+fix-arm64-ftbfs-after-seccomp-upgrade.patch
