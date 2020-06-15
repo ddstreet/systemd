@@ -1,3 +1,17 @@
+systemd (242-7ubuntu3.11) eoan; urgency=medium
+
+  * fix arm64 ftbfs with libseccomp 2.4.3 (LP: #1876055)
+    - d/p/fix-arm64-ftbfs-after-seccomp-upgrade.patch: backport from upstream
+
+ -- Alex Murray <alex.murray@canonical.com>  Mon, 15 Jun 2020 12:12:40 +0930
+
+systemd (242-7ubuntu3.10) eoan; urgency=medium
+
+  * fix issues with muliplexed shmat calls and libseccomp 2.4.3 (LP: #1876055)
+    - d/p/lp-1853852-*: add backports based on the patches from LP #1853852
+
+ -- Alex Murray <alex.murray@canonical.com>  Fri, 12 Jun 2020 11:05:49 +0930
+
 systemd (242-7ubuntu3.9) eoan; urgency=medium
 
   * d/p/lp1867375/0001-network-Allow-to-configure-GW-even-UseRoutes-false.patch,
