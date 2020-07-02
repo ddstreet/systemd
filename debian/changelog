@@ -4,12 +4,19 @@ systemd (229-4ubuntu21.29) UNRELEASED; urgency=medium
   * d/p/lp1881312/0001-core-don-t-dispatch-load-queue-when-setting-Slice-fo.patch,
     d/p/lp1881312/0002-run-make-slice-work-in-conjunction-with-scope.patch:
     - run new scope unit in specified slice (LP: #1881312)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b5a778c3cd93e3d684602146f281f315f30778a8
   * d/p/lp1877176-sd-dhcp-client-validate-hostnames-stricter-7308.patch:
     - strictly validate hostname sent to dhcp server (LP: #1877176)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=7a1f1c41dcd860fcba6be42a2153cfe4315ebf17
+  * d/e/rules-ubuntu/40-vm-hotadd.rules:
+    - Hotadd only offline memory and CPUs
+      (LP: #1876018)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=43357bd260a1c3e7b4951d33cbacaebda1d086b3
 
   [ Heitor Alves de Siqueira ]
   * d/p/lp1876600-sd-bus-deal-with-cookie-overruns.patch:
     - deal with dbus cookie overruns (LP: #1876600)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8dc9ef188944349169044d8974a4ffa55c66be9d
 
  -- Heitor Alves de Siqueira <halves@canonical.com>  Tue, 05 May 2020 12:52:34 +0000
 
