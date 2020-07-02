@@ -1,0 +1,146 @@
+From eeab051b28ba6e1b4a56d369d4c6bf7cfa71947c Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 27 Sep 2018 17:27:04 +0900
+Subject: [PATCH] network: strdup iif and oif when creating RoutingPolicyRule
+ object
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1881972
+Origin: upstream, https://github.com/systemd/systemd/commit/eeab051b28ba6e1b4a56d369d4c6bf7cfa71947c
+
+---
+ src/network/networkd-manager.c             |  6 ++--
+ src/network/networkd-routing-policy-rule.c | 37 +++++++++++++++-------
+ src/network/networkd-routing-policy-rule.h |  6 ++--
+ 3 files changed, 31 insertions(+), 18 deletions(-)
+
+--- a/src/network/networkd-manager.c
++++ b/src/network/networkd-manager.c
+@@ -736,7 +736,7 @@ int manager_rtnl_process_rule(sd_netlink
+         union in_addr_union to = {}, from = {};
+         RoutingPolicyRule *rule = NULL;
+         uint32_t fwmark = 0, table = 0;
+-        char *iif = NULL, *oif = NULL;
++        const char *iif = NULL, *oif = NULL;
+         Manager *m = userdata;
+         uint16_t type;
+         int family;
+@@ -852,13 +852,13 @@ int manager_rtnl_process_rule(sd_netlink
+                 return 0;
+         }
+ 
+-        r = sd_netlink_message_read_string(message, FRA_IIFNAME, (const char **) &iif);
++        r = sd_netlink_message_read_string(message, FRA_IIFNAME, &iif);
+         if (r < 0 && r != -ENODATA) {
+                 log_warning_errno(r, "rtnl: could not get FRA_IIFNAME attribute, ignoring: %m");
+                 return 0;
+         }
+ 
+-        r = sd_netlink_message_read_string(message, FRA_OIFNAME, (const char **) &oif);
++        r = sd_netlink_message_read_string(message, FRA_OIFNAME, &oif);
+         if (r < 0 && r != -ENODATA) {
+                 log_warning_errno(r, "rtnl: could not get FRA_OIFNAME attribute, ignoring: %m");
+                 return 0;
+--- a/src/network/networkd-routing-policy-rule.c
++++ b/src/network/networkd-routing-policy-rule.c
+@@ -177,8 +177,8 @@ int routing_policy_rule_get(Manager *m,
+                             uint8_t tos,
+                             uint32_t fwmark,
+                             uint32_t table,
+-                            char *iif,
+-                            char *oif,
++                            const char *iif,
++                            const char *oif,
+                             RoutingPolicyRule **ret) {
+ 
+         RoutingPolicyRule rule, *existing;
+@@ -194,8 +194,8 @@ int routing_policy_rule_get(Manager *m,
+                 .tos = tos,
+                 .fwmark = fwmark,
+                 .table = table,
+-                .iif = iif,
+-                .oif = oif
++                .iif = (char*) iif,
++                .oif = (char*) oif
+         };
+ 
+         if (m->rules) {
+@@ -247,15 +247,28 @@ static int routing_policy_rule_add_inter
+                                             uint8_t tos,
+                                             uint32_t fwmark,
+                                             uint32_t table,
+-                                            char *iif,
+-                                            char *oif,
++                                            const char *_iif,
++                                            const char *_oif,
+                                             RoutingPolicyRule **ret) {
+ 
+         _cleanup_routing_policy_rule_free_ RoutingPolicyRule *rule = NULL;
++        _cleanup_free_ char *iif = NULL, *oif = NULL;
+         int r;
+ 
+         assert_return(rules, -EINVAL);
+ 
++        if (_iif) {
++                iif = strdup(_iif);
++                if (!iif)
++                        return -ENOMEM;
++        }
++
++        if (_oif) {
++                oif = strdup(_oif);
++                if (!oif)
++                        return -ENOMEM;
++        }
++
+         r = routing_policy_rule_new(&rule);
+         if (r < 0)
+                 return r;
+@@ -269,8 +282,8 @@ static int routing_policy_rule_add_inter
+         rule->tos = tos;
+         rule->fwmark = fwmark;
+         rule->table = table;
+-        rule->iif = iif;
+-        rule->oif = oif;
++        rule->iif = TAKE_PTR(iif);
++        rule->oif = TAKE_PTR(oif);
+ 
+         r = set_ensure_allocated(rules, &routing_policy_rule_hash_ops);
+         if (r < 0)
+@@ -297,8 +310,8 @@ int routing_policy_rule_add(Manager *m,
+                             uint8_t tos,
+                             uint32_t fwmark,
+                             uint32_t table,
+-                            char *iif,
+-                            char *oif,
++                            const char *iif,
++                            const char *oif,
+                             RoutingPolicyRule **ret) {
+ 
+         return routing_policy_rule_add_internal(m, &m->rules, family, from, from_prefixlen, to, to_prefixlen, tos, fwmark, table, iif, oif, ret);
+@@ -313,8 +326,8 @@ int routing_policy_rule_add_foreign(Mana
+                                     uint8_t tos,
+                                     uint32_t fwmark,
+                                     uint32_t table,
+-                                    char *iif,
+-                                    char *oif,
++                                    const char *iif,
++                                    const char *oif,
+                                     RoutingPolicyRule **ret) {
+         return routing_policy_rule_add_internal(m, &m->rules_foreign, family, from, from_prefixlen, to, to_prefixlen, tos, fwmark, table, iif, oif, ret);
+ }
+--- a/src/network/networkd-routing-policy-rule.h
++++ b/src/network/networkd-routing-policy-rule.h
+@@ -73,11 +73,11 @@ int link_routing_policy_rule_remove_hand
+ int link_routing_policy_rule_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata);
+ 
+ int routing_policy_rule_add(Manager *m, int family, const union in_addr_union *from, uint8_t from_prefixlen, const union in_addr_union *to, uint8_t to_prefixlen,
+-                            uint8_t tos, uint32_t fwmark, uint32_t table, char *iif, char *oif, RoutingPolicyRule **ret);
++                            uint8_t tos, uint32_t fwmark, uint32_t table, const char *iif, const char *oif, RoutingPolicyRule **ret);
+ int routing_policy_rule_add_foreign(Manager *m, int family, const union in_addr_union *from, uint8_t from_prefixlen, const union in_addr_union *to, uint8_t to_prefixlen,
+-                                    uint8_t tos, uint32_t fwmark, uint32_t table, char *iif, char *oif, RoutingPolicyRule **ret);
++                                    uint8_t tos, uint32_t fwmark, uint32_t table, const char *iif, const char *oif, RoutingPolicyRule **ret);
+ int routing_policy_rule_get(Manager *m, int family, const union in_addr_union *from, uint8_t from_prefixlen, const union in_addr_union *to, uint8_t to_prefixlen, uint8_t tos,
+-                            uint32_t fwmark, uint32_t table, char *iif, char *oif, RoutingPolicyRule **ret);
++                            uint32_t fwmark, uint32_t table, const char *iif, const char *oif, RoutingPolicyRule **ret);
+ int routing_policy_rule_make_local(Manager *m, RoutingPolicyRule *rule);
+ int routing_policy_serialize_rules(Set *rules, FILE *f);
+ int routing_policy_load_rules(const char *state_file, Set **rules);
