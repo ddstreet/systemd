@@ -5,6 +5,10 @@ systemd (237-3ubuntu10.42) UNRELEASED; urgency=medium
     - Add IgnoreCarrierLoss and default to value of ConfigureWithoutCarrier
       (LP: #1860926)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9a12a31a62f1a50cd3a67a164ee34c546809815e
+  * d/e/rules-ubuntu/40-vm-hotadd.rules:
+    - Hotadd only offline memory and CPUs
+      (LP: #1876018)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ba305d7ad00e80bc1a03f93e6986eef7cbbb18fc
 
  -- Dan Streetman <ddstreet@canonical.com>  Thu, 02 Jul 2020 16:25:13 -0400
 
