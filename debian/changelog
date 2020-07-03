@@ -13,6 +13,9 @@ systemd (237-3ubuntu10.42) UNRELEASED; urgency=medium
     - Avoid double-free by strdup'ing iif/oif strings for new policy rules
       (LP: #1881972)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=874056f0d429aaa2cc872c3b35ec33cd3b740483
+  * d/p/lp1886197-seccomp-more-comprehensive-protection-against-libsec.patch
+    - Fix FTBFS on arm64 due to libseccomp changes (LP: #1886197)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=c284a72ca2e3d87bfe1c20afb2fcfb379cda544f
 
  -- Dan Streetman <ddstreet@canonical.com>  Thu, 02 Jul 2020 16:25:13 -0400
 
