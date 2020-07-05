@@ -123,6 +123,11 @@ static int manager_write_console(Manager *m, const char *message) {
         if (!m->show_status_console)
                 return 0;
 
+        /* Nothing to display, and nothing to clear: return now. */
+        if (message == NULL && m->clear == 0) {
+                return 0;
+        }
+
         /* Reduce the SAK window by opening and closing console on every request */
         console = fopen("/dev/console", "we");
         if (!console)
