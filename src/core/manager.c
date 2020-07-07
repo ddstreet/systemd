@@ -1602,11 +1602,18 @@ static int manager_dispatch_cgroups_agent_fd(sd_event_source *source, int fd, ui
         return 0;
 }
 
-static void manager_invoke_notify_message(Manager *m, Unit *u, pid_t pid, const char *buf, FDSet *fds) {
+static void manager_invoke_notify_message(
+                Manager *m,
+                Unit *u,
+                const struct ucred *ucred,
+                const char *buf,
+                FDSet *fds) {
+
         _cleanup_strv_free_ char **tags = NULL;
 
         assert(m);
         assert(u);
+        assert(ucred);
         assert(buf);
 
         tags = strv_split(buf, "\n\r");
@@ -1616,7 +1623,7 @@ static void manager_invoke_notify_message(Manager *m, Unit *u, pid_t pid, const 
         }
 
         if (UNIT_VTABLE(u)->notify_message)
-                UNIT_VTABLE(u)->notify_message(u, pid, tags, fds);
+                UNIT_VTABLE(u)->notify_message(u, ucred, tags, fds);
         else
                 log_unit_debug(u, "Got notification message for unit. Ignoring.");
 }
@@ -1713,19 +1720,19 @@ static int manager_dispatch_notify_fd(sd_event_source *source, int fd, uint32_t 
          * to avoid notifying the same one multiple times. */
         u1 = manager_get_unit_by_pid_cgroup(m, ucred->pid);
         if (u1) {
-                manager_invoke_notify_message(m, u1, ucred->pid, buf, fds);
+                manager_invoke_notify_message(m, u1, ucred, buf, fds);
                 found = true;
         }
 
         u2 = hashmap_get(m->watch_pids1, PID_TO_PTR(ucred->pid));
         if (u2 && u2 != u1) {
-                manager_invoke_notify_message(m, u2, ucred->pid, buf, fds);
+                manager_invoke_notify_message(m, u2, ucred, buf, fds);
                 found = true;
         }
 
         u3 = hashmap_get(m->watch_pids2, PID_TO_PTR(ucred->pid));
         if (u3 && u3 != u2 && u3 != u1) {
-                manager_invoke_notify_message(m, u3, ucred->pid, buf, fds);
+                manager_invoke_notify_message(m, u3, ucred, buf, fds);
                 found = true;
         }
 
