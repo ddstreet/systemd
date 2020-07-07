@@ -16,6 +16,11 @@ systemd (237-3ubuntu10.42) UNRELEASED; urgency=medium
   * d/p/lp1886197-seccomp-more-comprehensive-protection-against-libsec.patch
     - Fix FTBFS on arm64 due to libseccomp changes (LP: #1886197)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=c284a72ca2e3d87bfe1c20afb2fcfb379cda544f
+  * d/p/lp1832754/0001-umount-Try-unmounting-even-if-remounting-read-only-f.patch,
+    d/p/lp1832754/0002-umount-Don-t-bother-remounting-api-and-ro-filesystem.patch:
+    - Try unmounting even if ro-remount fails, and don't bother remounting api/ro fs
+      (LP: #1832754)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a518baa673aeaaf42000a3a01b7e03347652b216
 
  -- Dan Streetman <ddstreet@canonical.com>  Thu, 02 Jul 2020 16:25:13 -0400
 
