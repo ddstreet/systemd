@@ -152,6 +152,7 @@ struct Network {
         uint32_t cost;
         uint16_t priority;
 
+        bool use_br_vlan;
         uint16_t pvid;
         uint32_t br_vid_bitmap[BRIDGE_VLAN_BITMAP_LEN];
         uint32_t br_untagged_bitmap[BRIDGE_VLAN_BITMAP_LEN];
