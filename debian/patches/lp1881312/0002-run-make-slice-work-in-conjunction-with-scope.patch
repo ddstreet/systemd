@@ -1,0 +1,31 @@
+From 37e605f934892bf7458eecaeb01fc682e33cc2ad Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 22 Apr 2016 17:31:40 +0200
+Subject: [PATCH 2/2] run: make --slice= work in conjunction with --scope
+Origin: upstream, https://github.com/systemd/systemd/pull/3094
+Bug: https://github.com/systemd/systemd/issues/2991
+Bug-Ubuntu: https://bugs.launchpad.net/systemd/+bug/1881312
+
+Fixes: #2991
+---
+ src/run/run.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/run/run.c b/src/run/run.c
+index 1993a424ca..ff94ac7b11 100644
+--- a/src/run/run.c
++++ b/src/run/run.c
+@@ -621,6 +621,10 @@ static int transient_scope_set_properties(sd_bus_message *m) {
+         if (r < 0)
+                 return r;
+ 
++        r = transient_cgroup_set_properties(m);
++        if (r < 0)
++                return r;
++
+         r = sd_bus_message_append(m, "(sv)", "PIDs", "au", 1, (uint32_t) getpid());
+         if (r < 0)
+                 return r;
+-- 
+2.25.1
+
