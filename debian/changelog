@@ -1,4 +1,4 @@
-systemd (229-4ubuntu21.29) UNRELEASED; urgency=medium
+systemd (229-4ubuntu21.29) xenial; urgency=medium
 
   [ Dan Streetman ]
   * d/p/lp1881312/0001-core-don-t-dispatch-load-queue-when-setting-Slice-fo.patch,
@@ -12,13 +12,17 @@ systemd (229-4ubuntu21.29) UNRELEASED; urgency=medium
     - Hotadd only offline memory and CPUs
       (LP: #1876018)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=43357bd260a1c3e7b4951d33cbacaebda1d086b3
+  * d/p/lp1698388-journal-remote-Ensure-reallocation-of-source-buf-doe.patch:
+    - Fix assertion failure when journald source->filled < source->size
+      (LP: #1698388)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d1cc15b88113510227e5a76654e103ef54a8b8f3
 
   [ Heitor Alves de Siqueira ]
   * d/p/lp1876600-sd-bus-deal-with-cookie-overruns.patch:
     - deal with dbus cookie overruns (LP: #1876600)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8dc9ef188944349169044d8974a4ffa55c66be9d
 
- -- Heitor Alves de Siqueira <halves@canonical.com>  Tue, 05 May 2020 12:52:34 +0000
+ -- Heitor Alves de Siqueira <halves@canonical.com>  Tue, 07 Jul 2020 17:28:11 -0400
 
 systemd (229-4ubuntu21.28) xenial; urgency=medium
 
