@@ -217,3 +217,5 @@ lp1860926/0001-networkd-Allow-to-retain-configs-even-if-carrier-is-.patch
 lp1860926/0002-network-Change-IgnoreCarrierLoss-default-to-value-of.patch
 lp1881972-network-strdup-iif-and-oif-when-creating-RoutingPoli.patch
 lp1886197-seccomp-more-comprehensive-protection-against-libsec.patch
+lp1832754/0001-umount-Try-unmounting-even-if-remounting-read-only-f.patch
+lp1832754/0002-umount-Don-t-bother-remounting-api-and-ro-filesystem.patch

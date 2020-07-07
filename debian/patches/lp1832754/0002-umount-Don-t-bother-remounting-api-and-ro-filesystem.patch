@@ -1,0 +1,25 @@
+From e783b4902f387640bba12496936d01e967545c3c Mon Sep 17 00:00:00 2001
+From: Jan Janssen <medhefgo@web.de>
+Date: Thu, 8 Mar 2018 18:51:13 +0100
+Subject: [PATCH] umount: Don't bother remounting api and ro filesystems
+ read-only
+Bug: https://github.com/systemd/systemd/issues/8155
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1832754
+Origin: upstream, https://github.com/systemd/systemd/pull/8429
+Origin: upstream, https://github.com/systemd/systemd/pull/8429/commits/e783b4902f387640bba12496936d01e967545c3c
+
+---
+ src/core/umount.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/src/core/umount.c
++++ b/src/core/umount.c
+@@ -479,6 +479,8 @@ static int mount_points_list_umount(Moun
+                    hang because of the network being down. */
+                 if (detect_container() <= 0 &&
+                     !fstype_is_network(m->type) &&
++                    !fstype_is_api_vfs(m->type) &&
++                    !fstype_is_ro(m->type) &&
+                     !mount_is_readonly) {
+                         _cleanup_free_ char *options = NULL;
+                         /* MS_REMOUNT requires that the data parameter
