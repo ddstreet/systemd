@@ -670,7 +670,10 @@ int dhcp4_configure(Link *link) {
 
                 if (!is_localhost(hn)) {
                         r = sd_dhcp_client_set_hostname(link->dhcp_client, hn);
-                        if (r < 0)
+                        if (r == -EINVAL && hostname)
+                                /* Ignore error when the machine's hostname is not suitable to send in DHCP packet. */
+                                log_link_warning_errno(link, r, "DHCP4 CLIENT: Failed to set hostname from kernel hostname, ignoring: %m");
+                        else if (r < 0)
                                 return r;
                 }
         }
