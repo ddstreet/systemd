@@ -1,3 +1,29 @@
+systemd (229-4ubuntu21.29) xenial; urgency=medium
+
+  [ Dan Streetman ]
+  * d/p/lp1881312/0001-core-don-t-dispatch-load-queue-when-setting-Slice-fo.patch,
+    d/p/lp1881312/0002-run-make-slice-work-in-conjunction-with-scope.patch:
+    - run new scope unit in specified slice (LP: #1881312)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b5a778c3cd93e3d684602146f281f315f30778a8
+  * d/p/lp1877176-sd-dhcp-client-validate-hostnames-stricter-7308.patch:
+    - strictly validate hostname sent to dhcp server (LP: #1877176)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=7a1f1c41dcd860fcba6be42a2153cfe4315ebf17
+  * d/e/rules-ubuntu/40-vm-hotadd.rules:
+    - Hotadd only offline memory and CPUs
+      (LP: #1876018)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=43357bd260a1c3e7b4951d33cbacaebda1d086b3
+  * d/p/lp1698388-journal-remote-Ensure-reallocation-of-source-buf-doe.patch:
+    - Fix assertion failure when journald source->filled < source->size
+      (LP: #1698388)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d1cc15b88113510227e5a76654e103ef54a8b8f3
+
+  [ Heitor Alves de Siqueira ]
+  * d/p/lp1876600-sd-bus-deal-with-cookie-overruns.patch:
+    - deal with dbus cookie overruns (LP: #1876600)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8dc9ef188944349169044d8974a4ffa55c66be9d
+
+ -- Heitor Alves de Siqueira <halves@canonical.com>  Tue, 07 Jul 2020 17:28:11 -0400
+
 systemd (229-4ubuntu21.28) xenial; urgency=medium
 
   * d/t/logind: skip if nonexistent /sys/power/state (LP: #1862657)

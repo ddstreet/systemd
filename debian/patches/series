@@ -149,3 +149,8 @@ lp1867421-70-mouse.hwdb-Set-DPI-for-MS-Classic-IntelliMouse.patch
 lp1858412-journalctl-allow-running-vacuum-on-remote-journals-t.patch
 lp1862232-network-DHCP-ignore-error-in-setting-hostname-when-i.patch
 lp1837914-journal-do-not-trigger-assertion-when-journal_file_c.patch
+lp1876600-sd-bus-deal-with-cookie-overruns.patch
+lp1881312/0001-core-don-t-dispatch-load-queue-when-setting-Slice-fo.patch
+lp1881312/0002-run-make-slice-work-in-conjunction-with-scope.patch
+lp1877176-sd-dhcp-client-validate-hostnames-stricter-7308.patch
+lp1698388-journal-remote-Ensure-reallocation-of-source-buf-doe.patch

@@ -1,0 +1,29 @@
+From 9ba37525d0ef3d144a50ed5fd4710573e92b7ec1 Mon Sep 17 00:00:00 2001
+From: Klearchos Chaloulos <klearchos.chaloulos@nokia.com>
+Date: Fri, 22 Apr 2016 21:04:17 +0300
+Subject: [PATCH] journal-remote : Ensure reallocation of source->buf does not
+ result in source->size < source->filled (#3086)
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/xenial/+source/systemd/+bug/1698388
+Origin: upstream, https://github.com/systemd/systemd/pull/3086
+
+While the function journal-remote-parse.c:get_line() enforces an assertion that source->filled <= source->size, in function journal-remote-parse.c:process_source() there is a chance that source->size will be decreased to a lower value than source->filled, when source->buf is reallocated. Therefore a check is added that ensures that source->buf is reallocated only when source->filled is smaller than target / 2.
+---
+ src/journal-remote/journal-remote-parse.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/journal-remote/journal-remote-parse.c b/src/journal-remote/journal-remote-parse.c
+index 3864647eb7..9ba9ee3fc0 100644
+--- a/src/journal-remote/journal-remote-parse.c
++++ b/src/journal-remote/journal-remote-parse.c
+@@ -485,7 +485,7 @@ int process_source(RemoteSource *source, bool compress, bool seal) {
+         }
+ 
+         target = source->size;
+-        while (target > 16 * LINE_CHUNK && remain < target / 2)
++        while (target > 16 * LINE_CHUNK && source->filled < target / 2)
+                 target /= 2;
+         if (target < source->size) {
+                 char *tmp;
+-- 
+2.25.1
+

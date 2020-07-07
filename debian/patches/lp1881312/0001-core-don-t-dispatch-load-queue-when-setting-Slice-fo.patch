@@ -1,0 +1,36 @@
+From aea529e5b2c864d536941ee18220abcc1a9015a0 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 22 Apr 2016 17:30:08 +0200
+Subject: [PATCH 1/2] core: don't dispatch load queue when setting Slice= for
+ transient units
+Origin: upstream, https://github.com/systemd/systemd/pull/3094
+Bug: https://github.com/systemd/systemd/issues/2991
+Bug-Ubuntu: https://bugs.launchpad.net/systemd/+bug/1881312
+
+Let's be more careful when setting up the Slice= property of transient units:
+let's use manager_load_unit_prepare() instead of manager_load_unit(), so that
+the load queue isn't dispatched right away, because our own transient unit is
+in it, and we don#t want to have it loaded until we finished initializing it.
+---
+ src/core/dbus-unit.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/dbus-unit.c b/src/core/dbus-unit.c
+index c507265070..1f0bc3a386 100644
+--- a/src/core/dbus-unit.c
++++ b/src/core/dbus-unit.c
+@@ -1099,7 +1099,10 @@ static int bus_unit_set_transient_property(
+                 if (!unit_name_is_valid(s, UNIT_NAME_PLAIN))
+                         return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid unit name '%s'", s);
+ 
+-                r = manager_load_unit(u->manager, s, NULL, error, &slice);
++                /* Note that we do not dispatch the load queue here yet, as we don't want our own transient unit to be
++                 * loaded while we are still setting it up. Or in other words, we use manager_load_unit_prepare()
++                 * instead of manager_load_unit() on purpose, here. */
++                r = manager_load_unit_prepare(u->manager, s, NULL, error, &slice);
+                 if (r < 0)
+                         return r;
+ 
+-- 
+2.25.1
+
