@@ -1811,9 +1811,75 @@ void unit_trigger_notify(Unit *u) {
                         UNIT_VTABLE(other)->trigger_notify(other, u);
 }
 
+static bool unit_process_job(Job *j, UnitActiveState ns, bool reload_success) {
+        bool unexpected = false;
+
+        assert(j);
+
+        if (j->state == JOB_WAITING)
+
+                /* So we reached a different state for this job. Let's see if we can run it now if it failed previously
+                 * due to EAGAIN. */
+                job_add_to_run_queue(j);
+
+        /* Let's check whether the unit's new state constitutes a finished job, or maybe contradicts a running job and
+         * hence needs to invalidate jobs. */
+
+        switch (j->type) {
+
+        case JOB_START:
+        case JOB_VERIFY_ACTIVE:
+
+                if (UNIT_IS_ACTIVE_OR_RELOADING(ns))
+                        job_finish_and_invalidate(j, JOB_DONE, true);
+                else if (j->state == JOB_RUNNING && ns != UNIT_ACTIVATING) {
+                        unexpected = true;
+
+                        if (UNIT_IS_INACTIVE_OR_FAILED(ns))
+                                job_finish_and_invalidate(j, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
+                }
+
+                break;
+
+        case JOB_RELOAD:
+        case JOB_RELOAD_OR_START:
+        case JOB_TRY_RELOAD:
+
+                if (j->state == JOB_RUNNING) {
+                        if (ns == UNIT_ACTIVE)
+-                                        job_finish_and_invalidate(j, reload_success ? JOB_DONE : JOB_FAILED, true);
+                        else if (!IN_SET(ns, UNIT_ACTIVATING, UNIT_RELOADING)) {
+                                unexpected = true;
+
+                                if (UNIT_IS_INACTIVE_OR_FAILED(ns))
+-                                                job_finish_and_invalidate(j, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
+                        }
+                }
+
+                break;
+
+        case JOB_STOP:
+        case JOB_RESTART:
+        case JOB_TRY_RESTART:
+
+                if (UNIT_IS_INACTIVE_OR_FAILED(ns))
+                        job_finish_and_invalidate(j, JOB_DONE, true);
+                else if (j->state == JOB_RUNNING && ns != UNIT_DEACTIVATING) {
+                        unexpected = true;
+                        job_finish_and_invalidate(j, JOB_FAILED, true);
+                }
+
+                break;
+
+        default:
+                assert_not_reached("Job type unknown");
+        }
+
+        return unexpected;
+}
+
 void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_success) {
         Manager *m;
-        bool unexpected;
 
         assert(u);
         assert(os < _UNIT_ACTIVE_STATE_MAX);
@@ -1868,82 +1934,18 @@ void unit_notify(Unit *u, UnitActiveState os, UnitActiveState ns, bool reload_su
                 }
         }
 
-        if (u->job) {
-                unexpected = false;
-
-                if (u->job->state == JOB_WAITING)
-
-                        /* So we reached a different state for this
-                         * job. Let's see if we can run it now if it
-                         * failed previously due to EAGAIN. */
-                        job_add_to_run_queue(u->job);
-
-                /* Let's check whether this state change constitutes a
-                 * finished job, or maybe contradicts a running job and
-                 * hence needs to invalidate jobs. */
-
-                switch (u->job->type) {
-
-                case JOB_START:
-                case JOB_VERIFY_ACTIVE:
-
-                        if (UNIT_IS_ACTIVE_OR_RELOADING(ns))
-                                job_finish_and_invalidate(u->job, JOB_DONE, true);
-                        else if (u->job->state == JOB_RUNNING && ns != UNIT_ACTIVATING) {
-                                unexpected = true;
-
-                                if (UNIT_IS_INACTIVE_OR_FAILED(ns))
-                                        job_finish_and_invalidate(u->job, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
-                        }
-
-                        break;
-
-                case JOB_RELOAD:
-                case JOB_RELOAD_OR_START:
-                case JOB_TRY_RELOAD:
-
-                        if (u->job->state == JOB_RUNNING) {
-                                if (ns == UNIT_ACTIVE)
-                                        job_finish_and_invalidate(u->job, reload_success ? JOB_DONE : JOB_FAILED, true);
-                                else if (ns != UNIT_ACTIVATING && ns != UNIT_RELOADING) {
-                                        unexpected = true;
-
-                                        if (UNIT_IS_INACTIVE_OR_FAILED(ns))
-                                                job_finish_and_invalidate(u->job, ns == UNIT_FAILED ? JOB_FAILED : JOB_DONE, true);
-                                }
-                        }
-
-                        break;
-
-                case JOB_STOP:
-                case JOB_RESTART:
-                case JOB_TRY_RESTART:
-
-                        if (UNIT_IS_INACTIVE_OR_FAILED(ns))
-                                job_finish_and_invalidate(u->job, JOB_DONE, true);
-                        else if (u->job->state == JOB_RUNNING && ns != UNIT_DEACTIVATING) {
-                                unexpected = true;
-                                job_finish_and_invalidate(u->job, JOB_FAILED, true);
-                        }
-
-                        break;
-
-                default:
-                        assert_not_reached("Job type unknown");
-                }
-
-        } else
-                unexpected = true;
-
         if (m->n_reloading <= 0) {
+                bool unexpected;
 
-                /* If this state change happened without being
-                 * requested by a job, then let's retroactively start
-                 * or stop dependencies. We skip that step when
-                 * deserializing, since we don't want to create any
-                 * additional jobs just because something is already
-                 * activated. */
+                /* Let's propagate state changes to the job */
+                if (u->job)
+                        unexpected = unit_process_job(u->job, ns, reload_success);
+                else
+                        unexpected = true;
 
+                /* If this state change happened without being requested by a job, then let's retroactively start or
+                 * stop dependencies. We skip that step when deserializing, since we don't want to create any
+                 * additional jobs just because something is already activated. */
                 if (unexpected) {
                         if (UNIT_IS_INACTIVE_OR_FAILED(os) && UNIT_IS_ACTIVE_OR_ACTIVATING(ns))
                                 retroactively_start_dependencies(u);
@@ -2673,6 +2675,29 @@ void unit_serialize_item_format(Unit *u, FILE *f, const char *key, const char *f
         fputc('\n', f);
 }
 
+static int unit_deserialize_job(Unit *u, FILE *f, FDSet *fds) {
+        _cleanup_(job_freep) Job *j = NULL;
+        int r;
+
+        assert(u);
+        assert(f);
+
+        j = job_new_raw(u);
+        if (!j)
+                return log_oom();
+
+        r = job_deserialize(j, f, fds);
+        if (r < 0)
+                return r;
+
+        r = job_install_deserialized(j);
+        if (r < 0)
+                return r;
+
+        TAKE_PTR(j);
+        return 0;
+}
+
 int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
         ExecRuntime **rt = NULL;
         size_t offset;
@@ -2710,33 +2735,12 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
                         v = l+k;
 
                 if (streq(l, "job")) {
-                        if (v[0] == '\0') {
-                                /* new-style serialized job */
-                                Job *j;
-
-                                j = job_new_raw(u);
-                                if (!j)
-                                        return log_oom();
-
-                                r = job_deserialize(j, f, fds);
-                                if (r < 0) {
-                                        job_free(j);
+                        if (v[0] == '\0') {                        
+                                /* New-style serialized job */
+                                r = unit_deserialize_job(u, f, fds);
+                                if (r < 0)
                                         return r;
-                                }
-
-                                r = hashmap_put(u->manager->jobs, UINT32_TO_PTR(j->id), j);
-                                if (r < 0) {
-                                        job_free(j);
-                                        return r;
-                                }
-
-                                r = job_install_deserialized(j);
-                                if (r < 0) {
-                                        hashmap_remove(u->manager->jobs, UINT32_TO_PTR(j->id));
-                                        job_free(j);
-                                        return r;
-                                }
-                        } else  /* legacy for pre-44 */
+                        } else  /* Legacy for pre-44 */
                                 log_unit_warning(u, "Update from too old systemd versions are unsupported, cannot deserialize job: %s", v);
                         continue;
                 } else if (streq(l, "state-change-timestamp")) {
