@@ -21,7 +21,7 @@
 #include <linux/if.h>
 
 #include "network-internal.h"
-#include "networkd-link.h"
+#include "networkd.h"
 
 static int ipv4ll_address_lost(Link *link) {
         _cleanup_address_free_ Address *address = NULL;
@@ -51,7 +51,7 @@ static int ipv4ll_address_lost(Link *link) {
         address->prefixlen = 16;
         address->scope = RT_SCOPE_LINK;
 
-        address_remove(address, link, &link_address_remove_handler);
+        address_remove(address, link, link_address_remove_handler);
 
         r = route_new(&route);
         if (r < 0) {
@@ -63,7 +63,7 @@ static int ipv4ll_address_lost(Link *link) {
         route->scope = RT_SCOPE_LINK;
         route->priority = IPV4LL_ROUTE_METRIC;
 
-        route_remove(route, link, &link_route_remove_handler);
+        route_remove(route, link, link_route_remove_handler);
 
         link_check_ready(link);
 
@@ -138,7 +138,7 @@ static int ipv4ll_address_claimed(sd_ipv4ll *ll, Link *link) {
         ll_addr->family = AF_INET;
         ll_addr->in_addr.in = address;
         ll_addr->prefixlen = 16;
-        ll_addr->broadcast.s_addr = ll_addr->in_addr.in.s_addr | htonl(0xfffffffflu >> ll_addr->prefixlen);
+        ll_addr->broadcast.s_addr = ll_addr->in_addr.in.s_addr | htobe32(0xfffffffflu >> ll_addr->prefixlen);
         ll_addr->scope = RT_SCOPE_LINK;
 
         r = address_configure(ll_addr, link, ipv4ll_address_handler, false);
@@ -165,7 +165,7 @@ static int ipv4ll_address_claimed(sd_ipv4ll *ll, Link *link) {
         return 0;
 }
 
-static void ipv4ll_handler(sd_ipv4ll *ll, int event, void *userdata){
+static void ipv4ll_handler(sd_ipv4ll *ll, int event, void *userdata) {
         Link *link = userdata;
         int r;
 
@@ -215,9 +215,7 @@ int ipv4ll_configure(Link *link) {
         if (link->udev_device) {
                 r = net_get_unique_predictable_data(link->udev_device, &seed);
                 if (r >= 0) {
-                        assert_cc(sizeof(unsigned) <= 8);
-
-                        r = sd_ipv4ll_set_address_seed(link->ipv4ll, (unsigned)seed);
+                        r = sd_ipv4ll_set_address_seed(link->ipv4ll, seed);
                         if (r < 0)
                                 return r;
                 }
@@ -231,7 +229,7 @@ int ipv4ll_configure(Link *link) {
         if (r < 0)
                 return r;
 
-        r = sd_ipv4ll_set_index(link->ipv4ll, link->ifindex);
+        r = sd_ipv4ll_set_ifindex(link->ipv4ll, link->ifindex);
         if (r < 0)
                 return r;
 
