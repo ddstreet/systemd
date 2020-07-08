@@ -1,0 +1,26 @@
+From 25e992ba23fc2f0a6480434aa1bd060404833fe0 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 17 Feb 2019 03:57:13 +0900
+Subject: [PATCH] network: always drop configs when corresponding network file
+ does not exist
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1860926
+Origin: upstream, https://github.com/systemd/systemd/commit/25e992ba23fc2f0a6480434aa1bd060404833fe0
+
+Follow-up for 93b4dab57e2e13bd804cbee999241be65a443e2e.
+
+Fixes #11724.
+---
+ src/network/networkd-link.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -3392,7 +3392,7 @@ static int link_carrier_lost(Link *link)
+ 
+         assert(link);
+ 
+-        if (link->network->ignore_carrier_loss)
++        if (link->network && link->network->ignore_carrier_loss)
+                 return 0;
+ 
+         /* Some devices reset itself while setting the MTU. This causes the DHCP client fall into a loop.
