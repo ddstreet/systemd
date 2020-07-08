@@ -1,0 +1,26 @@
+From 58d9d89b4b41189bdcea86c2ad5cf708b7d54aca Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Fri, 14 Dec 2018 08:16:31 +0100
+Subject: [PATCH] pid1: fix free of uninitialized pointer in
+ unit_fail_if_noncanonical()
+Bug: https://bugzilla.redhat.com/show_bug.cgi?id=1653068
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/libseccomp/+bug/1886115
+Origin: upstream, https://github.com/systemd/systemd/pull/11157
+Origin: upstream, https://github.com/systemd/systemd/commit/58d9d89b4b41189bdcea86c2ad5cf708b7d54aca
+
+https://bugzilla.redhat.com/show_bug.cgi?id=1653068
+---
+ src/core/unit.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -4771,7 +4771,7 @@ void unit_warn_if_dir_nonempty(Unit *u,
+ }
+ 
+ int unit_fail_if_noncanonical(Unit *u, const char* where) {
+-        _cleanup_free_ char *canonical_where;
++        _cleanup_free_ char *canonical_where = NULL;
+         int r;
+ 
+         assert(u);

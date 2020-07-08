@@ -1,3 +1,37 @@
+systemd (237-3ubuntu10.42) bionic; urgency=medium
+
+  [ Dan Streetman ]
+  * d/p/lp1860926/0001-networkd-Allow-to-retain-configs-even-if-carrier-is-.patch,
+    d/p/lp1860926/0002-network-Change-IgnoreCarrierLoss-default-to-value-of.patch,
+    d/p/lp1860926/0003-network-always-drop-configs-when-corresponding-netwo.patch:
+    - Add IgnoreCarrierLoss and default to value of ConfigureWithoutCarrier
+      (LP: #1860926)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9a12a31a62f1a50cd3a67a164ee34c546809815e
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=3cc3870fde47982a4dda53f820e18065e5488e7e
+  * d/e/rules-ubuntu/40-vm-hotadd.rules:
+    - Hotadd only offline memory and CPUs
+      (LP: #1876018)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ba305d7ad00e80bc1a03f93e6986eef7cbbb18fc
+  * d/p/lp1881972-network-strdup-iif-and-oif-when-creating-RoutingPoli.patch:
+    - Avoid double-free by strdup'ing iif/oif strings for new policy rules
+      (LP: #1881972)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=874056f0d429aaa2cc872c3b35ec33cd3b740483
+  * d/p/lp1886197-seccomp-more-comprehensive-protection-against-libsec.patch
+    - Fix FTBFS on arm64 due to libseccomp changes (LP: #1886197)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=c284a72ca2e3d87bfe1c20afb2fcfb379cda544f
+  * d/p/lp1832754/0001-umount-Try-unmounting-even-if-remounting-read-only-f.patch,
+    d/p/lp1832754/0002-umount-Don-t-bother-remounting-api-and-ro-filesystem.patch:
+    - Try unmounting even if ro-remount fails, and don't bother remounting api/ro fs
+      (LP: #1832754)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a518baa673aeaaf42000a3a01b7e03347652b216
+
+  [ Alex Murray, Jamie Strandboge ]
+  * d/p/lp1886115-pid1-fix-free-of-uninitialized-pointer-in-unit_fail_.patch:
+    - Fix free of uninitialized pointer (LP: #1886115)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=491c76fd0f2fba0007a9b54d63a50f21add643c8
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 08 Jul 2020 14:59:14 -0400
+
 systemd (237-3ubuntu10.41) bionic; urgency=medium
 
   [ Dan Streetman ]

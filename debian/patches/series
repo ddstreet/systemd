@@ -213,3 +213,11 @@ lp1529152/0003-shell-completion-systemctl-pass-current-word-to-all-.patch
 lp1529152/0004-bash-completion-systemctl-re-implement-__filter_unit.patch
 lp1529152/0005-strip-value-from-property-names.patch
 lp1877159-networkd-fix-attribute-length-for-wireguard-10380.patch
+lp1860926/0001-networkd-Allow-to-retain-configs-even-if-carrier-is-.patch
+lp1860926/0002-network-Change-IgnoreCarrierLoss-default-to-value-of.patch
+lp1860926/0003-network-always-drop-configs-when-corresponding-netwo.patch
+lp1881972-network-strdup-iif-and-oif-when-creating-RoutingPoli.patch
+lp1886197-seccomp-more-comprehensive-protection-against-libsec.patch
+lp1832754/0001-umount-Try-unmounting-even-if-remounting-read-only-f.patch
+lp1832754/0002-umount-Don-t-bother-remounting-api-and-ro-filesystem.patch
+lp1886115-pid1-fix-free-of-uninitialized-pointer-in-unit_fail_.patch
