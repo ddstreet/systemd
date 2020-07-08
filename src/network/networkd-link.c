@@ -276,22 +276,23 @@ static IPv6PrivacyExtensions link_ipv6_privacy_extensions(Link *link) {
 
 static int link_enable_ipv6(Link *link) {
         const char *p = NULL;
-        bool disabled;
+        bool enabled;
         int r;
 
         if (link->flags & IFF_LOOPBACK)
                 return 0;
 
-        disabled = !link_ipv6_enabled(link);
+        enabled = link_ipv6_enabled(link);
 
-        p = strjoina("/proc/sys/net/ipv6/conf/", link->ifname, "/disable_ipv6");
+        if (enabled) {
+                p = strjoina("/proc/sys/net/ipv6/conf/", link->ifname, "/disable_ipv6");
 
-        r = write_string_file(p, one_zero(disabled), WRITE_STRING_FILE_VERIFY_ON_FAILURE);
-        if (r < 0)
-                log_link_warning_errno(link, r, "Cannot %s IPv6 for interface %s: %m",
-                                       enable_disable(!disabled), link->ifname);
-        else
-                log_link_info(link, "IPv6 successfully %sd", enable_disable(!disabled));
+                r = write_string_file(p, "0", WRITE_STRING_FILE_VERIFY_ON_FAILURE);
+                if (r < 0)
+                        log_link_warning_errno(link, r, "Cannot enable IPv6: %m");
+                else
+                        log_link_info(link, "IPv6 successfully enabled");
+        }
 
         return 0;
 }
@@ -1374,10 +1375,6 @@ int link_set_mtu(Link *link, uint32_t mtu) {
         r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_SETLINK, link->ifindex);
         if (r < 0)
                 return log_link_error_errno(link, r, "Could not allocate RTM_SETLINK message: %m");
-
-        /* If IPv6 not configured (no static IPv6 address and IPv6LL autoconfiguration is disabled)
-         * for this interface, or if it is a bridge slave, then disable IPv6 else enable it. */
-        (void) link_enable_ipv6(link);
 
         /* IPv6 protocol requires a minimum MTU of IPV6_MTU_MIN(1280) bytes
          * on the interface. Bump up MTU bytes to IPV6_MTU_MIN. */
@@ -2820,6 +2817,10 @@ static int link_configure(Link *link) {
 
                 return 0;
         }
+
+        /* If IPv6 configured that is static IPv6 address and IPv6LL autoconfiguration is enabled
+         * for this interface, then enable IPv6 */
+        (void) link_enable_ipv6(link);
 
         r = link_set_proxy_arp(link);
         if (r < 0)
