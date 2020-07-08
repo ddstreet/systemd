@@ -266,6 +266,9 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->ipv6_accept_ra_route_table = RT_TABLE_MAIN;
         network->ipv6_mtu = 0;
 
+        network->configure_without_carrier = false;
+        network->ignore_carrier_loss = -1;
+
         dropin_dirname = strjoina(network->name, ".network.d");
 
         r = config_parse_many(filename, network_dirs, dropin_dirname,
@@ -305,6 +308,9 @@ static int network_load_one(Manager *manager, const char *filename) {
 
         if (network->dhcp_use_gateway < 0)
                 network->dhcp_use_gateway = network->dhcp_use_routes;
+
+        if (network->ignore_carrier_loss < 0)
+                network->ignore_carrier_loss = network->configure_without_carrier;
 
         LIST_PREPEND(networks, manager->networks, network);
 

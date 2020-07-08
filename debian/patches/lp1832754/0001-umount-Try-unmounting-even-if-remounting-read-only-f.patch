@@ -1,0 +1,40 @@
+From 8645ffd12b3cc7b0292acd9e1d691c4fab4cf409 Mon Sep 17 00:00:00 2001
+From: Jan Janssen <medhefgo@web.de>
+Date: Thu, 8 Mar 2018 18:46:58 +0100
+Subject: [PATCH] umount: Try unmounting even if remounting read-only failed
+Bug: https://github.com/systemd/systemd/issues/8155
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1832754
+Origin: upstream, https://github.com/systemd/systemd/pull/8429
+Origin: upstream, https://github.com/systemd/systemd/pull/8429/commits/8645ffd12b3cc7b0292acd9e1d691c4fab4cf409
+
+In the case of some api filesystems remounting read-only fails
+while unmounting succeeds.
+---
+ src/core/umount.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+--- a/src/core/umount.c
++++ b/src/core/umount.c
+@@ -502,16 +502,19 @@ static int mount_points_list_umount(Moun
+                          * somehwere else via a bind mount. If we
+                          * explicitly remount the super block of that
+                          * alias read-only we hence should be
+-                         * relatively safe regarding keeping dirty an fs
++                         * relatively safe regarding keeping a dirty fs
+                          * we cannot otherwise see.
+                          *
+                          * Since the remount can hang in the instance of
+                          * remote filesystems, we remount asynchronously
+                          * and skip the subsequent umount if it fails */
+                         if (remount_with_timeout(m, options, &n_failed) < 0) {
+-                                if (nonunmountable_path(m->path))
++                                /* Remount failed, but try unmounting anyway,
++                                 * unless this is a mount point we want to skip. */
++                                if (nonunmountable_path(m->path)) {
+                                         n_failed++;
+-                                continue;
++                                        continue;
++                                }
+                         }
+                 }
+ 

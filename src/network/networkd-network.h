@@ -226,6 +226,7 @@ struct Network {
         int arp;
         bool unmanaged;
         bool configure_without_carrier;
+        int ignore_carrier_loss;
         uint32_t iaid;
         DUID duid;
 

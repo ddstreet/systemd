@@ -1,0 +1,75 @@
+From 93b4dab57e2e13bd804cbee999241be65a443e2e Mon Sep 17 00:00:00 2001
+From: Susant Sahani <susant@redhat.com>
+Date: Fri, 1 Jun 2018 15:04:49 +0530
+Subject: [PATCH] networkd: Allow to retain configs even if carrier is lost
+Bug: https://github.com/systemd/systemd/issues/9111
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1860926
+Origin: upstream, https://github.com/systemd/systemd/commit/93b4dab57e2e13bd804cbee999241be65a443e2e
+
+When there is bad link in the network the carrier goes up/down.
+This makes networkd stops all the clients and drop config.
+But if the remote router/dhcpserver running a prevention
+of DHCP Starvation attack or DHCP Flood attack it does not allow
+networkd to take a DHCP lease resulting failure in configuration.
+This patch allows to keep the client running and keep the conf
+also for this scenario.
+
+Closes #9111
+---
+ man/systemd.network.xml                          | 9 +++++++++
+ src/network/networkd-link.c                      | 3 +++
+ src/network/networkd-network-gperf.gperf         | 1 +
+ src/network/networkd-network.h                   | 1 +
+ test/fuzz/fuzz-network-parser/directives.network | 1 +
+ 5 files changed, 15 insertions(+)
+
+--- a/man/systemd.network.xml
++++ b/man/systemd.network.xml
+@@ -775,6 +775,15 @@
+           </para>
+         </listitem>
+       </varlistentry>
++      <varlistentry>
++        <term><varname>IgnoreCarrierLoss=</varname></term>
++        <listitem>
++          <para>A boolean. Allows networkd to retain both the static and dynamic configuration of the
++          interface even if its carrier is lost. Defaults to false.
++          </para>
++        </listitem>
++      </varlistentry>
++
+       </variablelist>
+ 
+   </refsect1>
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -3392,6 +3392,9 @@ static int link_carrier_lost(Link *link)
+ 
+         assert(link);
+ 
++        if (link->network->ignore_carrier_loss)
++                return 0;
++
+         /* Some devices reset itself while setting the MTU. This causes the DHCP client fall into a loop.
+          * setting_mtu keep track whether the device got reset because of setting MTU and does not drop the
+          * configuration and stop the clients as well. */
+--- a/src/network/networkd-network-gperf.gperf
++++ b/src/network/networkd-network-gperf.gperf
+@@ -77,6 +77,7 @@ Network.ProxyARP,
+ Network.IPv6ProxyNDPAddress,            config_parse_ipv6_proxy_ndp_address,            0,                             0
+ Network.BindCarrier,                    config_parse_strv,                              0,                             offsetof(Network, bind_carrier)
+ Network.ConfigureWithoutCarrier,        config_parse_bool,                              0,                             offsetof(Network, configure_without_carrier)
++Network.IgnoreCarrierLoss,              config_parse_bool,                              0,                             offsetof(Network, ignore_carrier_loss)
+ Address.Address,                        config_parse_address,                           0,                             0
+ Address.Peer,                           config_parse_address,                           0,                             0
+ Address.Broadcast,                      config_parse_broadcast,                         0,                             0
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -226,6 +226,7 @@ struct Network {
+         int arp;
+         bool unmanaged;
+         bool configure_without_carrier;
++        bool ignore_carrier_loss;
+         uint32_t iaid;
+         DUID duid;
+ 
