@@ -1,6 +1,6 @@
---
+---
 title: User/Group Name Syntax
-category: Concepts
+category: Users, Groups and Home Directories
 layout: default
 ---
 
@@ -26,7 +26,7 @@ Generally, the same rules apply for user as for group names.
   is defined as [lower and upper case ASCII letters, digits, period,
   underscore, and
   hyphen](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap03.html#tag_03_282),
-  with the restriction that hyphen is now allowed as first character of the
+  with the restriction that hyphen is not allowed as first character of the
   user name. Interestingly no size limit is declared, i.e. in neither
   direction, meaning that strictly speaking according to POSIX both the empty
   string is a valid user name as well as a string of gigabytes in length.
@@ -68,9 +68,9 @@ Distilled from the above, below are the rules systemd enforces on user/group
 names. An additional, common rule between both modes listed below is that empty
 strings are not valid user/group names.
 
-Philosophically, the strict mode described below enforces a white-list of what's
-allowed and prohibits everything else, while the relaxed mode described below
-implements a blacklist of what's not allowed and permits everything else.
+Philosophically, the strict mode described below enforces an allow list of
+what's allowed and prohibits everything else, while the relaxed mode described
+below implements a deny list of what's not allowed and permits everything else.
 
 ### Strict mode
 
@@ -157,7 +157,7 @@ it creates ambiguity in traditional `chown` syntax (which is still accepted
 today) that uses it to separate user and group names in the command's
 parameter: without consulting the user/group databases it is not possible to
 determine if a `chown` invocation would change just the owning user or both the
-owning user and group. It also allows embeddeding `@` (which is confusing to
+owning user and group. It also allows embedding `@` (which is confusing to
 MTAs).
 
 ## Common Core
