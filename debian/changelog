@@ -1,3 +1,11 @@
+systemd (237-3ubuntu10.43) UNRELEASED; urgency=medium
+
+  * d/p/lp1830746-bump-mlock-ulimit-to-64Mb.patch:
+    - Bump the memlock limit to match Focal and newer releases (LP: #1830746)
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=61adb797642f3dd2e5c14f7914c2949c665cefe8
+
+ -- Guilherme G. Piccoli <gpiccoli@canonical.com>  Thu, 10 Sep 2020 11:54:26 -0300
+
 systemd (237-3ubuntu10.42) bionic; urgency=medium
 
   [ Dan Streetman ]
