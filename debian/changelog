@@ -1,10 +1,16 @@
 systemd (237-3ubuntu10.43) UNRELEASED; urgency=medium
 
+  [ Guilherme G. Piccoli ]
   * d/p/lp1830746-bump-mlock-ulimit-to-64Mb.patch:
     - Bump the memlock limit to match Focal and newer releases (LP: #1830746)
       https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=61adb797642f3dd2e5c14f7914c2949c665cefe8
 
- -- Guilherme G. Piccoli <gpiccoli@canonical.com>  Thu, 10 Sep 2020 11:54:26 -0300
+  [ Victor Manuel Tapia King ]
+  * d/p/lp1896614-core-Avoid-race-when-starting-dbus-services.patch:
+    - Fix race when starting dbus services (LP: #1896614)
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=373cb6ccd6978a7112bbfd7e5cf4f703a9f8448e
+
+ -- Victor Manuel Tapia King <victor.tapia@canonical.com>  Wed, 23 Sep 2020 14:00:12 -0400
 
 systemd (237-3ubuntu10.42) bionic; urgency=medium
 
