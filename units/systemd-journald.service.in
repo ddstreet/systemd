@@ -28,6 +28,7 @@ OOMScoreAdjust=-250
 ProtectClock=yes
 Restart=always
 RestartSec=0
+Nice=-1
 RestrictAddressFamilies=AF_UNIX AF_NETLINK
 RestrictNamespaces=yes
 RestrictRealtime=yes
@@ -40,7 +41,6 @@ SystemCallArchitectures=native
 SystemCallErrorNumber=EPERM
 SystemCallFilter=@system-service
 Type=notify
-@SERVICE_WATCHDOG@
 
 # If there are many split up journal files we need a lot of fds to access them
 # all in parallel.

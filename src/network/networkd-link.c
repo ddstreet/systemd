@@ -38,7 +38,6 @@
 #include "networkd-wifi.h"
 #include "set.h"
 #include "socket-util.h"
-#include "stat-util.h"
 #include "stdio-util.h"
 #include "string-table.h"
 #include "strv.h"
@@ -47,6 +46,7 @@
 #include "tmpfile-util.h"
 #include "udev-util.h"
 #include "util.h"
+#include "virt.h"
 #include "vrf.h"
 
 uint32_t link_get_vrf_table(Link *link) {
@@ -1505,7 +1505,7 @@ static int set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) 
         else
                 log_link_debug(link, "Setting MTU done.");
 
-        if (link->state == LINK_STATE_INITIALIZED) {
+        if (link->state == LINK_STATE_PENDING) {
                 r = link_configure_continue(link);
                 if (r < 0)
                         link_enter_failed(link);
@@ -1805,7 +1805,7 @@ static int link_address_genmode_handler(sd_netlink *rtnl, sd_netlink_message *m,
         else
                 log_link_debug(link, "Setting address genmode done.");
 
-        if (link->state == LINK_STATE_INITIALIZED) {
+        if (link->state == LINK_STATE_PENDING) {
                 r = link_configure_continue(link);
                 if (r < 0)
                         link_enter_failed(link);
@@ -2418,7 +2418,7 @@ static int link_enter_join_netdev(Link *link) {
 
         assert(link);
         assert(link->network);
-        assert(link->state == LINK_STATE_INITIALIZED);
+        assert(link->state == LINK_STATE_PENDING);
 
         link_set_state(link, LINK_STATE_CONFIGURING);
 
@@ -3042,7 +3042,7 @@ static int link_configure(Link *link) {
 
         assert(link);
         assert(link->network);
-        assert(link->state == LINK_STATE_INITIALIZED);
+        assert(link->state == LINK_STATE_PENDING);
 
         r = link_configure_traffic_control(link);
         if (r < 0)
@@ -3186,7 +3186,7 @@ static int link_configure_continue(Link *link) {
 
         assert(link);
         assert(link->network);
-        assert(link->state == LINK_STATE_INITIALIZED);
+        assert(link->state == LINK_STATE_PENDING);
 
         if (link->setting_mtu || link->setting_genmode)
                 return 0;
@@ -3396,7 +3396,7 @@ static int link_reconfigure_internal(Link *link, sd_netlink_message *m, bool for
         if (r < 0)
                 return r;
 
-        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING, LINK_STATE_INITIALIZED)) {
+        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING)) {
                 log_link_debug(link, "State is %s, dropping config", link_state_to_string(link->state));
                 r = link_drop_foreign_config(link);
                 if (r < 0)
@@ -3416,7 +3416,7 @@ static int link_reconfigure_internal(Link *link, sd_netlink_message *m, bool for
         if (r < 0)
                 return r;
 
-        link_set_state(link, LINK_STATE_INITIALIZED);
+        link_set_state(link, LINK_STATE_PENDING);
         link_dirty(link);
 
         /* link_configure_duid() returns 0 if it requests product UUID. In that case,
@@ -3485,11 +3485,10 @@ static int link_initialized_and_synced(Link *link) {
 
         /* We may get called either from the asynchronous netlink callback,
          * or directly for link_add() if running in a container. See link_add(). */
-        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_INITIALIZED))
+        if (link->state != LINK_STATE_PENDING)
                 return 0;
 
         log_link_debug(link, "Link state is up-to-date");
-        link_set_state(link, LINK_STATE_INITIALIZED);
 
         r = link_new_bound_by_list(link);
         if (r < 0)
@@ -3591,7 +3590,6 @@ int link_initialized(Link *link, sd_device *device) {
                 return 0;
 
         log_link_debug(link, "udev initialized link");
-        link_set_state(link, LINK_STATE_INITIALIZED);
 
         link->sd_device = sd_device_ref(device);
 
@@ -3826,8 +3824,8 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
         if (r < 0)
                 return r;
 
-        if (path_is_read_only_fs("/sys") <= 0) {
-                /* udev should be around */
+        if (detect_container() <= 0) {
+                /* not in a container, udev will be around */
                 sprintf(ifindex_str, "n%d", link->ifindex);
                 r = sd_device_new_from_device_id(&device, ifindex_str);
                 if (r < 0) {
@@ -3837,7 +3835,7 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = sd_device_get_is_initialized(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized: %m");
+                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized or not: %m");
                         goto failed;
                 }
                 if (r == 0) {
@@ -3848,11 +3846,11 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = device_is_renaming(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Failed to determine the device is being renamed: %m");
+                        log_link_warning_errno(link, r, "Failed to determine the device is renamed or not: %m");
                         goto failed;
                 }
                 if (r > 0) {
-                        log_link_debug(link, "Interface is being renamed, pending initialization.");
+                        log_link_debug(link, "Interface is under renaming, pending initialization.");
                         return 0;
                 }
 
@@ -3881,7 +3879,7 @@ int link_ipv6ll_gained(Link *link, const struct in6_addr *address) {
         link->ipv6ll_address = *address;
         link_check_ready(link);
 
-        if (IN_SET(link->state, LINK_STATE_CONFIGURING, LINK_STATE_CONFIGURED)) {
+        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_UNMANAGED, LINK_STATE_FAILED)) {
                 r = link_acquire_ipv6_conf(link);
                 if (r < 0) {
                         link_enter_failed(link);
@@ -3908,7 +3906,7 @@ static int link_carrier_gained(Link *link) {
                 }
         }
 
-        if (IN_SET(link->state, LINK_STATE_CONFIGURING, LINK_STATE_CONFIGURED)) {
+        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_UNMANAGED, LINK_STATE_FAILED)) {
                 r = link_acquire_conf(link);
                 if (r < 0) {
                         link_enter_failed(link);
@@ -3955,7 +3953,7 @@ static int link_carrier_lost(Link *link) {
         if (r < 0)
                 return r;
 
-        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING, LINK_STATE_INITIALIZED)) {
+        if (!IN_SET(link->state, LINK_STATE_UNMANAGED, LINK_STATE_PENDING)) {
                 log_link_debug(link, "State is %s, dropping config", link_state_to_string(link->state));
                 r = link_drop_foreign_config(link);
                 if (r < 0)
@@ -4666,7 +4664,6 @@ int link_save_and_clean(Link *link) {
 
 static const char* const link_state_table[_LINK_STATE_MAX] = {
         [LINK_STATE_PENDING] = "pending",
-        [LINK_STATE_INITIALIZED] = "initialized",
         [LINK_STATE_CONFIGURING] = "configuring",
         [LINK_STATE_CONFIGURED] = "configured",
         [LINK_STATE_UNMANAGED] = "unmanaged",
