@@ -741,62 +741,6 @@ static void link_enter_configured(Link *link) {
         link_dirty(link);
 }
 
-void link_check_ready(Link *link) {
-        Address *a;
-        Iterator i;
-
-        assert(link);
-
-        if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
-                return;
-
-        if (!link->network)
-                return;
-
-        if (!link->addresses_configured)
-                return;
-
-        if (!link->static_routes_configured)
-                return;
-
-        if (!link->routing_policy_rules_configured)
-                return;
-
-        if (link_ipv4ll_enabled(link))
-                if (!link->ipv4ll_address ||
-                    !link->ipv4ll_route)
-                        return;
-
-        if (!link->network->bridge) {
-
-                if (link_ipv6ll_enabled(link))
-                        if (in_addr_is_null(AF_INET6, (const union in_addr_union*) &link->ipv6ll_address) > 0)
-                                return;
-
-                if ((link_dhcp4_enabled(link) && !link_dhcp6_enabled(link) &&
-                     !link->dhcp4_configured) ||
-                    (link_dhcp6_enabled(link) && !link_dhcp4_enabled(link) &&
-                     !link->dhcp6_configured) ||
-                    (link_dhcp4_enabled(link) && link_dhcp6_enabled(link) &&
-                     !link->dhcp4_configured && !link->dhcp6_configured))
-                        return;
-
-                bool implicit = false;
-                if (link_ipv6_accept_ra_enabled_implicit(link, &implicit) && !link->ndisc_configured)
-                        if (!implicit)
-                                return;
-        }
-
-        SET_FOREACH(a, link->addresses, i)
-                if (!address_is_ready(a))
-                        return;
-
-        if (link->state != LINK_STATE_CONFIGURED)
-                link_enter_configured(link);
-
-        return;
-}
-
 static int link_set_routing_policy_rule(Link *link) {
         RoutingPolicyRule *rule, *rrule = NULL;
         int r;
@@ -890,6 +834,62 @@ static int link_request_set_routes(Link *link) {
                 log_link_debug(link, "Setting routes");
 
         return 0;
+}
+
+void link_check_ready(Link *link) {
+        Address *a;
+        Iterator i;
+
+        assert(link);
+
+        if (IN_SET(link->state, LINK_STATE_FAILED, LINK_STATE_LINGER))
+                return;
+
+        if (!link->network)
+                return;
+
+        if (!link->addresses_configured)
+                return;
+
+        if (!link->static_routes_configured)
+                return;
+
+        if (!link->routing_policy_rules_configured)
+                return;
+
+        if (link_ipv4ll_enabled(link))
+                if (!link->ipv4ll_address ||
+                    !link->ipv4ll_route)
+                        return;
+
+        if (!link->network->bridge) {
+
+                if (link_ipv6ll_enabled(link))
+                        if (in_addr_is_null(AF_INET6, (const union in_addr_union*) &link->ipv6ll_address) > 0)
+                                return;
+
+                if ((link_dhcp4_enabled(link) && !link_dhcp6_enabled(link) &&
+                     !link->dhcp4_configured) ||
+                    (link_dhcp6_enabled(link) && !link_dhcp4_enabled(link) &&
+                     !link->dhcp6_configured) ||
+                    (link_dhcp4_enabled(link) && link_dhcp6_enabled(link) &&
+                     !link->dhcp4_configured && !link->dhcp6_configured))
+                        return;
+
+                bool implicit = false;
+                if (link_ipv6_accept_ra_enabled_implicit(link, &implicit) && !link->ndisc_configured)
+                        if (!implicit)
+                                return;
+        }
+
+        SET_FOREACH(a, link->addresses, i)
+                if (!address_is_ready(a))
+                        return;
+
+        if (link->state != LINK_STATE_CONFIGURED)
+                link_enter_configured(link);
+
+        return;
 }
 
 int link_route_remove_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
