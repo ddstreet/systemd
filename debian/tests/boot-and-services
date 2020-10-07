@@ -3,6 +3,7 @@
 # (C) 2014 Canonical Ltd.
 # Author: Martin Pitt <martin.pitt@ubuntu.com>
 
+import platform
 import sys
 import os
 import unittest
@@ -12,6 +13,8 @@ import shutil
 import time
 import re
 from glob import glob
+
+is_container = subprocess.call(['systemd-detect-virt', '--container']) == 0
 
 
 def wait_unit_stop(unit, timeout=10):
@@ -51,6 +54,12 @@ class ServicesTest(unittest.TestCase):
         failed = [f for f in failed if 'thermald' not in f]
         # console-setup.service fails on devices without keyboard (LP: #1516591)
         failed = [f for f in failed if 'console-setup' not in f]
+        # cpi.service fails on s390x
+        failed = [f for f in failed if 'cpi.service' not in f]
+        # https://bugs.debian.org/926138
+        if is_container:
+            failed = [f for f in failed if 'e2scrub_reap.service' not in f]
+            failed = [f for f in failed if 'sys-kernel-config' not in f]
         if failed:
             for f in failed:
                 f = f.split()[0]
@@ -59,12 +68,9 @@ class ServicesTest(unittest.TestCase):
                 subprocess.call(['journalctl', '-b', '-u', f])
             self.assertEqual(failed, [])
 
-    @unittest.skipUnless(subprocess.call(['which', 'gdm3'], stdout=subprocess.DEVNULL) == 0, 'gdm3 not found')
+    @unittest.skipUnless(shutil.which('gdm3') is not None, 'gdm3 not found')
     def test_gdm3(self):
-        out = subprocess.check_output(['ps', 'u', '-C', 'gdm-x-session'])
-        self.assertIn(b'gdm-x-session gnome-session', out)
-        out = subprocess.check_output(['ps', 'u', '-C', 'Xorg'])
-        self.assertIn(b'Xorg vt1', out)
+        subprocess.check_call(['pgrep', '-af', '/gdm[-3]'])
         self.active_unit('gdm')
 
     def test_dbus(self):
@@ -103,13 +109,15 @@ class ServicesTest(unittest.TestCase):
         self.active_unit('rsyslog')
         with open('/var/log/syslog') as f:
             log = f.read()
-        # has kernel messages
-        self.assertRegex(log, 'kernel:.*[cC]ommand line:')
+        if not is_container:
+            # has kernel messages
+            self.assertRegex(log, 'kernel:.*')
         # has init messages
         self.assertRegex(log, 'systemd.*Reached target Graphical Interface')
         # has other services
         self.assertRegex(log, 'NetworkManager.*:')
 
+    @unittest.skipIf(is_container, 'udev does not work in containers')
     def test_udev(self):
         out = subprocess.check_output(['udevadm', 'info', '--export-db'])
         self.assertIn(b'\nP: /devices/', out)
@@ -118,14 +126,17 @@ class ServicesTest(unittest.TestCase):
     def test_tmp_mount(self):
         # check if we want to mount /tmp in fstab
         want_tmp_mount = False
-        with open('/etc/fstab') as f:
-            for l in f:
-                try:
-                    if not l.startswith('#') and l.split()[1] in ('/tmp', '/tmp/'):
-                        want_tmp_mount = True
-                        break
-                except IndexError:
-                    pass
+        try:
+            with open('/etc/fstab') as f:
+                for l in f:
+                    try:
+                        if not l.startswith('#') and l.split()[1] in ('/tmp', '/tmp/'):
+                            want_tmp_mount = True
+                            break
+                    except IndexError:
+                        pass
+        except FileNotFoundError:
+            pass
 
         # ensure that we actually do/don't have a /tmp mount
         (status, status_out) = subprocess.getstatusoutput('systemctl status tmp.mount')
@@ -147,12 +158,14 @@ class ServicesTest(unittest.TestCase):
             ['systemctl', 'status', 'systemd-tmpfiles-clean.timer'],
             stdout=subprocess.PIPE), 0)
         subprocess.check_call(['systemctl', 'start', 'systemd-tmpfiles-clean'])
-        # all files in /tmp/ should get cleaned up on boot
-        self.assertFalse(os.path.exists('/tmp/oldfile.test'))
+        if not is_container:
+            # all files in /tmp/ should get cleaned up on boot
+            self.assertFalse(os.path.exists('/tmp/oldfile.test'))
         self.assertFalse(os.path.exists('/tmp/newfile.test'))
         # files in /var/tmp/ older than 30d should get cleaned up
         # XXX FIXME: /var/tmp/ cleanup was disabled in #675422
-        # self.assertFalse(os.path.exists('/var/tmp/oldfile.test'))
+        # if not is_container:
+        #     self.assertFalse(os.path.exists('/var/tmp/oldfile.test'))
         self.assertTrue(os.path.exists('/var/tmp/newfile.test'))
 
         # next run should leave the recent ones
@@ -176,8 +189,9 @@ class JournalTest(unittest.TestCase):
 
     def test_no_options(self):
         out = subprocess.check_output(['journalctl'])
-        # has kernel messages
-        self.assertRegex(out, b'kernel:.*[cC]ommand line:')
+        if not is_container:
+            # has kernel messages
+            self.assertRegex(out, b'kernel:.*')
         # has init messages
         self.assertRegex(out, b'systemd.*Reached target Graphical Interface')
         # has other services
@@ -191,6 +205,7 @@ class JournalTest(unittest.TestCase):
         self.assertNotIn(b'systemd:', out)
 
 
+@unittest.skipIf(is_container, 'nspawn does not work in most containers')
 class NspawnTest(unittest.TestCase):
     '''Check nspawn'''
 
@@ -244,7 +259,7 @@ poweroff\n''')
         subprocess.call(['journalctl', '--sync'])
         systemctl = subprocess.Popen(
             ['systemctl', 'status', '-overbose', '-l', 'systemd-nspawn@c1'],
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out = systemctl.communicate()[0].decode('UTF-8', 'replace')
         self.assertEqual(systemctl.returncode, 3, out)
         self.assertNotIn('failed', out)
@@ -252,6 +267,7 @@ poweroff\n''')
 
 @unittest.skipUnless(os.path.exists('/sys/kernel/security/apparmor'),
                      'AppArmor not enabled')
+@unittest.skipIf(is_container and platform.machine().startswith('arm'), 'fails on armhf testbeds, see LP: #1842352')
 class AppArmorTest(unittest.TestCase):
     def test_profile(self):
         '''AppArmor confined unit'''
@@ -263,7 +279,7 @@ class AppArmorTest(unittest.TestCase):
 profile "violator-test" {
   #include <abstractions/base>
 
-  /bin/** rix,
+  /{usr/,}bin/** rix,
   /etc/machine-id r,
 }
 ''')
@@ -379,34 +395,6 @@ ExecStart=/bin/sleep 500
         subprocess.check_call(['systemctl', 'stop', self.service])
         self.assertNoControllers()
 
-    @unittest.skipIf('TEST_UPSTREAM' in os.environ,
-                     'fix not applied upstream')
-    def test_custom_cgroup_cleanup(self):
-        '''cgroup cleanup does not touch manually created cgroups'''
-
-        # reproduces https://bugs.debian.org/777601
-        self.create_service()
-        os.mkdir('/sys/fs/cgroup/blkio/aux')
-        os.mkdir('/sys/fs/cgroup/perf_event/aux')
-        self.addCleanup(os.rmdir, '/sys/fs/cgroup/blkio/aux')
-        self.addCleanup(os.rmdir, '/sys/fs/cgroup/perf_event/aux')
-        subprocess.check_call(['systemctl', 'start', self.service])
-        self.assertController('systemd')
-        self.assertTrue(os.path.exists('/sys/fs/cgroup/blkio/aux'))
-        self.assertTrue(os.path.exists('/sys/fs/cgroup/perf_event/aux'))
-
-        subprocess.check_call(['systemctl', 'daemon-reload'])
-        time.sleep(1)
-        subprocess.check_call(['systemctl', 'restart', self.service])
-        time.sleep(1)
-        self.assertTrue(os.path.exists('/sys/fs/cgroup/blkio/aux'))
-        self.assertTrue(os.path.exists('/sys/fs/cgroup/perf_event/aux'))
-
-        subprocess.check_call(['systemctl', 'stop', self.service])
-        self.assertNoControllers()
-        self.assertTrue(os.path.exists('/sys/fs/cgroup/blkio/aux'))
-        self.assertTrue(os.path.exists('/sys/fs/cgroup/perf_event/aux'))
-
 
 class SeccompTest(unittest.TestCase):
     '''Check seccomp syscall filtering'''
@@ -436,11 +424,12 @@ SystemCallFilter=access
         subprocess.check_call(['systemctl', 'reset-failed', 'scfail.service'])
 
         self.assertIn(b'failed', out)
-        self.assertIn(b'code=killed, signal=SYS', out)
+        self.assertRegex(out, b'code=(killed|dumped), signal=SYS')
         with open('/etc/machine-id') as f:
             self.assertNotIn(f.read().strip().encode('ASCII'), out)
 
 
+@unittest.skipIf(is_container, 'systemd-coredump does not work in containers')
 class CoredumpTest(unittest.TestCase):
     '''Check systemd-coredump'''
 
@@ -533,21 +522,25 @@ class CLITest(unittest.TestCase):
 def pre_boot_setup():
     '''Test setup before rebooting testbed'''
 
+    subprocess.check_call(['systemctl', 'set-default', 'graphical.target'],
+                          stderr=subprocess.STDOUT)
+
     # create a few temporary files to ensure that they get cleaned up on boot
     os.close(os.open('/tmp/newfile.test',
                      os.O_CREAT | os.O_EXCL | os.O_WRONLY))
     os.close(os.open('/var/tmp/newfile.test',
                      os.O_CREAT | os.O_EXCL | os.O_WRONLY))
     # we can't use utime() here, as systemd looks for ctime
-    cur_time = time.clock_gettime(time.CLOCK_REALTIME)
-    time.clock_settime(time.CLOCK_REALTIME, cur_time - 2 * 30 * 86400)
-    try:
-        os.close(os.open('/tmp/oldfile.test',
-                         os.O_CREAT | os.O_EXCL | os.O_WRONLY))
-        os.close(os.open('/var/tmp/oldfile.test',
-                         os.O_CREAT | os.O_EXCL | os.O_WRONLY))
-    finally:
-        time.clock_settime(time.CLOCK_REALTIME, cur_time)
+    if not is_container:
+        cur_time = time.clock_gettime(time.CLOCK_REALTIME)
+        time.clock_settime(time.CLOCK_REALTIME, cur_time - 2 * 30 * 86400)
+        try:
+            os.close(os.open('/tmp/oldfile.test',
+                             os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+            os.close(os.open('/var/tmp/oldfile.test',
+                             os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        finally:
+            time.clock_settime(time.CLOCK_REALTIME, cur_time)
 
     # allow X to start even on headless machines
     os.makedirs('/etc/X11/xorg.conf.d/', exist_ok=True)
@@ -559,7 +552,7 @@ EndSection''')
 
 
 if __name__ == '__main__':
-    if not os.getenv('ADT_REBOOT_MARK'):
+    if not os.getenv('AUTOPKGTEST_REBOOT_MARK'):
         pre_boot_setup()
         print('Rebooting...')
         subprocess.check_call(['/tmp/autopkgtest-reboot', 'boot1'])

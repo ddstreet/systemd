@@ -84,6 +84,7 @@ Depends: systemd-sysv,
   cron,
   network-manager,
   busybox-static,
+  rsyslog,
   apparmor,
   pkg-config,
   python3
@@ -92,10 +93,11 @@ Restrictions: needs-root, isolation-machine, needs-recommends, breaks-testbed
 Tests: udev
 Depends: systemd-tests,
   udev,
+  python3,
   tree,
   perl,
   xz-utils,
-Restrictions: needs-root, allow-stderr, isolation-machine
+Restrictions: needs-root, allow-stderr, isolation-machine, skippable
 
 Tests: root-unittests
 Depends: systemd-tests,
@@ -107,7 +109,9 @@ Depends: systemd-tests,
   iproute2,
   liblz4-tool,
   acl,
-Restrictions: needs-root, allow-stderr, isolation-container
+  iputils-ping,
+  dbus-user-session,
+Restrictions: needs-root, allow-stderr, isolation-container, breaks-testbed
 
 Tests: upstream
 Depends: libsystemd-dev,
@@ -118,6 +122,7 @@ Depends: libsystemd-dev,
   iproute2,
   liblz4-tool,
   acl,
+  dmeventd,
   kbd,
   cryptsetup-bin,
   net-tools,
@@ -177,4 +182,4 @@ Tests: systemd-fsckd
 Depends: systemd-sysv,
   python3,
   plymouth
-Restrictions: needs-root, isolation-machine, needs-recommends, breaks-testbed
+Restrictions: needs-root, isolation-machine, needs-recommends, breaks-testbed, skippable

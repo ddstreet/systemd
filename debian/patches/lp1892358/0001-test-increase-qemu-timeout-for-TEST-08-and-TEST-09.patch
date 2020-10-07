@@ -1,0 +1,38 @@
+From eae1ef076d6b84e25c68ba543705f3fc1e07bd2c Mon Sep 17 00:00:00 2001
+From: Christian Ehrhardt <christian.ehrhardt@canonical.com>
+Date: Thu, 12 Dec 2019 13:37:27 +0100
+Subject: [PATCH] test: increase qemu timeout for TEST-08 and TEST-09
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1892358
+Origin: upstream, http://github.com/systemd/systemd/commit/eae1ef076d6b84e25c68ba543705f3fc1e07bd2c
+
+These tests two have shown to be flaky in Ubuntu test infrastructure,
+but got more reliable with increased timeouts of 300 seconds each.
+
+Signed-off-by: Christian Ehrhardt <christian.ehrhardt@canonical.com>
+---
+ test/TEST-08-ISSUE-2730/test.sh | 2 +-
+ test/TEST-09-ISSUE-2691/test.sh | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+--- a/test/TEST-08-ISSUE-2730/test.sh
++++ b/test/TEST-08-ISSUE-2730/test.sh
+@@ -7,7 +7,7 @@
+ 
+ . $TEST_BASE_DIR/test-functions
+ SKIP_INITRD=yes
+-QEMU_TIMEOUT=180
++QEMU_TIMEOUT=300
+ FSTYPE=ext4
+ 
+ test_setup() {
+--- a/test/TEST-09-ISSUE-2691/test.sh
++++ b/test/TEST-09-ISSUE-2691/test.sh
+@@ -7,7 +7,7 @@
+ 
+ . $TEST_BASE_DIR/test-functions
+ SKIP_INITRD=yes
+-QEMU_TIMEOUT=90
++QEMU_TIMEOUT=300
+ 
+ test_setup() {
+     create_empty_image

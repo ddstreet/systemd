@@ -25,3 +25,5 @@ for pass in {1..5}; do
         sleep 0.1
     done
 done
+
+echo "Finished running fake fsck on $device"

@@ -1,0 +1,31 @@
+From 91cfdd8d29b353dc1fd825673c9a23e00c92a341 Mon Sep 17 00:00:00 2001
+From: Roman Gushchin <guro@fb.com>
+Date: Thu, 23 Aug 2018 10:46:20 -0700
+Subject: [PATCH] core: bump mlock ulimit to 64Mb
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1830746
+Origin: upstream, https://github.com/systemd/systemd/commit/91cfdd8d29b3
+
+Bpf programs are charged against memlock ulimit, and the default value
+can be too tight on machines with many cgroups and attached bpf programs.
+
+Let's bump it to 64Mb.
+---
+ src/core/main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/main.c b/src/core/main.c
+index ce45f2ded234..88656dcabf56 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -1295,7 +1295,7 @@ static int bump_rlimit_memlock(struct rlimit *saved_rlimit) {
+         if (getrlimit(RLIMIT_MEMLOCK, saved_rlimit) < 0)
+                 return log_warning_errno(errno, "Reading RLIMIT_MEMLOCK failed, ignoring: %m");
+ 
+-        r = setrlimit_closest(RLIMIT_MEMLOCK, &RLIMIT_MAKE_CONST(1024ULL*1024ULL*16ULL));
++        r = setrlimit_closest(RLIMIT_MEMLOCK, &RLIMIT_MAKE_CONST(1024ULL*1024ULL*64ULL));
+         if (r < 0)
+                 return log_warning_errno(r, "Setting RLIMIT_MEMLOCK failed, ignoring: %m");
+ 
+-- 
+2.28.0
+

@@ -1,3 +1,33 @@
+systemd (237-3ubuntu10.43) bionic; urgency=medium
+
+  [ Guilherme G. Piccoli ]
+  * d/p/lp1830746-bump-mlock-ulimit-to-64Mb.patch:
+    - Bump the memlock limit to match Focal and newer releases (LP: #1830746)
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=61adb797642f3dd2e5c14f7914c2949c665cefe8
+
+  [ Victor Manuel Tapia King ]
+  * d/p/lp1896614-core-Avoid-race-when-starting-dbus-services.patch:
+    - Fix race when starting dbus services (LP: #1896614)
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=373cb6ccd6978a7112bbfd7e5cf4f703a9f8448e
+
+  [ Dan Streetman ]
+  * d/t/*,
+    d/p/lp1892358/0001-test-increase-qemu-timeout-for-TEST-08-and-TEST-09.patch,
+    d/p/lp1892358/0002-test-increase-timeout-for-TEST-17-UDEV-WANTS.patch,
+    d/p/lp1892358/0003-test-increase-qemu-timeout-for-TEST-18-and-TEST-19.patch:
+    - Increase QEMU_TIMEOUT on 'upstream' autopkgtest tests
+    - Pull latest tests from newer releases to fix false negatives
+    - Blacklist flaky 'upstream' TEST-03
+      (LP: #1892358)
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9fd8391c2499e163515b629a8ca5790898fc599d
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d1756b3e1c3e625ed7162cff4909e7a29c315051
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=37f8d73516a84e85e4057d6a92204b4a174af718
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=229ed2076eb773efc548035262b8b8009bf89207
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=f2d7b1f952667316cc07a4b3c5010e66ace07a90
+      https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=659befe61bbfeb7afc9efa24458c9745412d7c6d
+
+ -- Victor Manuel Tapia King <victor.tapia@canonical.com>  Wed, 07 Oct 2020 16:30:03 -0400
+
 systemd (237-3ubuntu10.42) bionic; urgency=medium
 
   [ Dan Streetman ]

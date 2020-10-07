@@ -1,0 +1,40 @@
+From e24619fddd4a9002af92f3fce38ba91b08d204e3 Mon Sep 17 00:00:00 2001
+From: Dan Streetman <ddstreet@canonical.com>
+Date: Thu, 15 Aug 2019 16:27:05 -0400
+Subject: [PATCH] test: increase qemu timeout for TEST-18 and TEST-19
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1892358
+Origin: upstream, http://github.com/systemd/systemd/commit/e24619fddd4a9002af92f3fce38ba91b08d204e3
+
+These tests runs under qemu, and on some testbeds, without acceleration.
+On those systems, the current 180 second overall test timeout is too
+short to run the test.
+
+Increasing the timeout to 600s should be enough, even for slow
+non-accelerated qemu testbeds.
+---
+ test/TEST-18-FAILUREACTION/test.sh | 2 +-
+ test/TEST-19-DELEGATE/test.sh      | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+--- a/test/TEST-18-FAILUREACTION/test.sh
++++ b/test/TEST-18-FAILUREACTION/test.sh
+@@ -5,7 +5,7 @@
+ TEST_DESCRIPTION="FailureAction= operation"
+ 
+ . $TEST_BASE_DIR/test-functions
+-QEMU_TIMEOUT=180
++QEMU_TIMEOUT=600
+ 
+ test_setup() {
+     create_empty_image
+--- a/test/TEST-19-DELEGATE/test.sh
++++ b/test/TEST-19-DELEGATE/test.sh
+@@ -6,7 +6,7 @@
+ TEST_NO_NSPAWN=1
+ 
+ . $TEST_BASE_DIR/test-functions
+-QEMU_TIMEOUT=180
++QEMU_TIMEOUT=600
+ UNIFIED_CGROUP_HIERARCHY=yes
+ 
+ test_setup() {
