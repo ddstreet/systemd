@@ -1,0 +1,24 @@
+From f775f613adaf8fb6005c5082eb387499370c4fd9 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 1 Nov 2018 19:54:48 +0900
+Subject: [PATCH] test: increase timeout for TEST-17-UDEV-WANTS
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1892358
+Origin: upstream, http://github.com/systemd/systemd/commit/f775f613adaf8fb6005c5082eb387499370c4fd9
+
+As the test randomly fails with timeout.
+This may fix #10274.
+---
+ test/TEST-17-UDEV-WANTS/test.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/test/TEST-17-UDEV-WANTS/test.sh
++++ b/test/TEST-17-UDEV-WANTS/test.sh
+@@ -6,7 +6,7 @@
+ TEST_NO_NSPAWN=1
+ 
+ . $TEST_BASE_DIR/test-functions
+-QEMU_TIMEOUT=180
++QEMU_TIMEOUT=300
+ 
+ test_setup() {
+     create_empty_image
