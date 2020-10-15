@@ -5,7 +5,7 @@ set -e
 
 # even after installing policycoreutils this fails with
 # "Failed to install /usr/libexec/selinux/hll/pp"
-BLACKLIST="TEST-06-SELINUX TEST-16-EXTEND-TIMEOUT"
+BLACKLIST="TEST-03-JOBS TEST-06-SELINUX TEST-16-EXTEND-TIMEOUT"
 
 # quiesce Makefile.guess; not really relevant as systemd/nspawn run from
 # installed packages
