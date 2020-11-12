@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/* SPDX-License-Identifier: LGPL-2.1-or-later */
 
 #include <errno.h>
 #include <stdio.h>
@@ -167,7 +167,7 @@ static int xdg_config_parse_string(
 
         /* XDG does not allow duplicate definitions. */
         if (*out) {
-                log_syntax(unit, LOG_ERR, filename, line, 0, "Key %s was defined multiple times, ignoring.", lvalue);
+                log_syntax(unit, LOG_WARNING, filename, line, 0, "Key %s was defined multiple times, ignoring.", lvalue);
                 return 0;
         }
 
@@ -239,7 +239,7 @@ static int xdg_config_parse_strv(
 
         /* XDG does not allow duplicate definitions. */
         if (*ret_sv) {
-                log_syntax(unit, LOG_ERR, filename, line, 0, "Key %s was already defined, ignoring.", lvalue);
+                log_syntax(unit, LOG_WARNING, filename, line, 0, "Key %s was already defined, ignoring.", lvalue);
                 return 0;
         }
 
@@ -257,7 +257,7 @@ static int xdg_config_parse_strv(
                         /* Move forward, and ensure it is a valid escape. */
                         end++;
                         if (!strchr("sntr\\;", *end)) {
-                                log_syntax(unit, LOG_ERR, filename, line, 0, "Undefined escape sequence \\%c.", *end);
+                                log_syntax(unit, LOG_WARNING, filename, line, 0, "Undefined escape sequence \\%c.", *end);
                                 return 0;
                         }
                         continue;
@@ -390,9 +390,9 @@ int xdg_autostart_format_exec_start(
          * NOTE: Technically, XDG only specifies " as quotes, while this also
          *       accepts '.
          */
-        exec_split = strv_split_full(exec, WHITESPACE, SPLIT_QUOTES | SPLIT_RELAX);
-        if (!exec_split)
-                return -ENOMEM;
+        r = strv_split_full(&exec_split, exec, NULL, EXTRACT_UNQUOTE | EXTRACT_RELAX);
+        if (r < 0)
+                return r;
 
         if (strv_isempty(exec_split))
                 return log_warning_errno(SYNTHETIC_ERRNO(EINVAL), "Exec line is empty");
@@ -410,7 +410,7 @@ int xdg_autostart_format_exec_start(
 
                         /* This is the executable, find it in $PATH */
                         first_arg = false;
-                        r = find_binary(c, &executable);
+                        r = find_executable(c, &executable);
                         if (r < 0)
                                 return log_info_errno(r, "Exec binary '%s' does not exist: %m", c);
 
@@ -486,7 +486,7 @@ static int xdg_autostart_generate_desktop_condition(
         if (!isempty(condition)) {
                 _cleanup_free_ char *gnome_autostart_condition_path = NULL, *e_autostart_condition = NULL;
 
-                r = find_binary(test_binary, &gnome_autostart_condition_path);
+                r = find_executable(test_binary, &gnome_autostart_condition_path);
                 if (r < 0) {
                         log_full_errno(r == -ENOENT ? LOG_DEBUG : LOG_WARNING, r,
                                        "%s not found: %m", test_binary);
@@ -541,10 +541,10 @@ int xdg_autostart_service_generate_unit(
 
         /*
          * The TryExec key cannot be checked properly from the systemd unit,
-         * it is trivial to check using find_binary though.
+         * it is trivial to check using find_executable though.
          */
         if (service->try_exec) {
-                r = find_binary(service->try_exec, NULL);
+                r = find_executable(service->try_exec, NULL);
                 if (r < 0) {
                         log_full_errno(r == -ENOENT ? LOG_DEBUG : LOG_WARNING, r,
                                        "Not generating service for XDG autostart %s, could not find TryExec= binary %s: %m",
@@ -604,7 +604,7 @@ int xdg_autostart_service_generate_unit(
 
         fprintf(f,
                 "\n[Service]\n"
-                "Type=simple\n"
+                "Type=exec\n"
                 "ExecStart=:%s\n"
                 "Restart=no\n"
                 "TimeoutSec=5s\n"

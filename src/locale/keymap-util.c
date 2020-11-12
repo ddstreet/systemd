@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: LGPL-2.1+ */
+/* SPDX-License-Identifier: LGPL-2.1-or-later */
 
 #include <errno.h>
 #include <sys/stat.h>
@@ -491,7 +491,7 @@ static int read_next_mapping(const char* filename,
                 if (IN_SET(l[0], 0, '#'))
                         continue;
 
-                r = strv_split_extract(&b, l, WHITESPACE, EXTRACT_UNQUOTE);
+                r = strv_split_full(&b, l, WHITESPACE, EXTRACT_UNQUOTE);
                 if (r < 0)
                         return r;
 
