@@ -228,3 +228,4 @@ lp1892358/0002-test-increase-timeout-for-TEST-17-UDEV-WANTS.patch
 lp1892358/0003-test-increase-qemu-timeout-for-TEST-18-and-TEST-19.patch
 lp1905044/0001-capability-add-a-way-to-get-a-uint64_t-with-all-caps.patch
 lp1905044/0002-test-use-cap_last_cap-for-max-supported-cap-number-n.patch
+lp1905245/0001-basic-cap-list-parse-print-numerical-capabilities.patch
