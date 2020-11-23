@@ -8,6 +8,10 @@ systemd (237-3ubuntu10.44) UNRELEASED; urgency=medium
     test: use cap_last_cap() instead of capability_list_length()
     (LP: #1905044)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=34ebc6e28e63881d40c91c5839597acc2fdab546
+  * d/p/lp1905245/0001-basic-cap-list-parse-print-numerical-capabilities.patch:
+    print number of unknown capabilities instead of failing
+    (LP: #1905245)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5ab225b7f731c6cf6b4655cb27c3a842150c4c1a
 
  -- Dan Streetman <ddstreet@canonical.com>  Sat, 12 Dec 2020 10:40:37 -0500
 
