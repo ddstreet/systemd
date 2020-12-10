@@ -1,0 +1,24 @@
+From c8a79aa8127c40eab63aef4758bc3492db864214 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 6 Mar 2019 11:37:04 +0100
+Subject: [PATCH] capability: add a way to get a uint64_t with all caps set
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/focal/+source/systemd/+bug/1905044
+Origin: upstream, https://github.com/systemd/systemd/commit/c8a79aa8127c40eab63aef4758bc3492db864214
+
+---
+ src/basic/capability-util.h | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+--- a/src/basic/capability-util.h
++++ b/src/basic/capability-util.h
+@@ -51,6 +51,10 @@ static inline void cap_free_charpp(char
+ }
+ #define _cleanup_cap_free_charp_ _cleanup_(cap_free_charpp)
+ 
++static inline uint64_t all_capabilities(void) {
++        return UINT64_MAX >> (63 - cap_last_cap());
++}
++
+ static inline bool cap_test_all(uint64_t caps) {
+         uint64_t m;
+         m = (UINT64_C(1) << (cap_last_cap() + 1)) - 1;
