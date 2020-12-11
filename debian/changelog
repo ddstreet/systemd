@@ -6,6 +6,9 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
   * d/p/lp1913423-hashmap-make-sure-to-initialize-shared-hash-key-atom.patch:
     Thread-safe init of hashmap shared key (LP: #1913423)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=95c189adb9c3e22576b26b084c7edf001cbc8307
+  * d/p/lp1890448-hwdb-Add-EliteBook-to-use-micmute-hotkey.patch:
+    Add EliteBook to use micmute hotkey (LP: #1890448)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=19b48bdac5129aa772fbcd2dbf8d1bb5c30c1510
 
  -- Dan Streetman <ddstreet@canonical.com>  Mon, 25 Jan 2021 14:02:07 -0500
 
