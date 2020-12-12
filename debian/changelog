@@ -1,3 +1,11 @@
+systemd (237-3ubuntu10.44) UNRELEASED; urgency=medium
+
+  * d/extra/dhclient-enter-resolved-hook:
+    suppress output of cmp command in dhclient hook (LP: #1878955)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=c5a2db69aafc7a3ab4e71bae44fd7ad9dd955c97
+
+ -- Dan Streetman <ddstreet@canonical.com>  Sat, 12 Dec 2020 10:40:37 -0500
+
 systemd (237-3ubuntu10.43) bionic; urgency=medium
 
   [ Guilherme G. Piccoli ]
