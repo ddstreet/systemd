@@ -3,6 +3,11 @@ systemd (237-3ubuntu10.44) UNRELEASED; urgency=medium
   * d/extra/dhclient-enter-resolved-hook:
     suppress output of cmp command in dhclient hook (LP: #1878955)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=c5a2db69aafc7a3ab4e71bae44fd7ad9dd955c97
+  * d/p/lp1905044/0001-capability-add-a-way-to-get-a-uint64_t-with-all-caps.patch,
+    d/p/lp1905044/0002-test-use-cap_last_cap-for-max-supported-cap-number-n.patch:
+    test: use cap_last_cap() instead of capability_list_length()
+    (LP: #1905044)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=34ebc6e28e63881d40c91c5839597acc2fdab546
 
  -- Dan Streetman <ddstreet@canonical.com>  Sat, 12 Dec 2020 10:40:37 -0500
 
