@@ -12,6 +12,15 @@ systemd (237-3ubuntu10.44) UNRELEASED; urgency=medium
     print number of unknown capabilities instead of failing
     (LP: #1905245)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5ab225b7f731c6cf6b4655cb27c3a842150c4c1a
+  * d/p/lp1907306/0001-sd-dhcp-client-don-t-log-timeouts-if-already-expired.patch,
+    d/p/lp1907306/0002-sd-dhcp-client-track-dhcp4-t1-t2-expire-times.patch,
+    d/p/lp1907306/0003-sd-dhcp-client-add-RFC2131-retransmission-details.patch,
+    d/p/lp1907306/0004-sd-dhcp-client-simplify-dhcp4-t1-t2-parsing.patch,
+    d/p/lp1907306/0005-sd-dhcp-client-correct-dhcpv4-renew-rebind-retransmi.patch,
+    d/p/lp1907306/0008-sd-dhcp-client-fix-renew-rebind-timeout-calculation-.patch:
+    Send correct number of dhcpv4 renew and rebind requests
+    (LP: #1907306)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=036230cac8232bf4f970e565c355ee1a82fc2ee6
 
  -- Dan Streetman <ddstreet@canonical.com>  Sat, 12 Dec 2020 10:40:37 -0500
 
