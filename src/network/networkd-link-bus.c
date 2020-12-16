@@ -668,7 +668,7 @@ int bus_link_method_reconfigure(sd_bus_message *message, void *userdata, sd_bus_
         if (r < 0)
                 return r;
 
-        link_set_state(l, LINK_STATE_INITIALIZED);
+        link_set_state(l, LINK_STATE_PENDING);
         r = link_save_and_clean(l);
         if (r < 0)
                 return r;
