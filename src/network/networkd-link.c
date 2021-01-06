@@ -1622,7 +1622,7 @@ static int link_address_genmode_handler(sd_netlink *rtnl, sd_netlink_message *m,
         else
                 log_link_debug(link, "Setting address genmode done.");
 
-        if (link->state == LINK_STATE_INITIALIZED) {
+        if (link->state == LINK_STATE_PENDING) {
                 r = link_configure_continue(link);
                 if (r < 0)
                         link_enter_failed(link);
