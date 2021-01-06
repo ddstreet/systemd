@@ -1,3 +1,32 @@
+systemd (237-3ubuntu10.44) bionic; urgency=medium
+
+  * d/extra/dhclient-enter-resolved-hook:
+    suppress output of cmp command in dhclient hook (LP: #1878955)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=c5a2db69aafc7a3ab4e71bae44fd7ad9dd955c97
+  * d/p/lp1905044/0001-capability-add-a-way-to-get-a-uint64_t-with-all-caps.patch,
+    d/p/lp1905044/0002-test-use-cap_last_cap-for-max-supported-cap-number-n.patch:
+    test: use cap_last_cap() instead of capability_list_length()
+    (LP: #1905044)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=34ebc6e28e63881d40c91c5839597acc2fdab546
+  * d/p/lp1905245/0001-basic-cap-list-parse-print-numerical-capabilities.patch:
+    print number of unknown capabilities instead of failing
+    (LP: #1905245)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5ab225b7f731c6cf6b4655cb27c3a842150c4c1a
+  * d/p/lp1907306/0001-sd-dhcp-client-don-t-log-timeouts-if-already-expired.patch,
+    d/p/lp1907306/0002-sd-dhcp-client-track-dhcp4-t1-t2-expire-times.patch,
+    d/p/lp1907306/0003-sd-dhcp-client-add-RFC2131-retransmission-details.patch,
+    d/p/lp1907306/0004-sd-dhcp-client-simplify-dhcp4-t1-t2-parsing.patch,
+    d/p/lp1907306/0005-sd-dhcp-client-correct-dhcpv4-renew-rebind-retransmi.patch,
+    d/p/lp1907306/0008-sd-dhcp-client-fix-renew-rebind-timeout-calculation-.patch:
+    Send correct number of dhcpv4 renew and rebind requests
+    (LP: #1907306)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=036230cac8232bf4f970e565c355ee1a82fc2ee6
+  * d/t/root-unittests:
+    Remove any corrupt journal files (LP: #1881947)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b284b93e40b6cb834bb40dd3db94850853ab5bb8
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 06 Jan 2021 16:04:25 -0500
+
 systemd (237-3ubuntu10.43) bionic; urgency=medium
 
   [ Guilherme G. Piccoli ]
