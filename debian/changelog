@@ -1,3 +1,46 @@
+systemd (245.4-4ubuntu3.4) focal; urgency=medium
+
+  * d/p/lp1905245/0001-basic-cap-list-parse-print-numerical-capabilities.patch,
+    d/p/lp1905245/0002-basic-capability-util-let-cap_last_cap-return-unsign.patch,
+    d/p/lp1905245/0003-basic-cap-list-reduce-scope-of-variables.patch:
+    - print number of unknown capabilities instead of failing
+      (LP: #1905245)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5cd98102e16a6e4acc1444b10db3308d87930933
+  * d/p/lp1890448-hwdb-Add-EliteBook-to-use-micmute-hotkey.patch:
+    Add EliteBook to use micmute hotkey (LP: #1890448)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=238c8c1a7b9d75f69bdeafb1d55f1faf00acb063
+  * d/extra/dhclient-enter-resolved-hook:
+    suppress output of cmp command in dhclient hook (LP: #1878955)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=83df4fc182f8ffe87256f5d7c4b49cee5192529a
+  * d/p/lp1905044-test-use-cap_last_cap-for-max-supported-cap-number-n.patch:
+    test: use cap_last_cap() instead of capability_list_length()
+    (LP: #1905044)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ff21f41e624d9e603f3be463846ce981a433842a
+  * d/p/lp1903300/0001-network-VXLan-fix-adding-Group-address.patch,
+    d/p/lp1903300/0002-network-VXLan-Add-support-for-remote-address.patch,
+    d/p/lp1903300/0003-networkctl-Add-support-to-display-VXLan-remote-addre.patch:
+    set vxlan multicast group when specified (LP: #1903300)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9deff4b7c5495dbe738561ca47daf3756df9fcde
+  * d/p/lp1907306/0001-sd-dhcp-client-don-t-log-timeouts-if-already-expired.patch,
+    d/p/lp1907306/0002-sd-dhcp-client-track-dhcp4-t1-t2-expire-times.patch,
+    d/p/lp1907306/0003-sd-dhcp-client-add-RFC2131-retransmission-details.patch,
+    d/p/lp1907306/0004-sd-dhcp-client-simplify-dhcp4-t1-t2-parsing.patch,
+    d/p/lp1907306/0005-sd-dhcp-client-correct-dhcpv4-renew-rebind-retransmi.patch,
+    d/p/lp1907306/0006-sd-dhcp-client-correct-retransmission-timeout-to-mat.patch,
+    d/p/lp1907306/0007-test-network-increase-wait_online-timeout-to-handle-.patch,
+    d/p/lp1907306/0008-sd-dhcp-client-fix-renew-rebind-timeout-calculation-.patch:
+    Send correct number of dhcpv4 renew and rebind requests
+    (LP: #1907306)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a73c51d0df284dcc38e6924d40eed810554bab2e
+  * d/p/lp1902960-udev-re-assign-ID_NET_DRIVER-ID_NET_LINK_FILE-ID_NET.patch:
+    Run net_setup_link on 'change' uevents (LP: #1902960)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ec7ba2358aa68d8d6276ed56ef91caafc287cecf
+  * d/t/root-unittests:
+    Remove any corrupt journal files (LP: #1881947)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5481fececdb3cb35ca7118598cad537681b5ff14
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 06 Jan 2021 15:47:39 -0500
+
 systemd (245.4-4ubuntu3.3) focal; urgency=medium
 
   [ Rafael David Tinoco ]
