@@ -1,3 +1,11 @@
+systemd (246.6-1ubuntu1.2) UNRELEASED; urgency=medium
+
+  * d/p/lp1906331-sd-event-ref-event-loop-while-in-sd_event_prepare-ot.patch:
+    Take event reference while processing (LP: #1906331)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8252b2724debf2f2ad20fb4c189b4bcbd1d3e8b3
+
+ -- Dan Streetman <ddstreet@canonical.com>  Fri, 19 Feb 2021 15:02:24 -0500
+
 systemd (246.6-1ubuntu1.1) groovy; urgency=medium
 
   [ Dan Streetman ]
