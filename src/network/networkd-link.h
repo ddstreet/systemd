@@ -128,6 +128,8 @@ typedef struct Link {
 
         Hashmap *bound_by_links;
         Hashmap *bound_to_links;
+
+        int sysctl_ipv6_enabled;
 } Link;
 
 typedef int (*link_netlink_message_handler_t)(sd_netlink*, sd_netlink_message*, Link*);
@@ -208,6 +210,8 @@ int link_send_changed(Link *link, const char *property, ...) _sentinel_;
 
 #define LOG_LINK_MESSAGE(link, fmt, ...) "MESSAGE=%s: " fmt, (link)->ifname, ##__VA_ARGS__
 #define LOG_LINK_INTERFACE(link) "INTERFACE=%s", (link)->ifname
+
+int link_sysctl_ipv6_enabled(Link *link);
 
 #define ADDRESS_FMT_VAL(address)                   \
         be32toh((address).s_addr) >> 24,           \
