@@ -12,3 +12,4 @@ Name=org.freedesktop.timedate1
 Exec=/bin/false
 User=root
 SystemdService=dbus-org.freedesktop.timedate1.service
+AssumedAppArmorLabel=unconfined

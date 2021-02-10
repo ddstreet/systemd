@@ -14,6 +14,8 @@ DefaultDependencies=no
 After=systemd-sysusers.service systemd-hwdb-update.service
 Before=sysinit.target
 ConditionPathIsReadWrite=/sys
+# LXC mounts /sys rw
+ConditionVirtualization=!lxc
 
 [Service]
 DeviceAllow=block-* rwm
