@@ -13,8 +13,6 @@ Documentation=man:systemd-udevd.service(8) man:udev(7)
 DefaultDependencies=no
 Before=sockets.target
 ConditionPathIsReadWrite=/sys
-# LXC mounts /sys rw
-ConditionVirtualization=!lxc
 
 [Socket]
 Service=systemd-udevd.service
