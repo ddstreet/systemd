@@ -236,3 +236,4 @@ lp1907306/0004-sd-dhcp-client-simplify-dhcp4-t1-t2-parsing.patch
 lp1907306/0005-sd-dhcp-client-correct-dhcpv4-renew-rebind-retransmi.patch
 lp1907306/0008-sd-dhcp-client-fix-renew-rebind-timeout-calculation-.patch
 lp1913189-test-accept-that-char-device-0-0-can-now-be-created-.patch
+lp1913423-hashmap-make-sure-to-initialize-shared-hash-key-atom.patch
