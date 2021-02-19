@@ -9,6 +9,9 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
   * d/p/lp1890448-hwdb-Add-EliteBook-to-use-micmute-hotkey.patch:
     Add EliteBook to use micmute hotkey (LP: #1890448)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=19b48bdac5129aa772fbcd2dbf8d1bb5c30c1510
+  * d/p/debian/patches/lp1902553-test-disable-QEMU-based-testing-for-TEST-16-EXTEND-T.patch:
+    Disable TEST-03 run under qemu (LP: #1902553)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=4e37d20ec379d169cfd53088d0c3b4d7bb65d25b
 
  -- Dan Streetman <ddstreet@canonical.com>  Mon, 25 Jan 2021 14:02:07 -0500
 
