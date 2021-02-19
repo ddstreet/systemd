@@ -238,3 +238,4 @@ lp1907306/0008-sd-dhcp-client-fix-renew-rebind-timeout-calculation-.patch
 lp1913189-test-accept-that-char-device-0-0-can-now-be-created-.patch
 lp1913423-hashmap-make-sure-to-initialize-shared-hash-key-atom.patch
 lp1890448-hwdb-Add-EliteBook-to-use-micmute-hotkey.patch
+lp1902553-test-disable-QEMU-based-testing-for-TEST-16-EXTEND-T.patch
