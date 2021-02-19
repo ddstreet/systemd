@@ -3,6 +3,9 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
   * d/p/lp1913189-test-accept-that-char-device-0-0-can-now-be-created-.patch:
     - Fix failing test case under 5.8 kernel (LP: #1913189)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=15143ec6cd584a18866390a042348a543e5aa22d
+  * d/p/lp1913423-hashmap-make-sure-to-initialize-shared-hash-key-atom.patch:
+    Thread-safe init of hashmap shared key (LP: #1913423)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=95c189adb9c3e22576b26b084c7edf001cbc8307
 
  -- Dan Streetman <ddstreet@canonical.com>  Mon, 25 Jan 2021 14:02:07 -0500
 
