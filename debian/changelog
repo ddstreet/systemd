@@ -12,6 +12,9 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
   * d/p/debian/patches/lp1902553-test-disable-QEMU-based-testing-for-TEST-16-EXTEND-T.patch:
     Disable TEST-03 run under qemu (LP: #1902553)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=4e37d20ec379d169cfd53088d0c3b4d7bb65d25b
+  * d/p/debian/patches/lp1883447-seccomp-add-all-time64-syscalls.patch:
+    Add *time64 syscalls (LP: #1883447)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a459492c67c5c5855b03daca4b44141705495376
 
  -- Dan Streetman <ddstreet@canonical.com>  Mon, 25 Jan 2021 14:02:07 -0500
 
