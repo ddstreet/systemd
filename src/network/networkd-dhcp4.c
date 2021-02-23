@@ -139,6 +139,9 @@ static int link_set_dhcp_routes(Link *link) {
                 }
         }
 
+        if (!link->network->dhcp_use_gateway)
+                return 0;
+
         r = sd_dhcp_lease_get_router(link->dhcp_lease, &gateway);
         if (r == -ENODATA)
                 log_link_info_errno(link, r, "DHCP: No routes received from DHCP server: %m");
@@ -205,7 +208,6 @@ static int dhcp_lease_lost(Link *link) {
         _cleanup_address_free_ Address *address = NULL;
         struct in_addr addr;
         struct in_addr netmask;
-        struct in_addr gateway;
         unsigned prefixlen = 0;
         int r;
 
@@ -235,6 +237,10 @@ static int dhcp_lease_lost(Link *link) {
                                 }
                         }
                 }
+        }
+
+        if (link->network->dhcp_use_gateway) {
+                struct in_addr gateway;
 
                 r = sd_dhcp_lease_get_router(link->dhcp_lease, &gateway);
                 if (r >= 0) {
