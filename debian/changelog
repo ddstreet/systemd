@@ -1,5 +1,11 @@
 systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
 
+  [ Ioanna Alifieraki ]
+  * d/p/lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch:
+    Do not shutdown immediately when scheduled shutdown fails (LP: #1911187)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=257135a59455f4e4063e78cdd3f5cfeca2597b5b
+
+  [ Dan Streetman ]
   * d/p/lp1913189-test-accept-that-char-device-0-0-can-now-be-created-.patch:
     - Fix failing test case under 5.8 kernel (LP: #1913189)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=15143ec6cd584a18866390a042348a543e5aa22d
@@ -16,7 +22,7 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
     Add *time64 syscalls (LP: #1883447)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a459492c67c5c5855b03daca4b44141705495376
 
- -- Dan Streetman <ddstreet@canonical.com>  Mon, 25 Jan 2021 14:02:07 -0500
+ -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 03:45:01 +0200
 
 systemd (237-3ubuntu10.44) bionic; urgency=medium
 
