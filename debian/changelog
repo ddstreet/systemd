@@ -1,3 +1,35 @@
+systemd (245.4-4ubuntu3.5) focal; urgency=medium
+
+  [ Ioanna Alifieraki ]
+  * d/p/lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch:
+    Do not shutdown immediately when scheduled shutdown fails (LP: #1911187)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=3899c9d5c171e84fc503c6ab46aea7cc9def7235
+
+  [ Dimitri John Ledkov ]
+  * d/p/lp1878969-meson-initialize-time-epoch-to-reproducible-builds-compat.patch:
+    meson: initialize time-epoch to reproducible builds compatible value
+    (LP: #1878969)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=84212797d21ed08031e1d71fe5e118bdd9873c0f
+
+  [ Dan Streetman ]
+  * d/p/lp1913189-test-accept-that-char-device-0-0-can-now-be-created-.patch:
+    - Fix failing test case under 5.8 kernel (LP: #1913189)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=782a382017ce188dbf9a40adabd265943d7db119
+  * d/p/lp1913423-hashmap-make-sure-to-initialize-shared-hash-key-atom.patch:
+    Thread-safe init of hashmap shared key (LP: #1913423)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=fc8dde7c4b1944d1583866f61c2314174b4dd06a
+  * d/p/lp1902236-nss-systemd-don-t-synthesize-root-nobody-when-iterat.patch:
+    Don't synthesize root/nobody when iterating (LP: #1902236)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=4d20e415ecd5b0fd032b4cf45bd9fd344cc434ac
+  * d/p/debian/patches/lp1880258-log-nxdomain-as-debug.patch:
+    Change NXDOMAIN 'errors' to log level debug (LP: #1880258)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=80163a2097aa876fe73b6071495ae4ad8749d04e
+  * d/p/lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch:
+    Create symlink for hyperv-provided ptp device (LP: #1913763)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b02053da2ff3fee6221bd8310488af0f52b140f1
+
+ -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 00:18:57 +0000
+
 systemd (245.4-4ubuntu3.4) focal; urgency=medium
 
   * d/p/lp1905245/0001-basic-cap-list-parse-print-numerical-capabilities.patch,
