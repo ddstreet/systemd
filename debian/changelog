@@ -1,10 +1,16 @@
 systemd (246.6-1ubuntu1.2) UNRELEASED; urgency=medium
 
+  [ Ioanna Alifieraki ]
+  * d/p/lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch:
+    Do not shutdown immediately when scheduled shutdown fails (LP: #1911187)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=bbca658178d27e0ffaf759ba3115878d26c917a6
+
+  [ Dan Streetman ]
   * d/p/lp1906331-sd-event-ref-event-loop-while-in-sd_event_prepare-ot.patch:
     Take event reference while processing (LP: #1906331)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8252b2724debf2f2ad20fb4c189b4bcbd1d3e8b3
 
- -- Dan Streetman <ddstreet@canonical.com>  Fri, 19 Feb 2021 15:02:24 -0500
+ -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 02:31:55 +0200
 
 systemd (246.6-1ubuntu1.1) groovy; urgency=medium
 
