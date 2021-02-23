@@ -240,3 +240,4 @@ lp1913423-hashmap-make-sure-to-initialize-shared-hash-key-atom.patch
 lp1890448-hwdb-Add-EliteBook-to-use-micmute-hotkey.patch
 lp1902553-test-disable-QEMU-based-testing-for-TEST-16-EXTEND-T.patch
 lp1883447-seccomp-add-all-time64-syscalls.patch
+lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch
