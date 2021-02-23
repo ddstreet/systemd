@@ -1,3 +1,20 @@
+systemd (246.6-1ubuntu1.2) groovy; urgency=medium
+
+  [ Ioanna Alifieraki ]
+  * d/p/lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch:
+    Do not shutdown immediately when scheduled shutdown fails (LP: #1911187)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=bbca658178d27e0ffaf759ba3115878d26c917a6
+
+  [ Dan Streetman ]
+  * d/p/debian/patches/lp1880258-log-nxdomain-as-debug.patch:
+    Change NXDOMAIN 'errors' to log level debug (LP: #1880258)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b8e864eb907469616d688eab39b20491693d7c3a
+  * d/p/lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch:
+    Create symlink for hyperv-provided ptp device (LP: #1913763)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=83c7476c80e4139ee7c1ec18a549c30d37d3b4b2
+
+ -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 02:31:55 +0200
+
 systemd (246.6-1ubuntu1.1) groovy; urgency=medium
 
   [ Dan Streetman ]
