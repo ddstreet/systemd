@@ -1,3 +1,44 @@
+systemd (237-3ubuntu10.45) bionic; urgency=medium
+
+  [ Ioanna Alifieraki ]
+  * d/p/lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch:
+    Do not shutdown immediately when scheduled shutdown fails (LP: #1911187)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=257135a59455f4e4063e78cdd3f5cfeca2597b5b
+
+  [ Dimitri John Ledkov ]
+  * d/p/lp1878969-meson-initialize-time-epoch-to-reproducible-builds-compat.patch:
+    meson: initialize time-epoch to reproducible builds compatible value
+    (LP: #1878969)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=6f5a0c94ff4a486ee0b72af926672b24d16ff5a8
+
+  [ Dan Streetman ]
+  * d/p/lp1913189-test-accept-that-char-device-0-0-can-now-be-created-.patch:
+    - Fix failing test case under 5.8 kernel (LP: #1913189)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=15143ec6cd584a18866390a042348a543e5aa22d
+  * d/p/lp1913423-hashmap-make-sure-to-initialize-shared-hash-key-atom.patch:
+    Thread-safe init of hashmap shared key (LP: #1913423)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=95c189adb9c3e22576b26b084c7edf001cbc8307
+  * d/p/lp1890448-hwdb-Add-EliteBook-to-use-micmute-hotkey.patch:
+    Add EliteBook to use micmute hotkey (LP: #1890448)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=19b48bdac5129aa772fbcd2dbf8d1bb5c30c1510
+  * d/p/debian/patches/lp1902553-test-disable-QEMU-based-testing-for-TEST-16-EXTEND-T.patch:
+    Disable TEST-03 run under qemu (LP: #1902553)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=4e37d20ec379d169cfd53088d0c3b4d7bb65d25b
+  * d/p/debian/patches/lp1883447-seccomp-add-all-time64-syscalls.patch:
+    Add *time64 syscalls (LP: #1883447)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a459492c67c5c5855b03daca4b44141705495376
+  * d/p/lp1685754-pid1-by-default-make-user-units-inherit-their-umask-.patch:
+    Inherit umask for --user processes (LP: #1685754)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=00df8d0e76975594adb765182c587ef495262fe1
+  * d/p/debian/patches/lp1880258-log-nxdomain-as-debug.patch:
+    Change NXDOMAIN 'errors' to log level debug (LP: #1880258)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9684abed02669bfcf696763b887518cf54cd3f69
+  * d/p/lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch:
+    Create symlink for hyperv-provided ptp device (LP: #1913763)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ff2a9ed2ece6bbd86a3d57f42b26cb1a6ca2845a
+
+ -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 03:45:01 +0200
+
 systemd (237-3ubuntu10.44) bionic; urgency=medium
 
   * d/extra/dhclient-enter-resolved-hook:

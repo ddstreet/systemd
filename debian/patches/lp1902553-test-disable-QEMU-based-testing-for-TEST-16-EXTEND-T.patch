@@ -1,0 +1,50 @@
+From 3edc0c590d3a9212267d0a7cf56e95efa7f61039 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 5 Jun 2018 21:30:19 +0200
+Subject: [PATCH] test: disable QEMU based testing for TEST-16-EXTEND-TIMEOUT
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/bionic/+source/systemd/+bug/1902553
+Origin: upstream, https://github.com/systemd/systemd/commit/3edc0c590d3a9212267d0a7cf56e95efa7f61039
+
+The test is heavily dependent on timeouts, and if we are run in
+potentially very slow QEMU instances there's a good chance we'll miss
+some which we normally wouldn't miss. Hence, let's test this one in
+nspawn only. Given that the test is purely in service management it
+shouldn't matter whether it runs in nspawn or qemu, hence keep running
+it in nspawn, but don't bother with qemu.
+
+Similar, do this for TEST-03-JOBS, too, which operates with relatively
+short sleep times internally.
+
+Fixes: #9123
+---
+ test/TEST-03-JOBS/test.sh           | 1 +
+ test/TEST-16-EXTEND-TIMEOUT/test.sh | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/test/TEST-03-JOBS/test.sh b/test/TEST-03-JOBS/test.sh
+index 88bbf3cdac..65a8893fea 100755
+--- a/test/TEST-03-JOBS/test.sh
++++ b/test/TEST-03-JOBS/test.sh
+@@ -3,6 +3,7 @@
+ # ex: ts=8 sw=4 sts=4 et filetype=sh
+ set -e
+ TEST_DESCRIPTION="Job-related tests"
++TEST_NO_QEMU=1
+ 
+ . $TEST_BASE_DIR/test-functions
+ 
+diff --git a/test/TEST-16-EXTEND-TIMEOUT/test.sh b/test/TEST-16-EXTEND-TIMEOUT/test.sh
+index 4544672066..e7bb5430c0 100755
+--- a/test/TEST-16-EXTEND-TIMEOUT/test.sh
++++ b/test/TEST-16-EXTEND-TIMEOUT/test.sh
+@@ -4,6 +4,7 @@
+ set -e
+ TEST_DESCRIPTION="EXTEND_TIMEOUT_USEC=usec start/runtime/stop tests"
+ SKIP_INITRD=yes
++TEST_NO_QEMU=1
+ 
+ . $TEST_BASE_DIR/test-functions
+ 
+-- 
+2.25.1
+
