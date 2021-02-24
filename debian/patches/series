@@ -241,3 +241,4 @@ lp1890448-hwdb-Add-EliteBook-to-use-micmute-hotkey.patch
 lp1902553-test-disable-QEMU-based-testing-for-TEST-16-EXTEND-T.patch
 lp1883447-seccomp-add-all-time64-syscalls.patch
 lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch
+lp1685754-pid1-by-default-make-user-units-inherit-their-umask-.patch
