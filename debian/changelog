@@ -21,6 +21,9 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
   * d/p/debian/patches/lp1883447-seccomp-add-all-time64-syscalls.patch:
     Add *time64 syscalls (LP: #1883447)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a459492c67c5c5855b03daca4b44141705495376
+  * d/p/lp1685754-pid1-by-default-make-user-units-inherit-their-umask-.patch:
+    Inherit umask for --user processes (LP: #1685754)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=00df8d0e76975594adb765182c587ef495262fe1
 
  -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 03:45:01 +0200
 
