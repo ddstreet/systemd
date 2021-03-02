@@ -243,3 +243,4 @@ lp1883447-seccomp-add-all-time64-syscalls.patch
 lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch
 lp1685754-pid1-by-default-make-user-units-inherit-their-umask-.patch
 lp1878969-meson-initialize-time-epoch-to-reproducible-builds-compat.patch
+lp1880258-log-nxdomain-as-debug.patch
