@@ -33,6 +33,9 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
   * d/p/debian/patches/lp1880258-log-nxdomain-as-debug.patch:
     Change NXDOMAIN 'errors' to log level debug (LP: #1880258)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9684abed02669bfcf696763b887518cf54cd3f69
+  * d/p/lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch:
+    Create symlink for hyperv-provided ptp device (LP: #1913763)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ff2a9ed2ece6bbd86a3d57f42b26cb1a6ca2845a
 
  -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 03:45:01 +0200
 
