@@ -155,3 +155,4 @@ lp1881312/0002-run-make-slice-work-in-conjunction-with-scope.patch
 lp1877176-sd-dhcp-client-validate-hostnames-stricter-7308.patch
 lp1698388-journal-remote-Ensure-reallocation-of-source-buf-doe.patch
 lp1878969-time-epoch-use-source-date-epoch.patch
+lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch
