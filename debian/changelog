@@ -30,6 +30,9 @@ systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
   * d/p/lp1685754-pid1-by-default-make-user-units-inherit-their-umask-.patch:
     Inherit umask for --user processes (LP: #1685754)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=00df8d0e76975594adb765182c587ef495262fe1
+  * d/p/debian/patches/lp1880258-log-nxdomain-as-debug.patch:
+    Change NXDOMAIN 'errors' to log level debug (LP: #1880258)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9684abed02669bfcf696763b887518cf54cd3f69
 
  -- Ioanna Alifieraki <ioanna-maria.alifieraki@canonical.com>  Tue, 23 Feb 2021 03:45:01 +0200
 
