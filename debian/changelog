@@ -4,6 +4,10 @@ systemd (229-4ubuntu21.30) UNRELEASED; urgency=medium
     - Set time epoch using $SOURCE_DATE_EPOCH
       (LP: #1878969)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9e1ad364d94b3619947c541b72aa506010ee3f38
+  * d/p/lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch:
+    - Create symlink for hyperv-provided ptp device
+      (LP: #1913763)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ae39f8878ca5dabb4e9d8ba5ebdb6ed003993b9f
 
  -- Dan Streetman <ddstreet@canonical.com>  Thu, 28 Jan 2021 06:45:44 -0500
 
