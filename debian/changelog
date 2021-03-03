@@ -1,4 +1,4 @@
-systemd (237-3ubuntu10.45) UNRELEASED; urgency=medium
+systemd (237-3ubuntu10.45) bionic; urgency=medium
 
   [ Ioanna Alifieraki ]
   * d/p/lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch:
