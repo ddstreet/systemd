@@ -6,9 +6,6 @@ systemd (246.6-1ubuntu1.2) groovy; urgency=medium
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=bbca658178d27e0ffaf759ba3115878d26c917a6
 
   [ Dan Streetman ]
-  * d/p/lp1906331-sd-event-ref-event-loop-while-in-sd_event_prepare-ot.patch:
-    Take event reference while processing (LP: #1906331)
-    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8252b2724debf2f2ad20fb4c189b4bcbd1d3e8b3
   * d/p/debian/patches/lp1880258-log-nxdomain-as-debug.patch:
     Change NXDOMAIN 'errors' to log level debug (LP: #1880258)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b8e864eb907469616d688eab39b20491693d7c3a
