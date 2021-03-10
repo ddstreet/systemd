@@ -1,3 +1,11 @@
+systemd (237-3ubuntu10.46) UNRELEASED; urgency=medium
+
+  * d/p/lp1916485-Newer-Glibc-use-faccessat2-to-implement-faccessat.patch:
+    Add support for faccessat2 (LP: #1916485)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b5f11a9baecf0cefb503632e938d473234172128
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 10 Mar 2021 16:05:41 -0500
+
 systemd (237-3ubuntu10.45) bionic; urgency=medium
 
   [ Ioanna Alifieraki ]
