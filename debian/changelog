@@ -4,6 +4,10 @@ systemd (246.6-1ubuntu1.3) groovy; urgency=medium
     Stop attempting to restrict address families on ppc archs
     (LP: #1918696)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=34d1b2b4f4fdc349da37a07fe98418456167592a
+  * d/p/lp1915887-Downgrade-a-couple-of-warnings-to-debug.patch:
+    Downgrade some log messages so they stop spamming logs
+    (LP: #1915887)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d092e70912009daf6f64182d86b3d92aed28722a
 
  -- Dan Streetman <ddstreet@canonical.com>  Wed, 10 Mar 2021 16:03:13 -0500
 
