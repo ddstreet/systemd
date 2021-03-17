@@ -1,3 +1,16 @@
+systemd (229-4ubuntu21.30) xenial; urgency=medium
+
+  * d/p/lp1878969-time-epoch-use-source-date-epoch.patch:
+    - Set time epoch using $SOURCE_DATE_EPOCH
+      (LP: #1878969)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9e1ad364d94b3619947c541b72aa506010ee3f38
+  * d/p/lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch:
+    - Create symlink for hyperv-provided ptp device
+      (LP: #1913763)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ae39f8878ca5dabb4e9d8ba5ebdb6ed003993b9f
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 17 Mar 2021 17:41:20 -0400
+
 systemd (229-4ubuntu21.29) xenial; urgency=medium
 
   [ Dan Streetman ]
