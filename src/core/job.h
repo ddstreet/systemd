@@ -172,7 +172,8 @@ struct Job {
 
 Job* job_new(Unit *unit, JobType type);
 Job* job_new_raw(Unit *unit);
-void job_free(Job *job);
+void job_unlink(Job *job);
+Job* job_free(Job *job);
 Job* job_install(Job *j);
 int job_install_deserialized(Job *j);
 void job_uninstall(Job *j);
@@ -226,6 +227,8 @@ char *job_dbus_path(Job *j);
 void job_shutdown_magic(Job *j);
 
 int job_get_timeout(Job *j, usec_t *timeout) _pure_;
+
+DEFINE_TRIVIAL_CLEANUP_FUNC(Job*, job_free);
 
 const char* job_type_to_string(JobType t) _const_;
 JobType job_type_from_string(const char *s) _pure_;
