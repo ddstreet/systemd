@@ -1,4 +1,4 @@
-systemd (229-4ubuntu21.30) UNRELEASED; urgency=medium
+systemd (229-4ubuntu21.30) xenial; urgency=medium
 
   * d/p/lp1878969-time-epoch-use-source-date-epoch.patch:
     - Set time epoch using $SOURCE_DATE_EPOCH
@@ -9,7 +9,7 @@ systemd (229-4ubuntu21.30) UNRELEASED; urgency=medium
       (LP: #1913763)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ae39f8878ca5dabb4e9d8ba5ebdb6ed003993b9f
 
- -- Dan Streetman <ddstreet@canonical.com>  Thu, 28 Jan 2021 06:45:44 -0500
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 17 Mar 2021 17:41:20 -0400
 
 systemd (229-4ubuntu21.29) xenial; urgency=medium
 
