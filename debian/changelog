@@ -1,3 +1,19 @@
+systemd (237-3ubuntu10.46) bionic; urgency=medium
+
+  * d/p/lp1916485-Newer-Glibc-use-faccessat2-to-implement-faccessat.patch:
+    Add support for faccessat2 (LP: #1916485)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b5f11a9baecf0cefb503632e938d473234172128
+  * d/p/lp1918696-shared-seccomp-util-address-family-filtering-is-brok.patch:
+    Stop attempting to restrict address families on ppc archs
+    (LP: #1918696)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=4569a047ece8b1b300ef63e49b5aea8aba35c500
+  * d/p/lp1891810-seccomp-util-add-new-syscalls-from-kernel-5.6-to-sys.patch:
+    Add openat2() syscall to seccomp filter list
+    (LP: #1891810)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=2ddfbfa79af4f22b7adf946c4299433fd74a4f17
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 17 Mar 2021 17:38:05 -0400
+
 systemd (237-3ubuntu10.45) bionic; urgency=medium
 
   [ Ioanna Alifieraki ]
