@@ -369,6 +369,7 @@ static int patch_var_run(
 
         const char *e;
         char *z;
+        int log_level;
 
         e = path_startswith(*path, "/var/run/");
         if (!e)
@@ -378,7 +379,8 @@ static int patch_var_run(
         if (!z)
                 return log_oom();
 
-        log_syntax(unit, LOG_NOTICE, filename, line, 0,
+        log_level = path_startswith(filename, "/etc") ? LOG_NOTICE : LOG_DEBUG;
+        log_syntax(unit, log_level, filename, line, 0,
                    "%s= references a path below legacy directory /var/run/, updating %s → %s; "
                    "please update the unit file accordingly.", lvalue, *path, z);
 
@@ -4785,10 +4787,11 @@ int unit_load_fragment(Unit *u) {
                         u->source_mtime = 0;
         }
 
-        /* We do the merge dance here because for some unit types, the unit might have aliases which are not
+        /* Call merge_by_names with the name derived from the fragment path as the preferred name.
+         *
+         * We do the merge dance here because for some unit types, the unit might have aliases which are not
          * declared in the file system. In particular, this is true (and frequent) for device and swap units.
          */
-        Unit *merged;
         const char *id = u->id;
         _cleanup_free_ char *free_id = NULL;
 
@@ -4805,7 +4808,7 @@ int unit_load_fragment(Unit *u) {
                 }
         }
 
-        merged = u;
+        Unit *merged = u;
         r = merge_by_names(&merged, names, id);
         if (r < 0)
                 return r;
