@@ -912,6 +912,10 @@ static inline int setns(int fd, int nstype) {
 #define IPV6_UNICAST_IF 76
 #endif
 
+#ifndef IPV6_MIN_MTU
+#define IPV6_MIN_MTU 1280
+#endif
+
 #ifndef IFF_MULTI_QUEUE
 #define IFF_MULTI_QUEUE 0x100
 #endif
@@ -1165,6 +1169,10 @@ static inline key_serial_t request_key(const char *type, const char *description
 
 #ifndef HAVE_DECL_CHAR16_T
 #define char16_t uint16_t
+#endif
+
+#ifndef ETHERTYPE_LLDP
+#define ETHERTYPE_LLDP 0x88cc
 #endif
 
 #endif
