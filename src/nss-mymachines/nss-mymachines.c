@@ -501,7 +501,7 @@ enum nss_status _nss_mymachines_getpwnam_r(
         pwd->pw_gecos = buffer;
         pwd->pw_passwd = (char*) "*"; /* locked */
         pwd->pw_dir = (char*) "/";
-        pwd->pw_shell = (char*) "/sbin/nologin";
+        pwd->pw_shell = (char*) NOLOGIN;
 
         return NSS_STATUS_SUCCESS;
 
@@ -581,7 +581,7 @@ enum nss_status _nss_mymachines_getpwuid_r(
         pwd->pw_gecos = buffer;
         pwd->pw_passwd = (char*) "*"; /* locked */
         pwd->pw_dir = (char*) "/";
-        pwd->pw_shell = (char*) "/sbin/nologin";
+        pwd->pw_shell = (char*) NOLOGIN;
 
         return NSS_STATUS_SUCCESS;
 
