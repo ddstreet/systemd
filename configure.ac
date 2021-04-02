@@ -1069,7 +1069,7 @@ AC_ARG_WITH(time-epoch,
         AS_HELP_STRING([--with-time-epoch=SECONDS],
                 [Time epoch for time clients]),
         [TIME_EPOCH="$withval"],
-        [TIME_EPOCH="`stat -c %Y ${srcdir}/NEWS 2>/dev/null || echo 0`"])
+        [TIME_EPOCH="`test -n "$SOURCE_DATE_EPOCH" && echo "$SOURCE_DATE_EPOCH" || stat -c %Y ${srcdir}/NEWS 2>/dev/null || echo 0`"])
 
 AC_DEFINE_UNQUOTED(TIME_EPOCH, [$TIME_EPOCH], [Time Epoch])
 
