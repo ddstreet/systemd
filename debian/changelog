@@ -1,3 +1,12 @@
+systemd (229-4ubuntu21.31) xenial; urgency=medium
+
+  * d/p/lp1878969-time-epoch-use-source-date-epoch.patch:
+    - Fix configure.ac change to set time epoch
+      (LP: #1878969)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=30bf11d2759499ec94d3b82eaf22f55583f4758b
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 01 Apr 2021 22:51:58 -0400
+
 systemd (229-4ubuntu21.30) xenial; urgency=medium
 
   * d/p/lp1878969-time-epoch-use-source-date-epoch.patch:
