@@ -1049,6 +1049,8 @@ libshared_la_SOURCES = \
 	src/shared/bus-util.h \
 	src/shared/logs-show.c \
 	src/shared/logs-show.h \
+	src/shared/vlan-util.h \
+	src/shared/vlan-util.c \
 	src/shared/machine-image.c \
 	src/shared/machine-image.h \
 	src/shared/machine-pool.c \
@@ -3389,6 +3391,9 @@ libsystemd_network_la_SOURCES = \
 	src/libsystemd-network/network-internal.c \
 	src/libsystemd-network/network-internal.h \
 	src/libsystemd-network/sd-ndisc.c \
+	src/libsystemd-network/ndisc-internal.h \
+	src/libsystemd-network/ndisc-router.h \
+	src/libsystemd-network/ndisc-router.c \
 	src/libsystemd-network/icmp6-util.h \
 	src/libsystemd-network/icmp6-util.c \
 	src/libsystemd-network/sd-dhcp6-client.c \
@@ -3400,15 +3405,11 @@ libsystemd_network_la_SOURCES = \
 	src/libsystemd-network/sd-dhcp6-lease.c \
 	src/libsystemd-network/dhcp-identifier.h \
 	src/libsystemd-network/dhcp-identifier.c \
-	src/libsystemd-network/lldp.h \
-	src/libsystemd-network/lldp-tlv.h \
-	src/libsystemd-network/lldp-tlv.c \
+	src/libsystemd-network/lldp-internal.h \
 	src/libsystemd-network/lldp-network.h \
 	src/libsystemd-network/lldp-network.c \
-	src/libsystemd-network/lldp-port.h \
-	src/libsystemd-network/lldp-port.c \
-	src/libsystemd-network/lldp-internal.h \
-	src/libsystemd-network/lldp-internal.c \
+	src/libsystemd-network/lldp-neighbor.h \
+	src/libsystemd-network/lldp-neighbor.c \
 	src/libsystemd-network/sd-lldp.c
 
 libsystemd_network_la_LIBADD = \
@@ -3491,9 +3492,6 @@ test_dhcp6_client_LDADD = \
 	libshared.la
 
 test_lldp_SOURCES = \
-	src/libsystemd-network/lldp.h \
-	src/libsystemd-network/lldp-tlv.h \
-	src/libsystemd-network/lldp-tlv.c \
 	src/libsystemd-network/test-lldp.c
 
 test_lldp_LDADD = \
@@ -5381,10 +5379,14 @@ libnetworkd_core_la_CFLAGS = \
 libnetworkd_core_la_SOURCES = \
 	src/libsystemd-network/network-internal.h \
 	src/network/networkd.h \
+	src/network/networkd-conf.h \
+	src/network/networkd-conf.c \
 	src/network/networkd-link.h \
 	src/network/networkd-link.c \
 	src/network/networkd-netdev.h \
 	src/network/networkd-netdev.c \
+	src/network/networkd-netdev-vrf.h \
+	src/network/networkd-netdev-vrf.c \
 	src/network/networkd-netdev-tunnel.h \
 	src/network/networkd-netdev-tunnel.c \
 	src/network/networkd-netdev-veth.h \
@@ -5409,6 +5411,7 @@ libnetworkd_core_la_SOURCES = \
 	src/network/networkd-ipv4ll.c \
 	src/network/networkd-dhcp4.c \
 	src/network/networkd-dhcp6.c \
+	src/network/networkd-ndisc.h \
 	src/network/networkd-ndisc.c \
 	src/network/networkd-network.h \
 	src/network/networkd-network.c \
@@ -5421,12 +5424,17 @@ libnetworkd_core_la_SOURCES = \
 	src/network/networkd-manager-bus.c \
 	src/network/networkd-fdb.h \
 	src/network/networkd-fdb.c \
+	src/network/networkd-brvlan.h \
+	src/network/networkd-brvlan.c \
 	src/network/networkd-address-pool.h \
 	src/network/networkd-address-pool.c \
 	src/network/networkd-util.h \
-	src/network/networkd-util.c
+	src/network/networkd-util.c \
+	src/network/networkd-lldp-tx.h \
+	src/network/networkd-lldp-tx.c
 
 nodist_libnetworkd_core_la_SOURCES = \
+	src/network/networkd-gperf.c \
 	src/network/networkd-network-gperf.c \
 	src/network/networkd-netdev-gperf.c
 
@@ -5523,6 +5531,7 @@ BUSNAMES_TARGET_WANTS += \
 endif
 
 gperf_gperf_sources += \
+	src/network/networkd-gperf.gperf \
 	src/network/networkd-network-gperf.gperf \
 	src/network/networkd-netdev-gperf.gperf
 
