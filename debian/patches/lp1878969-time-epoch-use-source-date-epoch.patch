@@ -7,14 +7,14 @@ This is a backport of the upstream commit that modifies meson.build;
 in this old version of systemd, meson isn't used, so the configure.ac
 must be modified instead
 
---- systemd-229.orig/configure.ac
-+++ systemd-229/configure.ac
-@@ -1069,7 +1069,7 @@ AC_ARG_WITH(time-epoch,
+--- a/configure.ac
++++ b/configure.ac
+@@ -1069,7 +1069,7 @@
          AS_HELP_STRING([--with-time-epoch=SECONDS],
                  [Time epoch for time clients]),
          [TIME_EPOCH="$withval"],
 -        [TIME_EPOCH="`stat -c %Y ${srcdir}/NEWS 2>/dev/null || echo 0`"])
-+        [TIME_EPOCH="`[ -n "$SOURCE_DATE_EPOCH" ] && echo "$SOURCE_DATE_EPOCH" || stat -c %Y ${srcdir}/NEWS 2>/dev/null || echo 0`"])
++        [TIME_EPOCH="`test -n "$SOURCE_DATE_EPOCH" && echo "$SOURCE_DATE_EPOCH" || stat -c %Y ${srcdir}/NEWS 2>/dev/null || echo 0`"])
  
  AC_DEFINE_UNQUOTED(TIME_EPOCH, [$TIME_EPOCH], [Time Epoch])
  
