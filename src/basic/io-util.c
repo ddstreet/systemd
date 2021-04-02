@@ -25,6 +25,7 @@
 #include <unistd.h>
 
 #include "io-util.h"
+#include "string-util.h"
 #include "time-util.h"
 
 int flush_fd(int fd) {
@@ -262,3 +263,21 @@ ssize_t sparse_write(int fd, const void *p, size_t sz, size_t run_length) {
 
         return q - (const uint8_t*) p;
 }
+
+char* set_iovec_string_field(struct iovec *iovec, unsigned int *n_iovec, const char *field, const char *value) {
+        char *x;
+
+        x = strappend(field, value);
+        if (x)
+                iovec[(*n_iovec)++] = IOVEC_MAKE_STRING(x);
+        return x;
+}
+
+char* set_iovec_field_free(struct iovec *iovec, unsigned int *n_iovec, const char *field, char *value) {
+        char *x;
+
+        x = set_iovec_string_field(iovec, n_iovec, field, value);
+        free(value);
+        return x;
+}
+
