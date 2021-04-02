@@ -1342,7 +1342,7 @@ static int mount_setup_unit(
         _cleanup_free_ char *e = NULL, *w = NULL, *o = NULL, *f = NULL;
         bool load_extras = false;
         MountParameters *p;
-        bool delete, changed = false;
+        bool delete, just_mounted, changed = false;
         Unit *u;
         int r;
 
@@ -1408,6 +1408,7 @@ static int mount_setup_unit(
                 }
 
                 unit_add_to_load_queue(u);
+                just_mounted = true;
                 changed = true;
         } else {
                 delete = false;
@@ -1438,6 +1439,8 @@ static int mount_setup_unit(
                         load_extras = true;
                         changed = true;
                 }
+
+                just_mounted = !MOUNT(u)->from_proc_self_mountinfo || MOUNT(u)->just_mounted;
         }
 
         w = strdup(what);
@@ -1457,7 +1460,7 @@ static int mount_setup_unit(
 
         if (set_flags) {
                 MOUNT(u)->is_mounted = true;
-                MOUNT(u)->just_mounted = !MOUNT(u)->from_proc_self_mountinfo;
+                MOUNT(u)->just_mounted = just_mounted;
                 MOUNT(u)->just_changed = changed;
         }
 
