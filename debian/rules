@@ -34,6 +34,7 @@ export DEB_BUILD_PROFILES += noudeb
 endif
 
 CONFFLAGS = \
+	-Dlog-trace=true \
 	-Db_lto=true \
 	-Db_pie=true \
 	-Dmode=release \
