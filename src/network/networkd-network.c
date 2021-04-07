@@ -211,7 +211,7 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->dhcp_use_dns = true;
         network->dhcp_use_hostname = true;
         network->dhcp_use_routes = true;
-        network->dhcp_use_gateway = true;
+        network->dhcp_use_gateway = -1;
         /* NOTE: this var might be overwriten by network_apply_anonymize_if_set */
         network->dhcp_send_hostname = true;
         network->dhcp_use_domains = DHCP_USE_DOMAINS_YES;
@@ -302,6 +302,9 @@ static int network_load_one(Manager *manager, const char *filename) {
                             "Disabling UseMTU=.", filename);
                 network->dhcp_use_mtu = false;
         }
+
+        if (network->dhcp_use_gateway < 0)
+                network->dhcp_use_gateway = network->dhcp_use_routes;
 
         LIST_PREPEND(networks, manager->networks, network);
 
