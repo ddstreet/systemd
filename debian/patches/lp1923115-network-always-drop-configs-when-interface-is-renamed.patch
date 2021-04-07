@@ -1,0 +1,35 @@
+Description: network: always drop configs when interface is renamed
+    Before the renaming, wrong .network file may be assigned to the link.
+    So, let's always drop link configuration.
+Author: Yu Watanabe <watanabe.yu+github@gmail.com>
+Origin: https://github.com/systemd/systemd/commit/30de2b89d125a8692c22579ef805b03f2054b30b
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1923115
+---
+Index: systemd-237/src/network/networkd-link.c
+===================================================================
+--- systemd-237.orig/src/network/networkd-link.c
++++ systemd-237/src/network/networkd-link.c
+@@ -3490,17 +3490,14 @@ int link_update(Link *link, sd_netlink_m
+
+         r = sd_netlink_message_read_string(m, IFLA_IFNAME, &ifname);
+         if (r >= 0 && !streq(ifname, link->ifname)) {
+-                log_link_info(link, "Interface name change detected, %s has been renamed to %s.", link->ifname, ifname);
+-
+-                link_free_carrier_maps(link);
++              Manager *manager = link->manager;
+
+-                r = free_and_strdup(&link->ifname, ifname);
+-                if (r < 0)
+-                        return r;
++                log_link_info(link, "Interface name change detected, %s has been renamed to %s.", link->ifname, ifname);
+
+-                r = link_new_carrier_maps(link);
+-                if (r < 0)
+-                        return r;
++              link_drop(link);
++              r = link_add(manager, m, &link);
++              if (r < 0)
++                      return r;
+         }
+
+         r = sd_netlink_message_read_u32(m, IFLA_MTU, &mtu);
