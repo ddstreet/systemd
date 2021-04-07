@@ -1,3 +1,10 @@
+systemd (237-3ubuntu10.47) bionic; urgency=medium
+
+  * d/p/network_always_drop_configs_when_interface_is_renamed.patch:
+    Fix networkd renaming race condition (LP: #1923115)
+
+ -- Seyeong Kim <seyeong.kim@canonical.com>  Wed, 07 Apr 2021 15:11:17 +0900
+
 systemd (237-3ubuntu10.46) bionic; urgency=medium
 
   * d/p/lp1916485-Newer-Glibc-use-faccessat2-to-implement-faccessat.patch:
