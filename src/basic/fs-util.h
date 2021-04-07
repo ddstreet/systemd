@@ -60,6 +60,7 @@ int symlink_idempotent(const char *from, const char *to);
 int symlink_atomic(const char *from, const char *to);
 int mknod_atomic(const char *path, mode_t mode, dev_t dev);
 int mkfifo_atomic(const char *path, mode_t mode);
+int mkfifoat_atomic(int dir_fd, const char *path, mode_t mode);
 
 int get_files_in_directory(const char *path, char ***list);
 
@@ -86,6 +87,7 @@ enum {
         CHASE_NO_AUTOFS   = 1U << 2,   /* If set, return -EREMOTE if autofs mount point found */
         CHASE_SAFE        = 1U << 3,   /* If set, return EPERM if we ever traverse from unprivileged to privileged files or directories */
         CHASE_OPEN        = 1U << 4,   /* If set, return an O_PATH object to the final component */
+        CHASE_NOFOLLOW    = 1U << 7, /* Only valid with CHASE_OPEN: when the path's right-most component refers to symlink return O_PATH fd of the symlink, rather than following it. */
 };
 
 int chase_symlinks(const char *path_with_prefix, const char *root, unsigned flags, char **ret);
