@@ -62,3 +62,5 @@ lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch
 lp1918696-shared-seccomp-util-address-family-filtering-is-brok.patch
 lp1915887-Downgrade-a-couple-of-warnings-to-debug.patch
 lp1887744-basic-unit-file-when-loading-linked-unit-files-use-l.patch
+lp1921696/0001-rfkill-improve-error-logging.patch
+lp1921696/0002-rfkill-use-short-writes-and-accept-long-reads.patch
