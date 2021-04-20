@@ -1,3 +1,11 @@
+systemd (237-3ubuntu10.48) UNRELEASED; urgency=medium
+
+  * d/p/lp1925216-seccomp-rework-functions-for-parsing-system-call-fil.patch:
+    Downgrade syscall group parsing failure logs to debug (LP: #1925216)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8c0181e24f7c0128a48c706d1f4b28ec0f225fd7
+
+ -- Dan Streetman <ddstreet@canonical.com>  Tue, 20 Apr 2021 10:21:12 -0400
+
 systemd (237-3ubuntu10.47) bionic; urgency=medium
 
   * d/p/network_always_drop_configs_when_interface_is_renamed.patch:
