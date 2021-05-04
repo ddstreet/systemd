@@ -5,6 +5,16 @@ set -e
 
 DPKGARCH=$(dpkg --print-architecture)
 
+SELECTED_TESTS=${SELECTED_TESTS:-test/TEST*}
+
+# passes on baremetal, fails in nested qemu
+# https://github.com/systemd/systemd/issues/11612
+if [ $(dpkg --print-architecture) = "ppc64el" ]; then
+BLACKLIST="$BLACKLIST
+TEST-24-UNIT-TESTS
+"
+fi
+
 # quiesce Makefile.guess; not really relevant as systemd/nspawn run from
 # installed packages
 export BUILD_DIR=.
@@ -31,7 +41,7 @@ else
     BLACKLIST="blacklist-upstream-ci"
 fi
 
-for t in test/TEST*; do
+for t in $SELECTED_TESTS; do
     testname=$(basename $t)
     if [ -f "$t/${DENY_LIST}" -o -f "$t/${BLACKLIST}" ]; then
         echo "========== DENY-LISTED: $testname =========="
