@@ -76,7 +76,10 @@ CONFFLAGS = \
 	-Dfdisk=false \
 	-Dpwquality=false \
 	-Dp11kit=false \
+	-Dtpm2=false \
 	-Doomd=false \
+	-Dsysext=true \
+	-Dnscd=true \
 	-Dntp-servers="$(DEFAULT_NTP_SERVERS)" \
 	-Ddns-servers='' \
 	-Dlink-udev-shared=false \
@@ -95,6 +98,7 @@ CONFFLAGS_deb = \
 	-Dinstall-tests=$(if $(filter noinsttest,$(DEB_BUILD_PROFILES)),false,true) \
 	-Defi=true \
 	-Dman=true \
+	-Dtranslations=true \
 	-Dnss-myhostname=true \
 	-Dnss-mymachines=true \
 	-Dnss-resolve=true \
@@ -172,6 +176,7 @@ CONFFLAGS_udeb = \
 	-Drfkill=false \
 	-Dhwdb=false \
 	-Dman=false \
+	-Dtranslations=false \
 	-Defi=false \
 	-Dseccomp=false \
 	-Dsysusers=false \
@@ -224,6 +229,9 @@ override_dh_install:
 	rm -f debian/install/*/usr/share/doc/systemd/LICENSE.*
 	rm -f debian/install/*/var/log/README
 	rm -f debian/install/*/etc/init.d/README
+	rm -f debian/install/*/lib/*.d/README
+	rm -f debian/install/*/lib/udev/*.d/README
+	rm -f debian/install/*/usr/lib/*.d/README
 	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/

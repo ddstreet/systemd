@@ -11,6 +11,7 @@ bin/systemd-machine-id-setup
 bin/systemd-tmpfiles
 bin/systemd-inhibit
 bin/systemd-escape
+bin/systemd-sysext
 bin/systemd-sysusers
 lib/modprobe.d/
 lib/systemd/
@@ -20,6 +21,7 @@ lib/udev/rules.d/71-seat.rules
 lib/udev/rules.d/99-systemd.rules
 usr/bin/systemd-cgls
 usr/bin/systemd-cgtop
+usr/bin/systemd-cryptenroll
 usr/bin/systemd-nspawn
 usr/bin/systemd-stdio-bridge
 usr/bin/systemd-analyze
