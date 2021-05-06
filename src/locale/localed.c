@@ -19,6 +19,7 @@
 #include "bus-polkit.h"
 #include "def.h"
 #include "dlfcn-util.h"
+#include "kbd-util.h"
 #include "keymap-util.h"
 #include "locale-util.h"
 #include "macro.h"
@@ -37,8 +38,7 @@ static int locale_update_system_manager(Context *c, sd_bus *bus) {
         _cleanup_strv_free_ char **l_set = NULL;
         _cleanup_(sd_bus_message_unrefp) sd_bus_message *m = NULL;
         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
-        size_t c_set, c_unset;
-        LocaleVariable p;
+        size_t c_set = 0, c_unset = 0;
         int r;
 
         assert(bus);
@@ -51,7 +51,7 @@ static int locale_update_system_manager(Context *c, sd_bus *bus) {
         if (!l_set)
                 return log_oom();
 
-        for (p = 0, c_set = 0, c_unset = 0; p < _VARIABLE_LC_MAX; p++) {
+        for (LocaleVariable p = 0; p < _VARIABLE_LC_MAX; p++) {
                 const char *name;
 
                 name = locale_variable_to_string(p);
@@ -178,7 +178,7 @@ static int property_get_locale(
 
         Context *c = userdata;
         _cleanup_strv_free_ char **l = NULL;
-        int p, q, r;
+        int r;
 
         r = locale_read_data(c, reply);
         if (r < 0)
@@ -188,7 +188,7 @@ static int property_get_locale(
         if (!l)
                 return -ENOMEM;
 
-        for (p = 0, q = 0; p < _VARIABLE_LC_MAX; p++) {
+        for (LocaleVariable p = 0, q = 0; p < _VARIABLE_LC_MAX; p++) {
                 char *t;
                 const char *name;
 
@@ -475,7 +475,7 @@ static int method_set_locale(sd_bus_message *m, void *userdata, sd_bus_error *er
 
 static int method_set_vc_keyboard(sd_bus_message *m, void *userdata, sd_bus_error *error) {
         Context *c = userdata;
-        const char *keymap, *keymap_toggle;
+        const char *name, *keymap, *keymap_toggle;
         int convert, interactive, r;
 
         assert(m);
@@ -491,16 +491,22 @@ static int method_set_vc_keyboard(sd_bus_message *m, void *userdata, sd_bus_erro
         r = vconsole_read_data(c, m);
         if (r < 0) {
                 log_error_errno(r, "Failed to read virtual console keymap data: %m");
-                return sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Failed to read virtual console keymap data");
+                return sd_bus_error_set_errnof(error, r, "Failed to read virtual console keymap data: %m");
+        }
+
+        FOREACH_STRING(name, keymap ?: keymap_toggle, keymap ? keymap_toggle : NULL) {
+                r = keymap_exists(name); /* This also verifies that the keymap name is kosher. */
+                if (r < 0) {
+                        log_error_errno(r, "Failed to check keymap %s: %m", name);
+                        return sd_bus_error_set_errnof(error, r, "Failed to check keymap %s: %m", name);
+                }
+                if (r == 0)
+                        return sd_bus_error_setf(error, SD_BUS_ERROR_FAILED, "Keymap %s is not installed.", name);
         }
 
         if (streq_ptr(keymap, c->vc_keymap) &&
             streq_ptr(keymap_toggle, c->vc_keymap_toggle))
                 return sd_bus_reply_method_return(m, NULL);
-
-        if ((keymap && (!filename_is_valid(keymap) || !string_is_safe(keymap))) ||
-            (keymap_toggle && (!filename_is_valid(keymap_toggle) || !string_is_safe(keymap_toggle))))
-                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Received invalid keymap data");
 
         r = bus_verify_polkit_async(
                         m,
@@ -830,7 +836,7 @@ static int run(int argc, char *argv[]) {
         _cleanup_(sd_bus_flush_close_unrefp) sd_bus *bus = NULL;
         int r;
 
-        log_setup_service();
+        log_setup();
 
         r = service_parse_argv("systemd-localed.service",
                                "Manage system locale settings and key mappings.",

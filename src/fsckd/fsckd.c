@@ -103,8 +103,8 @@ typedef struct Manager {
         bool cancel_requested;
 } Manager;
 
-static void client_free(Client *c);
-static void manager_free(Manager *m);
+static Client* client_free(Client *c);
+static Manager* manager_free(Manager *m);
 
 DEFINE_TRIVIAL_CLEANUP_FUNC(Client*, client_free);
 DEFINE_TRIVIAL_CLEANUP_FUNC(Manager*, manager_free);
@@ -183,7 +183,7 @@ static int client_request_cancel(Client *c) {
         return 1;
 }
 
-static void client_free(Client *c) {
+static Client* client_free(Client *c) {
         assert(c);
 
         if (c->manager) {
@@ -197,7 +197,7 @@ static void client_free(Client *c) {
                 free(c->device_name);
         if (c->device_id)
                 free(c->device_id);
-        free(c);
+        return mfree(c);
 }
 
 static void manager_disconnect_plymouth(Manager *m) {
@@ -513,9 +513,9 @@ static int manager_new_connection_handler(sd_event_source *s, int fd, uint32_t r
         return 0;
 }
 
-static void manager_free(Manager *m) {
+static Manager* manager_free(Manager *m) {
         if (!m)
-                return;
+                return NULL;
 
         /* clear last line */
         manager_write_console(m, NULL);
@@ -530,7 +530,7 @@ static void manager_free(Manager *m) {
 
         sd_event_unref(m->event);
 
-        free(m);
+        return mfree(m);
 }
 
 static int manager_new(Manager **ret, int fd) {
