@@ -12,6 +12,14 @@ systemd (246.6-1ubuntu1.4) UNRELEASED; urgency=medium
     Handle rfkill api change in kernel 5.10 (LP: #1921696)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b683c842c74b5f193555fd79bc76e574a025f5b1
 
+  [ Łukasz 'sil2100' Zemczak ]
+  * d/p/lp1664844/0001-network-add-ActivationPolicy-configuration-parameter.patch,
+    d/p/lp1664844/0002-test-add-ActivationPolicy-unit-tests.patch,
+    d/p/lp1664844/0003-save-link-activation-policy-to-state-file-and-displa.patch:
+    - add support for configuring the activation policy for an interface
+      (LP: #1664844)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=0b0a9202964b24fb8d9fb4b28bdb22c6aadd25b7
+
  -- Dan Streetman <ddstreet@canonical.com>  Fri, 21 May 2021 12:24:41 -0400
 
 systemd (246.6-1ubuntu1.3) groovy; urgency=medium
