@@ -73,7 +73,7 @@ Fixes: #17437
      </variablelist>
    </refsect1>
  
-@@ -573,8 +603,9 @@
+@@ -561,8 +591,9 @@
            <listitem>
              <para>A link name or a list of link names. When set, controls the behavior of the current
              link. When all links in the list are in an operational down state, the current link is brought
@@ -85,7 +85,7 @@ Fixes: #17437
            </listitem>
          </varlistentry>
          <varlistentry>
-@@ -947,6 +978,10 @@
+@@ -929,6 +960,10 @@
            of the interface even if its carrier is lost. When unset, the value specified with
            <option>ConfigureWithoutCarrier=</option> is used.
            </para>
@@ -98,7 +98,7 @@ Fixes: #17437
        <varlistentry>
 --- a/src/network/networkd-link.c
 +++ b/src/network/networkd-link.c
-@@ -1812,17 +1812,38 @@
+@@ -2332,17 +2332,38 @@
          assert(link);
          assert(link->network);
  
@@ -139,15 +139,15 @@ Fixes: #17437
  
          if (link->network->bridge) {
                  r = link_set_bridge(link);
-@@ -2216,6 +2237,7 @@
+@@ -3417,6 +3438,7 @@
                  return r;
  
-         link_set_state(link, LINK_STATE_INITIALIZED);
+         link_set_state(link, LINK_STATE_PENDING);
 +        link->activated = false;
          link_dirty(link);
  
          /* link_configure_duid() returns 0 if it requests product UUID. In that case,
-@@ -2687,6 +2709,16 @@
+@@ -3992,6 +4014,16 @@
  static int link_admin_state_up(Link *link) {
          int r;
  
@@ -164,7 +164,7 @@ Fixes: #17437
          /* We set the ipv6 mtu after the device mtu, but the kernel resets
           * ipv6 mtu on NETDEV_UP, so we need to reset it.  The check for
           * ipv6_mtu_set prevents this from trying to set it too early before
-@@ -2701,6 +2733,21 @@
+@@ -4006,6 +4038,21 @@
          return 0;
  }
  
@@ -185,8 +185,8 @@ Fixes: #17437
 +
  int link_update(Link *link, sd_netlink_message *m) {
          _cleanup_strv_free_ char **s = NULL;
-         hw_addr_data hw_addr;
-@@ -2813,9 +2860,14 @@
+         struct ether_addr mac;
+@@ -4194,9 +4241,14 @@
                  r = link_admin_state_up(link);
                  if (r < 0)
                          return r;
@@ -204,17 +204,17 @@ Fixes: #17437
                  return r;
 --- a/src/network/networkd-link.h
 +++ b/src/network/networkd-link.h
-@@ -130,6 +130,7 @@
+@@ -123,6 +123,7 @@
+         bool setting_mtu:1;
          bool setting_genmode:1;
          bool ipv6_mtu_set:1;
-         bool bridge_mdb_configured:1;
 +        bool activated:1;
  
-         sd_dhcp_server *dhcp_server;
+         LIST_HEAD(Address, pool_addresses);
  
 --- a/src/network/networkd-network-gperf.gperf
 +++ b/src/network/networkd-network-gperf.gperf
-@@ -63,6 +63,7 @@
+@@ -53,6 +53,7 @@
  Link.Multicast,                              config_parse_tristate,                                    0,                             offsetof(Network, multicast)
  Link.AllMulticast,                           config_parse_tristate,                                    0,                             offsetof(Network, allmulticast)
  Link.Unmanaged,                              config_parse_bool,                                        0,                             offsetof(Network, unmanaged)
@@ -224,7 +224,7 @@ Fixes: #17437
  SR-IOV.VLANId,                               config_parse_sr_iov_uint32,                               0,                             0
 --- a/src/network/networkd-network.c
 +++ b/src/network/networkd-network.c
-@@ -238,9 +238,6 @@
+@@ -274,9 +274,6 @@
          if (network->dhcp_use_gateway < 0)
                  network->dhcp_use_gateway = network->dhcp_use_routes;
  
@@ -234,7 +234,7 @@ Fixes: #17437
          if (network->dhcp_critical >= 0) {
                  if (network->keep_configuration >= 0)
                          log_warning("%s: Both KeepConfiguration= and deprecated CriticalConnection= are set. "
-@@ -252,6 +249,30 @@
+@@ -288,6 +285,30 @@
                          network->keep_configuration = KEEP_CONFIGURATION_NO;
          }
  
@@ -265,15 +265,15 @@ Fixes: #17437
          if (network->keep_configuration < 0)
                  network->keep_configuration = KEEP_CONFIGURATION_NO;
  
-@@ -329,6 +350,7 @@
+@@ -392,6 +413,7 @@
  
                  .required_for_online = true,
                  .required_operstate_for_online = LINK_OPERSTATE_RANGE_DEFAULT,
 +                .activation_policy = _ACTIVATION_POLICY_INVALID,
-                 .arp = -1,
-                 .multicast = -1,
-                 .allmulticast = -1,
-@@ -1238,3 +1260,15 @@
+                 .dhcp = ADDRESS_FAMILY_NO,
+                 .dhcp_critical = -1,
+                 .dhcp_use_ntp = true,
+@@ -1418,3 +1440,15 @@
  
  DEFINE_STRING_TABLE_LOOKUP(ipv6_link_local_address_gen_mode, IPv6LinkLocalAddressGenMode);
  DEFINE_CONFIG_PARSE_ENUM(config_parse_ipv6_link_local_address_gen_mode, ipv6_link_local_address_gen_mode, IPv6LinkLocalAddressGenMode, "Failed to parse IPv6 link local address generation mode");
@@ -291,7 +291,7 @@ Fixes: #17437
 +DEFINE_CONFIG_PARSE_ENUM(config_parse_activation_policy, activation_policy, ActivationPolicy, "Failed to parse activation policy");
 --- a/src/network/networkd-network.h
 +++ b/src/network/networkd-network.h
-@@ -46,6 +46,17 @@
+@@ -63,6 +63,17 @@
         _IPV6_LINK_LOCAL_ADDRESS_GEN_MODE_INVALID        = -1
  } IPv6LinkLocalAddressGenMode;
  
@@ -309,15 +309,15 @@ Fixes: #17437
  typedef struct Manager Manager;
  
  typedef struct NetworkDHCPServerEmitAddress {
-@@ -98,6 +109,7 @@
-         bool unmanaged;
+@@ -278,6 +289,7 @@
+ 
          bool required_for_online; /* Is this network required to be considered online? */
          LinkOperationalStateRange required_operstate_for_online;
 +        ActivationPolicy activation_policy;
  
-         /* misc settings */
-         bool configure_without_carrier;
-@@ -330,6 +342,7 @@
+         /* LLDP support */
+         LLDPMode lldp_mode; /* LLDP reception */
+@@ -367,6 +379,7 @@
  CONFIG_PARSER_PROTOTYPE(config_parse_required_for_online);
  CONFIG_PARSER_PROTOTYPE(config_parse_keep_configuration);
  CONFIG_PARSER_PROTOTYPE(config_parse_ipv6_link_local_address_gen_mode);
@@ -325,7 +325,7 @@ Fixes: #17437
  
  const struct ConfigPerfItem* network_network_gperf_lookup(const char *key, GPERF_LEN_TYPE length);
  
-@@ -338,3 +351,6 @@
+@@ -378,3 +391,6 @@
  
  const char* ipv6_link_local_address_gen_mode_to_string(IPv6LinkLocalAddressGenMode s) _const_;
  IPv6LinkLocalAddressGenMode ipv6_link_local_address_gen_mode_from_string(const char *s) _pure_;

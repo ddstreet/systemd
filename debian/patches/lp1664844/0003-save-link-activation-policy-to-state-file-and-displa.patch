@@ -46,7 +46,7 @@ Bug-Ubuntu: https://bugs.launchpad.net/netplan/+bug/1664844
  }
 --- a/src/network/networkctl.c
 +++ b/src/network/networkctl.c
-@@ -1390,7 +1390,7 @@
+@@ -1389,7 +1389,7 @@
  
          _cleanup_strv_free_ char **dns = NULL, **ntp = NULL, **sip = NULL, **search_domains = NULL, **route_domains = NULL;
          _cleanup_free_ char *t = NULL, *network = NULL, *iaid = NULL, *duid = NULL,
@@ -74,7 +74,7 @@ Bug-Ubuntu: https://bugs.launchpad.net/netplan/+bug/1664844
                  size_t client_id_len;
 --- a/src/network/networkd-link.c
 +++ b/src/network/networkd-link.c
-@@ -3040,6 +3040,9 @@
+@@ -4425,6 +4425,9 @@
                          st.max != LINK_OPERSTATE_RANGE_DEFAULT.max ? ":" : "",
                          st.max != LINK_OPERSTATE_RANGE_DEFAULT.max ? strempty(link_operstate_to_string(st.max)) : "");
  
@@ -100,7 +100,7 @@ Bug-Ubuntu: https://bugs.launchpad.net/netplan/+bug/1664844
  
 --- a/test/test-network/systemd-networkd-tests.py
 +++ b/test/test-network/systemd-networkd-tests.py
-@@ -2931,6 +2931,7 @@
+@@ -2738,6 +2738,7 @@
              self.assertRegex(data, r'OPER_STATE=routable')
              self.assertRegex(data, r'REQUIRED_FOR_ONLINE=yes')
              self.assertRegex(data, r'REQUIRED_OPER_STATE_FOR_ONLINE=routable')
