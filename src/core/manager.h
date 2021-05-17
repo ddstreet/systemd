@@ -341,6 +341,7 @@ struct Manager {
         StatusUnitFormat status_unit_format;
         char *confirm_spawn;
         bool no_console_output;
+        bool no_ellipsize_output;
         bool service_watchdogs;
 
         ExecOutput default_std_output, default_std_error;

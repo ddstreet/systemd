@@ -445,6 +445,15 @@ static int parse_proc_cmdline_item(const char *key, const char *value, void *dat
                 } else
                         arg_show_status = SHOW_STATUS_YES;
 
+        } else if (proc_cmdline_key_streq(key, "systemd.show_status_ellipsize")) {
+
+                if (value) {
+                        r = parse_show_status_ellipsize(value, &arg_show_status_ellipsize);
+                        if (r < 0)
+                                log_warning_errno(r, "Failed to parse show status switch %s, ignoring: %m", value);
+                } else
+                        arg_show_status = SHOW_STATUS_YES;
+
         } else if (proc_cmdline_key_streq(key, "systemd.status_unit_format")) {
 
                 if (proc_cmdline_value_missing(key, value))
