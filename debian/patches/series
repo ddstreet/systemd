@@ -250,3 +250,4 @@ lp1918696-shared-seccomp-util-address-family-filtering-is-brok.patch
 lp1891810-seccomp-util-add-new-syscalls-from-kernel-5.6-to-sys.patch
 lp1923115-network-always-drop-configs-when-interface-is-renamed.patch
 lp1925216-seccomp-rework-functions-for-parsing-system-call-fil.patch
+lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch
