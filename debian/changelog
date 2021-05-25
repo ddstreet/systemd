@@ -14,6 +14,9 @@ systemd (246.6-1ubuntu1.4) UNRELEASED; urgency=medium
   * d/p/lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch:
     Move link mac and master config out of link_up() (LP: #1929560)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a90963d52a70c0ed1b429b1025b95f8c0fa6e7aa
+  * d/p/lp1902891-core-mount-mount-command-may-fail-after-adding-the-c.patch:
+    Handle failed mount command (LP: #1902891)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d83f3bce38e04395c6406c3c45efbc9977ae1138
 
   [ Łukasz 'sil2100' Zemczak ]
   * d/p/lp1664844/0001-network-add-ActivationPolicy-configuration-parameter.patch,
