@@ -6,6 +6,12 @@ systemd (237-3ubuntu10.48) UNRELEASED; urgency=medium
   * d/p/lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch:
     Move link mac and master config out of link_up() (LP: #1929560)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d808ea22366ca7ba4b5bb32815ab0ca2eea8a49f
+  * d/p/resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch,
+    d/p/resolved_disable-connection-downgrade-when-DNSSEC-yes.patch,
+    d/p/lp1880258-log-nxdomain-as-debug.patch,
+    d/p/lp1785383-resolved-address-DVE-2018-0001.patch:
+    - Use upstream patch for DVE-2018-0001 handling (LP: #1785383)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b6258fda64c84c34b0f8026e6e29bcfffa8dc4f1
 
  -- Dan Streetman <ddstreet@canonical.com>  Tue, 20 Apr 2021 10:21:12 -0400
 
