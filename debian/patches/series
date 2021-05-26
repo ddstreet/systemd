@@ -11,7 +11,6 @@ test-test-functions-on-PP64-use-vmlinux.patch
 test-test-functions-on-PPC64-use-hvc0-console.patch
 test-masked-unit-with-drop-ins.patch
 install-detect-masked-unit-with-drop-ins.patch
-resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch
 hwdb-Use-wlan-keycode-for-all-Dell-systems-8762.patch
 virt-if-we-detect-Xen-by-DMI-trust-that-over-CPUID.patch
 0001-logind-trivial-improvements.patch
@@ -132,7 +131,6 @@ fix-typo-lp1668771-resolved-switch-cache-option-to-a-tri-state-option-s.patch
 lp1840640-shared-seccomp-add-sync_file_range2.patch
 lp1783994-dissect-Don-t-count-RPMB-and-boot-partitions-8609.patch
 lp1832672-resolved-rework-parsing-of-etc-hosts.patch
-resolved_disable-connection-downgrade-when-DNSSEC-yes.patch
 lp1843381-dell_passthrough_skip_rename_retry.patch
 lp1849733/0001-resolved-longlived-TCP-connections.patch
 lp1849733/0002-resolved-line-split-dns_stream_new-function-signatur.patch
@@ -243,7 +241,6 @@ lp1883447-seccomp-add-all-time64-syscalls.patch
 lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch
 lp1685754-pid1-by-default-make-user-units-inherit-their-umask-.patch
 lp1878969-meson-initialize-time-epoch-to-reproducible-builds-compat.patch
-lp1880258-log-nxdomain-as-debug.patch
 lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch
 lp1916485-Newer-Glibc-use-faccessat2-to-implement-faccessat.patch
 lp1918696-shared-seccomp-util-address-family-filtering-is-brok.patch
@@ -251,3 +248,4 @@ lp1891810-seccomp-util-add-new-syscalls-from-kernel-5.6-to-sys.patch
 lp1923115-network-always-drop-configs-when-interface-is-renamed.patch
 lp1925216-seccomp-rework-functions-for-parsing-system-call-fil.patch
 lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch
+lp1785383-resolved-address-DVE-2018-0001.patch
