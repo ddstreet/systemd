@@ -136,6 +136,8 @@ DnsServer* dns_server_unref(DnsServer *s)  {
         if (s->n_ref > 0)
                 return NULL;
 
+        dns_stream_unref(s->stream);
+
         free(s->server_string);
         return mfree(s);
 }
