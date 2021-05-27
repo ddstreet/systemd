@@ -1,0 +1,175 @@
+From 13d92c6300edbb1369f97c2e1bef4c4096de8ddb Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 26 Feb 2018 12:51:35 +0100
+Subject: [PATCH] seccomp: rework functions for parsing system call filters
+Bug: https://github.com/systemd/systemd/issues/8261
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1925216
+Origin: upstream, https://github.com/systemd/systemd/pull/8280/commits/13d92c6300edbb1369f97c2e1bef4c4096de8ddb
+
+This reworks system call filter parsing, and replaces a couple of "bool"
+function arguments by a single flags parameter.
+
+This shouldn't change behaviour, except for one case: when we
+recursively call our parsing function on our own syscall list, then
+we'll lower the log level to LOG_DEBUG from LOG_WARNING, because at that
+point things are just a problem in our own code rather than in the user
+configuration we are parsing, and we shouldn't hence generate confusing
+warnings about syntax errors.
+
+Fixes: #8261
+---
+ src/core/dbus-execute.c   |  4 ++--
+ src/core/load-fragment.c  |  6 ++++--
+ src/shared/seccomp-util.c | 34 +++++++++++++++++++---------------
+ src/shared/seccomp-util.h | 29 +++++++++++++----------------
+ 4 files changed, 38 insertions(+), 35 deletions(-)
+
+--- a/src/core/dbus-execute.c
++++ b/src/core/dbus-execute.c
+@@ -1569,7 +1569,7 @@ int bus_exec_context_set_transient_prope
+                                 c->syscall_whitelist = whitelist;
+ 
+                                 if (c->syscall_whitelist) {
+-                                        r = seccomp_parse_syscall_filter(invert, "@default", -1, c->syscall_filter, true);
++                                        r = seccomp_parse_syscall_filter("@default", -1, c->syscall_filter, SECCOMP_PARSE_WHITELIST | (invert ? SECCOMP_PARSE_INVERT : 0));
+                                         if (r < 0)
+                                                 return r;
+                                 }
+@@ -1583,7 +1583,7 @@ int bus_exec_context_set_transient_prope
+                                 if (r < 0)
+                                         return r;
+ 
+-                                r = seccomp_parse_syscall_filter(invert, n, e, c->syscall_filter, c->syscall_whitelist);
++                                r = seccomp_parse_syscall_filter(n, e, c->syscall_filter, (invert ? SECCOMP_PARSE_INVERT : 0) | (c->syscall_whitelist ? SECCOMP_PARSE_WHITELIST : 0));
+                                 if (r < 0)
+                                         return r;
+                         }
+--- a/src/core/load-fragment.c
++++ b/src/core/load-fragment.c
+@@ -2935,7 +2935,7 @@ int config_parse_syscall_filter(
+                         c->syscall_whitelist = true;
+ 
+                         /* Accept default syscalls if we are on a whitelist */
+-                        r = seccomp_parse_syscall_filter(false, "@default", -1, c->syscall_filter, true);
++                        r = seccomp_parse_syscall_filter("@default", -1, c->syscall_filter, SECCOMP_PARSE_WHITELIST);
+                         if (r < 0)
+                                 return r;
+                 }
+@@ -2962,7 +2962,9 @@ int config_parse_syscall_filter(
+                         continue;
+                 }
+ 
+-                r = seccomp_parse_syscall_filter_and_warn(invert, name, num, c->syscall_filter, c->syscall_whitelist, unit, filename, line);
++                r = seccomp_parse_syscall_filter_full(name, num, c->syscall_filter,
++                                                      SECCOMP_PARSE_LOG|SECCOMP_PARSE_PERMISSIVE|(invert ? SECCOMP_PARSE_INVERT : 0)|(c->syscall_whitelist ? SECCOMP_PARSE_WHITELIST : 0),
++                                                      unit, filename, line);
+                 if (r < 0)
+                         return r;
+         }
+--- a/src/shared/seccomp-util.c
++++ b/src/shared/seccomp-util.c
+@@ -974,13 +974,11 @@ int seccomp_load_syscall_filter_set_raw(
+         return 0;
+ }
+ 
+-int seccomp_parse_syscall_filter_internal(
+-                bool invert,
++int seccomp_parse_syscall_filter_full(
+                 const char *name,
+                 int errno_num,
+                 Hashmap *filter,
+-                bool whitelist,
+-                bool warn,
++                SeccompParseFlags flags,
+                 const char *unit,
+                 const char *filename,
+                 unsigned line) {
+@@ -996,15 +994,20 @@ int seccomp_parse_syscall_filter_interna
+ 
+                 set = syscall_filter_set_find(name);
+                 if (!set) {
+-                        if (warn) {
+-                                log_syntax(unit, LOG_WARNING, filename, line, 0, "Unknown system call group, ignoring: %s", name);
+-                                return 0;
+-                        } else
++                        if (!(flags & SECCOMP_PARSE_PERMISSIVE))
+                                 return -EINVAL;
++
++                        log_syntax(unit, flags & SECCOMP_PARSE_LOG ? LOG_WARNING : LOG_DEBUG, filename, line, 0,
++                                   "Unknown system call group, ignoring: %s", name);
++                        return 0;
+                 }
+ 
+                 NULSTR_FOREACH(i, set->value) {
+-                        r = seccomp_parse_syscall_filter_internal(invert, i, errno_num, filter, whitelist, warn, unit, filename, line);
++                        /* Call ourselves again, for the group to parse. Note that we downgrade logging here (i.e. take
++                         * away the SECCOMP_PARSE_LOG flag) since any issues in the group table are our own problem,
++                         * not a problem in user configuration data and we shouldn't pretend otherwise by complaining
++                         * about them. */
++                        r = seccomp_parse_syscall_filter_full(i, errno_num, filter, flags &~ SECCOMP_PARSE_LOG, unit, filename, line);
+                         if (r < 0)
+                                 return r;
+                 }
+@@ -1013,19 +1016,20 @@ int seccomp_parse_syscall_filter_interna
+ 
+                 id = seccomp_syscall_resolve_name(name);
+                 if (id == __NR_SCMP_ERROR) {
+-                        if (warn) {
+-                                log_syntax(unit, LOG_WARNING, filename, line, 0, "Failed to parse system call, ignoring: %s", name);
+-                                return 0;
+-                        } else
++                        if (!(flags & SECCOMP_PARSE_PERMISSIVE))
+                                 return -EINVAL;
++
++                        log_syntax(unit, flags & SECCOMP_PARSE_LOG ? LOG_WARNING : LOG_DEBUG, filename, line, 0,
++                                   "Failed to parse system call, ignoring: %s", name);
++                        return 0;
+                 }
+ 
+                 /* If we previously wanted to forbid a syscall and now
+                  * we want to allow it, then remove it from the list. */
+-                if (!invert == whitelist) {
++                if (!(flags & SECCOMP_PARSE_INVERT) == !!(flags & SECCOMP_PARSE_WHITELIST)) {
+                         r = hashmap_put(filter, INT_TO_PTR(id + 1), INT_TO_PTR(errno_num));
+                         if (r < 0)
+-                                return warn ? log_oom() : -ENOMEM;
++                                return flags & SECCOMP_PARSE_LOG ? log_oom() : -ENOMEM;
+                 } else
+                         (void) hashmap_remove(filter, INT_TO_PTR(id + 1));
+         }
+--- a/src/shared/seccomp-util.h
++++ b/src/shared/seccomp-util.h
+@@ -81,22 +81,19 @@ int seccomp_add_syscall_filter_item(scmp
+ int seccomp_load_syscall_filter_set(uint32_t default_action, const SyscallFilterSet *set, uint32_t action);
+ int seccomp_load_syscall_filter_set_raw(uint32_t default_action, Hashmap* set, uint32_t action);
+ 
+-int seccomp_parse_syscall_filter_internal(
+-                bool invert, const char *name, int errno_num, Hashmap *filter, bool whitelist,
+-                bool warn, const char *unit, const char *filename, unsigned line);
++typedef enum SeccompParseFlags {
++        SECCOMP_PARSE_INVERT     = 1U << 0,
++        SECCOMP_PARSE_WHITELIST  = 1U << 1,
++        SECCOMP_PARSE_LOG        = 1U << 2,
++        SECCOMP_PARSE_PERMISSIVE = 1U << 3,
++} SeccompParseFlags;
+ 
+-static inline int seccomp_parse_syscall_filter_and_warn(
+-                bool invert, const char *name, int errno_num, Hashmap *filter, bool whitelist,
+-                const char *unit, const char *filename, unsigned line) {
+-        assert(unit);
+-        assert(filename);
++int seccomp_parse_syscall_filter_full(
++                const char *name, int errno_num, Hashmap *filter, SeccompParseFlags flags,
++                const char *unit, const char *filename, unsigned line);
+ 
+-        return seccomp_parse_syscall_filter_internal(invert, name, errno_num, filter, whitelist, true, unit, filename, line);
+-}
+-
+-static inline int seccomp_parse_syscall_filter(
+-                bool invert, const char *name, int errno_num, Hashmap *filter, bool whitelist) {
+-        return seccomp_parse_syscall_filter_internal(invert, name, errno_num, filter, whitelist, false, NULL, NULL, 0);
++static inline int seccomp_parse_syscall_filter(const char *name, int errno_num, Hashmap *filter, SeccompParseFlags flags) {
++        return seccomp_parse_syscall_filter_full(name, errno_num, filter, flags, NULL, NULL, 0);
+ }
+ 
+ int seccomp_restrict_archs(Set *archs);
