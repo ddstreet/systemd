@@ -11,6 +11,7 @@
 #include "conf-files.h"
 #include "conf-parser.h"
 #include "def.h"
+#include "device-private.h"
 #include "device-util.h"
 #include "ethtool-util.h"
 #include "fd-util.h"
@@ -364,6 +365,7 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
         struct ether_addr *mac = NULL;
         const char *new_name = NULL;
         const char *old_name;
+        DeviceAction a = _DEVICE_ACTION_INVALID;
         unsigned speed, name_type = NET_NAME_UNKNOWN;
         NamePolicy policy;
         int r, ifindex;
@@ -376,6 +378,16 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
         r = sd_device_get_sysname(device, &old_name);
         if (r < 0)
                 return r;
+
+        r = device_get_action(device, &a);
+        if (r < 0)
+                log_device_warning_errno(device, r, "Failed to get ACTION= property: %m");
+        else if (!IN_SET(a, DEVICE_ACTION_ADD, DEVICE_ACTION_BIND, DEVICE_ACTION_MOVE)) {
+                log_device_debug(device, "Skipping to apply .link settings on '%s' uevent.", device_action_to_string(a));
+
+                *name = old_name;
+                return 0;
+        }
 
         r = ethtool_set_glinksettings(&ctx->ethtool_fd, old_name,
                                       config->autonegotiation, config->advertise,
@@ -437,6 +449,12 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
         if (IN_SET(name_type, NET_NAME_USER, NET_NAME_RENAMED)
             && !naming_scheme_has(NAMING_ALLOW_RERENAMES)) {
                 log_device_debug(device, "Device already has a name given by userspace, not renaming.");
+                goto no_rename;
+        }
+
+        if (a == DEVICE_ACTION_MOVE) {
+                log_device_debug(device, "Skipping to apply Name= and NamePolicy= on '%s' uevent.", device_action_to_string(a));
+                new_name = old_name;
                 goto no_rename;
         }
 
