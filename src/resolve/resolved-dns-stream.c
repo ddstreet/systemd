@@ -59,6 +59,10 @@ static int dns_stream_update_io(DnsStream *s) {
 
 static int dns_stream_complete(DnsStream *s, int error) {
         assert(s);
+        assert(error >= 0);
+
+        /* Error is > 0 when the connection failed for some reason in the network stack. It's == 0 if we sent
+         * and receieved exactly one packet each (in the LLMNR client case). */
 
         dns_stream_stop(s);
 
