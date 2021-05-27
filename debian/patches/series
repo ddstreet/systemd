@@ -32,7 +32,6 @@ debian/UBUNTU-units-block-CAP_SYS_MODULE-units-in-containers-too.patch
 debian/UBUNTU-test-sleep-skip-test_fiemap-upon-inapproriate-ioctl-.patch
 debian/UBUNTU-Support-system-image-read-only-etc.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
-debian/UBUNTU-resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch
 debian/UBUNTU-Revert-namespace-be-more-careful-when-handling-namespacin.patch
 Skip-falling-back-to-device-name-when-net_get_name-device.patch
 debian/UBUNTU-Revert-cgroup-Continue-unit-reset-if-cgroup-is-busy.patch
@@ -57,8 +56,16 @@ lp1907306/0007-test-network-increase-wait_online-timeout-to-handle-.patch
 lp1907306/0008-sd-dhcp-client-fix-renew-rebind-timeout-calculation-.patch
 lp1902960-udev-re-assign-ID_NET_DRIVER-ID_NET_LINK_FILE-ID_NET.patch
 lp1911187-systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch
-lp1880258-log-nxdomain-as-debug.patch
 lp1913763-udev-rules-add-rule-to-create-dev-ptp_hyperv.patch
 lp1918696-shared-seccomp-util-address-family-filtering-is-brok.patch
 lp1915887-Downgrade-a-couple-of-warnings-to-debug.patch
 lp1887744-basic-unit-file-when-loading-linked-unit-files-use-l.patch
+lp1921696/0001-rfkill-improve-error-logging.patch
+lp1921696/0002-rfkill-use-short-writes-and-accept-long-reads.patch
+lp1926547-hwdb-60-keyboard-Update-Dell-Privacy-Micmute-Hotkey-.patch
+lp1664844/0001-network-add-ActivationPolicy-configuration-parameter.patch
+lp1664844/0002-test-add-ActivationPolicy-unit-tests.patch
+lp1664844/0003-save-link-activation-policy-to-state-file-and-displa.patch
+lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch
+lp1902891-core-mount-mount-command-may-fail-after-adding-the-c.patch
+lp1785383-resolved-address-DVE-2018-0001.patch
