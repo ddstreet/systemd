@@ -1,4 +1,4 @@
-systemd (246.6-1ubuntu1.4) UNRELEASED; urgency=medium
+systemd (246.6-1ubuntu1.4) groovy; urgency=medium
 
   [ Andy Chi ]
   * debian/patches/lp1926547-hwdb-60-keyboard-Update-Dell-Privacy-Local-Mic-Mute-.patch
@@ -31,7 +31,7 @@ systemd (246.6-1ubuntu1.4) UNRELEASED; urgency=medium
       (LP: #1664844)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=0b0a9202964b24fb8d9fb4b28bdb22c6aadd25b7
 
- -- Dan Streetman <ddstreet@canonical.com>  Fri, 21 May 2021 12:24:41 -0400
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 27 May 2021 11:13:07 -0400
 
 systemd (246.6-1ubuntu1.3) groovy; urgency=medium
 
