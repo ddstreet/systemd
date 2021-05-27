@@ -42,13 +42,14 @@ __contains_word () {
 __filter_units_by_properties () {
         local mode=$1 properties=$2; shift 2
         local units=("$@")
-        local props i p n
+        local propertynames props i p n
         local names= count=0
 
         IFS=$',' read -r -a p < <(echo "Names,$properties")
+        IFS=$',' propertynames=("${p[*]//=*/}")
         n=${#p[*]}
         readarray -t props < \
-                  <(__systemctl $mode show --property "Names,$properties" -- "${units[@]}")
+                  <(__systemctl $mode show --property "Names,$propertynames" -- "${units[@]}")
 
         for ((i=0; i < ${#props[*]}; i++)); do
                 if [[ -z ${props[i]} ]]; then
