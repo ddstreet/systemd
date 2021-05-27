@@ -1,4 +1,4 @@
-systemd (237-3ubuntu10.48) UNRELEASED; urgency=medium
+systemd (237-3ubuntu10.48) bionic; urgency=medium
 
   * d/p/lp1925216-seccomp-rework-functions-for-parsing-system-call-fil.patch:
     Downgrade syscall group parsing failure logs to debug (LP: #1925216)
@@ -13,7 +13,7 @@ systemd (237-3ubuntu10.48) UNRELEASED; urgency=medium
     - Use upstream patch for DVE-2018-0001 handling (LP: #1785383)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b6258fda64c84c34b0f8026e6e29bcfffa8dc4f1
 
- -- Dan Streetman <ddstreet@canonical.com>  Tue, 20 Apr 2021 10:21:12 -0400
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 27 May 2021 11:18:38 -0400
 
 systemd (237-3ubuntu10.47) bionic; urgency=medium
 
