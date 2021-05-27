@@ -437,6 +437,7 @@ int dns_stream_new(
         s->n_ref = 1;
         s->fd = -1;
         s->protocol = protocol;
+        s->type = type;
 
         r = sd_event_add_io(m->event, &s->io_event_source, fd, EPOLLIN, on_stream_io, s);
         if (r < 0)
