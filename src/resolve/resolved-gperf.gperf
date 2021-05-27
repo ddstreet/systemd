@@ -23,5 +23,5 @@ Resolve.Domains,         config_parse_search_domains,         0,                
 Resolve.LLMNR,           config_parse_resolve_support,        0,                   offsetof(Manager, llmnr_support)
 Resolve.MulticastDNS,    config_parse_resolve_support,        0,                   offsetof(Manager, mdns_support)
 Resolve.DNSSEC,          config_parse_dnssec_mode,            0,                   offsetof(Manager, dnssec_mode)
-Resolve.Cache,           config_parse_bool,                   0,                   offsetof(Manager, enable_cache)
+Resolve.Cache,           config_parse_dns_cache_mode,         DNS_CACHE_MODE_YES,  offsetof(Manager, enable_cache)
 Resolve.DNSStubListener, config_parse_dns_stub_listener_mode, 0,                   offsetof(Manager, dns_stub_listener_mode)
