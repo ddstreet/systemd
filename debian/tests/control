@@ -99,6 +99,7 @@ Restrictions: needs-root, allow-stderr, isolation-container, skippable
 Tests: unit-tests
 Depends: systemd-tests,
   libpam-systemd,
+  udev,
   tree,
   perl,
   python3,
@@ -150,6 +151,7 @@ Depends: @,
   zstd,
   squashfs-tools,
   vim-tiny,
+  dosfstools,
 Restrictions: needs-root, allow-stderr, isolation-machine
 
 Tests: boot-smoke
