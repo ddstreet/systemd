@@ -82,3 +82,6 @@ lp1925827/0011-network-always-re-configure-rules-even-if-already-ex.patch
 lp1925827/0012-network-set-RoutingPolicyRule-family-based-on-Family.patch
 lp1925827/0013-network-drop-fib-rules-configured-with-Family-both.patch
 lp1925827/0014-test-network-add-tests-for-fib-rules-with-Family-bot.patch
+lp1931578/0001-network-default-RequiredForOnline-false-if-Activacti.patch
+lp1931578/0002-networkctl-add-field-Required-For-Online.patch
+lp1931578/0003-test-add-test-to-verify-RequiredForOnline-setting-wi.patch
