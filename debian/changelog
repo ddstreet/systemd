@@ -5,6 +5,24 @@ systemd (247.3-3ubuntu3.2) UNRELEASED; urgency=medium
     - Add ProBook to use micmute hotkey (LP: #1930910)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=90ffcafda001ca1dd3598078f6f474327d5573c9
 
+  [ Zhang Youfu ]
+  * d/p/lp1925827/0001-network-make-routing_policy_rule_remove-take-Manager.patch,
+    d/p/lp1925827/0002-network-introduce-routing_policy_rule_equal.patch,
+    d/p/lp1925827/0003-network-use-netlink_message_read_in_addr_union-where.patch,
+    d/p/lp1925827/0004-network-set-FRA_PROTOCOL-to-RTPROT_STATIC-by-default.patch,
+    d/p/lp1925827/0005-network-adjust-protocol-of-rules-sent-from-kernel-wh.patch,
+    d/p/lp1925827/0006-network-treat-rule-which-has-l3mdev-flag-as-created-.patch,
+    d/p/lp1925827/0007-network-drop-unnecessary-routing-policy-rules.patch,
+    d/p/lp1925827/0008-network-do-not-serialize-deserialize-routing-policy-.patch,
+    d/p/lp1925827/0009-network-constify-several-arguments.patch,
+    d/p/lp1925827/0010-network-drop-unnecessary-checks.patch,
+    d/p/lp1925827/0011-network-always-re-configure-rules-even-if-already-ex.patch,
+    d/p/lp1925827/0012-network-set-RoutingPolicyRule-family-based-on-Family.patch,
+    d/p/lp1925827/0013-network-drop-fib-rules-configured-with-Family-both.patch,
+    d/p/lp1925827/0014-test-network-add-tests-for-fib-rules-with-Family-bot.patch:
+    - backport routing policy rule fix (LP: #1925827)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=40ad9a36c7c68bc6f7456741b2a8d4ac313e88b1
+
  -- Dan Streetman <ddstreet@canonical.com>  Mon, 28 Jun 2021 09:55:17 -0400
 
 systemd (247.3-3ubuntu3.1) hirsute; urgency=medium
