@@ -1,3 +1,12 @@
+systemd (246.6-1ubuntu1.5) UNRELEASED; urgency=medium
+
+  [ Kai-Heng Feng ]
+  * d/p/lp1930910-hwdb-Add-ProBook-to-use-micmute-hotkey.patch:
+    - Add ProBook to use micmute hotkey (LP: #1930910)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=61d8acfdadb856cb408afde99f583142ec31b54e
+
+ -- Dan Streetman <ddstreet@canonical.com>  Mon, 28 Jun 2021 10:19:47 -0400
+
 systemd (246.6-1ubuntu1.4) groovy; urgency=medium
 
   [ Andy Chi ]
