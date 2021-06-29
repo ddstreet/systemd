@@ -5,6 +5,11 @@ systemd (246.6-1ubuntu1.5) UNRELEASED; urgency=medium
     - Add ProBook to use micmute hotkey (LP: #1930910)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=61d8acfdadb856cb408afde99f583142ec31b54e
 
+  [ Jeremy Szu ]
+  * d/p/lp1932352-hwdb-Add-mic-mute-key-mapping-for-HP-Elite-Dragonfly.patch:
+    - Fix micmute hotkeys on HP Elite Dragonfly (LP: #1932352)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a635153cbd0542019190380c1f10fd86c12b537d
+
   [ Dan Streetman ]
   * d/p/lp1931578/0001-network-default-RequiredForOnline-false-if-Activacti.patch,
     d/p/lp1931578/0002-networkctl-add-field-Required-For-Online.patch,
