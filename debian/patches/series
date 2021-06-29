@@ -85,3 +85,4 @@ lp1925827/0014-test-network-add-tests-for-fib-rules-with-Family-bot.patch
 lp1931578/0001-network-default-RequiredForOnline-false-if-Activacti.patch
 lp1931578/0002-networkctl-add-field-Required-For-Online.patch
 lp1931578/0003-test-add-test-to-verify-RequiredForOnline-setting-wi.patch
+lp1932352-hwdb-Add-mic-mute-key-mapping-for-HP-Elite-Dragonfly.patch
