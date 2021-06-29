@@ -23,6 +23,11 @@ systemd (247.3-3ubuntu3.2) UNRELEASED; urgency=medium
     - backport routing policy rule fix (LP: #1925827)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=40ad9a36c7c68bc6f7456741b2a8d4ac313e88b1
 
+  [ Jeremy Szu ]
+  * d/p/lp1932352-hwdb-Add-mic-mute-key-mapping-for-HP-Elite-Dragonfly.patch:
+    - Fix micmute hotkeys on HP Elite Dragonfly (LP: #1932352)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ff43db882db719e23bd52bf2aa74662865791c4d
+
   [ Dan Streetman ]
   * d/p/lp1931578/0001-network-default-RequiredForOnline-false-if-Activacti.patch,
     d/p/lp1931578/0002-networkctl-add-field-Required-For-Online.patch,
