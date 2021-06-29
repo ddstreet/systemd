@@ -13,6 +13,9 @@ systemd (237-3ubuntu10.52) UNRELEASED; urgency=medium
     Fix sleep verb used by logind during suspend-then-hibernate
     (LP: #1934981)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=1ade873a41ad018a5e07f10775738c6eb8c82310
+  * d/extra/dhclient-enter-resolved-hook:
+    Check is-enabled systemd-resolved in dhclient hook (LP: #1853164)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=774c2f82a39a88fa0fd8b2adbfa0b8a8c3cd1fb5
 
  -- Dan Streetman <ddstreet@canonical.com>  Sun, 08 Aug 2021 21:19:07 -0400
 
