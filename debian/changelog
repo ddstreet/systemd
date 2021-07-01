@@ -21,6 +21,12 @@ systemd (246.6-1ubuntu1.5) UNRELEASED; urgency=medium
     Add man page symlink and deprecation notice for systemd-resolve
     (LP: #1894622)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=bdcb37e447bf419cc3ff1082aec3427ab9ad0c47
+  * d/p/lp1858210/0001-time-simplify-get_timezones.patch,
+    d/p/lp1858210/0002-time-split-get_timezone-into-main-function-and-zone1.patch,
+    d/p/lp1858210/0003-time-get-timezones-from-tzdata.zi.patch:
+    Parse tzdata.zi so timedatectl list-timezones also lists aliases
+    (LP: #1858210)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a64ac9f1413abd3b7d427560ac6c439ba916e542
 
  -- Dan Streetman <ddstreet@canonical.com>  Mon, 28 Jun 2021 10:19:47 -0400
 
