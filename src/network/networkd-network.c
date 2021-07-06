@@ -356,6 +356,7 @@ int network_load_one(Manager *manager, OrderedHashmap **networks, const char *fi
                 /* NOTE: this var might be overwritten by network_apply_anonymize_if_set */
                 .dhcp_send_hostname = true,
                 .dhcp_send_release = true,
+                .dhcp_use_domains = DHCP_USE_DOMAINS_YES,
                 /* To enable/disable RFC7844 Anonymity Profiles */
                 .dhcp_anonymize = false,
                 .dhcp_route_metric = DHCP_ROUTE_METRIC,
@@ -429,6 +430,7 @@ int network_load_one(Manager *manager, OrderedHashmap **networks, const char *fi
                 .proxy_arp = -1,
 
                 .ipv6_accept_ra_use_dns = true,
+                .ipv6_accept_ra_use_domains = DHCP_USE_DOMAINS_YES,
                 .ipv6_accept_ra_use_autonomous_prefix = true,
                 .ipv6_accept_ra_use_onlink_prefix = true,
                 .ipv6_accept_ra_route_table = RT_TABLE_MAIN,
