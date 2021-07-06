@@ -1,5 +1,6 @@
 units-Don-t-start-systemd-udev-trigger.service-in-a-conta.patch
 test-Allow-running-only-a-subset-of-integration-tests-by-.patch
+hwdb-Add-ProBook-to-use-micmute-hotkey.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
@@ -35,7 +36,6 @@ debian/UBUNTU-units-block-CAP_SYS_MODULE-units-in-containers-too.patch
 debian/UBUNTU-test-sleep-skip-test_fiemap-upon-inapproriate-ioctl-.patch
 debian/UBUNTU-Support-system-image-read-only-etc.patch
 debian/UBUNTU-units-disable-journald-watchdog.patch
-debian/UBUNTU-resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch
 debian/UBUNTU-Revert-namespace-be-more-careful-when-handling-namespacin.patch
 debian/UBUNTU-Revert-cgroup-Continue-unit-reset-if-cgroup-is-busy.patch
 debian/UBUNTU-resolved-default-no-negative-caching.patch
@@ -45,3 +45,11 @@ debian/UBUNTU-src-test-test-execute.c-Skip-parts-of-test-execute-in-con.patch
 lp1861941-dont-generate-disk-byuuid-for-bcache-uuid.patch
 debian/UBUNTU-deny-list-TEST-10-ISSUE-2467.patch
 deny-list-TEST-29-PORTABLE-on-ppc64el.patch
+lp1931578/0001-network-default-RequiredForOnline-false-if-Activacti.patch
+lp1931578/0002-networkctl-add-field-Required-For-Online.patch
+lp1931578/0003-test-add-test-to-verify-RequiredForOnline-setting-wi.patch
+lp1932352-hwdb-Add-mic-mute-key-mapping-for-HP-Elite-Dragonfly.patch
+lp1894622-Add-systemd-resolve-backwards-compatibility-section-.patch
+lp1858210/0001-time-simplify-get_timezones.patch
+lp1858210/0002-time-split-get_timezone-into-main-function-and-zone1.patch
+lp1858210/0003-time-get-timezones-from-tzdata.zi.patch
