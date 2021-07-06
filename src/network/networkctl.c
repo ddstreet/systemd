@@ -1541,6 +1541,16 @@ static int link_status_one(
                         return table_log_add_error(r);
         }
 
+        r = sd_network_link_get_required_for_online(info->ifindex);
+        if (r >= 0) {
+                r = table_add_many(table,
+                                   TABLE_EMPTY,
+                                   TABLE_STRING, "Required For Online:",
+                                   TABLE_BOOLEAN, r);
+                if (r < 0)
+                        return table_log_add_error(r);
+        }
+
         (void) sd_network_link_get_timezone(info->ifindex, &tz);
         if (tz) {
                 r = table_add_many(table,
