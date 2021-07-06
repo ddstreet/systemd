@@ -123,4 +123,7 @@ int syncfs_path(int atfd, const char *path);
 
 int open_parent(const char *path, int flags, mode_t mode);
 
-int conservative_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+int conservative_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+static inline int conservative_rename(const char *oldpath, const char *newpath) {
+        return conservative_renameat(AT_FDCWD, oldpath, AT_FDCWD, newpath);
+}
