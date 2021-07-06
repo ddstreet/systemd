@@ -1736,6 +1736,7 @@ class NetworkdNetworkTests(unittest.TestCase, Utilities):
     units = [
         '11-dummy.netdev',
         '12-dummy.netdev',
+        '12-dummy.network',
         '23-active-slave.network',
         '24-keep-configuration-static.network',
         '24-search-domain.network',
@@ -1791,7 +1792,8 @@ class NetworkdNetworkTests(unittest.TestCase, Utilities):
         '26-link-local-addressing-ipv6.network',
         'routing-policy-rule-dummy98.network',
         'routing-policy-rule-test1.network',
-        'routing-policy-rule-reconfigure.network',
+        'routing-policy-rule-reconfigure1.network',
+        'routing-policy-rule-reconfigure2.network',
     ]
 
     routing_policy_rule_tables = ['7', '8', '9', '1011']
@@ -2075,37 +2077,65 @@ class NetworkdNetworkTests(unittest.TestCase, Utilities):
             stop_networkd(remove_state_files=False)
 
     def test_routing_policy_rule_reconfigure(self):
-        copy_unit_to_networkd_unit_path('routing-policy-rule-reconfigure.network', '11-dummy.netdev')
+        copy_unit_to_networkd_unit_path('routing-policy-rule-reconfigure2.network', '11-dummy.netdev')
         start_networkd()
         self.wait_online(['test1:degraded'])
 
         output = check_output('ip rule list table 1011')
         print(output)
-        self.assertRegex(output, '10111:	from all fwmark 0x3f3 lookup 1011')
-        self.assertRegex(output, '10112:	from all oif test1 lookup 1011')
-        self.assertRegex(output, '10113:	from all iif test1 lookup 1011')
-        self.assertRegex(output, '10114:	from 192.168.8.254 lookup 1011')
+        self.assertIn('10111:	from all fwmark 0x3f3 lookup 1011', output)
+        self.assertIn('10112:	from all oif test1 lookup 1011', output)
+        self.assertIn('10113:	from all iif test1 lookup 1011', output)
+        self.assertIn('10114:	from 192.168.8.254 lookup 1011', output)
+
+        output = check_output('ip -6 rule list table 1011')
+        print(output)
+        self.assertIn('10112:	from all oif test1 lookup 1011', output)
+
+        copy_unit_to_networkd_unit_path('routing-policy-rule-reconfigure1.network', '11-dummy.netdev')
+        run(*networkctl_cmd, 'reload', env=env)
+        time.sleep(1)
+        self.wait_online(['test1:degraded'])
+
+        output = check_output('ip rule list table 1011')
+        print(output)
+        self.assertIn('10111:	from all fwmark 0x3f3 lookup 1011', output)
+        self.assertIn('10112:	from all oif test1 lookup 1011', output)
+        self.assertIn('10113:	from all iif test1 lookup 1011', output)
+        self.assertIn('10114:	from 192.168.8.254 lookup 1011', output)
+
+        output = check_output('ip -6 rule list table 1011')
+        print(output)
+        self.assertNotIn('10112:	from all oif test1 lookup 1011', output)
+        self.assertIn('10113:	from all iif test1 lookup 1011', output)
 
         run('ip rule delete priority 10111')
         run('ip rule delete priority 10112')
         run('ip rule delete priority 10113')
         run('ip rule delete priority 10114')
-        run('ip rule delete priority 10115')
+        run('ip -6 rule delete priority 10113')
 
         output = check_output('ip rule list table 1011')
         print(output)
         self.assertEqual(output, '')
 
-        run(*networkctl_cmd, 'reconfigure', 'test1', env=env)
+        output = check_output('ip -6 rule list table 1011')
+        print(output)
+        self.assertEqual(output, '')
 
+        run(*networkctl_cmd, 'reconfigure', 'test1', env=env)
         self.wait_online(['test1:degraded'])
 
         output = check_output('ip rule list table 1011')
         print(output)
-        self.assertRegex(output, '10111:	from all fwmark 0x3f3 lookup 1011')
-        self.assertRegex(output, '10112:	from all oif test1 lookup 1011')
-        self.assertRegex(output, '10113:	from all iif test1 lookup 1011')
-        self.assertRegex(output, '10114:	from 192.168.8.254 lookup 1011')
+        self.assertIn('10111:	from all fwmark 0x3f3 lookup 1011', output)
+        self.assertIn('10112:	from all oif test1 lookup 1011', output)
+        self.assertIn('10113:	from all iif test1 lookup 1011', output)
+        self.assertIn('10114:	from 192.168.8.254 lookup 1011', output)
+
+        output = check_output('ip -6 rule list table 1011')
+        print(output)
+        self.assertIn('10113:	from all iif test1 lookup 1011', output)
 
     @expectedFailureIfRoutingPolicyPortRangeIsNotAvailable()
     def test_routing_policy_rule_port_range(self):
@@ -2656,6 +2686,50 @@ class NetworkdNetworkTests(unittest.TestCase, Utilities):
         for test in ['up', 'always-up', 'manual', 'always-down', 'down', '']:
             with self.subTest(test=test):
                 self._test_activation_policy(test)
+
+    def _test_activation_policy_required_for_online(self, policy, required):
+        self.setUp()
+        conffile = '25-activation-policy.network'
+        units = ['11-dummy.netdev', '12-dummy.netdev', '12-dummy.network', conffile]
+        if policy:
+            units += [f'{conffile}.d/{policy}.conf']
+        if required:
+            units += [f'{conffile}.d/required-{required}.conf']
+        copy_unit_to_networkd_unit_path(*units, dropins=False)
+        start_networkd()
+
+        if policy.endswith('down') or policy == 'manual':
+            self.wait_operstate('test1', 'off', setup_state='configuring')
+        else:
+            self.wait_online(['test1'])
+
+        if policy == 'always-down':
+            # if always-down, required for online is forced to no
+            expected = False
+        elif required:
+            # otherwise if required for online is specified, it should match that
+            expected = required == 'yes'
+        elif policy:
+            # otherwise if only policy specified, required for online defaults to
+            # true if policy is up, always-up, or bound
+            expected = policy.endswith('up') or policy == 'bound'
+        else:
+            # default is true, if neither are specified
+            expected = True
+
+        output = check_output(*networkctl_cmd, '-n', '0', 'status', 'test1', env=env)
+        print(output)
+
+        yesno = 'yes' if expected else 'no'
+        self.assertRegex(output, f'Required For Online: {yesno}')
+
+        self.tearDown()
+
+    def test_activation_policy_required_for_online(self):
+        for policy in ['up', 'always-up', 'manual', 'always-down', 'down', 'bound', '']:
+            for required in ['yes', 'no', '']:
+                with self.subTest(policy=policy, required=required):
+                    self._test_activation_policy_required_for_online(policy, required)
 
     def test_domain(self):
         copy_unit_to_networkd_unit_path('12-dummy.netdev', '24-search-domain.network')
@@ -3304,7 +3378,7 @@ class NetworkdBridgeTests(unittest.TestCase, Utilities):
 
         output = check_output('ip rule list table 100')
         print(output)
-        self.assertEqual(output, '0:	from all to 8.8.8.8 lookup 100')
+        self.assertIn('0:	from all to 8.8.8.8 lookup 100', output)
 
 class NetworkdLLDPTests(unittest.TestCase, Utilities):
     links = ['veth99']

@@ -1,0 +1,172 @@
+From 131f78322eb9c72d2cdf27aa919191c9693f88d7 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 28 Oct 2020 20:27:23 +0900
+Subject: [PATCH 05/12] network: drop unnecessary routing policy rules
+
+networkd already drop foreign address, routes, and nexthops on startup,
+except those created by kernel. However, previously, routing policy
+rules were not. The logic of serialization/deserialization of rules only
+works for rules created by previous invocation of networkd, and does not
+work for one created by other tools like `ip rule`.
+
+This makes networkd drop foreign routing policy rules except created by
+kernel on startup. Also, remove rules created by networkd when the
+corresponding links are dropped or networkd is stopping.
+
+[#17477,4/5] cherry-picked from 0b81225e5791f660506f7db0ab88078cf296b771
+---
+ src/network/networkd-link.c                | 48 ++++++++++++++--------
+ src/network/networkd-routing-policy-rule.c | 32 ++++++++++++++-
+ src/network/networkd-routing-policy-rule.h |  7 ++++
+ 3 files changed, 68 insertions(+), 19 deletions(-)
+
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -2022,37 +2022,51 @@ static int link_enter_join_netdev(Link *
+ }
+ 
+ static int link_drop_foreign_config(Link *link) {
+-        int r;
++        int k, r;
++
++        assert(link);
++        assert(link->manager);
+ 
+         r = link_drop_foreign_addresses(link);
+-        if (r < 0)
+-                return r;
+ 
+-        r = link_drop_foreign_neighbors(link);
+-        if (r < 0)
+-                return r;
++        k = link_drop_foreign_neighbors(link);
++        if (k < 0 && r >= 0)
++                r = k;
++
++        k = link_drop_foreign_routes(link);
++        if (k < 0 && r >= 0)
++                r = k;
++
++        k = manager_drop_foreign_routing_policy_rules(link->manager);
++        if (k < 0 && r >= 0)
++                r = k;
+ 
+-        return link_drop_foreign_routes(link);
++        return r;
+ }
+ 
+ static int link_drop_config(Link *link) {
+-        int r;
++        int k, r;
++
++        assert(link);
++        assert(link->manager);
+ 
+         r = link_drop_addresses(link);
+-        if (r < 0)
+-                return r;
+ 
+-        r = link_drop_neighbors(link);
+-        if (r < 0)
+-                return r;
+-
+-        r = link_drop_routes(link);
+-        if (r < 0)
+-                return r;
++        k = link_drop_neighbors(link);
++        if (k < 0 && r >= 0)
++                r = k;
++
++        k = link_drop_routes(link);
++        if (k < 0 && r >= 0)
++                r = k;
++
++        k = manager_drop_routing_policy_rules(link->manager, link);
++        if (k < 0 && r >= 0)
++                r = k;
+ 
+         ndisc_flush(link);
+ 
+-        return 0;
++        return r;
+ }
+ 
+ int link_configure(Link *link) {
+--- a/src/network/networkd-routing-policy-rule.c
++++ b/src/network/networkd-routing-policy-rule.c
+@@ -614,7 +614,7 @@ static int routing_policy_rule_configure
+         return 0;
+ }
+ 
+-static bool manager_links_have_routing_policy_rule(Manager *m, RoutingPolicyRule *rule) {
++static bool links_have_routing_policy_rule(const Manager *m, const RoutingPolicyRule *rule, const Link *except) {
+         Link *link;
+ 
+         assert(m);
+@@ -623,6 +623,9 @@ static bool manager_links_have_routing_p
+         HASHMAP_FOREACH(link, m->links) {
+                 RoutingPolicyRule *link_rule;
+ 
++                if (link == except)
++                        continue;
++
+                 if (!link->network)
+                         continue;
+ 
+@@ -634,6 +637,31 @@ static bool manager_links_have_routing_p
+         return false;
+ }
+ 
++int manager_drop_routing_policy_rules_internal(Manager *m, bool foreign, const Link *except) {
++        RoutingPolicyRule *rule;
++        int k, r = 0;
++        Set *rules;
++
++        assert(m);
++
++        rules = foreign ? m->rules_foreign : m->rules;
++        SET_FOREACH(rule, rules) {
++                /* Do not touch rules managed by kernel. */
++                if (rule->protocol == RTPROT_KERNEL)
++                        continue;
++
++                /* The rule will be configured later, or already configured by a link. */
++                if (links_have_routing_policy_rule(m, rule, except))
++                        continue;
++
++                k = routing_policy_rule_remove(rule, m);
++                if (k < 0 && r >= 0)
++                        r = k;
++        }
++
++        return r;
++}
++
+ static void routing_policy_rule_purge(Manager *m) {
+         RoutingPolicyRule *rule;
+         int r;
+@@ -647,7 +675,7 @@ static void routing_policy_rule_purge(Ma
+                 if (!existing)
+                         continue; /* Saved rule does not exist anymore. */
+ 
+-                if (manager_links_have_routing_policy_rule(m, existing))
++                if (links_have_routing_policy_rule(m, existing, NULL))
+                         continue; /* Existing links have the saved rule. */
+ 
+                 /* Existing links do not have the saved rule. Let's drop the rule now, and re-configure it
+--- a/src/network/networkd-routing-policy-rule.h
++++ b/src/network/networkd-routing-policy-rule.h
+@@ -57,6 +57,13 @@ void network_drop_invalid_routing_policy
+ int link_set_routing_policy_rules(Link *link);
+ 
+ int manager_rtnl_process_rule(sd_netlink *rtnl, sd_netlink_message *message, Manager *m);
++int manager_drop_routing_policy_rules_internal(Manager *m, bool foreign, const Link *except);
++static inline int manager_drop_foreign_routing_policy_rules(Manager *m) {
++        return manager_drop_routing_policy_rules_internal(m, true, NULL);
++}
++static inline int manager_drop_routing_policy_rules(Manager *m, const Link *except) {
++        return manager_drop_routing_policy_rules_internal(m, false, except);
++}
+ 
+ int routing_policy_serialize_rules(Set *rules, FILE *f);
+ int routing_policy_load_rules(const char *state_file, Set **rules);
