@@ -1,4 +1,4 @@
-systemd (246.6-1ubuntu1.5) UNRELEASED; urgency=medium
+systemd (246.6-1ubuntu1.5) groovy; urgency=medium
 
   [ Kai-Heng Feng ]
   * d/p/lp1930910-hwdb-Add-ProBook-to-use-micmute-hotkey.patch:
@@ -34,7 +34,7 @@ systemd (246.6-1ubuntu1.5) UNRELEASED; urgency=medium
     Don't rewrite resolv.conf is content unchanged (LP: #1891215)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=79ff24ba51d2239315d948e7dfb3e39769946937
 
- -- Dan Streetman <ddstreet@canonical.com>  Mon, 28 Jun 2021 10:19:47 -0400
+ -- Dan Streetman <ddstreet@canonical.com>  Tue, 06 Jul 2021 14:00:27 -0400
 
 systemd (246.6-1ubuntu1.4) groovy; urgency=medium
 
