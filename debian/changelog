@@ -1,3 +1,38 @@
+systemd (248.3-1ubuntu2) impish; urgency=medium
+
+  [ Kai-Heng Feng ]
+  * d/p/hwdb-Add-ProBook-to-use-micmute-hotkey.patch:
+    - Add ProBook to use micmute hotkey (LP: #1930910)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=30b96fac92d911cb725f7220a9539085a24fe5f7
+
+  [ Jeremy Szu ]
+  * d/p/lp1932352-hwdb-Add-mic-mute-key-mapping-for-HP-Elite-Dragonfly.patch:
+    - Fix micmute hotkeys on HP Elite Dragonfly (LP: #1932352)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ac93cfcca200644b743deab94f655ccd74ff90a6
+
+  [ Dan Streetman ]
+  * d/p/debian/UBUNTU-resolved-Mitigate-DVE-2018-0001-by-retrying-NXDOMAIN-with.patch:
+    Remove no-longer-needed patch for DVE-2018-0001 (LP: #1785383)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=943b2dd5884e67c67d6336c24352b02e17809df0
+  * d/p/lp1931578/0001-network-default-RequiredForOnline-false-if-Activacti.patch,
+    d/p/lp1931578/0002-networkctl-add-field-Required-For-Online.patch,
+    d/p/lp1931578/0003-test-add-test-to-verify-RequiredForOnline-setting-wi.patch:
+    Adjust default for RequiredForOnline when using ActivationPolicy
+    (LP: #1931578)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d0b8629ec14396f1a5d5f7c132c9b687065136b0
+  * d/p/lp1894622-Add-systemd-resolve-backwards-compatibility-section-.patch:
+    Add man page symlink and deprecation notice for systemd-resolve
+    (LP: #1894622)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=f719185253f989d6708c894150c0878cabee6589
+  * d/p/lp1858210/0001-time-simplify-get_timezones.patch,
+    d/p/lp1858210/0002-time-split-get_timezone-into-main-function-and-zone1.patch,
+    d/p/lp1858210/0003-time-get-timezones-from-tzdata.zi.patch:
+    Parse tzdata.zi so timedatectl list-timezones also lists aliases
+    (LP: #1858210)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=8e5b0a7c7c4e1e29b5e81511a1145633d9b75be5
+
+ -- Dan Streetman <ddstreet@canonical.com>  Tue, 06 Jul 2021 13:37:59 -0400
+
 systemd (248.3-1ubuntu1) impish; urgency=medium
 
   * Merge to Ubuntu from Debian unstable
