@@ -1,0 +1,62 @@
+From 968f67ff7114485ee582b8323ba4ff622d1cad1e Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 29 Oct 2020 11:55:12 +0900
+Subject: [PATCH 04/12] network: treat rule which has l3mdev flag as created by
+ kernel
+
+[#17477,3/5] cherry-picked from e737dce5445ac2359f4f260aa462056b02d68d54
+---
+ src/network/networkd-routing-policy-rule.c | 17 +++++++++++++++++
+ src/network/networkd-routing-policy-rule.h |  1 +
+ 2 files changed, 18 insertions(+)
+
+--- a/src/network/networkd-routing-policy-rule.c
++++ b/src/network/networkd-routing-policy-rule.c
+@@ -715,6 +715,11 @@ static const RoutingPolicyRule kernel_ru
+ static bool routing_policy_rule_is_created_by_kernel(const RoutingPolicyRule *rule) {
+         assert(rule);
+ 
++        if (rule->l3mdev > 0)
++                /* Currently, [RoutingPolicyRule] does not explicitly set FRA_L3MDEV. So, if the flag
++                 * is set, it is safe to treat the rule as created by kernel. */
++                return true;
++
+         for (size_t i = 0; i < ELEMENTSOF(kernel_rules); i++)
+                 if (routing_policy_rule_equal(rule, &kernel_rules[i]))
+                         return true;
+@@ -864,6 +869,12 @@ int manager_rtnl_process_rule(sd_netlink
+                 return 0;
+         }
+ 
++        r = sd_netlink_message_read_u8(message, FRA_L3MDEV, &tmp->l3mdev);
++        if (r < 0 && r != -ENODATA) {
++                log_warning_errno(r, "rtnl: could not get FRA_L3MDEV attribute, ignoring: %m");
++                return 0;
++        }
++
+         r = sd_netlink_message_read(message, FRA_SPORT_RANGE, sizeof(tmp->sport), &tmp->sport);
+         if (r < 0 && r != -ENODATA) {
+                 log_warning_errno(r, "rtnl: could not get FRA_SPORT_RANGE attribute, ignoring: %m");
+@@ -1478,6 +1489,12 @@ static int routing_policy_rule_section_v
+         if (rule->family == AF_UNSPEC && rule->address_family == ADDRESS_FAMILY_NO)
+                 rule->family = AF_INET;
+ 
++        /* Currently, [RoutingPolicyRule] does not have a setting to set FRA_L3MDEV flag. Please also
++         * update routing_policy_rule_is_created_by_kernel() when a new setting which sets the flag is
++         * added in the future. */
++        if (rule->l3mdev > 0)
++                assert_not_reached("FRA_L3MDEV flag should not be configured.");
++
+         return 0;
+ }
+ 
+--- a/src/network/networkd-routing-policy-rule.h
++++ b/src/network/networkd-routing-policy-rule.h
+@@ -25,6 +25,7 @@ typedef struct RoutingPolicyRule {
+         uint8_t tos;
+         uint8_t ipproto; /* FRA_IP_PROTO */
+         uint8_t protocol; /* FRA_PROTOCOL */
++        uint8_t l3mdev; /* FRA_L3MDEV */
+ 
+         uint32_t table;
+         uint32_t fwmark;

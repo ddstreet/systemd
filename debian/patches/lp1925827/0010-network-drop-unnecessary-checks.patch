@@ -1,0 +1,27 @@
+From e59256800dd29cf9376c21a5ec8a27f6c0aa262c Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 30 Dec 2020 03:17:35 +0900
+Subject: [PATCH 08/12] network: drop unnecessary checks
+
+By the previous commit, the checks are not necessary any more.
+
+[#18109,3/7] cherry-picked from 57fe5a42f0975ca12ff856ca221c081a1ad3e87e
+---
+ src/network/networkd-routing-policy-rule.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+--- a/src/network/networkd-routing-policy-rule.c
++++ b/src/network/networkd-routing-policy-rule.c
+@@ -29,10 +29,8 @@ RoutingPolicyRule *routing_policy_rule_f
+         }
+ 
+         if (rule->manager) {
+-                if (set_get(rule->manager->rules, rule) == rule)
+-                        set_remove(rule->manager->rules, rule);
+-                if (set_get(rule->manager->rules_foreign, rule) == rule)
+-                        set_remove(rule->manager->rules_foreign, rule);
++                set_remove(rule->manager->rules, rule);
++                set_remove(rule->manager->rules_foreign, rule);
+         }
+ 
+         network_config_section_free(rule->section);

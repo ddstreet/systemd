@@ -1,3 +1,59 @@
+systemd (247.3-3ubuntu3.2) hirsute; urgency=medium
+
+  [ Kai-Heng Feng ]
+  * d/p/hwdb-Add-ProBook-to-use-micmute-hotkey.patch:
+    - Add ProBook to use micmute hotkey (LP: #1930910)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=90ffcafda001ca1dd3598078f6f474327d5573c9
+
+  [ Zhang Youfu ]
+  * d/p/lp1925827/0001-network-make-routing_policy_rule_remove-take-Manager.patch,
+    d/p/lp1925827/0002-network-introduce-routing_policy_rule_equal.patch,
+    d/p/lp1925827/0003-network-use-netlink_message_read_in_addr_union-where.patch,
+    d/p/lp1925827/0004-network-set-FRA_PROTOCOL-to-RTPROT_STATIC-by-default.patch,
+    d/p/lp1925827/0005-network-adjust-protocol-of-rules-sent-from-kernel-wh.patch,
+    d/p/lp1925827/0006-network-treat-rule-which-has-l3mdev-flag-as-created-.patch,
+    d/p/lp1925827/0007-network-drop-unnecessary-routing-policy-rules.patch,
+    d/p/lp1925827/0008-network-do-not-serialize-deserialize-routing-policy-.patch,
+    d/p/lp1925827/0009-network-constify-several-arguments.patch,
+    d/p/lp1925827/0010-network-drop-unnecessary-checks.patch,
+    d/p/lp1925827/0011-network-always-re-configure-rules-even-if-already-ex.patch,
+    d/p/lp1925827/0012-network-set-RoutingPolicyRule-family-based-on-Family.patch,
+    d/p/lp1925827/0013-network-drop-fib-rules-configured-with-Family-both.patch,
+    d/p/lp1925827/0014-test-network-add-tests-for-fib-rules-with-Family-bot.patch:
+    - backport routing policy rule fix (LP: #1925827)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=40ad9a36c7c68bc6f7456741b2a8d4ac313e88b1
+
+  [ Jeremy Szu ]
+  * d/p/lp1932352-hwdb-Add-mic-mute-key-mapping-for-HP-Elite-Dragonfly.patch:
+    - Fix micmute hotkeys on HP Elite Dragonfly (LP: #1932352)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ff43db882db719e23bd52bf2aa74662865791c4d
+
+  [ Dan Streetman ]
+  * d/p/lp1931578/0001-network-default-RequiredForOnline-false-if-Activacti.patch,
+    d/p/lp1931578/0002-networkctl-add-field-Required-For-Online.patch,
+    d/p/lp1931578/0003-test-add-test-to-verify-RequiredForOnline-setting-wi.patch:
+    Adjust default for RequiredForOnline when using ActivationPolicy
+    (LP: #1931578)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=f2008e613c8ae5ea58d3171d7446b9772236ba4d
+  * d/p/lp1894622-Add-systemd-resolve-backwards-compatibility-section-.patch:
+    Add man page symlink and deprecation notice for systemd-resolve
+    (LP: #1894622)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=acc7bb952109717777b774ab1e1c162f003048ae
+  * d/p/lp1858210/0001-time-simplify-get_timezones.patch,
+    d/p/lp1858210/0002-time-split-get_timezone-into-main-function-and-zone1.patch,
+    d/p/lp1858210/0003-time-get-timezones-from-tzdata.zi.patch:
+    Parse tzdata.zi so timedatectl list-timezones also lists aliases
+    (LP: #1858210)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=24fb40db173a07559a805b2b61396dba805c8d45
+  * d/p/lp1891215/0001-fs-util-add-conservative_rename-that-suppresses-unne.patch,
+    d/p/lp1891215/0002-resolved-don-t-update-resolv.conf-snippets-unnecessa.patch,
+    d/p/lp1891215/0003-fs-util-rename-conservative_rename-conservative_rena.patch,
+    d/p/lp1891215/0004-fs-util-make-sure-conservative_renameat-properly-det.patch:
+    Don't rewrite resolv.conf is content unchanged (LP: #1891215)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=b8f16358b838e8878ac4d669ce9b95e8d015ac86
+
+ -- Dan Streetman <ddstreet@canonical.com>  Tue, 06 Jul 2021 13:56:54 -0400
+
 systemd (247.3-3ubuntu3.1) hirsute; urgency=medium
 
   [ Andy Chi ]

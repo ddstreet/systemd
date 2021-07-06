@@ -1,0 +1,37 @@
+From 40424f1ad97db59958e40a395986a5e248da6f05 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 29 Oct 2020 11:41:01 +0900
+Subject: [PATCH] network: introduce routing_policy_rule_equal()
+
+---
+ src/network/networkd-routing-policy-rule.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+--- a/src/network/networkd-routing-policy-rule.c
++++ b/src/network/networkd-routing-policy-rule.c
+@@ -264,6 +264,16 @@ static int routing_policy_rule_compare_f
+         }
+ }
+ 
++static bool routing_policy_rule_equal(const RoutingPolicyRule *rule1, const RoutingPolicyRule *rule2) {
++        if (rule1 == rule2)
++                return true;
++
++        if (!rule1 || !rule2)
++                return false;
++
++        return routing_policy_rule_compare_func(rule1, rule2) == 0;
++}
++
+ DEFINE_PRIVATE_HASH_OPS_WITH_KEY_DESTRUCTOR(
+                 routing_policy_rule_hash_ops,
+                 RoutingPolicyRule,
+@@ -605,7 +615,7 @@ static bool manager_links_have_routing_p
+                         continue;
+ 
+                 HASHMAP_FOREACH(link_rule, link->network->rules_by_section)
+-                        if (routing_policy_rule_compare_func(link_rule, rule) == 0)
++                        if (routing_policy_rule_equal(link_rule, rule))
+                                 return true;
+         }
+ 
