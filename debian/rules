@@ -6,7 +6,7 @@
 # LOCAL ONLY: for upstream testing
 CFLAGS=-O0
 DEB_BUILD_PROFILES=noudeb
-CONFFLAGS_UPSTREAM=--werror -Dslow-tests=true
+CONFFLAGS_UPSTREAM=-Dslow-tests=true
 TEST_UPSTREAM=1
 
 export LC_ALL = C.UTF-8
