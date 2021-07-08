@@ -58,6 +58,9 @@ All tools:
   this only controls use of Unicode emoji glyphs, and has no effect on other
   Unicode glyphs.
 
+* `$SYSTEMD_SECCOMP=0` – if set, seccomp filters will not be enforced, even if
+  support for it is compiled in and available in the kernel.
+
 systemctl:
 
 * `$SYSTEMCTL_FORCE_BUS=1` — if set, do not connect to PID1's private D-Bus
