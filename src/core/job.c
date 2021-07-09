@@ -78,7 +78,7 @@ Job* job_new(Unit *unit, JobType type) {
         return j;
 }
 
-void job_free(Job *j) {
+void job_unlink(Job *j) {
         assert(j);
         assert(!j->installed);
         assert(!j->transaction_prev);
@@ -86,21 +86,38 @@ void job_free(Job *j) {
         assert(!j->subject_list);
         assert(!j->object_list);
 
-        if (j->in_run_queue)
+        if (j->in_run_queue) {
                 LIST_REMOVE(run_queue, j->manager->run_queue, j);
+                j->in_run_queue = false;
+        }
 
-        if (j->in_dbus_queue)
+        if (j->in_dbus_queue) {
                 LIST_REMOVE(dbus_queue, j->manager->dbus_job_queue, j);
+                j->in_dbus_queue = false;
+        }
 
-        if (j->in_gc_queue)
+        if (j->in_gc_queue) {
                 LIST_REMOVE(gc_queue, j->manager->gc_job_queue, j);
+                j->in_gc_queue = false;
+        }
 
-        sd_event_source_unref(j->timer_event_source);
+        j->timer_event_source = sd_event_source_unref(j->timer_event_source);
+}
+
+Job* job_free(Job *j) {
+        assert(j);
+        assert(!j->installed);
+        assert(!j->transaction_prev);
+        assert(!j->transaction_next);
+        assert(!j->subject_list);
+        assert(!j->object_list);
+
+        job_unlink(j);
 
         sd_bus_track_unref(j->bus_track);
         strv_free(j->deserialized_clients);
 
-        free(j);
+        return mfree(j);
 }
 
 static void job_set_state(Job *j, JobState state) {
@@ -149,7 +166,7 @@ void job_uninstall(Job *j) {
 
         unit_add_to_gc_queue(j->unit);
 
-        hashmap_remove(j->manager->jobs, UINT32_TO_PTR(j->id));
+        hashmap_remove_value(j->manager->jobs, UINT32_TO_PTR(j->id), j);
         j->installed = false;
 }
 
@@ -239,6 +256,7 @@ Job* job_install(Job *j) {
 
 int job_install_deserialized(Job *j) {
         Job **pj;
+        int r;
 
         assert(!j->installed);
 
@@ -248,10 +266,15 @@ int job_install_deserialized(Job *j) {
         }
 
         pj = (j->type == JOB_NOP) ? &j->unit->nop_job : &j->unit->job;
-        if (*pj) {
-                log_unit_debug(j->unit, "Unit already has a job installed. Not installing deserialized job.");
-                return -EEXIST;
-        }
+        if (*pj)
+                return log_unit_debug_errno(j->unit, EEXIST,
+                                            "Unit already has a job installed. Not installing deserialized job.");
+
+        r = hashmap_put(j->manager->jobs, UINT32_TO_PTR(j->id), j);
+        if (r == -EEXIST)
+                return log_unit_debug_errno(j->unit, r, "Job ID %" PRIu32 " already used, cannot deserialize job.", j->id);
+        if (r < 0)
+                return log_unit_debug_errno(j->unit, r, "Failed to insert job into jobs hash table: %m");
 
         *pj = j;
         j->installed = true;
