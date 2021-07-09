@@ -48,7 +48,7 @@ struct Manager {
         ResolveSupport llmnr_support;
         ResolveSupport mdns_support;
         DnssecMode dnssec_mode;
-        bool enable_cache;
+        DnsCacheMode enable_cache;
         DnsStubListenerMode dns_stub_listener_mode;
 
         /* Network */
