@@ -1,3 +1,16 @@
+systemd (245.4-4ubuntu3.10) focal-security; urgency=medium
+
+  * SECURITY UPDATE: DoS via DHCP FORCERENEW
+    - debian/patches/CVE-2020-13529.patch: tentatively ignore FORCERENEW
+      command in src/libsystemd-network/sd-dhcp-client.c.
+    - CVE-2020-13529
+  * SECURITY UPDATE: denial of service via stack exhaustion
+    - debian/patches/CVE-2021-33910.patch: do not use strdupa() on a path
+      in src/basic/unit-name.c.
+    - CVE-2021-33910
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Tue, 20 Jul 2021 07:39:51 -0400
+
 systemd (245.4-4ubuntu3.8) focal; urgency=medium
 
   [ dann frazier ]
