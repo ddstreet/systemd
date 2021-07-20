@@ -1,5 +1,10 @@
 systemd (247.3-3ubuntu3.3) UNRELEASED; urgency=medium
 
+  [ Lukas Märdian ]
+  * Add d/p/lp1934221-resolved-disable-event-sources-before-unreffing-them.patch
+    - Fix segfault in systemd-resolve (LP: #1934221)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=414fd10bdd4273197b727822eada2c80ced231d3
+
   [ Simon Chopin ]
   * d/p/lp1914740-network-enable-DHCP-broadcast-flag-if-required-by-in.patch:
     - Apply upstream patch to fix Hipersocket DHCP mode (LP: #1914740)
