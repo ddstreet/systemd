@@ -347,10 +347,16 @@ int unit_file_build_name_map(
 
                                 /* Check if the symlink goes outside of our search path.
                                  * If yes, it's a linked unit file or mask, and we don't care about the target name.
-                                 * Let's just store the link destination directly.
+                                 * Let's just store the link source directly.
                                  * If not, let's verify that it's a good symlink. */
                                 char *tail = path_startswith_strv(simplified, lp->search_path);
-                                if (tail) {
+                                if (!tail) {
+                                        log_debug("%s: linked unit file: %s → %s",
+                                                  __func__, filename, simplified);
+
+                                        dst = filename;
+                                } else {
+
                                         bool self_alias;
 
                                         dst = basename(simplified);
@@ -373,10 +379,6 @@ int unit_file_build_name_map(
                                         }
 
                                         log_debug("%s: alias: %s/%s → %s", __func__, *dir, de->d_name, dst);
-                                } else {
-                                        dst  = simplified;
-
-                                        log_debug("%s: linked unit file: %s/%s → %s", __func__, *dir, de->d_name, dst);
                                 }
 
                         } else {
