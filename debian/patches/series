@@ -53,3 +53,5 @@ lp1894622-Add-systemd-resolve-backwards-compatibility-section-.patch
 lp1858210/0001-time-simplify-get_timezones.patch
 lp1858210/0002-time-split-get_timezone-into-main-function-and-zone1.patch
 lp1858210/0003-time-get-timezones-from-tzdata.zi.patch
+CVE-2020-13529.patch
+CVE-2021-33910.patch
