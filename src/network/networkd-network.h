@@ -287,7 +287,7 @@ struct Network {
 
         bool iaid_set;
 
-        bool required_for_online; /* Is this network required to be considered online? */
+        int required_for_online; /* Is this network required to be considered online? */
         LinkOperationalStateRange required_operstate_for_online;
         ActivationPolicy activation_policy;
 
