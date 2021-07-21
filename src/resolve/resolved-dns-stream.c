@@ -379,7 +379,12 @@ DnsStream *dns_stream_ref(DnsStream *s) {
         return s;
 }
 
-int dns_stream_new(Manager *m, DnsStream **ret, DnsProtocol protocol, int fd) {
+int dns_stream_new(
+                Manager *m,
+                DnsStream **ret,
+                DnsProtocol protocol,
+                int fd) {
+
         _cleanup_(dns_stream_unrefp) DnsStream *s = NULL;
         int r;
 
