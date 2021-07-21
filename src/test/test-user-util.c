@@ -167,6 +167,43 @@ static void test_get_group_creds_one(const char *id, const char *name, gid_t gid
         assert_se(rgid == gid);
 }
 
+static void test_gid_lists_ops(void) {
+        static const gid_t l1[] = { 5, 10, 15, 20, 25};
+        static const gid_t l2[] = { 1, 2, 3, 15, 20, 25};
+        static const gid_t l3[] = { 5, 10, 15, 20, 25, 26, 27};
+        static const gid_t l4[] = { 25, 26, 20, 15, 5, 27, 10};
+
+        static const gid_t result1[] = {1, 2, 3, 5, 10, 15, 20, 25, 26, 27};
+        static const gid_t result2[] = {5, 10, 15, 20, 25, 26, 27};
+
+        _cleanup_free_ gid_t *gids = NULL;
+        _cleanup_free_ gid_t *res1 = NULL;
+        _cleanup_free_ gid_t *res2 = NULL;
+        _cleanup_free_ gid_t *res3 = NULL;
+        _cleanup_free_ gid_t *res4 = NULL;
+        int nresult;
+
+        nresult = merge_gid_lists(l2, ELEMENTSOF(l2), l3, ELEMENTSOF(l3), &res1);
+        assert_se(nresult == ELEMENTSOF(result1));
+        assert_se(memcmp(res1, result1, ELEMENTSOF(result1)) == 0);
+
+        nresult = merge_gid_lists(NULL, 0, l2, ELEMENTSOF(l2), &res2);
+        assert_se(nresult == ELEMENTSOF(l2));
+        assert_se(memcmp(res2, l2, ELEMENTSOF(l2)) == 0);
+
+        nresult = merge_gid_lists(l1, ELEMENTSOF(l1), l1, ELEMENTSOF(l1), &res3);
+        assert_se(nresult == ELEMENTSOF(l1));
+        assert_se(memcmp(l1, res3, nresult) == 0);
+
+        nresult = merge_gid_lists(l1, ELEMENTSOF(l1), l4, ELEMENTSOF(l4), &res4);
+        assert_se(nresult == ELEMENTSOF(result2));
+        assert_se(memcmp(result2, res4, nresult) == 0);
+
+        nresult = getgroups_alloc(&gids);
+        assert_se(nresult >= 0 || nresult == -EINVAL || nresult == -ENOMEM);
+        assert_se(gids);
+}
+
 int main(int argc, char*argv[]) {
 
         test_uid_to_name_one(0, "root");
@@ -197,6 +234,8 @@ int main(int argc, char*argv[]) {
         test_valid_user_group_name_or_id();
         test_valid_gecos();
         test_valid_home();
+
+        test_gid_lists_ops();
 
         return 0;
 }
