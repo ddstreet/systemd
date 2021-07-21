@@ -119,6 +119,7 @@ typedef struct Link {
         bool setting_mtu:1;
         bool setting_genmode:1;
         bool ipv6_mtu_set:1;
+        bool activated:1;
 
         LIST_HEAD(Address, pool_addresses);
 

@@ -53,6 +53,17 @@ typedef enum KeepConfiguration {
         _KEEP_CONFIGURATION_INVALID = -1,
 } KeepConfiguration;
 
+typedef enum ActivationPolicy {
+        ACTIVATION_POLICY_UP,
+        ACTIVATION_POLICY_ALWAYS_UP,
+        ACTIVATION_POLICY_MANUAL,
+        ACTIVATION_POLICY_ALWAYS_DOWN,
+        ACTIVATION_POLICY_DOWN,
+        ACTIVATION_POLICY_BOUND,
+        _ACTIVATION_POLICY_MAX,
+        _ACTIVATION_POLICY_INVALID = -1
+} ActivationPolicy;
+
 typedef struct Manager Manager;
 
 struct Network {
@@ -240,6 +251,7 @@ struct Network {
 
         bool required_for_online; /* Is this network required to be considered online? */
         LinkOperationalStateRange required_operstate_for_online;
+        ActivationPolicy activation_policy;
 
         LLDPMode lldp_mode; /* LLDP reception */
         LLDPEmit lldp_emit; /* LLDP transmission */
@@ -325,6 +337,7 @@ CONFIG_PARSER_PROTOTYPE(config_parse_dnssec_negative_trust_anchors);
 CONFIG_PARSER_PROTOTYPE(config_parse_ntp);
 CONFIG_PARSER_PROTOTYPE(config_parse_required_for_online);
 CONFIG_PARSER_PROTOTYPE(config_parse_keep_configuration);
+CONFIG_PARSER_PROTOTYPE(config_parse_activation_policy);
 
 const struct ConfigPerfItem* network_network_gperf_lookup(const char *key, GPERF_LEN_TYPE length);
 
@@ -333,3 +346,6 @@ IPv6PrivacyExtensions ipv6_privacy_extensions_from_string(const char *s) _pure_;
 
 const char* keep_configuration_to_string(KeepConfiguration i) _const_;
 KeepConfiguration keep_configuration_from_string(const char *s) _pure_;
+
+const char* activation_policy_to_string(ActivationPolicy i) _const_;
+ActivationPolicy activation_policy_from_string(const char *s) _pure_;
