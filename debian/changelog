@@ -1,3 +1,11 @@
+systemd (237-3ubuntu10.50) bionic-security; urgency=medium
+
+  * d/p/lp1937117-revert-lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch:
+    Revert patch due to users expecting previous buggy behavior
+    (LP: #1937117)
+
+ -- Dan Streetman <ddstreet@canonical.com>  Wed, 21 Jul 2021 14:51:38 -0400
+
 systemd (237-3ubuntu10.49) bionic-security; urgency=medium
 
   * SECURITY UPDATE: DoS via DHCP FORCERENEW
