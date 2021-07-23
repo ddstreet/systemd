@@ -249,3 +249,5 @@ lp1923115-network-always-drop-configs-when-interface-is-renamed.patch
 lp1925216-seccomp-rework-functions-for-parsing-system-call-fil.patch
 lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch
 lp1785383-resolved-address-DVE-2018-0001.patch
+CVE-2020-13529.patch
+CVE-2021-33910.patch
