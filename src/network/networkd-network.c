@@ -207,6 +207,7 @@ static int network_load_one(Manager *manager, const char *filename) {
 
         network->required_for_online = true;
         network->dhcp = ADDRESS_FAMILY_NO;
+        network->dhcp_critical = -1;
         network->dhcp_use_ntp = true;
         network->dhcp_use_dns = true;
         network->dhcp_use_hostname = true;
@@ -266,6 +267,8 @@ static int network_load_one(Manager *manager, const char *filename) {
         network->ipv6_accept_ra_route_table = RT_TABLE_MAIN;
         network->ipv6_mtu = 0;
 
+        network->keep_configuration = _KEEP_CONFIGURATION_INVALID;
+
         network->configure_without_carrier = false;
         network->ignore_carrier_loss = -1;
 
@@ -305,6 +308,20 @@ static int network_load_one(Manager *manager, const char *filename) {
                             "Disabling UseMTU=.", filename);
                 network->dhcp_use_mtu = false;
         }
+
+        if (network->dhcp_critical >= 0) {
+                if (network->keep_configuration >= 0)
+                        log_warning("%s: Both KeepConfiguration= and deprecated CriticalConnection= are set. "
+                                    "Ignoring CriticalConnection=.", network->filename);
+                else if (network->dhcp_critical)
+                        /* CriticalConnection=yes also preserve foreign static configurations. */
+                        network->keep_configuration = KEEP_CONFIGURATION_YES;
+                else
+                        network->keep_configuration = KEEP_CONFIGURATION_NO;
+        }
+
+        if (network->keep_configuration < 0)
+                network->keep_configuration = KEEP_CONFIGURATION_NO;
 
         if (network->dhcp_use_gateway < 0)
                 network->dhcp_use_gateway = network->dhcp_use_routes;
@@ -1508,3 +1525,15 @@ static const char* const lldp_mode_table[_LLDP_MODE_MAX] = {
 };
 
 DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(lldp_mode, LLDPMode, LLDP_MODE_YES);
+
+DEFINE_CONFIG_PARSE_ENUM(config_parse_keep_configuration, keep_configuration, KeepConfiguration,
+                         "Failed to parse KeepConfiguration= setting");
+
+static const char* const keep_configuration_table[_KEEP_CONFIGURATION_MAX] = {
+        [KEEP_CONFIGURATION_NO]     = "no",
+        [KEEP_CONFIGURATION_DHCP]   = "dhcp",
+        [KEEP_CONFIGURATION_STATIC] = "static",
+        [KEEP_CONFIGURATION_YES]    = "yes",
+};
+
+DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(keep_configuration, KeepConfiguration, KEEP_CONFIGURATION_YES);
