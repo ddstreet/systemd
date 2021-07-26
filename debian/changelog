@@ -1,3 +1,16 @@
+systemd (237-3ubuntu10.51) bionic; urgency=medium
+
+  * Add support to keepconfiguration (LP: #1815101)
+    - lp1815101-0001-add-macro-if-flags-are-set.patch
+    - lp1815101-0002-networkd-add-support-to-keepconfiguration.patch
+    - lp1815101-0003-network-use-hashmap_steal_first-rather-than-hashmap_.patch
+    - lp1815101-0004-networkd-stop-clients-when-networkd-shuts-down.patch
+    - lp1815101-0005-network-add-KeepConfiguration-dhcp-on-stop.patch
+    - lp1815101-0006-network-make-KeepConfiguration-static-drop-DHCP-addr.patch
+    - lp1815101-0007-man-add-documentation-about-KeepConfiguration.patch
+
+ -- Eric Desrochers <eric.desrochers@canonical.com>  Mon, 26 Jul 2021 11:31:02 -0400
+
 systemd (237-3ubuntu10.50) bionic-security; urgency=medium
 
   * d/p/lp1937117-revert-lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch:

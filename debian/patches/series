@@ -252,3 +252,10 @@ lp1785383-resolved-address-DVE-2018-0001.patch
 CVE-2020-13529.patch
 CVE-2021-33910.patch
 lp1937117-revert-lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch
+lp1815101-0001-add-macro-if-flags-are-set.patch
+lp1815101-0002-networkd-add-support-to-keepconfiguration.patch
+lp1815101-0003-network-use-hashmap_steal_first-rather-than-hashmap_.patch
+lp1815101-0004-networkd-stop-clients-when-networkd-shuts-down.patch
+lp1815101-0005-network-add-KeepConfiguration-dhcp-on-stop.patch
+lp1815101-0006-network-make-KeepConfiguration-static-drop-DHCP-addr.patch
+lp1815101-0007-man-add-documentation-about-KeepConfiguration.patch

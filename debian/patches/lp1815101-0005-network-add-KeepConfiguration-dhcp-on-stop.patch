@@ -1,0 +1,128 @@
+Description: network: add KeepConfiguration=dhcp-on-stop
+    The option prevents to drop lease address on stop.
+    By setting this, we can safely restart networkd.
+Author: Yu Watanabe <watanabe.yu+github@gmail.com>
+Origin: backport, https://github.com/systemd/systemd/commit/95355a281c06c5970b7355c38b066910c3be4958
+Bug-Ubuntu: https://launchpad.net/bugs/1815101
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -647,14 +647,15 @@
+         link_dirty(link);
+ }
+ 
+-int link_stop_clients(Link *link) {
++int link_stop_clients(Link *link, bool may_keep_dhcp) {
+         int r = 0, k;
+ 
+         assert(link);
+         assert(link->manager);
+         assert(link->manager->event);
+ 
+-        if (link->dhcp_client) {
++        if (link->dhcp_client && (!may_keep_dhcp || !link->network ||
++                                  !FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP_ON_STOP))) {
+                 k = sd_dhcp_client_stop(link->dhcp_client);
+                 if (k < 0)
+                         r = log_link_warning_errno(link, k, "Could not stop DHCPv4 client: %m");
+@@ -698,7 +699,7 @@
+ 
+         link_set_state(link, LINK_STATE_FAILED);
+ 
+-        link_stop_clients(link);
++        link_stop_clients(link, false);
+ 
+         link_dirty(link);
+ }
+@@ -2974,7 +2975,7 @@
+         /* Drop foreign config, but ignore loopback or critical devices.
+          * We do not want to remove loopback address or addresses used for root NFS. */
+         if (!(link->flags & IFF_LOOPBACK) &&
+-            !(link->network->keep_configuration & (KEEP_CONFIGURATION_DHCP | KEEP_CONFIGURATION_STATIC))) {
++            !(link->network->keep_configuration & (KEEP_CONFIGURATION_DHCP_ON_START | KEEP_CONFIGURATION_STATIC))) {
+                 r = link_drop_foreign_config(link);
+                 if (r < 0)
+                         return r;
+@@ -3402,7 +3403,7 @@
+         if (link->setting_mtu)
+                 return 0;
+ 
+-        r = link_stop_clients(link);
++        r = link_stop_clients(link, false);
+         if (r < 0) {
+                 link_enter_failed(link);
+                 return r;
+--- a/src/network/networkd-link.h
++++ b/src/network/networkd-link.h
+@@ -184,7 +184,7 @@
+ int dhcp6_configure(Link *link);
+ int dhcp6_request_address(Link *link, int ir);
+ 
+-int link_stop_clients(Link *link);
++int link_stop_clients(Link *link, bool may_keep_dhcp);
+ 
+ const char* link_state_to_string(LinkState s) _const_;
+ LinkState link_state_from_string(const char *s) _pure_;
+--- a/src/network/networkd-manager.c
++++ b/src/network/networkd-manager.c
+@@ -1469,7 +1469,7 @@
+         hashmap_free(m->dhcp6_prefixes);
+ 
+         while ((link = hashmap_steal_first(m->links))) {
+-                link_stop_clients(link);
++                (void) link_stop_clients(link, true);
+                 link_unref(link);
+          }
+ 
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -317,11 +317,13 @@
+                         /* CriticalConnection=yes also preserve foreign static configurations. */
+                         network->keep_configuration = KEEP_CONFIGURATION_YES;
+                 else
+-                        network->keep_configuration = KEEP_CONFIGURATION_NO;
++                        /* For backward compatibility, we do not release DHCP addresses on manager stop. */
++                        network->keep_configuration = KEEP_CONFIGURATION_DHCP_ON_STOP;
+         }
+ 
+         if (network->keep_configuration < 0)
+-                network->keep_configuration = KEEP_CONFIGURATION_NO;
++                /* For backward compatibility, we do not release DHCP addresses on manager stop. */
++                network->keep_configuration = KEEP_CONFIGURATION_DHCP_ON_STOP;
+ 
+         if (network->dhcp_use_gateway < 0)
+                 network->dhcp_use_gateway = network->dhcp_use_routes;
+@@ -1530,10 +1532,11 @@
+                          "Failed to parse KeepConfiguration= setting");
+ 
+ static const char* const keep_configuration_table[_KEEP_CONFIGURATION_MAX] = {
+-        [KEEP_CONFIGURATION_NO]     = "no",
+-        [KEEP_CONFIGURATION_DHCP]   = "dhcp",
+-        [KEEP_CONFIGURATION_STATIC] = "static",
+-        [KEEP_CONFIGURATION_YES]    = "yes",
++        [KEEP_CONFIGURATION_NO]           = "no",
++        [KEEP_CONFIGURATION_DHCP_ON_STOP] = "dhcp-on-stop",
++        [KEEP_CONFIGURATION_DHCP]         = "dhcp",
++        [KEEP_CONFIGURATION_STATIC]       = "static",
++        [KEEP_CONFIGURATION_YES]          = "yes",
+ };
+ 
+ DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(keep_configuration, KeepConfiguration, KEEP_CONFIGURATION_YES);
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -96,10 +96,12 @@
+ } RADVPrefixDelegation;
+ 
+ typedef enum KeepConfiguration {
+-        KEEP_CONFIGURATION_NO     = 0,
+-        KEEP_CONFIGURATION_DHCP   = 1 << 0,
+-        KEEP_CONFIGURATION_STATIC = 1 << 1,
+-        KEEP_CONFIGURATION_YES    = KEEP_CONFIGURATION_DHCP | KEEP_CONFIGURATION_STATIC,
++        KEEP_CONFIGURATION_NO            = 0,
++        KEEP_CONFIGURATION_DHCP_ON_START = 1 << 0,
++        KEEP_CONFIGURATION_DHCP_ON_STOP  = 1 << 1,
++        KEEP_CONFIGURATION_DHCP          = KEEP_CONFIGURATION_DHCP_ON_START | KEEP_CONFIGURATION_DHCP_ON_STOP,
++        KEEP_CONFIGURATION_STATIC        = 1 << 2,
++        KEEP_CONFIGURATION_YES           = KEEP_CONFIGURATION_DHCP | KEEP_CONFIGURATION_STATIC,
+         _KEEP_CONFIGURATION_MAX,
+         _KEEP_CONFIGURATION_INVALID = -1,
+ } KeepConfiguration;

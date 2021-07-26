@@ -1,0 +1,23 @@
+Description: <short description, required>
+ Add macro for checking if some flags are set
+
+ This way we don't need to repeat the argument twice.
+ I didn't replace all instances. I think it's better to leave out:
+ - asserts
+ - comparisons like x & y == x, which are mathematically equivalent, but
+ here we aren't checking if flags are set, but if the argument fits in the
+ flags.
+From: Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl>
+Origin: backport, https://github.com/systemd/systemd/commit/d94a24ca2ea769755beaed0659b966b1ec75c8d4
+Bug-Ubuntu: https://launchpad.net/bugs/1815101
+--- a/src/basic/macro.h
++++ b/src/basic/macro.h
+@@ -350,6 +350,8 @@
+ 
+ #define SET_FLAG(v, flag, b) \
+         (v) = (b) ? ((v) | (flag)) : ((v) & ~(flag))
++#define FLAGS_SET(v, flags) \
++        (((v) & (flags)) == (flags))
+ 
+ #define CASE_F(X) case X:
+ #define CASE_F_1(CASE, X) CASE_F(X)
