@@ -855,6 +855,15 @@ void link_check_ready(Link *link) {
         if (!link->addresses_configured)
                 return;
 
+        SET_FOREACH(a, link->addresses, i)
+                if (!address_is_ready(a))
+                        return;
+
+        if (!link->addresses_ready) {
+                link->addresses_ready = true;
+                link_request_set_routes(link);
+        }
+
         if (!link->static_routes_configured)
                 return;
 
@@ -885,10 +894,6 @@ void link_check_ready(Link *link) {
                         if (!implicit)
                                 return;
         }
-
-        SET_FOREACH(a, link->addresses, i)
-                if (!address_is_ready(a))
-                        return;
 
         if (link->state != LINK_STATE_CONFIGURED)
                 link_enter_configured(link);
@@ -940,7 +945,7 @@ static int address_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userda
         if (link->address_messages == 0) {
                 log_link_debug(link, "Addresses set");
                 link->addresses_configured = true;
-                link_request_set_routes(link);
+                link_check_ready(link);
         }
 
         return 1;
@@ -1097,6 +1102,7 @@ static int link_request_set_addresses(Link *link) {
 
         /* Reset all *_configured flags we are configuring. */
         link->addresses_configured = false;
+        link->addresses_ready = false;
         link->static_routes_configured = false;
         link->routing_policy_rules_configured = false;
 
@@ -1248,7 +1254,7 @@ static int link_request_set_addresses(Link *link) {
 
         if (link->address_messages == 0) {
                 link->addresses_configured = true;
-                link_request_set_routes(link);
+                link_check_ready(link);
         } else
                 log_link_debug(link, "Setting addresses");
 
