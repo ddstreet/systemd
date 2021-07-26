@@ -1,0 +1,18 @@
+Description: network: use hashmap_steal_first() rather than hashmap_first()+hashmap_remove()
+Author: Yu Watanabe <watanabe.yu+github@gmail.com>
+Origin: backport, https://github.com/systemd/systemd/commit/f61365e516851e8f59a6d120d29835c111c1d8fb
+Bug-Ubuntu: https://launchpad.net/bugs/1815101
+--- a/src/network/networkd-manager.c
++++ b/src/network/networkd-manager.c
+@@ -1468,8 +1468,10 @@
+                 link_unref(link);
+         hashmap_free(m->dhcp6_prefixes);
+ 
+-        while ((link = hashmap_first(m->links)))
++        while ((link = hashmap_steal_first(m->links))) {
+                 link_unref(link);
++         }
++
+         hashmap_free(m->links);
+ 
+         hashmap_free(m->networks_by_name);
