@@ -317,11 +317,13 @@ static int network_load_one(Manager *manager, const char *filename) {
                         /* CriticalConnection=yes also preserve foreign static configurations. */
                         network->keep_configuration = KEEP_CONFIGURATION_YES;
                 else
-                        network->keep_configuration = KEEP_CONFIGURATION_NO;
+                        /* For backward compatibility, we do not release DHCP addresses on manager stop. */
+                        network->keep_configuration = KEEP_CONFIGURATION_DHCP_ON_STOP;
         }
 
         if (network->keep_configuration < 0)
-                network->keep_configuration = KEEP_CONFIGURATION_NO;
+                /* For backward compatibility, we do not release DHCP addresses on manager stop. */
+                network->keep_configuration = KEEP_CONFIGURATION_DHCP_ON_STOP;
 
         if (network->dhcp_use_gateway < 0)
                 network->dhcp_use_gateway = network->dhcp_use_routes;
@@ -1530,10 +1532,11 @@ DEFINE_CONFIG_PARSE_ENUM(config_parse_keep_configuration, keep_configuration, Ke
                          "Failed to parse KeepConfiguration= setting");
 
 static const char* const keep_configuration_table[_KEEP_CONFIGURATION_MAX] = {
-        [KEEP_CONFIGURATION_NO]     = "no",
-        [KEEP_CONFIGURATION_DHCP]   = "dhcp",
-        [KEEP_CONFIGURATION_STATIC] = "static",
-        [KEEP_CONFIGURATION_YES]    = "yes",
+        [KEEP_CONFIGURATION_NO]           = "no",
+        [KEEP_CONFIGURATION_DHCP_ON_STOP] = "dhcp-on-stop",
+        [KEEP_CONFIGURATION_DHCP]         = "dhcp",
+        [KEEP_CONFIGURATION_STATIC]       = "static",
+        [KEEP_CONFIGURATION_YES]          = "yes",
 };
 
 DEFINE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(keep_configuration, KeepConfiguration, KEEP_CONFIGURATION_YES);
