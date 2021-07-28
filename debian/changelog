@@ -3,6 +3,7 @@ systemd (247.3-3ubuntu3.5) UNRELEASED; urgency=medium
   [ Yao Wei ]
   * Use SKU to identify Dell clamshell models for accelerometer properties
     (LP: #1938259)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a21edd743408b5603b0177e9c230c6d6b919e589
 
   [ Lukas Märdian ]
   * Add d/p/lp1934221-resolved-disable-event-sources-before-unreffing-them.patch
