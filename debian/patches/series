@@ -99,3 +99,4 @@ lp1934981-correct-suspend-then-sleep-string.patch
 lp1934221-resolved-disable-event-sources-before-unreffing-them.patch
 CVE-2020-13529.patch
 CVE-2021-33910.patch
+dell-clamshell-accel-location-base-with-sku.patch

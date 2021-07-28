@@ -1,5 +1,9 @@
 systemd (247.3-3ubuntu3.5) UNRELEASED; urgency=medium
 
+  [ Yao Wei ]
+  * Use SKU to identify Dell clamshell models for accelerometer properties
+    (LP: #1938259)
+
   [ Lukas Märdian ]
   * Add d/p/lp1934221-resolved-disable-event-sources-before-unreffing-them.patch
     - Fix segfault in systemd-resolve (LP: #1934221)
