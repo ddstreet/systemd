@@ -35,6 +35,8 @@ MemoryDenyWriteExecute=yes
 RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
+SystemCallFilter=@system-service @module @raw-io
+SystemCallErrorNumber=EPERM
 LockPersonality=yes
 IPAddressDeny=any
 {{SERVICE_WATCHDOG}}
