@@ -1,3 +1,11 @@
+systemd (249.3-1) experimental; urgency=medium
+
+  * New upstream version 249.3
+  * Rebase patches
+  * Remove obsolete systemd-resolve compat symlink
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 08 Aug 2021 22:39:25 +0200
+
 systemd (249.2-2) experimental; urgency=medium
 
   * Remove obsolete upgrade code from maintainer scripts
