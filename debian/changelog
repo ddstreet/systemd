@@ -1,3 +1,12 @@
+systemd (237-3ubuntu10.52) UNRELEASED; urgency=medium
+
+  * d/extra/dhclient-enter-resolved-hook:
+    Reset start limit counter for systemd-resolved in dhclient hook
+    (LP: #1939255)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ea6710476dde78e8595274c3c4ba7acca6d5162c
+
+ -- Dan Streetman <ddstreet@canonical.com>  Sun, 08 Aug 2021 21:19:07 -0400
+
 systemd (237-3ubuntu10.51) bionic; urgency=medium
 
   * Add support to keepconfiguration (LP: #1815101)
