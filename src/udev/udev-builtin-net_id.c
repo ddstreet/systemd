@@ -36,7 +36,8 @@
 #include "strxcpyx.h"
 #include "udev-builtin.h"
 
-#define ONBOARD_INDEX_MAX (16*1024-1)
+#define ONBOARD_14BIT_INDEX_MAX ((1U << 14) - 1)
+#define ONBOARD_16BIT_INDEX_MAX ((1U << 16) - 1)
 
 enum netname_type{
         NET_UNDEF,
@@ -161,6 +162,16 @@ static int get_virtfn_info(sd_device *dev, struct netnames *names, struct virtfn
         return 0;
 }
 
+static bool is_valid_onboard_index(unsigned long idx) {
+        /* Some BIOSes report rubbish indexes that are excessively high (2^24-1 is an index VMware likes to
+         * report for example). Let's define a cut-off where we don't consider the index reliable anymore. We
+         * pick some arbitrary cut-off, which is somewhere beyond the realistic number of physical network
+         * interface a system might have. Ideally the kernel would already filter this crap for us, but it
+         * doesn't currently. The initial cut-off value (2^14-1) was too conservative for s390 PCI which
+         * allows for index values up 2^16-1 which is now enabled with the NAMING_16BIT_INDEX naming flag. */
+        return idx <= (naming_scheme_has(NAMING_16BIT_INDEX) ? ONBOARD_16BIT_INDEX_MAX : ONBOARD_14BIT_INDEX_MAX);
+}
+
 /* retrieve on-board index number and label from firmware */
 static int dev_pci_onboard(sd_device *dev, struct netnames *names) {
         unsigned long idx, dev_port = 0;
@@ -183,12 +194,7 @@ static int dev_pci_onboard(sd_device *dev, struct netnames *names) {
         if (idx == 0 && !naming_scheme_has(NAMING_ZERO_ACPI_INDEX))
                 return -EINVAL;
 
-        /* Some BIOSes report rubbish indexes that are excessively high (2^24-1 is an index VMware likes to
-         * report for example). Let's define a cut-off where we don't consider the index reliable anymore. We
-         * pick some arbitrary cut-off, which is somewhere beyond the realistic number of physical network
-         * interface a system might have. Ideally the kernel would already filter this crap for us, but it
-         * doesn't currently. */
-        if (idx > ONBOARD_INDEX_MAX)
+        if (!is_valid_onboard_index(idx))
                 return -ENOENT;
 
         /* kernel provided port index for multiple ports on a single PCI function */
@@ -344,6 +350,32 @@ static int dev_pci_slot(sd_device *dev, struct netnames *names) {
         while (hotplug_slot_dev) {
                 if (sd_device_get_sysname(hotplug_slot_dev, &sysname) < 0)
                         continue;
+
+                /*  The <sysname>/function_id attribute is unique to the s390 PCI driver.
+                    If present, we know that the slot's directory name for this device is
+                    /sys/bus/pci/XXXXXXXX/ where XXXXXXXX is the fixed length 8 hexadecimal
+                    character string representation of function_id.
+                    Therefore we can short cut here and just check for the existence of
+                    the slot directory. As this directory has to exist, we're emitting a
+                    debug message for the unlikely case it's not found.
+                    Note that the domain part of doesn't belong to the slot name here
+                    because there's a 1-to-1 relationship between PCI function and its hotplug
+                    slot.
+                 */
+                if (naming_scheme_has(NAMING_SLOT_FUNCTION_ID) &&
+                    sd_device_get_sysattr_value(hotplug_slot_dev, "function_id", &attr) >= 0) {
+                        _cleanup_free_ char *str = NULL;
+                        int function_id;
+
+                        if (safe_atoi(attr, &function_id) >= 0 &&
+                            asprintf(&str, "%s/%08x/", slots, function_id) >= 0 &&
+                            access(str, R_OK) == 0) {
+                                hotplug_slot = function_id;
+                                domain = 0;
+                        } else
+                                log_debug("No matching slot for function_id (%s).", attr);
+                        break;
+                }
 
                 FOREACH_DIRENT_ALL(dent, dir, break) {
                         int i;
