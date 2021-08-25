@@ -21,6 +21,10 @@ systemd (247.3-3ubuntu3.5) UNRELEASED; urgency=medium
     Fix sleep verb used by logind during suspend-then-hibernate
     (LP: #1934981)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=cf75bbb01a6e7e2516e2bbf541c8e84d0548359c
+  * d/p/lp1934147/0001-cgroup-do-catchup-for-unit-cgroup-inotify-watch-file.patch,
+    d/p/lp1934147/0002-core-Make-sure-cgroup_oom_queue-is-flushed-on-manage.patch:
+    Catchup cgroup inotify watch after reexec/reload (LP: #1934147)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d34d104339065665fa64ccda72d07ba8e2b7e10f
 
  -- Dan Streetman <ddstreet@canonical.com>  Tue, 20 Jul 2021 16:53:38 -0400
 
