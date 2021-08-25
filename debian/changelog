@@ -4,6 +4,11 @@ systemd (237-3ubuntu10.52) UNRELEASED; urgency=medium
     Reset start limit counter for systemd-resolved in dhclient hook
     (LP: #1939255)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ea6710476dde78e8595274c3c4ba7acca6d5162c
+  * d/p/lp1934147/0001-core-add-a-new-unit-method-catchup.patch,
+    d/p/lp1934147/0002-cgroup-do-catchup-for-unit-cgroup-inotify-watch-file.patch,
+    d/p/lp1934147/0003-core-Make-sure-cgroup_oom_queue-is-flushed-on-manage.patch:
+    Catch up on cgroup empty inotify after reexec/reload (LP: #1934147)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5ef61bd930612a90ce3ed9105cbadc5ff97b6ffc
 
  -- Dan Streetman <ddstreet@canonical.com>  Sun, 08 Aug 2021 21:19:07 -0400
 
