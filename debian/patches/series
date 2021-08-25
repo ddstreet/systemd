@@ -259,3 +259,6 @@ lp1815101-0004-networkd-stop-clients-when-networkd-shuts-down.patch
 lp1815101-0005-network-add-KeepConfiguration-dhcp-on-stop.patch
 lp1815101-0006-network-make-KeepConfiguration-static-drop-DHCP-addr.patch
 lp1815101-0007-man-add-documentation-about-KeepConfiguration.patch
+lp1934147/0001-core-add-a-new-unit-method-catchup.patch
+lp1934147/0002-cgroup-do-catchup-for-unit-cgroup-inotify-watch-file.patch
+lp1934147/0003-core-Make-sure-cgroup_oom_queue-is-flushed-on-manage.patch
