@@ -3898,7 +3898,11 @@ static int exec_child(
 
         if (context->nice_set) {
                 r = setpriority_closest(context->nice);
-                if (r < 0)
+                if (ERRNO_IS_PRIVILEGE(r)) {
+                        log_open();
+                        log_unit_debug_errno(unit, r, "Failed to adjust Nice setting, assuming containerized execution, ignoring: %m");
+                        log_close();
+                } else if (r < 0)
                         return log_unit_error_errno(unit, r, "Failed to set up process scheduling priority (nice level): %m");
         }
 
