@@ -1,3 +1,42 @@
+systemd (245.4-4ubuntu3.12) focal; urgency=medium
+
+  [ Yao Wei ]
+  * d/p/dell-clamshell-accel-location-base.patch:
+    Add ACCEL_LOCATION=base property for Dell clamshell models (LP: #1938259)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5c1be33900edee94da0dc9a4ade8edcd079b4c85
+
+  [ Lukas Märdian ]
+  * Add d/p/lp1934221-resolved-disable-event-sources-before-unreffing-them.patch
+    - Fix segfault in systemd-resolve (LP: #1934221)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=6c401900c70962052f56c7108fdc02fe7f84c9bf
+
+  [ Simon Chopin ]
+  * d/p/lp1914740-network-enable-DHCP-broadcast-flag-if-required-by-in.patch:
+    - Apply upstream patch to fix Hipersocket DHCP mode (LP: #1914740)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=326ae43b7966d9e7c5f7124027185a79a07fa276
+
+  [ Dan Streetman ]
+  * d/p/lp1934981-correct-suspend-then-sleep-string.patch:
+    Fix sleep verb used by logind during suspend-then-hibernate
+    (LP: #1934981)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=997f3a7da3d5db22e3c63626c3f7dc3dff0830b0
+  * d/p/lp1937238-util-return-the-correct-correct-wd-from-inotify-help.patch:
+    Fix watch for time sync (LP: #1937238)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=dbabff8a03eb232c19174eff1335cd7cb7d7860c
+  * d/extra/dhclient-enter-resolved-hook:
+    Reset start limit counter for systemd-resolved in dhclient hook
+    (LP: #1939255)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=9d3a91a0b70a4b2bcc166f366cd0a880fd494812
+  * d/p/lp1935051-shared-unit-file-make-sure-the-old-hashmaps-and-sets.patch:
+    Fix memory leak in path cache (LP: #1935051)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=12d6bdeb35f309158fe8d4242c6dd9be4d067604
+  * d/p/lp1934147/0001-cgroup-do-catchup-for-unit-cgroup-inotify-watch-file.patch,
+    d/p/lp1934147/0002-core-Make-sure-cgroup_oom_queue-is-flushed-on-manage.patch:
+    Catchup cgroup inotify watch after reexec/reload (LP: #1934147)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=63eabc88b8e0005eb40b15b543538ce35377bdbd
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 26 Aug 2021 10:18:02 -0400
+
 systemd (245.4-4ubuntu3.11) focal-security; urgency=medium
 
   * d/p/lp1937117/0001-revert-lp1929560-network-move-set-MAC-and-set-nomaster-operations-out.patch,
