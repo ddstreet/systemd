@@ -9267,8 +9267,9 @@ static int logind_schedule_shutdown(void) {
                         "st",
                         action,
                         arg_when);
+        /* logind fails, cannot schedule reboot, do nothing */
         if (r < 0)
-                return log_warning_errno(r, "Failed to call ScheduleShutdown in logind, proceeding with immediate shutdown: %s", bus_error_message(&error, r));
+                return log_warning_errno(r, "Failed to call ScheduleShutdown in logind, no action will be taken: %s", bus_error_message(&error, r));
 
         if (!arg_quiet)
                 log_info("Shutdown scheduled for %s, use 'shutdown -c' to cancel.", format_timestamp(date, sizeof(date), arg_when));
@@ -9286,11 +9287,11 @@ static int halt_main(void) {
         if (r < 0)
                 return r;
 
-        /* Delayed shutdown requested, and was successful */
-        if (arg_when > 0 && logind_schedule_shutdown() == 0)
-                return 0;
-        /* no delay, or logind failed or is not at all available */
+        /* Delayed shutdown requested */
+        if (arg_when > 0)
+                return logind_schedule_shutdown();
 
+        /* no delay */
         if (geteuid() != 0) {
                 if (arg_dry_run || arg_force > 0) {
                         (void) must_be_root();
