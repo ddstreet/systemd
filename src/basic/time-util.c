@@ -1265,24 +1265,14 @@ bool ntp_synced(void) {
 int get_timezones(char ***ret) {
         _cleanup_fclose_ FILE *f = NULL;
         _cleanup_strv_free_ char **zones = NULL;
-        size_t n_zones = 0, n_allocated = 0;
         int r;
 
         assert(ret);
 
-        zones = strv_new("UTC");
-        if (!zones)
-                return -ENOMEM;
-
-        n_allocated = 2;
-        n_zones = 1;
-
         f = fopen("/usr/share/zoneinfo/zone1970.tab", "re");
         if (f) {
                 for (;;) {
-                        _cleanup_free_ char *line = NULL;
-                        char *p, *w;
-                        size_t k;
+                        _cleanup_free_ char *line = NULL, *cc = NULL, *co = NULL, *tz = NULL;
 
                         r = read_line(f, LONG_LINE_MAX, &line);
                         if (r < 0)
@@ -1290,45 +1280,34 @@ int get_timezones(char ***ret) {
                         if (r == 0)
                                 break;
 
-                        p = strstrip(line);
+                        const char *p = line;
 
-                        if (isempty(p) || *p == '#')
+                        /* Line format is:
+                         * 'country codes' 'coordinates' 'timezone' 'comments' */
+                        r = extract_many_words(&p, NULL, 0, &cc, &co, &tz, NULL);
+                        if (r < 0)
                                 continue;
 
-                        /* Skip over country code */
-                        p += strcspn(p, WHITESPACE);
-                        p += strspn(p, WHITESPACE);
-
-                        /* Skip over coordinates */
-                        p += strcspn(p, WHITESPACE);
-                        p += strspn(p, WHITESPACE);
-
-                        /* Found timezone name */
-                        k = strcspn(p, WHITESPACE);
-                        if (k <= 0)
+                        /* Lines that start with # are comments. */
+                        if (*cc == '#')
                                 continue;
 
-                        w = strndup(p, k);
-                        if (!w)
-                                return -ENOMEM;
-
-                        if (!GREEDY_REALLOC(zones, n_allocated, n_zones + 2)) {
-                                free(w);
-                                return -ENOMEM;
-                        }
-
-                        zones[n_zones++] = w;
-                        zones[n_zones] = NULL;
+                        r = strv_extend(&zones, tz);
+                        if (r < 0)
+                                return r;
                 }
-
-                strv_sort(zones);
-                strv_uniq(zones);
-
         } else if (errno != ENOENT)
                 return -errno;
 
-        *ret = TAKE_PTR(zones);
+        /* Always include UTC */
+        r = strv_extend(&zones, "UTC");
+        if (r < 0)
+                return -ENOMEM;
 
+        strv_sort(zones);
+        strv_uniq(zones);
+
+        *ret = TAKE_PTR(zones);
         return 0;
 }
 
