@@ -7,7 +7,7 @@ TEST_NO_NSPAWN=1
 
 . $TEST_BASE_DIR/test-functions
 SKIP_INITRD=yes
-QEMU_TIMEOUT=180
+QEMU_TIMEOUT=300
 FSTYPE=ext4
 
 test_setup() {
