@@ -1,3 +1,24 @@
+systemd (237-3ubuntu10.52) bionic; urgency=medium
+
+  * d/extra/dhclient-enter-resolved-hook:
+    Reset start limit counter for systemd-resolved in dhclient hook
+    (LP: #1939255)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=ea6710476dde78e8595274c3c4ba7acca6d5162c
+  * d/p/lp1934147/0001-core-add-a-new-unit-method-catchup.patch,
+    d/p/lp1934147/0002-cgroup-do-catchup-for-unit-cgroup-inotify-watch-file.patch,
+    d/p/lp1934147/0003-core-Make-sure-cgroup_oom_queue-is-flushed-on-manage.patch:
+    Catch up on cgroup empty inotify after reexec/reload (LP: #1934147)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=5ef61bd930612a90ce3ed9105cbadc5ff97b6ffc
+  * d/p/lp1934981-correct-suspend-then-sleep-string.patch:
+    Fix sleep verb used by logind during suspend-then-hibernate
+    (LP: #1934981)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=1ade873a41ad018a5e07f10775738c6eb8c82310
+  * d/extra/dhclient-enter-resolved-hook:
+    Check is-enabled systemd-resolved in dhclient hook (LP: #1853164)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=774c2f82a39a88fa0fd8b2adbfa0b8a8c3cd1fb5
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 26 Aug 2021 10:20:40 -0400
+
 systemd (237-3ubuntu10.51) bionic; urgency=medium
 
   * Add support to keepconfiguration (LP: #1815101)
