@@ -479,6 +479,8 @@ static int mount_points_list_umount(MountPoint **head, bool *changed) {
                    hang because of the network being down. */
                 if (detect_container() <= 0 &&
                     !fstype_is_network(m->type) &&
+                    !fstype_is_api_vfs(m->type) &&
+                    !fstype_is_ro(m->type) &&
                     !mount_is_readonly) {
                         _cleanup_free_ char *options = NULL;
                         /* MS_REMOUNT requires that the data parameter
