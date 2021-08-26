@@ -95,6 +95,15 @@ typedef enum RADVPrefixDelegation {
         RADV_PREFIX_DELEGATION_BOTH,
 } RADVPrefixDelegation;
 
+typedef enum KeepConfiguration {
+        KEEP_CONFIGURATION_NO     = 0,
+        KEEP_CONFIGURATION_DHCP   = 1 << 0,
+        KEEP_CONFIGURATION_STATIC = 1 << 1,
+        KEEP_CONFIGURATION_YES    = KEEP_CONFIGURATION_DHCP | KEEP_CONFIGURATION_STATIC,
+        _KEEP_CONFIGURATION_MAX,
+        _KEEP_CONFIGURATION_INVALID = -1,
+} KeepConfiguration;
+
 typedef struct NetworkConfigSection {
         unsigned line;
         char filename[];
@@ -144,7 +153,7 @@ struct Network {
         bool dhcp_anonymize;
         bool dhcp_send_hostname;
         bool dhcp_broadcast;
-        bool dhcp_critical;
+        int dhcp_critical;
         bool dhcp_use_dns;
         bool dhcp_use_ntp;
         bool dhcp_use_mtu;
@@ -227,6 +236,7 @@ struct Network {
         bool unmanaged;
         bool configure_without_carrier;
         int ignore_carrier_loss;
+        KeepConfiguration keep_configuration;
         uint32_t iaid;
         DUID duid;
 
@@ -291,6 +301,7 @@ int config_parse_tunnel(const char *unit, const char *filename, unsigned line, c
 int config_parse_dhcp(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_dns(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_dhcp_client_identifier(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
+int config_parse_keep_configuration(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_ipv6token(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_ipv6_privacy_extensions(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
 int config_parse_hostname(const char *unit, const char *filename, unsigned line, const char *section, unsigned section_line, const char *lvalue, int ltype, const char *rvalue, void *data, void *userdata);
@@ -323,3 +334,6 @@ DHCPUseDomains dhcp_use_domains_from_string(const char *s) _pure_;
 
 const char* lldp_mode_to_string(LLDPMode m) _const_;
 LLDPMode lldp_mode_from_string(const char *s) _pure_;
+
+const char* keep_configuration_to_string(KeepConfiguration i) _const_;
+KeepConfiguration keep_configuration_from_string(const char *s) _pure_;
