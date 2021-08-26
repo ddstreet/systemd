@@ -184,7 +184,7 @@ int dhcp4_set_promote_secondaries(Link *link);
 int dhcp6_configure(Link *link);
 int dhcp6_request_address(Link *link, int ir);
 
-int link_stop_clients(Link *link);
+int link_stop_clients(Link *link, bool may_keep_dhcp);
 
 const char* link_state_to_string(LinkState s) _const_;
 LinkState link_state_from_string(const char *s) _pure_;
