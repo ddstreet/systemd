@@ -22,6 +22,7 @@ rules = files('''
         75-probe_mtd.rules
         78-sound-card.rules
         80-net-setup-link.rules
+        81-net-dhcp.rules
 '''.split())
 
 if conf.get('HAVE_KMOD') == 1
