@@ -1,4 +1,4 @@
-systemd (237-3ubuntu10.52) UNRELEASED; urgency=medium
+systemd (237-3ubuntu10.52) bionic; urgency=medium
 
   * d/extra/dhclient-enter-resolved-hook:
     Reset start limit counter for systemd-resolved in dhclient hook
@@ -17,7 +17,7 @@ systemd (237-3ubuntu10.52) UNRELEASED; urgency=medium
     Check is-enabled systemd-resolved in dhclient hook (LP: #1853164)
     https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=774c2f82a39a88fa0fd8b2adbfa0b8a8c3cd1fb5
 
- -- Dan Streetman <ddstreet@canonical.com>  Sun, 08 Aug 2021 21:19:07 -0400
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 26 Aug 2021 10:20:40 -0400
 
 systemd (237-3ubuntu10.51) bionic; urgency=medium
 
