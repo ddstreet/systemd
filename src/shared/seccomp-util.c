@@ -396,6 +396,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 .value =
                 "lookup_dcookie\0"
                 "perf_event_open\0"
+                "pidfd_getfd\0"
                 "process_vm_readv\0"
                 "process_vm_writev\0"
                 "ptrace\0"
@@ -464,6 +465,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
                 "oldstat\0"
                 "open\0"
                 "openat\0"
+                "openat2\0"
                 "readlink\0"
                 "readlinkat\0"
                 "removexattr\0"
