@@ -1,3 +1,33 @@
+systemd (247.3-3ubuntu3.5) hirsute; urgency=medium
+
+  [ Yao Wei ]
+  * d/p/dell-clamshell-accel-location-base-with-sku.patch:
+    Use SKU to identify Dell clamshell models for accelerometer properties
+    (LP: #1938259)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=a21edd743408b5603b0177e9c230c6d6b919e589
+
+  [ Lukas Märdian ]
+  * Add d/p/lp1934221-resolved-disable-event-sources-before-unreffing-them.patch
+    - Fix segfault in systemd-resolve (LP: #1934221)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=55906c32bdfd862e454c0fce80c4e023de6c3b19
+
+  [ Simon Chopin ]
+  * d/p/lp1914740-network-enable-DHCP-broadcast-flag-if-required-by-in.patch:
+    - Apply upstream patch to fix Hipersocket DHCP mode (LP: #1914740)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=c7559785d7d4efaaa899009bceeb9498e53342e5
+
+  [ Dan Streetman ]
+  * d/p/lp1934981-correct-suspend-then-sleep-string.patch:
+    Fix sleep verb used by logind during suspend-then-hibernate
+    (LP: #1934981)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=cf75bbb01a6e7e2516e2bbf541c8e84d0548359c
+  * d/p/lp1934147/0001-cgroup-do-catchup-for-unit-cgroup-inotify-watch-file.patch,
+    d/p/lp1934147/0002-core-Make-sure-cgroup_oom_queue-is-flushed-on-manage.patch:
+    Catchup cgroup inotify watch after reexec/reload (LP: #1934147)
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=d34d104339065665fa64ccda72d07ba8e2b7e10f
+
+ -- Dan Streetman <ddstreet@canonical.com>  Thu, 26 Aug 2021 10:10:50 -0400
+
 systemd (247.3-3ubuntu3.4) hirsute-security; urgency=medium
 
   * SECURITY UPDATE: DoS via DHCP FORCERENEW
