@@ -147,9 +147,14 @@ int icmp6_send_router_solicitation(int s, const struct ether_addr *ether_addr) {
 
 int icmp6_receive(int fd, void *buffer, size_t size, struct in6_addr *ret_dst,
                   triple_timestamp *ret_timestamp) {
-
+#ifdef __arm__
+        CMSG_BUFFER_TYPE(CMSG_SPACE(sizeof(int)) + /* ttl */
+                         CMSG_SPACE(sizeof(int64_t)*2) + /* 64 bit timestamp */
+                         CMSG_SPACE(sizeof(struct timeval))) control;
+#else
         CMSG_BUFFER_TYPE(CMSG_SPACE(sizeof(int)) + /* ttl */
                          CMSG_SPACE(sizeof(struct timeval))) control;
+#endif
         struct iovec iov = {};
         union sockaddr_union sa = {};
         struct msghdr msg = {
