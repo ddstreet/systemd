@@ -15,6 +15,7 @@
 #include "strv.h"
 #include "tests.h"
 #include "tmpfile-util.h"
+#include "virt.h"
 
 static void test_mount_option_mangle(void) {
         char *opts = NULL;
@@ -75,6 +76,11 @@ static void test_bind_remount_recursive(void) {
         _cleanup_free_ char *subdir = NULL;
         const char *p;
 
+        if (detect_container() == VIRTUALIZATION_LXC) {
+                log_notice("Testing in LXC, skipping %s due to LP: #1878051", __func__);
+                return;
+        }
+
         if (geteuid() != 0) {
                 (void) log_tests_skipped("not running as root");
                 return;
@@ -130,6 +136,11 @@ static void test_bind_remount_one(void) {
 
         if (geteuid() != 0) {
                 (void) log_tests_skipped("not running as root");
+                return;
+        }
+
+        if (detect_container() == VIRTUALIZATION_LXC) {
+                log_notice("Testing in LXC, skipping %s due to LP: #1878051", __func__);
                 return;
         }
 
