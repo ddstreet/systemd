@@ -44,7 +44,6 @@
 #include "networkd-wifi.h"
 #include "set.h"
 #include "socket-util.h"
-#include "stat-util.h"
 #include "stdio-util.h"
 #include "string-table.h"
 #include "strv.h"
@@ -53,6 +52,7 @@
 #include "tmpfile-util.h"
 #include "udev-util.h"
 #include "util.h"
+#include "virt.h"
 #include "vrf.h"
 
 bool link_ipv4ll_enabled(Link *link, AddressFamily mask) {
@@ -2503,8 +2503,8 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
         if (r < 0)
                 return r;
 
-        if (path_is_read_only_fs("/sys") <= 0) {
-                /* udev should be around */
+        if (detect_container() <= 0) {
+                /* not in a container, udev will be around */
                 sprintf(ifindex_str, "n%d", link->ifindex);
                 r = sd_device_new_from_device_id(&device, ifindex_str);
                 if (r < 0) {
@@ -2514,7 +2514,7 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = sd_device_get_is_initialized(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized: %m");
+                        log_link_warning_errno(link, r, "Could not determine whether the device is initialized or not: %m");
                         goto failed;
                 }
                 if (r == 0) {
@@ -2525,11 +2525,11 @@ int link_add(Manager *m, sd_netlink_message *message, Link **ret) {
 
                 r = device_is_renaming(device);
                 if (r < 0) {
-                        log_link_warning_errno(link, r, "Failed to determine the device is being renamed: %m");
+                        log_link_warning_errno(link, r, "Failed to determine the device is renamed or not: %m");
                         goto failed;
                 }
                 if (r > 0) {
-                        log_link_debug(link, "Interface is being renamed, pending initialization.");
+                        log_link_debug(link, "Interface is under renaming, pending initialization.");
                         return 0;
                 }
 
