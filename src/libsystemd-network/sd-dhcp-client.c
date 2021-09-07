@@ -1273,9 +1273,7 @@ static int client_timeout_resend(
                 else
                         goto error;
 
-                next_timeout = time_now + ((UINT64_C(1) << MIN(client->attempt, (uint64_t) 6)) - 1) * USEC_PER_SEC;
-                next_timeout += (random_u32() & 0x1fffff);
-
+                next_timeout = client_compute_request_timeout(time_now, client->attempt);
                 break;
 
         case DHCP_STATE_STOPPED:
