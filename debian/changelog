@@ -1,4 +1,4 @@
-systemd (247.3-3ubuntu3.6) UNRELEASED; urgency=medium
+systemd (247.3-3ubuntu3.6) hirsute; urgency=medium
 
   * d/p/dell-clamshell-accel-location-base-with-sku.patch:
     Revert incorrect patch (LP: #1942899)
