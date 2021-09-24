@@ -97,6 +97,8 @@ sd-bus-if-we-receive-an-invalid-dbus-message-ignore-.patch
 journal-do-not-remove-multiple-spaces-after-identifi.patch
 stop-mount-error-propagation.patch
 Support-system-image-read-only-etc.patch
+debian/timedatectl-lp1650688.patch
+debian/UBUNTU-Fix-timezone-setting-on-read-only-etc.patch
 fix-race-daemon-reload-11121.patch
 virt-detect-WSL-environment-as-a-container-id-wsl.patch
 CVE-2019-3842.patch

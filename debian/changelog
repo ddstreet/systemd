@@ -1,3 +1,13 @@
+systemd (237-3ubuntu10.53) UNRELEASED; urgency=medium
+
+  * d/p/debian/timedatectl-lp1650688.patch,
+    d/p/debian/UBUNTU-Fix-timezone-setting-on-read-only-etc.patch:
+    Fix timedated unable to retrieve & properly set timezone on
+    read-only /etc (e.g. Ubuntu Core and system-image-based systems)
+    (LP: #1650688)
+
+ -- Ratchanan Srirattanamet <ratchanan@ubports.com>  Fri, 24 Sep 2021 16:54:31 +0700
+
 systemd (237-3ubuntu10.52) bionic; urgency=medium
 
   * d/extra/dhclient-enter-resolved-hook:
