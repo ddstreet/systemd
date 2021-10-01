@@ -656,8 +656,8 @@ Domains= ~company ~lab''')
         self.assertIn(b'kettle.cantina.company: 10.241.4.4', out)
 
         # test general domains
-        out = subprocess.check_output(['resolvectl', 'query', 'megasearch.net'])
-        self.assertIn(b'megasearch.net: 192.168.42.1', out)
+        out = subprocess.check_output(['resolvectl', 'query', 'search.example.com'])
+        self.assertIn(b'search.example.com: 192.168.42.1', out)
 
         with open(self.dnsmasq_log) as f:
             general_log = f.read()
@@ -671,63 +671,63 @@ Domains= ~company ~lab''')
         self.assertNotIn('.company', general_log)
 
         # general domains should not be sent to the VPN DNS
-        self.assertRegex(general_log, 'query.*megasearch.net')
-        self.assertNotIn('megasearch.net', vpn_log)
+        self.assertRegex(general_log, 'query.*search.example.com')
+        self.assertNotIn('search.example.com', vpn_log)
 
-#    def test_resolved_etc_hosts(self):
-#        '''resolved queries to /etc/hosts'''
-#
-#        # FIXME: -t MX query fails with enabled DNSSEC (even when using
-#        # the known negative trust anchor .internal instead of .example.com)
-#        conf = '/run/systemd/resolved.conf.d/test-disable-dnssec.conf'
-#        os.makedirs(os.path.dirname(conf), exist_ok=True)
-#        with open(conf, 'w') as f:
-#            f.write('[Resolve]\nDNSSEC=no\nLLMNR=no\nMulticastDNS=no\n')
-#        self.addCleanup(os.remove, conf)
-#
-#        # create /etc/hosts bind mount which resolves my.example.com for IPv4
-#        hosts = os.path.join(self.workdir, 'hosts')
-#        with open(hosts, 'w') as f:
-#            f.write('172.16.99.99  my.example.com\n')
-#        subprocess.check_call(['mount', '--bind', hosts, '/etc/hosts'])
-#        self.addCleanup(subprocess.call, ['umount', '/etc/hosts'])
-#        subprocess.check_call(['systemctl', 'stop', 'systemd-resolved.service'])
-#
-#        # note: different IPv4 address here, so that it's easy to tell apart
-#        # what resolved the query
-#        self.create_iface(dnsmasq_opts=['--host-record=my.example.com,172.16.99.1,2600::99:99',
-#                                        '--host-record=other.example.com,172.16.0.42,2600::42',
-#                                        '--mx-host=example.com,mail.example.com'],
-#                          ipv6=True)
-#        self.do_test(coldplug=None, ipv6=True)
-#
-#        try:
-#            # family specific queries
-#            out = subprocess.check_output(['resolvectl', 'query', '-4', 'my.example.com'])
-#            self.assertIn(b'my.example.com: 172.16.99.99', out)
-#            # we don't expect an IPv6 answer; if /etc/hosts has any IP address,
-#            # it's considered a sufficient source
-#            self.assertNotEqual(subprocess.call(['resolvectl', 'query', '-6', 'my.example.com']), 0)
-#            # "any family" query; IPv4 should come from /etc/hosts
-#            out = subprocess.check_output(['resolvectl', 'query', 'my.example.com'])
-#            self.assertIn(b'my.example.com: 172.16.99.99', out)
-#            # IP → name lookup; again, takes the /etc/hosts one
-#            out = subprocess.check_output(['resolvectl', 'query', '172.16.99.99'])
-#            self.assertIn(b'172.16.99.99: my.example.com', out)
-#
-#            # non-address RRs should fall back to DNS
-#            out = subprocess.check_output(['resolvectl', 'query', '--type=MX', 'example.com'])
-#            self.assertIn(b'example.com IN MX 1 mail.example.com', out)
-#
-#            # other domains query DNS
-#            out = subprocess.check_output(['resolvectl', 'query', 'other.example.com'])
-#            self.assertIn(b'172.16.0.42', out)
-#            out = subprocess.check_output(['resolvectl', 'query', '172.16.0.42'])
-#            self.assertIn(b'172.16.0.42: other.example.com', out)
-#        except (AssertionError, subprocess.CalledProcessError):
-#            self.show_journal('systemd-resolved.service')
-#            self.print_server_log()
-#            raise
+    def test_resolved_etc_hosts(self):
+        '''resolved queries to /etc/hosts'''
+
+        # FIXME: -t MX query fails with enabled DNSSEC (even when using
+        # the known negative trust anchor .internal instead of .example.com)
+        conf = '/run/systemd/resolved.conf.d/test-disable-dnssec.conf'
+        os.makedirs(os.path.dirname(conf), exist_ok=True)
+        with open(conf, 'w') as f:
+            f.write('[Resolve]\nDNSSEC=no\nLLMNR=no\nMulticastDNS=no\n')
+        self.addCleanup(os.remove, conf)
+
+        # create /etc/hosts bind mount which resolves my.example.com for IPv4
+        hosts = os.path.join(self.workdir, 'hosts')
+        with open(hosts, 'w') as f:
+            f.write('172.16.99.99  my.example.com\n')
+        subprocess.check_call(['mount', '--bind', hosts, '/etc/hosts'])
+        self.addCleanup(subprocess.call, ['umount', '/etc/hosts'])
+        subprocess.check_call(['systemctl', 'stop', 'systemd-resolved.service'])
+
+        # note: different IPv4 address here, so that it's easy to tell apart
+        # what resolved the query
+        self.create_iface(dnsmasq_opts=['--host-record=my.example.com,172.16.99.1,2600::99:99',
+                                        '--host-record=other.example.com,172.16.0.42,2600::42',
+                                        '--mx-host=example.com,mail.example.com'],
+                          ipv6=True)
+        self.do_test(coldplug=None, ipv6=True)
+
+        try:
+            # family specific queries
+            out = subprocess.check_output(['resolvectl', 'query', '-4', 'my.example.com'])
+            self.assertIn(b'my.example.com: 172.16.99.99', out)
+            # we don't expect an IPv6 answer; if /etc/hosts has any IP address,
+            # it's considered a sufficient source
+            self.assertNotEqual(subprocess.call(['resolvectl', 'query', '-6', 'my.example.com']), 0)
+            # "any family" query; IPv4 should come from /etc/hosts
+            out = subprocess.check_output(['resolvectl', 'query', 'my.example.com'])
+            self.assertIn(b'my.example.com: 172.16.99.99', out)
+            # IP → name lookup; again, takes the /etc/hosts one
+            out = subprocess.check_output(['resolvectl', 'query', '172.16.99.99'])
+            self.assertIn(b'172.16.99.99: my.example.com', out)
+
+            # non-address RRs should fall back to DNS
+            out = subprocess.check_output(['resolvectl', 'query', '--type=MX', 'example.com'])
+            self.assertIn(b'example.com IN MX 1 mail.example.com', out)
+
+            # other domains query DNS
+            out = subprocess.check_output(['resolvectl', 'query', 'other.example.com'])
+            self.assertIn(b'172.16.0.42', out)
+            out = subprocess.check_output(['resolvectl', 'query', '172.16.0.42'])
+            self.assertIn(b'172.16.0.42: other.example.com', out)
+        except (AssertionError, subprocess.CalledProcessError):
+            self.show_journal('systemd-resolved.service')
+            self.print_server_log()
+            raise
 
     def test_transient_hostname(self):
         '''networkd sets transient hostname from DHCP'''
