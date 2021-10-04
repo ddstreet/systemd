@@ -1,3 +1,21 @@
+systemd (248.3-1ubuntu8) impish; urgency=medium
+
+  [ Dan Streetman ]
+  * d/p/dell-clamshell-accel-location-base-with-sku.patch:
+    Revert incorrect patch (LP: #1942899)
+
+  [ Lukas Märdian ]
+  * Add d/p/Merge-pull-request-20705-from-yuwata-test-oomd-util.patch
+    Replace lp1942113.patch with upstream commit 54966b7 (LP: #1942113)
+    Files:
+    - debian/patches/lp1942113.patch
+    - debian/patches/Merge-pull-request-20705-from-yuwata-test-oomd-util.patch
+  * Drop snapd cgroupv2 workaround, not needed anymore as of snapd 2.53~pre1
+    File: debian/tests/tests-in-lxd
+    https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd/commit/?id=f9f340f74abdc4060cfd27a7cb3001929b6f9cf4
+
+ -- Lukas Märdian <slyon@ubuntu.com>  Mon, 04 Oct 2021 11:23:28 +0200
+
 systemd (248.3-1ubuntu7) impish; urgency=medium
 
   * d/tests/tests-in-lxd: suppress the cgroups v2 warning on stderr from
