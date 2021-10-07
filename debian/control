@@ -60,6 +60,7 @@ Build-Depends: debhelper-compat (= 13),
                iproute2 <!nocheck>,
                zstd <!nocheck>,
                gawk <!nocheck>,
+               libssl-dev,
 
 Package: systemd
 Architecture: linux-any
