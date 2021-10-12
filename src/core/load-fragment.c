@@ -802,7 +802,7 @@ int config_parse_exec(
                 if (!separate_argv0) {
                         char *w = NULL;
 
-                        if (!GREEDY_REALLOC(n, nlen + 2))
+                        if (!GREEDY_REALLOC0(n, nlen + 2))
                                 return log_oom();
 
                         w = strdup(path);
@@ -834,7 +834,7 @@ int config_parse_exec(
                                 p += 2;
                                 p += strspn(p, WHITESPACE);
 
-                                if (!GREEDY_REALLOC(n, nlen + 2))
+                                if (!GREEDY_REALLOC0(n, nlen + 2))
                                         return log_oom();
 
                                 w = strdup(";");
