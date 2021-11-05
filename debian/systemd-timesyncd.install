@@ -5,3 +5,4 @@ lib/systemd/systemd-timesyncd
 lib/systemd/system/systemd-timesyncd.service
 usr/share/dbus-1/*/*timesync*
 usr/share/man/man*/*timesyncd*
+usr/lib/sysusers.d/systemd-timesync.conf
