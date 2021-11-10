@@ -36,6 +36,9 @@ if install_tests
         install_subdir('testsuite-63.units',
                        install_dir : testdata_dir)
 
+        install_data(kbd_model_map,
+                     install_dir : testdata_dir + '/test-keymap-util')
+
         testsuite08_dir = testdata_dir + '/testsuite-08.units'
         install_data('testsuite-08.units/-.mount',
                      install_dir : testsuite08_dir)
@@ -100,9 +103,12 @@ if install_tests
         install_data('run-unit-tests.py',
                      install_mode : 'rwxr-xr-x',
                      install_dir : testsdir)
-        install_data('test-network-generator-conversion.sh',
-                     install_mode : 'rwxr-xr-x',
-                     install_dir : testsdir)
+
+        if conf.get('ENABLE_NETWORKD') == 1
+                install_data('test-network-generator-conversion.sh',
+                             install_mode : 'rwxr-xr-x',
+                             install_dir : testsdir)
+        endif
 endif
 
 ############################################################
@@ -142,12 +148,14 @@ if want_tests != 'false' and dmi_arches.contains(host_machine.cpu_family())
         endif
 
         foreach p : out.stdout().split()
-                source = join_paths(project_source_root, p)
+                source = project_source_root / p
                 name = 'dmidecode_' + p.split('/')[-1].split('.')[0]
 
                 test(name,
                      udev_dmi_memory_id_test,
-                     args : [dmi_memory_id_path, source, source + '.txt'])
+                     args : [udev_prog_paths['dmi_memory_id'],
+                             source,
+                             source + '.txt'])
         endforeach
 endif
 

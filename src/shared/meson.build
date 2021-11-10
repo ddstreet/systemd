@@ -81,6 +81,8 @@ shared_sources = files('''
         coredump-util.h
         cpu-set-util.c
         cpu-set-util.h
+        creds-util.c
+        creds-util.h
         cryptsetup-util.c
         cryptsetup-util.h
         daemon-util.h
@@ -149,7 +151,11 @@ shared_sources = files('''
         ima-util.h
         import-util.c
         import-util.h
+        in-addr-prefix-util.c
+        in-addr-prefix-util.h
         initreq.h
+        install-file.c
+        install-file.h
         install-printf.c
         install-printf.h
         install.c
@@ -212,6 +218,8 @@ shared_sources = files('''
         net-condition.h
         netif-naming-scheme.c
         netif-naming-scheme.h
+        netif-util.c
+        netif-util.h
         nscd-flush.h
         nsflags.c
         nsflags.h
@@ -297,6 +305,8 @@ shared_sources = files('''
         utmp-wtmp.h
         varlink.c
         varlink.h
+        verb-log-control.c
+        verb-log-control.h
         verbs.c
         verbs.h
         vlan-util.c

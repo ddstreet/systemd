@@ -12,6 +12,7 @@
 #include "bus-internal.h"
 #include "bus-message.h"
 #include "bus-socket.h"
+#include "escape.h"
 #include "fd-util.h"
 #include "format-util.h"
 #include "fs-util.h"
@@ -172,12 +173,12 @@ static int bus_socket_auth_verify_client(sd_bus *b) {
         if (!d)
                 return 0;
 
-        e = memmem(d + 2, b->rbuffer_size - (d - (char*) b->rbuffer) - 2, "\r\n", 2);
+        e = memmem_safe(d + 2, b->rbuffer_size - (d - (char*) b->rbuffer) - 2, "\r\n", 2);
         if (!e)
                 return 0;
 
         if (b->accept_fd) {
-                f = memmem(e + 2, b->rbuffer_size - (e - (char*) b->rbuffer) - 2, "\r\n", 2);
+                f = memmem_safe(e + 2, b->rbuffer_size - (e - (char*) b->rbuffer) - 2, "\r\n", 2);
                 if (!f)
                         return 0;
 
@@ -398,7 +399,7 @@ static int bus_socket_auth_verify_server(sd_bus *b) {
         for (;;) {
                 /* Check if line is complete */
                 line = (char*) b->rbuffer + b->auth_rbegin;
-                e = memmem(line, b->rbuffer_size - b->auth_rbegin, "\r\n", 2);
+                e = memmem_safe(line, b->rbuffer_size - b->auth_rbegin, "\r\n", 2);
                 if (!e)
                         return processed;
 
@@ -725,7 +726,8 @@ static int bus_socket_inotify_setup(sd_bus *b) {
         }
 
         /* Make sure the path is NUL terminated */
-        p = strndupa(b->sockaddr.un.sun_path, sizeof(b->sockaddr.un.sun_path));
+        p = strndupa_safe(b->sockaddr.un.sun_path,
+                          sizeof(b->sockaddr.un.sun_path));
 
         /* Make sure the path is absolute */
         r = path_make_absolute_cwd(p, &absolute);
@@ -962,8 +964,17 @@ int bus_socket_exec(sd_bus *b) {
         assert(b->exec_path);
         assert(b->busexec_pid == 0);
 
-        log_debug("sd-bus: starting bus%s%s with %s...",
-                  b->description ? " " : "", strempty(b->description), b->exec_path);
+        if (DEBUG_LOGGING) {
+                _cleanup_free_ char *line = NULL;
+
+                if (b->exec_argv)
+                        line = quote_command_line(b->exec_argv);
+
+                log_debug("sd-bus: starting bus%s%s with %s%s",
+                          b->description ? " " : "", strempty(b->description),
+                          line ?: b->exec_path,
+                          b->exec_argv && !line ? "…" : "");
+        }
 
         r = socketpair(AF_UNIX, SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 0, s);
         if (r < 0)
@@ -977,17 +988,17 @@ int bus_socket_exec(sd_bus *b) {
         if (r == 0) {
                 /* Child */
 
-                if (rearrange_stdio(s[1], s[1], STDERR_FILENO) < 0)
+                r = rearrange_stdio(s[1], s[1], STDERR_FILENO);
+                TAKE_FD(s[1]);
+                if (r < 0)
                         _exit(EXIT_FAILURE);
 
                 (void) rlimit_nofile_safe();
 
                 if (b->exec_argv)
                         execvp(b->exec_path, b->exec_argv);
-                else {
-                        const char *argv[] = { b->exec_path, NULL };
-                        execvp(b->exec_path, (char**) argv);
-                }
+                else
+                        execvp(b->exec_path, STRV_MAKE(b->exec_path));
 
                 _exit(EXIT_FAILURE);
         }

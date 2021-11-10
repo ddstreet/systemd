@@ -80,22 +80,19 @@ static int format_lun_number(sd_device *dev, char **path) {
 }
 
 static sd_device *skip_subsystem(sd_device *dev, const char *subsys) {
-        sd_device *parent;
-
         assert(dev);
         assert(subsys);
 
-        for (parent = dev; ; ) {
+        for (;;) {
                 const char *subsystem;
 
-                if (sd_device_get_subsystem(parent, &subsystem) < 0)
+                if (sd_device_get_subsystem(dev, &subsystem) < 0)
                         break;
 
                 if (!streq(subsystem, subsys))
                         break;
 
-                dev = parent;
-                if (sd_device_get_parent(dev, &parent) < 0)
+                if (sd_device_get_parent(dev, &dev) < 0)
                         break;
         }
 
@@ -340,7 +337,7 @@ static sd_device *handle_scsi_default(sd_device *parent, char **path) {
         if (!pos)
                 return NULL;
 
-        base = strndupa(base, pos - base);
+        base = strndupa_safe(base, pos - base);
         dir = opendir(base);
         if (!dir)
                 return NULL;
@@ -378,7 +375,6 @@ static sd_device *handle_scsi_hyperv(sd_device *parent, char **path, size_t guid
         const char *guid_str;
         _cleanup_free_ char *lun = NULL;
         char guid[39];
-        size_t i, k;
 
         assert(parent);
         assert(path);
@@ -396,7 +392,8 @@ static sd_device *handle_scsi_hyperv(sd_device *parent, char **path, size_t guid
         if (strlen(guid_str) < guid_str_len || guid_str[0] != '{' || guid_str[guid_str_len-1] != '}')
                 return NULL;
 
-        for (i = 1, k = 0; i < guid_str_len-1; i++) {
+        size_t k = 0;
+        for (size_t i = 1; i < guid_str_len-1; i++) {
                 if (guid_str[i] == '-')
                         continue;
                 guid[k++] = guid_str[i];
@@ -533,7 +530,7 @@ static sd_device *handle_ap(sd_device *parent, char **path) {
         return skip_subsystem(parent, "ap");
 }
 
-static int builtin_path_id(sd_device *dev, int argc, char *argv[], bool test) {
+static int builtin_path_id(sd_device *dev, sd_netlink **rtnl, int argc, char *argv[], bool test) {
         sd_device *parent;
         _cleanup_free_ char *path = NULL;
         _cleanup_free_ char *compat_path = NULL;
@@ -681,11 +678,10 @@ static int builtin_path_id(sd_device *dev, int argc, char *argv[], bool test) {
 
         {
                 char tag[UDEV_NAME_SIZE];
-                size_t i;
-                const char *p;
+                size_t i = 0;
 
                 /* compose valid udev tag name */
-                for (p = path, i = 0; *p; p++) {
+                for (const char *p = path; *p; p++) {
                         if ((*p >= '0' && *p <= '9') ||
                             (*p >= 'A' && *p <= 'Z') ||
                             (*p >= 'a' && *p <= 'z') ||

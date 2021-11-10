@@ -73,31 +73,28 @@ static void test_strv_env_unset(void) {
 static void test_strv_env_merge(void) {
         log_info("/* %s */", __func__);
 
-        _cleanup_strv_free_ char **a = NULL, **b = NULL, **r = NULL;
+        char **a = STRV_MAKE("FOO=BAR", "WALDO=WALDO", "WALDO=", "PIEP", "SCHLUMPF=SMURF", "EQ===");
+        char **b = STRV_MAKE("FOO=KKK", "FOO=", "PIEP=", "SCHLUMPF=SMURFF", "NANANANA=YES");
 
-        a = strv_new("FOO=BAR", "WALDO=WALDO", "WALDO=", "PIEP", "SCHLUMPF=SMURF");
-        assert_se(a);
-
-        b = strv_new("FOO=KKK", "FOO=", "PIEP=", "SCHLUMPF=SMURFF", "NANANANA=YES");
-        assert_se(b);
-
-        r = strv_env_merge(2, a, b);
+        _cleanup_strv_free_ char **r = strv_env_merge(NULL, a, NULL, b, NULL, a, b, b, NULL);
         assert_se(r);
         assert_se(streq(r[0], "FOO="));
         assert_se(streq(r[1], "WALDO="));
         assert_se(streq(r[2], "PIEP"));
         assert_se(streq(r[3], "SCHLUMPF=SMURFF"));
-        assert_se(streq(r[4], "PIEP="));
-        assert_se(streq(r[5], "NANANANA=YES"));
-        assert_se(strv_length(r) == 6);
+        assert_se(streq(r[4], "EQ==="));
+        assert_se(streq(r[5], "PIEP="));
+        assert_se(streq(r[6], "NANANANA=YES"));
+        assert_se(strv_length(r) == 7);
 
         assert_se(strv_env_clean(r) == r);
         assert_se(streq(r[0], "FOO="));
         assert_se(streq(r[1], "WALDO="));
         assert_se(streq(r[2], "SCHLUMPF=SMURFF"));
-        assert_se(streq(r[3], "PIEP="));
-        assert_se(streq(r[4], "NANANANA=YES"));
-        assert_se(strv_length(r) == 5);
+        assert_se(streq(r[3], "EQ==="));
+        assert_se(streq(r[4], "PIEP="));
+        assert_se(streq(r[5], "NANANANA=YES"));
+        assert_se(strv_length(r) == 6);
 }
 
 static void test_strv_env_replace_strdup(void) {
@@ -108,11 +105,33 @@ static void test_strv_env_replace_strdup(void) {
         assert_se(strv_env_replace_strdup(&a, "a=a") == 1);
         assert_se(strv_env_replace_strdup(&a, "b=b") == 1);
         assert_se(strv_env_replace_strdup(&a, "a=A") == 0);
+        assert_se(strv_env_replace_strdup(&a, "c") == -EINVAL);
 
         assert_se(strv_length(a) == 2);
         strv_sort(a);
         assert_se(streq(a[0], "a=A"));
         assert_se(streq(a[1], "b=b"));
+}
+
+static void test_strv_env_replace_strdup_passthrough(void) {
+        log_info("/* %s */", __func__);
+
+        _cleanup_strv_free_ char **a = NULL;
+
+        assert_se(putenv((char*) "a=a") == 0);
+        assert_se(putenv((char*) "b=") == 0);
+        assert_se(unsetenv("c") == 0);
+
+        assert_se(strv_env_replace_strdup_passthrough(&a, "a") == 1);
+        assert_se(strv_env_replace_strdup_passthrough(&a, "b") == 1);
+        assert_se(strv_env_replace_strdup_passthrough(&a, "c") == 1);
+        assert_se(strv_env_replace_strdup_passthrough(&a, "a") == 0);
+        assert_se(strv_env_replace_strdup_passthrough(&a, "$a") == -EINVAL);
+
+        assert_se(strv_length(a) == 3);
+        assert_se(streq(a[0], "a=a"));
+        assert_se(streq(a[1], "b="));
+        assert_se(streq(a[2], "c="));
 }
 
 static void test_strv_env_assign(void) {
@@ -412,6 +431,52 @@ static void test_setenv_systemd_exec_pid(void) {
         assert_se(set_unset_env("SYSTEMD_EXEC_PID", saved, 1) >= 0);
 }
 
+static void test_unsetenv_erase(void) {
+        int r;
+
+        log_info("/* %s */", __func__);
+
+        r = safe_fork("(sd-unsetenverase)", FORK_DEATHSIG|FORK_LOG|FORK_WAIT, NULL);
+        if (r == 0) {
+                _cleanup_strv_free_ char **l = NULL;
+                char **e;
+
+                /* child */
+
+                assert_se(unsetenv_erase("thisenvvardefinitelywontexist") == 0);
+
+                l = strv_new("FOO=BAR", "QUUX=PIFF", "ONE=TWO", "A=B");
+                assert_se(strv_length(l) == 4);
+
+                environ = l;
+
+                STRV_FOREACH(e, environ) {
+                        _cleanup_free_ char *n = NULL;
+                        char *eq;
+
+                        eq = strchr(*e, '=');
+                        if (!eq)
+                                continue;
+
+                        n = strndup(*e, eq - *e);
+                        assert_se(n);
+
+                        assert_se(streq_ptr(getenv(n), eq + 1));
+                        assert_se(getenv(n) == eq + 1);
+                        assert_se(unsetenv_erase(n) > 0);
+                        assert_se(isempty(eq + 1));
+                        assert_se(!getenv(n));
+                }
+
+                environ = NULL;
+                l = strv_free(l);
+
+                _exit(EXIT_SUCCESS);
+        }
+
+        assert_se(r > 0);
+}
+
 int main(int argc, char *argv[]) {
         test_setup_logging(LOG_DEBUG);
 
@@ -421,6 +486,7 @@ int main(int argc, char *argv[]) {
         test_strv_env_unset();
         test_strv_env_merge();
         test_strv_env_replace_strdup();
+        test_strv_env_replace_strdup_passthrough();
         test_strv_env_assign();
         test_env_strv_get_n();
         test_replace_env(false);
@@ -434,6 +500,7 @@ int main(int argc, char *argv[]) {
         test_env_assignment_is_valid();
         test_putenv_dup();
         test_setenv_systemd_exec_pid();
+        test_unsetenv_erase();
 
         return 0;
 }

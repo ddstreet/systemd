@@ -304,6 +304,7 @@ typedef struct UserRecord {
         char *cifs_domain;
         char *cifs_user_name;
         char *cifs_service;
+        char *cifs_extra_mount_options;
 
         char *image_path;
         char *image_path_auto; /* when none is configured explicitly, this is where we place the implicit image */
@@ -353,6 +354,7 @@ typedef struct UserRecord {
         int removable;
         int enforce_password_policy;
         int auto_login;
+        int drop_caches;
 
         uint64_t stop_delay_usec;   /* How long to leave systemd --user around on log-out */
         int kill_processes;         /* Whether to kill user processes forcibly on log-out */
@@ -419,6 +421,7 @@ int user_record_removable(UserRecord *h);
 usec_t user_record_ratelimit_interval_usec(UserRecord *h);
 uint64_t user_record_ratelimit_burst(UserRecord *h);
 bool user_record_can_authenticate(UserRecord *h);
+bool user_record_drop_caches(UserRecord *h);
 
 int user_record_build_image_path(UserStorage storage, const char *user_name_and_realm, char **ret);
 

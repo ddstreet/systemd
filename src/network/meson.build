@@ -51,6 +51,8 @@ sources = files('''
         netdev/macsec.h
         netdev/xfrm.c
         netdev/xfrm.h
+        networkd-address-generation.c
+        networkd-address-generation.h
         networkd-address-label.c
         networkd-address-label.h
         networkd-address-pool.c
@@ -268,6 +270,12 @@ fuzzers += [
 ]
 
 tests += [
+        [['src/network/test-networkd-address.c'],
+         [libnetworkd_core,
+          libsystemd_network],
+         [],
+         network_includes],
+
         [['src/network/test-networkd-conf.c'],
          [libnetworkd_core,
           libsystemd_network],

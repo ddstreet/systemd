@@ -54,15 +54,14 @@ foreach tuple : in_files
                 file,
                 input : file + '.in',
                 output: file,
-                command : [meson_render_jinja2, config_h, '@INPUT@'],
-                capture : true,
+                command : [meson_render_jinja2, config_h, '@INPUT@', '@OUTPUT@'],
                 install : tuple[1],
                 install_dir : pkgsysconfdir)
 endforeach
 
 if conf.get('ENABLE_REMOTE') == 1 and conf.get('HAVE_MICROHTTPD') == 1
         install_data('browse.html',
-                     install_dir : join_paths(pkgdatadir, 'gatewayd'))
+                     install_dir : pkgdatadir / 'gatewayd')
 
         if get_option('create-log-dirs')
                 meson.add_install_script('sh', '-c',

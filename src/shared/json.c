@@ -359,6 +359,12 @@ int json_variant_new_real(JsonVariant **ret, long double d) {
         }
         REENABLE_WARNING;
 
+        /* JSON doesn't know NaN, +Infinity or -Infinity. Let's silently convert to 'null'. */
+        if (isnan(d) || isinf(d)) {
+                *ret = JSON_VARIANT_MAGIC_NULL;
+                return 0;
+        }
+
         r = json_variant_new(&v, JSON_VARIANT_REAL, sizeof(d));
         if (r < 0)
                 return r;
@@ -447,9 +453,7 @@ int json_variant_new_hex(JsonVariant **ret, const void *p, size_t n) {
 }
 
 int json_variant_new_id128(JsonVariant **ret, sd_id128_t id) {
-        char s[SD_ID128_STRING_MAX];
-
-        return json_variant_new_string(ret, sd_id128_to_string(id, s));
+        return json_variant_new_string(ret, SD_ID128_TO_STRING(id));
 }
 
 static void json_variant_set(JsonVariant *a, JsonVariant *b) {
@@ -505,7 +509,7 @@ static void json_variant_set(JsonVariant *a, JsonVariant *b) {
                 break;
 
         default:
-                assert_not_reached("Unexpected variant type");
+                assert_not_reached();
         }
 }
 
@@ -763,7 +767,7 @@ static size_t json_variant_size(JsonVariant* v) {
                 return offsetof(JsonVariant, value);
 
         default:
-                assert_not_reached("unexpected type");
+                assert_not_reached();
         }
 }
 
@@ -1397,7 +1401,7 @@ bool json_variant_equal(JsonVariant *a, JsonVariant *b) {
         }
 
         default:
-                assert_not_reached("Unknown variant type.");
+                assert_not_reached();
         }
 }
 
@@ -1749,7 +1753,7 @@ static int json_format(FILE *f, JsonVariant *v, JsonFormatFlags flags, const cha
         }
 
         default:
-                assert_not_reached("Unexpected variant type.");
+                assert_not_reached();
         }
 
         return 0;
@@ -2787,7 +2791,7 @@ int json_tokenize(
                 return -EINVAL;
 
         default:
-                assert_not_reached("Unexpected tokenizer state");
+                assert_not_reached();
         }
 
 null_return:
@@ -3156,7 +3160,7 @@ static int json_parse_internal(
                         break;
 
                 default:
-                        assert_not_reached("Unexpected token");
+                        assert_not_reached();
                 }
 
                 if (add) {
@@ -3650,17 +3654,17 @@ int json_buildv(JsonVariant **ret, va_list ap) {
                 }
 
                 case _JSON_BUILD_ID128: {
-                        sd_id128_t id;
+                        const sd_id128_t *id;
 
                         if (!IN_SET(current->expect, EXPECT_TOPLEVEL, EXPECT_OBJECT_VALUE, EXPECT_ARRAY_ELEMENT)) {
                                 r = -EINVAL;
                                 goto finish;
                         }
 
-                        id = va_arg(ap, sd_id128_t);
+                        assert_se(id = va_arg(ap, sd_id128_t*));
 
                         if (current->n_suppress == 0) {
-                                r = json_variant_new_id128(&add, id);
+                                r = json_variant_new_id128(&add, *id);
                                 if (r < 0)
                                         goto finish;
                         }

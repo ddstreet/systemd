@@ -2,21 +2,25 @@
 
 efi_headers = files('''
         console.h
-        crc32.h
+        cpio.h
+        devicetree.h
         disk.h
+        drivers.h
         graphics.h
         linux.h
         measure.h
         missing_efi.h
         pe.h
         random-seed.h
-        sha256.h
         shim.h
         splash.h
         util.h
+        xbootldr.h
 '''.split())
 
 common_sources = '''
+        assert.c
+        devicetree.c
         disk.c
         graphics.c
         measure.c
@@ -28,17 +32,24 @@ common_sources = '''
 systemd_boot_sources = '''
         boot.c
         console.c
-        crc32.c
+        drivers.c
         random-seed.c
-        sha256.c
         shim.c
+        xbootldr.c
 '''.split()
 
 stub_sources = '''
-        linux.c
+        initrd.c
         splash.c
         stub.c
+        cpio.c
 '''.split()
+
+if efi_arch in ['x86', 'x86_64']
+        stub_sources += 'linux_x86.c'
+else
+        stub_sources += 'linux.c'
+endif
 
 if conf.get('ENABLE_EFI') == 1 and get_option('gnu-efi') != 'false'
         efi_cc = get_option('efi-cc')
@@ -71,14 +82,14 @@ if conf.get('ENABLE_EFI') == 1 and get_option('gnu-efi') != 'false'
         efi_libdir = get_option('efi-libdir')
         if efi_libdir == ''
                 # New location first introduced with gnu-efi 3.0.11
-                efi_libdir = join_paths('/usr/lib/gnuefi', EFI_MACHINE_TYPE_NAME)
+                efi_libdir = '/usr/lib/gnuefi' / EFI_MACHINE_TYPE_NAME
                 cmd = run_command(test, '-e', efi_libdir)
 
                 if cmd.returncode() != 0
                         # Fall back to the old approach
                         cmd = run_command(efi_cc + ['-print-multi-os-directory'])
                         if cmd.returncode() == 0
-                                path = join_paths('/usr/lib', cmd.stdout().strip())
+                                path = '/usr/lib' / cmd.stdout().strip()
                                 cmd = run_command(env, 'realpath', '-e', path)
                                 if cmd.returncode() == 0
                                         efi_libdir = cmd.stdout().strip()
@@ -88,6 +99,14 @@ if conf.get('ENABLE_EFI') == 1 and get_option('gnu-efi') != 'false'
         endif
 
         have_gnu_efi = gnu_efi_path_arch != '' and efi_libdir != ''
+
+        if have_gnu_efi and not cc.has_header_symbol('efi.h', 'EFI_IMAGE_MACHINE_X64',
+           include_directories: include_directories(efi_incdir, efi_incdir / gnu_efi_path_arch))
+                have_gnu_efi = false
+                if get_option('gnu-efi') == 'true'
+                        error('gnu-efi support requested, but found headers are too old (3.0.5+ required)')
+                endif
+        endif
 else
         have_gnu_efi = false
 endif
@@ -100,7 +119,13 @@ if have_gnu_efi
         efi_conf = configuration_data()
         efi_conf.set_quoted('EFI_MACHINE_TYPE_NAME', EFI_MACHINE_TYPE_NAME)
         efi_conf.set10('ENABLE_TPM', get_option('tpm'))
-        efi_conf.set('SD_TPM_PCR', get_option('tpm-pcrindex'))
+
+        foreach ctype : ['color-normal', 'color-entry', 'color-highlight', 'color-edit']
+                c = get_option('efi-' + ctype).split(',')
+                fg = 'EFI_' + c[0].strip().underscorify().to_upper()
+                bg = 'EFI_BACKGROUND_' + c[1].strip().underscorify().to_upper()
+                efi_conf.set(ctype.underscorify().to_upper(), '(' + fg + '|' + bg + ')')
+        endforeach
 
         if get_option('sbat-distro') != ''
                 efi_conf.set_quoted('SBAT_PROJECT', meson.project_name())
@@ -115,7 +140,7 @@ if have_gnu_efi
                             ['sbat-distro-url', 'BUG_REPORT_URL']]
                 foreach sbatvar : sbatvars
                         value = get_option(sbatvar[0])
-                        if value == '' or value == 'auto'
+                        if (value == '' and not meson.is_cross_build()) or value == 'auto'
                                 cmd = 'if [ -e /etc/os-release ]; then . /etc/os-release; else . /usr/lib/os-release; fi; echo $@0@'.format(sbatvar[1])
                                 value = run_command(sh, '-c', cmd).stdout().strip()
                                 message('@0@ (from @1@): @2@'.format(sbatvar[0], sbatvar[1], value))
@@ -148,13 +173,13 @@ if have_gnu_efi
 
         efi_location_map = [
                 # New locations first introduced with gnu-efi 3.0.11
-                [join_paths(efi_libdir, 'efi.lds'),
-                 join_paths(efi_libdir, 'crt0.o')],
+                [efi_libdir / 'efi.lds',
+                 efi_libdir / 'crt0.o'],
                 # Older locations...
-                [join_paths(efi_libdir, 'gnuefi', 'elf_@0@_efi.lds'.format(gnu_efi_path_arch)),
-                 join_paths(efi_libdir, 'gnuefi', 'crt0-efi-@0@.o'.format(gnu_efi_path_arch))],
-                [join_paths(efi_libdir, 'elf_@0@_efi.lds'.format(gnu_efi_path_arch)),
-                 join_paths(efi_libdir, 'crt0-efi-@0@.o'.format(gnu_efi_path_arch))]]
+                [efi_libdir / 'gnuefi' / 'elf_@0@_efi.lds'.format(gnu_efi_path_arch),
+                 efi_libdir / 'gnuefi' / 'crt0-efi-@0@.o'.format(gnu_efi_path_arch)],
+                [efi_libdir / 'elf_@0@_efi.lds'.format(gnu_efi_path_arch),
+                 efi_libdir / 'crt0-efi-@0@.o'.format(gnu_efi_path_arch)]]
         efi_lds = ''
         foreach location : efi_location_map
                 if efi_lds == ''
@@ -178,11 +203,10 @@ if have_gnu_efi
         compile_args = cc.get_supported_arguments(
                 basic_disabled_warnings +
                 possible_common_cc_flags + [
-                        '-ffreestanding',
                         '-fno-stack-protector',
                         '-fno-strict-aliasing',
                         '-fpic',
-                        '-fshort-wchar',
+                        '-fwide-exec-charset=UCS2',
                         '-Wall',
                         '-Wextra',
                         '-Wsign-compare',
@@ -190,46 +214,62 @@ if have_gnu_efi
         ) + [
                 '-nostdlib',
                 '-std=gnu99',
+                '-ffreestanding',
+                '-fshort-wchar',
                 '-isystem', efi_incdir,
-                '-isystem', join_paths(efi_incdir, gnu_efi_path_arch),
+                '-isystem', efi_incdir / gnu_efi_path_arch,
                 '-I', fundamental_path,
                 '-DSD_BOOT',
+                '-DGNU_EFI_USE_MS_ABI',
                 '-include', efi_config_h,
                 '-include', version_h,
         ]
+
         if efi_arch == 'x86_64'
                 compile_args += ['-mno-red-zone',
                                  '-mno-sse',
-                                 '-mno-mmx',
-                                 '-DEFI_FUNCTION_WRAPPER',
-                                 '-DGNU_EFI_USE_MS_ABI']
-        elif efi_arch == 'ia32'
+                                 '-mno-mmx']
+        elif efi_arch == 'x86'
                 compile_args += ['-mno-sse',
                                  '-mno-mmx']
         elif efi_arch == 'arm'
-                if cc.has_argument('-mgeneral-regs-only')
-                        compile_args += ['-mgeneral-regs-only']
-                endif
-
-                if cc.has_argument('-mfpu=none')
-                        compile_args += ['-mfpu=none']
-                endif
+                compile_args += cc.get_supported_arguments([
+                        '-mgeneral-regs-only',
+                        '-mfpu=none'
+                ])
         endif
-        if get_option('werror') == true
+
+        # We are putting the efi_cc command line together ourselves, so make sure to pull any
+        # relevant compiler flags from meson/CFLAGS as povided by the user or distro.
+
+        if get_option('werror')
                 compile_args += ['-Werror']
         endif
-        if get_option('buildtype') == 'debug'
-                compile_args += ['-ggdb', '-O0']
-        elif get_option('buildtype') == 'debugoptimized'
-                compile_args += ['-ggdb', '-Og']
-        else
-                compile_args += ['-O2']
+        if get_option('debug')
+                compile_args += ['-ggdb', '-DEFI_DEBUG']
         endif
+        if get_option('optimization') != '0'
+                compile_args += ['-O' + get_option('optimization')]
+        endif
+        if get_option('b_ndebug') == 'true' or (
+           get_option('b_ndebug') == 'if-release' and ['plain', 'release'].contains(get_option('buildtype')))
+                compile_args += ['-DNDEBUG']
+        endif
+
+        foreach arg : get_option('c_args')
+                if arg in ['-Werror', '-g', '-ggdb', '-O1', '-O2', '-O3', '-Og', '-Os', '-DNDEBUG']
+                        message('Using "@0@" from c_args for EFI compiler'.format(arg))
+                        compile_args += arg
+                endif
+        endforeach
 
         efi_ldflags = ['-T', efi_lds,
                        '-shared',
                        '-Bsymbolic',
                        '-nostdlib',
+                       '--no-undefined',
+                       '--warn-common',
+                       '--fatal-warnings',
                        '-znocombreloc',
                        '--build-id=sha1',
                        '-L', efi_libdir,
@@ -264,7 +304,6 @@ if have_gnu_efi
         systemd_boot_efi_name = 'systemd-boot@0@.efi'.format(EFI_MACHINE_TYPE_NAME)
         stub_elf_name = 'linux@0@.elf.stub'.format(EFI_MACHINE_TYPE_NAME)
         stub_efi_name = 'linux@0@.efi.stub'.format(EFI_MACHINE_TYPE_NAME)
-        no_undefined_symbols = find_program('no-undefined-symbols.sh')
 
         efi_stubs = []
         foreach tuple : [['systemd_boot.so', systemd_boot_efi_name, systemd_boot_objects, false],
@@ -284,25 +323,21 @@ if have_gnu_efi
                         input : so,
                         output : tuple[1],
                         command : [objcopy,
-                                   '-j', '.text',
-                                   '-j', '.sdata',
-                                   '-j', '.sbat',
                                    '-j', '.data',
                                    '-j', '.dynamic',
                                    '-j', '.dynsym',
+                                   '-j', '.osrel',
                                    '-j', '.rel*',
+                                   '-j', '.sbat',
+                                   '-j', '.sdata',
+                                   '-j', '.sdmagic',
+                                   '-j', '.text',
                                    efi_format,
                                    '@INPUT@', '@OUTPUT@'],
                         install : true,
                         install_dir : bootlibdir)
 
                 efi_stubs += [[so, stub]]
-
-                if want_tests != 'false'
-                        test('no-undefined-symbols-' + tuple[0],
-                             no_undefined_symbols,
-                             args : so)
-                endif
         endforeach
 
         ############################################################

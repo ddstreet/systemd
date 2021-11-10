@@ -5,6 +5,7 @@
 
 #include "sd-bus.h"
 #include "sd-device.h"
+#include "sd-lldp-tx.h"
 
 #include "bridge.h"
 #include "condition.h"
@@ -17,7 +18,6 @@
 #include "networkd-dhcp4.h"
 #include "networkd-dhcp6.h"
 #include "networkd-lldp-rx.h"
-#include "networkd-lldp-tx.h"
 #include "networkd-ndisc.h"
 #include "networkd-radv.h"
 #include "networkd-sysctl.h"
@@ -72,7 +72,7 @@ struct Network {
 
         char *name;
         char *filename;
-        usec_t timestamp;
+        Hashmap *stats_by_path;
         char *description;
 
         /* [Match] section */
@@ -80,6 +80,7 @@ struct Network {
         LIST_HEAD(Condition, conditions);
 
         /* Master or stacked netdevs */
+        bool keep_master;
         NetDev *batadv;
         NetDev *bridge;
         NetDev *bond;
@@ -125,10 +126,13 @@ struct Network {
         char *dhcp_mudurl;
         char **dhcp_user_class;
         char *dhcp_hostname;
+        char *dhcp_label;
         uint64_t dhcp_max_attempts;
         uint32_t dhcp_route_metric;
         bool dhcp_route_metric_set;
         uint32_t dhcp_route_table;
+        bool dhcp_route_table_set;
+        bool dhcp_route_table_set_explicitly;
         uint32_t dhcp_fallback_lease_lifetime;
         uint32_t dhcp_route_mtu;
         uint16_t dhcp_client_port;
@@ -149,7 +153,6 @@ struct Network {
         int dhcp_use_gateway;
         bool dhcp_use_timezone;
         bool dhcp_use_hostname;
-        bool dhcp_route_table_set;
         bool dhcp_send_release;
         bool dhcp_send_decline;
         DHCPUseDomains dhcp_use_domains;
@@ -162,29 +165,30 @@ struct Network {
 
         /* DHCPv6 Client support */
         bool dhcp6_use_address;
+        bool dhcp6_use_pd_prefix;
         bool dhcp6_use_dns;
         bool dhcp6_use_dns_set;
         bool dhcp6_use_hostname;
         bool dhcp6_use_ntp;
         bool dhcp6_use_ntp_set;
-        bool dhcp6_rapid_commit;
+        bool dhcp6_route_table;
+        bool dhcp6_route_table_set;
+        bool dhcp6_route_table_set_explicitly;
         DHCPUseDomains dhcp6_use_domains;
         bool dhcp6_use_domains_set;
         uint32_t dhcp6_iaid;
         bool dhcp6_iaid_set;
         bool dhcp6_iaid_set_explicitly;
         DUID dhcp6_duid;
-        uint8_t dhcp6_pd_length;
+        uint8_t dhcp6_pd_prefix_length;
+        struct in6_addr dhcp6_pd_prefix_hint;
         char *dhcp6_mudurl;
         char **dhcp6_user_class;
         char **dhcp6_vendor_class;
-        struct in6_addr dhcp6_pd_address;
-        DHCP6ClientStartMode dhcp6_without_ra;
+        DHCP6ClientStartMode dhcp6_client_start_mode;
         OrderedHashmap *dhcp6_client_send_options;
         OrderedHashmap *dhcp6_client_send_vendor_options;
         Set *dhcp6_request_options;
-        /* Start DHCPv6 PD also when 'O' RA flag is set, see RFC 7084, WPD-4 */
-        bool dhcp6_force_pd_other_information;
 
         /* DHCP Server Support */
         bool dhcp_server;
@@ -198,6 +202,7 @@ struct Network {
         char *dhcp_server_relay_agent_remote_id;
         NetworkDHCPServerEmitAddress dhcp_server_emit[_SD_DHCP_LEASE_SERVER_TYPE_MAX];
         bool dhcp_server_emit_router;
+        struct in_addr dhcp_server_router;
         bool dhcp_server_emit_timezone;
         char *dhcp_server_timezone;
         usec_t dhcp_server_default_lease_time_usec, dhcp_server_max_lease_time_usec;
@@ -224,6 +229,8 @@ struct Network {
         struct in6_addr *router_dns;
         unsigned n_router_dns;
         OrderedSet *router_search_domains;
+        int router_uplink_index;
+        char *router_uplink_name;
 
         /* DHCPv6 Prefix Delegation support */
         int dhcp6_pd;
@@ -232,7 +239,9 @@ struct Network {
         bool dhcp6_pd_manage_temporary_address;
         int64_t dhcp6_pd_subnet_id;
         uint32_t dhcp6_pd_route_metric;
-        struct in6_addr dhcp6_pd_token;
+        Set *dhcp6_pd_tokens;
+        int dhcp6_pd_uplink_index;
+        char *dhcp6_pd_uplink_name;
 
         /* Bridge Support */
         int use_bpdu;
@@ -259,15 +268,23 @@ struct Network {
         /* CAN support */
         uint32_t can_bitrate;
         unsigned can_sample_point;
+        nsec_t can_time_quanta_ns;
+        uint32_t can_propagation_segment;
+        uint32_t can_phase_buffer_segment_1;
+        uint32_t can_phase_buffer_segment_2;
+        uint32_t can_sync_jump_width;
         uint32_t can_data_bitrate;
         unsigned can_data_sample_point;
+        nsec_t can_data_time_quanta_ns;
+        uint32_t can_data_propagation_segment;
+        uint32_t can_data_phase_buffer_segment_1;
+        uint32_t can_data_phase_buffer_segment_2;
+        uint32_t can_data_sync_jump_width;
         usec_t can_restart_us;
-        int can_triple_sampling;
-        int can_berr_reporting;
-        int can_termination;
-        int can_listen_only;
-        int can_fd_mode;
-        int can_non_iso;
+        uint32_t can_control_mode_mask;
+        uint32_t can_control_mode_flags;
+        uint16_t can_termination;
+        bool can_termination_set;
 
         /* sysctl settings */
         AddressFamily ip_forward;
@@ -284,8 +301,11 @@ struct Network {
         /* IPv6 accept RA */
         int ipv6_accept_ra;
         bool ipv6_accept_ra_use_dns;
+        bool ipv6_accept_ra_use_gateway;
+        bool ipv6_accept_ra_use_route_prefix;
         bool ipv6_accept_ra_use_autonomous_prefix;
         bool ipv6_accept_ra_use_onlink_prefix;
+        bool ipv6_accept_ra_use_mtu;
         bool active_slave;
         bool primary_slave;
         DHCPUseDomains ipv6_accept_ra_use_domains;
@@ -300,12 +320,12 @@ struct Network {
         Set *ndisc_allow_listed_prefix;
         Set *ndisc_deny_listed_route_prefix;
         Set *ndisc_allow_listed_route_prefix;
-        OrderedSet *ipv6_tokens;
+        Set *ndisc_tokens;
 
         /* LLDP support */
         LLDPMode lldp_mode; /* LLDP reception */
-        LLDPEmit lldp_emit; /* LLDP transmission */
-        char *lldp_mud;    /* LLDP MUD URL */
+        sd_lldp_multicast_mode_t lldp_multicast_mode; /* LLDP transmission */
+        char *lldp_mudurl;  /* LLDP MUD URL */
 
         OrderedHashmap *addresses_by_section;
         Hashmap *routes_by_section;

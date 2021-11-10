@@ -23,15 +23,15 @@
         "-L2TP\0"                                 \
         "-L2TPSession\0"                          \
         "-MACsec\0"                               \
+        "-MACsecReceiveAssociation\0"             \
         "-MACsecReceiveChannel\0"                 \
         "-MACsecTransmitAssociation\0"            \
-        "-MACsecReceiveAssociation\0"             \
-        "-MACVTAP\0"                              \
         "-MACVLAN\0"                              \
-        "-Tunnel\0"                               \
-        "-Tun\0"                                  \
-        "-Tap\0"                                  \
+        "-MACVTAP\0"                              \
         "-Peer\0"                                 \
+        "-Tap\0"                                  \
+        "-Tun\0"                                  \
+        "-Tunnel\0"                               \
         "-VLAN\0"                                 \
         "-VRF\0"                                  \
         "-VXCAN\0"                                \
@@ -41,42 +41,42 @@
         "-Xfrm\0"
 
 typedef enum NetDevKind {
-        NETDEV_KIND_BRIDGE,
-        NETDEV_KIND_BOND,
-        NETDEV_KIND_VLAN,
-        NETDEV_KIND_MACVLAN,
-        NETDEV_KIND_MACVTAP,
-        NETDEV_KIND_IPVLAN,
-        NETDEV_KIND_IPVTAP,
-        NETDEV_KIND_VXLAN,
-        NETDEV_KIND_IPIP,
-        NETDEV_KIND_GRE,
-        NETDEV_KIND_GRETAP,
-        NETDEV_KIND_IP6GRE,
-        NETDEV_KIND_IP6GRETAP,
-        NETDEV_KIND_SIT,
-        NETDEV_KIND_VETH,
-        NETDEV_KIND_VTI,
-        NETDEV_KIND_VTI6,
-        NETDEV_KIND_IP6TNL,
-        NETDEV_KIND_DUMMY,
-        NETDEV_KIND_TUN,
-        NETDEV_KIND_TAP,
-        NETDEV_KIND_VRF,
-        NETDEV_KIND_VCAN,
-        NETDEV_KIND_GENEVE,
-        NETDEV_KIND_VXCAN,
-        NETDEV_KIND_WIREGUARD,
-        NETDEV_KIND_NETDEVSIM,
-        NETDEV_KIND_FOU,
-        NETDEV_KIND_ERSPAN,
-        NETDEV_KIND_L2TP,
-        NETDEV_KIND_MACSEC,
-        NETDEV_KIND_NLMON,
-        NETDEV_KIND_XFRM,
-        NETDEV_KIND_IFB,
         NETDEV_KIND_BAREUDP,
         NETDEV_KIND_BATADV,
+        NETDEV_KIND_BOND,
+        NETDEV_KIND_BRIDGE,
+        NETDEV_KIND_DUMMY,
+        NETDEV_KIND_ERSPAN,
+        NETDEV_KIND_FOU,
+        NETDEV_KIND_GENEVE,
+        NETDEV_KIND_GRE,
+        NETDEV_KIND_GRETAP,
+        NETDEV_KIND_IFB,
+        NETDEV_KIND_IP6GRE,
+        NETDEV_KIND_IP6GRETAP,
+        NETDEV_KIND_IP6TNL,
+        NETDEV_KIND_IPIP,
+        NETDEV_KIND_IPVLAN,
+        NETDEV_KIND_IPVTAP,
+        NETDEV_KIND_L2TP,
+        NETDEV_KIND_MACSEC,
+        NETDEV_KIND_MACVLAN,
+        NETDEV_KIND_MACVTAP,
+        NETDEV_KIND_NETDEVSIM,
+        NETDEV_KIND_NLMON,
+        NETDEV_KIND_SIT,
+        NETDEV_KIND_TAP,
+        NETDEV_KIND_TUN,
+        NETDEV_KIND_VCAN,
+        NETDEV_KIND_VETH,
+        NETDEV_KIND_VLAN,
+        NETDEV_KIND_VRF,
+        NETDEV_KIND_VTI,
+        NETDEV_KIND_VTI6,
+        NETDEV_KIND_VXCAN,
+        NETDEV_KIND_VXLAN,
+        NETDEV_KIND_WIREGUARD,
+        NETDEV_KIND_XFRM,
         _NETDEV_KIND_MAX,
         _NETDEV_KIND_TUNNEL, /* Used by config_parse_stacked_netdev() */
         _NETDEV_KIND_INVALID = -EINVAL,
@@ -159,7 +159,7 @@ typedef struct NetDevVTable {
         /* verify that compulsory configuration options were specified */
         int (*config_verify)(NetDev *netdev, const char *filename);
 
-        /* Generate MAC address or not When MACAddress= is not specified. */
+        /* Generate MAC address when MACAddress= is not specified. */
         bool generate_mac;
 } NetDevVTable;
 
@@ -184,6 +184,7 @@ extern const NetDevVTable * const netdev_vtable[_NETDEV_KIND_MAX];
 int netdev_load(Manager *manager, bool reload);
 int netdev_load_one(Manager *manager, const char *filename);
 void netdev_drop(NetDev *netdev);
+void netdev_enter_failed(NetDev *netdev);
 
 NetDev *netdev_unref(NetDev *netdev);
 NetDev *netdev_ref(NetDev *netdev);
@@ -196,8 +197,8 @@ int netdev_set_ifindex(NetDev *netdev, sd_netlink_message *newlink);
 int netdev_get_mac(const char *ifname, struct ether_addr **ret);
 int netdev_join(NetDev *netdev, Link *link, link_netlink_message_handler_t cb);
 
-int request_process_create_stacked_netdev(Request *req);
-int link_request_to_crate_stacked_netdev(Link *link, NetDev *netdev);
+int request_process_stacked_netdev(Request *req);
+int link_request_stacked_netdev(Link *link, NetDev *netdev);
 
 const char *netdev_kind_to_string(NetDevKind d) _const_;
 NetDevKind netdev_kind_from_string(const char *d) _pure_;

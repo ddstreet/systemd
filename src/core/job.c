@@ -407,7 +407,7 @@ bool job_type_is_redundant(JobType a, UnitActiveState b) {
                 return true;
 
         default:
-                assert_not_reached("Invalid job type");
+                assert_not_reached();
         }
 }
 
@@ -705,19 +705,51 @@ static void job_emit_done_message(Unit *u, uint32_t job_id, JobType t, JobResult
 
         if (!console_only) {  /* Skip printing if output goes to the console, and job_print_status_message()
                                * will actually print something to the console. */
-
+                Condition *c;
                 const char *mid = job_done_mid(t, result);  /* mid may be NULL. log_unit_struct() will ignore it. */
-                const char *msg_fmt = strjoina("MESSAGE=", format);
 
-                DISABLE_WARNING_FORMAT_NONLITERAL;
-                log_unit_struct(u, job_done_messages[result].log_level,
-                                msg_fmt, ident,
-                                "JOB_ID=%" PRIu32, job_id,
-                                "JOB_TYPE=%s", job_type_to_string(t),
-                                "JOB_RESULT=%s", job_result_to_string(result),
-                                LOG_UNIT_INVOCATION_ID(u),
-                                mid);
-                REENABLE_WARNING;
+                c = t == JOB_START && result == JOB_DONE ? unit_find_failed_condition(u) : NULL;
+                if (c) {
+                        /* Special case units that were skipped because of a failed condition check so that
+                         * we can add more information to the message. */
+                        if (c->trigger)
+                                log_unit_struct(
+                                        u,
+                                        job_done_messages[result].log_level,
+                                        "MESSAGE=%s was skipped because all trigger condition checks failed.",
+                                        ident,
+                                        "JOB_ID=%" PRIu32, job_id,
+                                        "JOB_TYPE=%s", job_type_to_string(t),
+                                        "JOB_RESULT=%s", job_result_to_string(result),
+                                        LOG_UNIT_INVOCATION_ID(u),
+                                        mid);
+                        else
+                                log_unit_struct(
+                                        u,
+                                        job_done_messages[result].log_level,
+                                        "MESSAGE=%s was skipped because of a failed condition check (%s=%s%s).",
+                                        ident,
+                                        condition_type_to_string(c->type),
+                                        c->negate ? "!" : "",
+                                        c->parameter,
+                                        "JOB_ID=%" PRIu32, job_id,
+                                        "JOB_TYPE=%s", job_type_to_string(t),
+                                        "JOB_RESULT=%s", job_result_to_string(result),
+                                        LOG_UNIT_INVOCATION_ID(u),
+                                        mid);
+                } else {
+                        const char *msg_fmt = strjoina("MESSAGE=", format);
+
+                        DISABLE_WARNING_FORMAT_NONLITERAL;
+                        log_unit_struct(u, job_done_messages[result].log_level,
+                                        msg_fmt, ident,
+                                        "JOB_ID=%" PRIu32, job_id,
+                                        "JOB_TYPE=%s", job_type_to_string(t),
+                                        "JOB_RESULT=%s", job_result_to_string(result),
+                                        LOG_UNIT_INVOCATION_ID(u),
+                                        mid);
+                        REENABLE_WARNING;
+                }
         }
 
         if (do_console) {
@@ -781,7 +813,7 @@ static int job_perform_on_unit(Job **j) {
                         break;
 
                 default:
-                        assert_not_reached("Invalid job type");
+                        assert_not_reached();
         }
 
         /* Log if the job still exists and the start/stop/reload function actually did something. Note that this means
@@ -849,7 +881,7 @@ int job_run_and_invalidate(Job *j) {
                         break;
 
                 default:
-                        assert_not_reached("Unknown job type");
+                        assert_not_reached();
         }
 
         if (j) {
@@ -1303,6 +1335,8 @@ void job_shutdown_magic(Job *j) {
         /* In case messages on console has been disabled on boot */
         j->unit->manager->no_console_output = false;
 
+        manager_invalidate_startup_units(j->unit->manager);
+
         if (detect_container() > 0)
                 return;
 
@@ -1511,44 +1545,44 @@ static const char* const job_state_table[_JOB_STATE_MAX] = {
 DEFINE_STRING_TABLE_LOOKUP(job_state, JobState);
 
 static const char* const job_type_table[_JOB_TYPE_MAX] = {
-        [JOB_START] = "start",
-        [JOB_VERIFY_ACTIVE] = "verify-active",
-        [JOB_STOP] = "stop",
-        [JOB_RELOAD] = "reload",
+        [JOB_START]           = "start",
+        [JOB_VERIFY_ACTIVE]   = "verify-active",
+        [JOB_STOP]            = "stop",
+        [JOB_RELOAD]          = "reload",
         [JOB_RELOAD_OR_START] = "reload-or-start",
-        [JOB_RESTART] = "restart",
-        [JOB_TRY_RESTART] = "try-restart",
-        [JOB_TRY_RELOAD] = "try-reload",
-        [JOB_NOP] = "nop",
+        [JOB_RESTART]         = "restart",
+        [JOB_TRY_RESTART]     = "try-restart",
+        [JOB_TRY_RELOAD]      = "try-reload",
+        [JOB_NOP]             = "nop",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(job_type, JobType);
 
 static const char* const job_mode_table[_JOB_MODE_MAX] = {
-        [JOB_FAIL] = "fail",
-        [JOB_REPLACE] = "replace",
+        [JOB_FAIL]                 = "fail",
+        [JOB_REPLACE]              = "replace",
         [JOB_REPLACE_IRREVERSIBLY] = "replace-irreversibly",
-        [JOB_ISOLATE] = "isolate",
-        [JOB_FLUSH] = "flush",
-        [JOB_IGNORE_DEPENDENCIES] = "ignore-dependencies",
-        [JOB_IGNORE_REQUIREMENTS] = "ignore-requirements",
-        [JOB_TRIGGERING] = "triggering",
+        [JOB_ISOLATE]              = "isolate",
+        [JOB_FLUSH]                = "flush",
+        [JOB_IGNORE_DEPENDENCIES]  = "ignore-dependencies",
+        [JOB_IGNORE_REQUIREMENTS]  = "ignore-requirements",
+        [JOB_TRIGGERING]           = "triggering",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(job_mode, JobMode);
 
 static const char* const job_result_table[_JOB_RESULT_MAX] = {
-        [JOB_DONE] = "done",
-        [JOB_CANCELED] = "canceled",
-        [JOB_TIMEOUT] = "timeout",
-        [JOB_FAILED] = "failed",
-        [JOB_DEPENDENCY] = "dependency",
-        [JOB_SKIPPED] = "skipped",
-        [JOB_INVALID] = "invalid",
-        [JOB_ASSERT] = "assert",
+        [JOB_DONE]        = "done",
+        [JOB_CANCELED]    = "canceled",
+        [JOB_TIMEOUT]     = "timeout",
+        [JOB_FAILED]      = "failed",
+        [JOB_DEPENDENCY]  = "dependency",
+        [JOB_SKIPPED]     = "skipped",
+        [JOB_INVALID]     = "invalid",
+        [JOB_ASSERT]      = "assert",
         [JOB_UNSUPPORTED] = "unsupported",
-        [JOB_COLLECTED] = "collected",
-        [JOB_ONCE] = "once",
+        [JOB_COLLECTED]   = "collected",
+        [JOB_ONCE]        = "once",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(job_result, JobResult);

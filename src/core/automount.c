@@ -305,7 +305,6 @@ static int automount_coldplug(Unit *u) {
 }
 
 static void automount_dump(Unit *u, FILE *f, const char *prefix) {
-        char time_string[FORMAT_TIMESPAN_MAX];
         Automount *a = AUTOMOUNT(u);
 
         assert(a);
@@ -320,7 +319,7 @@ static void automount_dump(Unit *u, FILE *f, const char *prefix) {
                 prefix, automount_result_to_string(a->result),
                 prefix, a->where,
                 prefix, a->directory_mode,
-                prefix, format_timespan(time_string, FORMAT_TIMESPAN_MAX, a->timeout_idle_usec, USEC_PER_SEC));
+                prefix, FORMAT_TIMESPAN(a->timeout_idle_usec, USEC_PER_SEC));
 }
 
 static void automount_enter_dead(Automount *a, AutomountResult f) {
@@ -366,7 +365,7 @@ static int open_ioctl_fd(int dev_autofs_fd, const char *where, dev_t devid) {
         assert(where);
 
         l = sizeof(struct autofs_dev_ioctl) + strlen(where) + 1;
-        param = alloca(l);
+        param = alloca_safe(l);
 
         init_autofs_dev_ioctl(param);
         param->size = l;
@@ -787,6 +786,11 @@ static void automount_enter_running(Automount *a) {
                 goto fail;
         }
 
+        if (unit_has_failed_condition_or_assert(trigger)) {
+                automount_enter_dead(a, AUTOMOUNT_FAILURE_MOUNT_CONDITION_FAILED);
+                return;
+        }
+
         r = manager_add_job(UNIT(a)->manager, JOB_START, trigger, JOB_REPLACE, NULL, &error, NULL);
         if (r < 0) {
                 log_unit_warning(UNIT(a), "Failed to queue mount startup job: %s", bus_error_message(&error, r));
@@ -1075,11 +1079,12 @@ static int automount_test_start_limit(Unit *u) {
 }
 
 static const char* const automount_result_table[_AUTOMOUNT_RESULT_MAX] = {
-        [AUTOMOUNT_SUCCESS] = "success",
-        [AUTOMOUNT_FAILURE_RESOURCES] = "resources",
-        [AUTOMOUNT_FAILURE_START_LIMIT_HIT] = "start-limit-hit",
-        [AUTOMOUNT_FAILURE_MOUNT_START_LIMIT_HIT] = "mount-start-limit-hit",
-        [AUTOMOUNT_FAILURE_UNMOUNTED] = "unmounted",
+        [AUTOMOUNT_SUCCESS]                        = "success",
+        [AUTOMOUNT_FAILURE_RESOURCES]              = "resources",
+        [AUTOMOUNT_FAILURE_START_LIMIT_HIT]        = "start-limit-hit",
+        [AUTOMOUNT_FAILURE_MOUNT_START_LIMIT_HIT]  = "mount-start-limit-hit",
+        [AUTOMOUNT_FAILURE_UNMOUNTED]              = "unmounted",
+        [AUTOMOUNT_FAILURE_MOUNT_CONDITION_FAILED] = "mount-condition-failed",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(automount_result, AutomountResult);

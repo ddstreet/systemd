@@ -224,7 +224,7 @@ static int netdev_macsec_fill_message(NetDev *netdev, int command, sd_netlink_me
         assert(netdev);
         assert(netdev->ifindex > 0);
 
-        r = sd_genl_message_new(netdev->manager->genl, SD_GENL_MACSEC, command, &m);
+        r = sd_genl_message_new(netdev->manager->genl, MACSEC_GENL_NAME, command, &m);
         if (r < 0)
                 return log_netdev_error_errno(netdev, r, "Failed to create generic netlink message: %m");
 
@@ -317,7 +317,7 @@ static int macsec_receive_association_handler(sd_netlink *rtnl, sd_netlink_messa
         else if (r < 0) {
                 log_netdev_warning_errno(netdev, r,
                                          "Failed to add receive secure association: %m");
-                netdev_drop(netdev);
+                netdev_enter_failed(netdev);
 
                 return 1;
         }
@@ -375,7 +375,7 @@ static int macsec_receive_channel_handler(sd_netlink *rtnl, sd_netlink_message *
         else if (r < 0) {
                 log_netdev_warning_errno(netdev, r,
                                          "Failed to add receive secure channel: %m");
-                netdev_drop(netdev);
+                netdev_enter_failed(netdev);
 
                 return 1;
         }
@@ -387,7 +387,7 @@ static int macsec_receive_channel_handler(sd_netlink *rtnl, sd_netlink_message *
                 if (r < 0) {
                         log_netdev_warning_errno(netdev, r,
                                                  "Failed to configure receive security association: %m");
-                        netdev_drop(netdev);
+                        netdev_enter_failed(netdev);
                         return 1;
                 }
         }
@@ -441,7 +441,7 @@ static int macsec_transmit_association_handler(sd_netlink *rtnl, sd_netlink_mess
         else if (r < 0) {
                 log_netdev_warning_errno(netdev, r,
                                          "Failed to add transmit secure association: %m");
-                netdev_drop(netdev);
+                netdev_enter_failed(netdev);
 
                 return 1;
         }
@@ -620,7 +620,7 @@ int config_parse_macsec_hw_address(
         if (r < 0)
                 return log_oom();
 
-        r = ether_addr_from_string(rvalue, b ? &b->sci.mac : &c->sci.mac);
+        r = parse_ether_addr(rvalue, b ? &b->sci.mac : &c->sci.mac);
         if (r < 0) {
                 log_syntax(unit, LOG_WARNING, filename, line, r,
                            "Failed to parse MAC address for secure channel identifier. "

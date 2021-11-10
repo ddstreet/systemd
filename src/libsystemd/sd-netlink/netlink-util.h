@@ -29,10 +29,6 @@ DEFINE_TRIVIAL_CLEANUP_FUNC(MultipathRoute*, multipath_route_free);
 
 int multipath_route_dup(const MultipathRoute *m, MultipathRoute **ret);
 
-int rtnl_message_new_synthetic_error(sd_netlink *rtnl, int error, uint32_t serial, sd_netlink_message **ret);
-uint32_t rtnl_message_get_serial(sd_netlink_message *m);
-void rtnl_message_seal(sd_netlink_message *m);
-
 static inline bool rtnl_message_type_is_neigh(uint16_t type) {
         return IN_SET(type, RTM_NEWNEIGH, RTM_GETNEIGH, RTM_DELNEIGH);
 }
@@ -118,6 +114,16 @@ int rtnl_log_create_error(int r);
                                      (sd_netlink_message_handler_t) _callback_, \
                                      (sd_netlink_destroy_t) _destroy_,  \
                                      userdata, description);            \
+        })
+
+#define genl_add_match(nl, ret_slot, family, group, cmd, callback, destroy_callback, userdata, description) \
+        ({                                                              \
+                int (*_callback_)(sd_netlink *, sd_netlink_message *, typeof(userdata)) = callback; \
+                void (*_destroy_)(typeof(userdata)) = destroy_callback; \
+                sd_genl_add_match(nl, ret_slot, family, group, cmd,     \
+                                  (sd_netlink_message_handler_t) _callback_, \
+                                  (sd_netlink_destroy_t) _destroy_,     \
+                                  userdata, description);               \
         })
 
 int netlink_message_append_hw_addr(sd_netlink_message *m, unsigned short type, const struct hw_addr_data *data);

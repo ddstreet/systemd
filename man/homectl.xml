@@ -288,12 +288,16 @@
       </varlistentry>
 
       <varlistentry>
-        <term><option>--setenv=</option><replaceable>VARIABLE</replaceable>=<replaceable>VALUE</replaceable></term>
+        <term><option>--setenv=</option><replaceable>VARIABLE</replaceable>[=<replaceable>VALUE</replaceable>]</term>
 
-        <listitem><para>Takes an environment variable assignment to set for all user processes. Note that a
-        number of other settings also result in environment variables to be set for the user, including
-        <option>--email=</option>, <option>--timezone=</option> and <option>--language=</option>. May be used
-        multiple times to set multiple environment variables.</para></listitem>
+        <listitem><para>Takes an environment variable assignment to set for all user processes. May be used
+        multiple times to set multiple environment variables. When <literal>=</literal> and
+        <replaceable>VALUE</replaceable> are omitted, the value of the variable with the same name in the
+        program environment will be used.</para>
+
+        <para>Note that a number of other settings also result in environment variables to be set for the
+        user, including <option>--email=</option>, <option>--timezone=</option> and
+        <option>--language=</option>.</para></listitem>
       </varlistentry>
 
       <varlistentry>
@@ -607,6 +611,17 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--drop-caches=</option><replaceable>BOOL</replaceable></term>
+
+        <listitem><para>Automatically flush OS file system caches on logout. This is useful in combination
+        with the fscrypt storage backend to ensure the OS does not keep decrypted versions of the files and
+        directories in memory (and accessible) after logout. This option is also supported on other backends,
+        but should not bring any benefit there. Defaults to off, except if the selected storage backend is
+        fscrypt, where it defaults to on. Note that flushing OS caches will negatively influence performance
+        of the OS shortly after logout.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--fs-type=</option><replaceable>TYPE</replaceable></term>
 
         <listitem><para>When LUKS2 storage is used configures the file system type to use inside the home
@@ -673,10 +688,17 @@
         <term><option>--cifs-domain=</option><replaceable>DOMAIN</replaceable></term>
         <term><option>--cifs-user-name=</option><replaceable>USER</replaceable></term>
         <term><option>--cifs-service=</option><replaceable>SERVICE</replaceable></term>
+        <term><option>--cifs-extra-mount-options=</option><replaceable>OPTIONS</replaceable></term>
 
         <listitem><para>Configures the Windows File Sharing (CIFS) domain and user to associate with the home
-        directory/user account, as well as the file share ("service") to mount as directory. The latter is used when
-        <literal>cifs</literal> storage is selected.</para></listitem>
+        directory/user account, as well as the file share ("service") to mount as directory. The latter is
+        used when <literal>cifs</literal> storage is selected. The file share should be specified in format
+        <literal>//<replaceable>host</replaceable>/<replaceable>share</replaceable>/<replaceable>directory/…</replaceable></literal>. The
+        directory part is optional — if not specified the home directory will be placed in the top-level
+        directory of the share. The <option>--cifs-extra-mount-options=</option> setting allows specifying
+        additional mount options when mounting the share, see <citerefentry
+        project='man-pages'><refentrytitle>mount.cifs</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+        for details.</para></listitem>
       </varlistentry>
 
       <varlistentry>

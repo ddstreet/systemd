@@ -21,6 +21,7 @@ typedef enum HomeState {
         HOME_ACTIVATING_FOR_ACQUIRE,  /* activating because Acquire() was called */
         HOME_DEACTIVATING,
         HOME_ACTIVE,                  /* logged in right now */
+        HOME_LINGERING,               /* not logged in anymore, but we didn't manage to deactivate (because some process keeps it busy?) but we'll keep trying */
         HOME_LOCKING,
         HOME_LOCKED,
         HOME_UNLOCKING,
@@ -43,6 +44,7 @@ typedef enum HomeState {
 static inline bool HOME_STATE_IS_ACTIVE(HomeState state) {
         return IN_SET(state,
                       HOME_ACTIVE,
+                      HOME_LINGERING,
                       HOME_UPDATING_WHILE_ACTIVE,
                       HOME_RESIZING_WHILE_ACTIVE,
                       HOME_PASSWD_WHILE_ACTIVE,
@@ -70,6 +72,33 @@ static inline bool HOME_STATE_IS_EXECUTING_OPERATION(HomeState state) {
                       HOME_PASSWD,
                       HOME_PASSWD_WHILE_ACTIVE,
                       HOME_AUTHENTICATING,
+                      HOME_AUTHENTICATING_WHILE_ACTIVE,
+                      HOME_AUTHENTICATING_FOR_ACQUIRE);
+}
+
+static inline bool HOME_STATE_SHALL_PIN(HomeState state) {
+        /* Like HOME_STATE_IS_ACTIVE() – but HOME_LINGERING is missing! */
+        return IN_SET(state,
+                      HOME_ACTIVE,
+                      HOME_UPDATING_WHILE_ACTIVE,
+                      HOME_RESIZING_WHILE_ACTIVE,
+                      HOME_PASSWD_WHILE_ACTIVE,
+                      HOME_AUTHENTICATING_WHILE_ACTIVE,
+                      HOME_AUTHENTICATING_FOR_ACQUIRE);
+}
+
+static inline bool HOME_STATE_MAY_RETRY_DEACTIVATE(HomeState state) {
+        /* Indicates when to leave the deactivate retry timer active */
+        return IN_SET(state,
+                      HOME_ACTIVE,
+                      HOME_LINGERING,
+                      HOME_DEACTIVATING,
+                      HOME_LOCKING,
+                      HOME_UNLOCKING,
+                      HOME_UNLOCKING_FOR_ACQUIRE,
+                      HOME_UPDATING_WHILE_ACTIVE,
+                      HOME_RESIZING_WHILE_ACTIVE,
+                      HOME_PASSWD_WHILE_ACTIVE,
                       HOME_AUTHENTICATING_WHILE_ACTIVE,
                       HOME_AUTHENTICATING_FOR_ACQUIRE);
 }
@@ -107,7 +136,7 @@ struct Home {
 
         /* The reading side of a FIFO stored in /run/systemd/home/, the writing side being used for reference
          * counting. The references dropped to zero as soon as we see EOF. This concept exists twice: once
-         * for clients that are fine if we suspend the home directory on system suspend, and once for cliets
+         * for clients that are fine if we suspend the home directory on system suspend, and once for clients
          * that are not ok with that. This allows us to determine for each home whether there are any clients
          * that support unsuspend. */
         sd_event_source *ref_event_source_please_suspend;
@@ -126,6 +155,15 @@ struct Home {
 
         /* Used to coalesce bus PropertiesChanged events */
         sd_event_source *deferred_change_event_source;
+
+        /* An fd to the top-level home directory we keep while logged in, to keep the dir busy */
+        int pin_fd;
+
+        /* A time event used to repeatedly try to unmount home dir after use if it didn't work on first try */
+        sd_event_source *retry_deactivate_event_source;
+
+        /* An fd that locks the backing file of LUKS home dirs with a BSD lock. */
+        int luks_lock_fd;
 };
 
 int home_new(Manager *m, UserRecord *hr, const char *sysfs, Home **ret);
@@ -152,7 +190,7 @@ int home_unlock(Home *h, UserRecord *secret, sd_bus_error *error);
 
 HomeState home_get_state(Home *h);
 
-void home_process_notify(Home *h, char **l);
+void home_process_notify(Home *h, char **l, int fd);
 
 int home_killall(Home *h);
 

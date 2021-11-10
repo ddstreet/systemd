@@ -115,7 +115,6 @@ REENABLE_WARNING
 static int open_label_db(void) {
         struct selabel_handle *hnd;
         usec_t before_timestamp, after_timestamp;
-        char timespan[FORMAT_TIMESPAN_MAX];
 
 #  if HAVE_GENERIC_MALLINFO
         generic_mallinfo before_mallinfo = generic_mallinfo_get();
@@ -131,11 +130,11 @@ static int open_label_db(void) {
         generic_mallinfo after_mallinfo = generic_mallinfo_get();
         size_t l = LESS_BY((size_t) after_mallinfo.uordblks, (size_t) before_mallinfo.uordblks);
         log_debug("Successfully loaded SELinux database in %s, size on heap is %zuK.",
-                  format_timespan(timespan, sizeof(timespan), after_timestamp - before_timestamp, 0),
+                  FORMAT_TIMESPAN(after_timestamp - before_timestamp, 0),
                   DIV_ROUND_UP(l, 1024));
 #  else
         log_debug("Successfully loaded SELinux database in %s.",
-                  format_timespan(timespan, sizeof(timespan), after_timestamp - before_timestamp, 0));
+                  FORMAT_TIMESPAN(after_timestamp - before_timestamp, 0));
 #  endif
 
         /* release memory after measurement */
@@ -267,7 +266,6 @@ int mac_selinux_fix_container_fd(int fd, const char *path, const char *inside_pa
         assert(inside_path);
 
 #if HAVE_SELINUX
-        char procfs_path[STRLEN("/proc/self/fd/") + DECIMAL_STR_MAX(int)];
         _cleanup_freecon_ char* fcon = NULL;
         struct stat st;
         int r;
@@ -293,8 +291,7 @@ int mac_selinux_fix_container_fd(int fd, const char *path, const char *inside_pa
                 goto fail;
         }
 
-        xsprintf(procfs_path, "/proc/self/fd/%i", fd);
-        if (setfilecon_raw(procfs_path, fcon) < 0) {
+        if (setfilecon_raw(FORMAT_PROC_FD_PATH(fd), fcon) < 0) {
                 _cleanup_freecon_ char *oldcon = NULL;
 
                 /* If the FS doesn't support labels, then exit without warning */
@@ -308,7 +305,7 @@ int mac_selinux_fix_container_fd(int fd, const char *path, const char *inside_pa
                 r = -errno;
 
                 /* If the old label is identical to the new one, suppress any kind of error */
-                if (getfilecon_raw(procfs_path, &oldcon) >= 0 && streq(fcon, oldcon))
+                if (getfilecon_raw(FORMAT_PROC_FD_PATH(fd), &oldcon) >= 0 && streq(fcon, oldcon))
                         return 0;
 
                 goto fail;
@@ -565,6 +562,21 @@ int mac_selinux_create_file_prepare(const char *path, mode_t mode) {
 #endif
 }
 
+int mac_selinux_create_file_prepare_label(const char *path, const char *label) {
+#if HAVE_SELINUX
+
+        if (!label)
+                return 0;
+
+        if (!mac_selinux_use())
+                return 0;
+
+        if (setfscreatecon_raw(label) < 0)
+                return log_enforcing_errno(errno, "Failed to set specified SELinux security context '%s' for '%s': %m", label, strna(path));
+#endif
+        return 0;
+}
+
 void mac_selinux_create_file_clear(void) {
 
 #if HAVE_SELINUX
@@ -635,7 +647,8 @@ int mac_selinux_bind(int fd, const struct sockaddr *addr, socklen_t addrlen) {
         if (un->sun_path[0] == 0)
                 goto skipped;
 
-        path = strndupa(un->sun_path, addrlen - offsetof(struct sockaddr_un, sun_path));
+        path = strndupa_safe(un->sun_path,
+                             addrlen - offsetof(struct sockaddr_un, sun_path));
 
         /* Check for policy reload so 'label_hnd' is kept up-to-date by callbacks */
         mac_selinux_maybe_reload();

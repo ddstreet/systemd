@@ -241,7 +241,7 @@ static void test_merge_env_file(void) {
                                 "zzzz=${foobar:-${nothing}}\n"
                                 "zzzzz=${nothing:+${nothing}}\n"
                                 , WRITE_STRING_FILE_AVOID_NEWLINE);
-        assert(r >= 0);
+        assert_se(r >= 0);
 
         r = merge_env_file(&a, NULL, t);
         assert_se(r >= 0);
@@ -305,7 +305,7 @@ static void test_merge_env_file_invalid(void) {
                                 "#\n"
                                 "\n\n"                  /* empty line */
                                 , WRITE_STRING_FILE_AVOID_NEWLINE);
-        assert(r >= 0);
+        assert_se(r >= 0);
 
         r = merge_env_file(&a, NULL, t);
         assert_se(r >= 0);
@@ -996,6 +996,25 @@ static void test_read_full_file_offset_size(void) {
 
         assert_se(read_full_file_full(AT_FDCWD, fn, UINT64_MAX, 128, 0, NULL, &rbuf, &rbuf_size) >= 0);
         assert_se(rbuf_size == 128);
+        assert_se(memcmp(buf, rbuf, rbuf_size) == 0);
+        rbuf = mfree(rbuf);
+
+        assert_se(read_full_file_full(AT_FDCWD, fn, UINT64_MAX, 128, READ_FULL_FILE_FAIL_WHEN_LARGER, NULL, &rbuf, &rbuf_size) == -E2BIG);
+        assert_se(read_full_file_full(AT_FDCWD, fn, UINT64_MAX, sizeof(buf)-1, READ_FULL_FILE_FAIL_WHEN_LARGER, NULL, &rbuf, &rbuf_size) == -E2BIG);
+        assert_se(read_full_file_full(AT_FDCWD, fn, UINT64_MAX, sizeof(buf), READ_FULL_FILE_FAIL_WHEN_LARGER, NULL, &rbuf, &rbuf_size) >= 0);
+        assert_se(rbuf_size == sizeof(buf));
+        assert_se(memcmp(buf, rbuf, rbuf_size) == 0);
+        rbuf = mfree(rbuf);
+
+        assert_se(read_full_file_full(AT_FDCWD, fn, 47, 128, READ_FULL_FILE_FAIL_WHEN_LARGER, NULL, &rbuf, &rbuf_size) == -E2BIG);
+        assert_se(read_full_file_full(AT_FDCWD, fn, 47, sizeof(buf)-47-1, READ_FULL_FILE_FAIL_WHEN_LARGER, NULL, &rbuf, &rbuf_size) == -E2BIG);
+        assert_se(read_full_file_full(AT_FDCWD, fn, 47, sizeof(buf)-47, READ_FULL_FILE_FAIL_WHEN_LARGER, NULL, &rbuf, &rbuf_size) >= 0);
+        assert_se(rbuf_size == sizeof(buf)-47);
+        assert_se(memcmp(buf+47, rbuf, rbuf_size) == 0);
+        rbuf = mfree(rbuf);
+
+        assert_se(read_full_file_full(AT_FDCWD, fn, UINT64_MAX, sizeof(buf)+1, READ_FULL_FILE_FAIL_WHEN_LARGER, NULL, &rbuf, &rbuf_size) >= 0);
+        assert_se(rbuf_size == sizeof(buf));
         assert_se(memcmp(buf, rbuf, rbuf_size) == 0);
         rbuf = mfree(rbuf);
 

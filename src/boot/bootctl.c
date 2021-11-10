@@ -2,7 +2,6 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <ftw.h>
 #include <getopt.h>
 #include <limits.h>
 #include <linux/magic.h>
@@ -25,7 +24,7 @@
 #include "fd-util.h"
 #include "fileio.h"
 #include "fs-util.h"
-#include "locale-util.h"
+#include "glyph-util.h"
 #include "main-func.h"
 #include "mkdir.h"
 #include "pager.h"
@@ -38,6 +37,7 @@
 #include "stdio-util.h"
 #include "string-util.h"
 #include "strv.h"
+#include "sync-util.h"
 #include "terminal-util.h"
 #include "tmpfile-util.h"
 #include "umask-util.h"
@@ -65,6 +65,7 @@ static const char *arg_dollar_boot_path(void) {
 
 static int acquire_esp(
                 bool unprivileged_mode,
+                bool graceful,
                 uint32_t *ret_part,
                 uint64_t *ret_pstart,
                 uint64_t *ret_psize,
@@ -80,10 +81,14 @@ static int acquire_esp(
          * this). */
 
         r = find_esp_and_warn(arg_esp_path, unprivileged_mode, &np, ret_part, ret_pstart, ret_psize, ret_uuid);
-        if (r == -ENOKEY)
+        if (r == -ENOKEY) {
+                if (graceful)
+                        return log_info_errno(r, "Couldn't find EFI system partition, skipping.");
+
                 return log_error_errno(r,
                                        "Couldn't find EFI system partition. It is recommended to mount it to /boot or /efi.\n"
                                        "Alternatively, use --esp-path= to specify path to mount point.");
+        }
         if (r < 0)
                 return r;
 
@@ -154,12 +159,11 @@ static int get_file_version(int fd, char **v) {
         if (buf == MAP_FAILED)
                 return log_error_errno(errno, "Failed to memory map EFI binary: %m");
 
-        s = memmem(buf, st.st_size - 8, "#### LoaderInfo: ", 17);
+        s = mempmem_safe(buf, st.st_size - 8, "#### LoaderInfo: ", 17);
         if (!s)
                 goto finish;
-        s += 17;
 
-        e = memmem(s, st.st_size - (s - buf), " ####", 5);
+        e = memmem_safe(s, st.st_size - (s - buf), " ####", 5);
         if (!e || e - s < 3) {
                 r = log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Malformed version string.");
                 goto finish;
@@ -500,7 +504,7 @@ static int version_check(int fd_from, const char *from, int fd_to, const char *t
         if (r < 0)
                 return r;
         if (r == 0)
-                return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
+                return log_notice_errno(SYNTHETIC_ERRNO(EREMOTE),
                                        "Source file \"%s\" does not carry version information!",
                                        from);
 
@@ -508,12 +512,15 @@ static int version_check(int fd_from, const char *from, int fd_to, const char *t
         if (r < 0)
                 return r;
         if (r == 0 || compare_product(a, b) != 0)
-                return log_notice_errno(SYNTHETIC_ERRNO(EEXIST),
+                return log_notice_errno(SYNTHETIC_ERRNO(EREMOTE),
                                         "Skipping \"%s\", since it's owned by another boot loader.",
                                         to);
 
-        if (compare_version(a, b) < 0)
-                return log_warning_errno(SYNTHETIC_ERRNO(ESTALE), "Skipping \"%s\", since a newer boot loader version exists already.", to);
+        r = compare_version(a, b);
+        if (r < 0)
+                return log_warning_errno(SYNTHETIC_ERRNO(ESTALE), "Skipping \"%s\", since newer boot loader version in place already.", to);
+        else if (r == 0)
+                return log_info_errno(SYNTHETIC_ERRNO(ESTALE), "Skipping \"%s\", since same boot loader version in place already.", to);
 
         return 0;
 }
@@ -562,12 +569,11 @@ static int copy_file_with_version_check(const char *from, const char *to, bool f
 
         (void) copy_times(fd_from, fd_to, 0);
 
-        if (fsync(fd_to) < 0) {
+        r = fsync_full(fd_to);
+        if (r < 0) {
                 (void) unlink_noerrno(t);
-                return log_error_errno(errno, "Failed to copy data from \"%s\" to \"%s\": %m", from, t);
+                return log_error_errno(r, "Failed to copy data from \"%s\" to \"%s\": %m", from, t);
         }
-
-        (void) fsync_directory_of_file(fd_to);
 
         if (renameat(AT_FDCWD, t, AT_FDCWD, to) < 0) {
                 (void) unlink_noerrno(t);
@@ -665,6 +671,10 @@ static int install_binaries(const char *esp_path, bool force) {
                         continue;
 
                 k = copy_one_file(esp_path, de->d_name, force);
+                /* Don't propagate an error code if no update necessary, installed version already equal or
+                 * newer version, or other boot loader in place. */
+                if (arg_graceful && IN_SET(k, -ESTALE, -EREMOTE))
+                        continue;
                 if (k < 0 && r == 0)
                         r = k;
         }
@@ -907,7 +917,6 @@ static int remove_subdirs(const char *root, const char *const *subdirs) {
 
 static int remove_machine_id_directory(const char *root) {
         sd_id128_t machine_id;
-        char buf[SD_ID128_STRING_MAX];
         int r;
 
         assert(root);
@@ -920,7 +929,7 @@ static int remove_machine_id_directory(const char *root) {
         if (r < 0)
                 return log_error_errno(r, "Failed to get machine id: %m");
 
-        return rmdir_one(root, sd_id128_to_string(machine_id, buf));
+        return rmdir_one(root, SD_ID128_TO_STRING(machine_id));
 }
 
 static int remove_binaries(const char *esp_path) {
@@ -1009,8 +1018,6 @@ static int install_loader_config(const char *esp_path) {
         _cleanup_(unlink_and_freep) char *t = NULL;
         _cleanup_fclose_ FILE *f = NULL;
         _cleanup_close_ int fd = -1;
-        sd_id128_t machine_id;
-        char machine_string[SD_ID128_STRING_MAX];
         const char *p;
         int r;
 
@@ -1030,12 +1037,15 @@ static int install_loader_config(const char *esp_path) {
 
         fprintf(f, "#timeout 3\n"
                    "#console-mode keep\n");
+
         if (arg_make_machine_id_directory) {
+                sd_id128_t machine_id;
+
                 r = sd_id128_get_machine(&machine_id);
                 if (r < 0)
                         return log_error_errno(r, "Failed to get machine id: %m");
 
-                fprintf(f, "default %s-*\n", sd_id128_to_string(machine_id, machine_string));
+                fprintf(f, "default %s-*\n", SD_ID128_TO_STRING(machine_id));
         }
 
         r = fflush_sync_and_check(f);
@@ -1054,7 +1064,6 @@ static int install_loader_config(const char *esp_path) {
 
 static int install_machine_id_directory(const char *root) {
         sd_id128_t machine_id;
-        char buf[SD_ID128_STRING_MAX];
         int r;
 
         assert(root);
@@ -1067,7 +1076,7 @@ static int install_machine_id_directory(const char *root) {
         if (r < 0)
                 return log_error_errno(r, "Failed to get machine id: %m");
 
-        return mkdir_one(root, sd_id128_to_string(machine_id, buf));
+        return mkdir_one(root, SD_ID128_TO_STRING(machine_id));
 }
 
 static int help(int argc, char *argv[], void *userdata) {
@@ -1090,6 +1099,9 @@ static int help(int argc, char *argv[], void *userdata) {
                "  list                List boot loader entries\n"
                "  set-default ID      Set default boot loader entry\n"
                "  set-oneshot ID      Set default boot loader entry, for next boot only\n"
+               "  set-timeout SECONDS Set the menu timeout\n"
+               "  set-timeout-oneshot SECONDS\n"
+               "                      Set the menu timeout for the next boot only\n"
                "\n%3$ssystemd-boot Commands:%4$s\n"
                "  install             Install systemd-boot to the ESP and EFI variables\n"
                "  update              Update systemd-boot in the ESP and EFI variables\n"
@@ -1216,7 +1228,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return -EINVAL;
 
                 default:
-                        assert_not_reached("Unknown option");
+                        assert_not_reached();
                 }
 
         return 1;
@@ -1243,7 +1255,7 @@ static int verb_status(int argc, char *argv[], void *userdata) {
         sd_id128_t esp_uuid = SD_ID128_NULL, xbootldr_uuid = SD_ID128_NULL;
         int r, k;
 
-        r = acquire_esp(geteuid() != 0, NULL, NULL, NULL, &esp_uuid);
+        r = acquire_esp(/* unprivileged_mode= */ geteuid() != 0, /* graceful= */ false, NULL, NULL, NULL, &esp_uuid);
         if (arg_print_esp_path) {
                 if (r == -EACCES) /* If we couldn't acquire the ESP path, log about access errors (which is the only
                                    * error the find_esp_and_warn() won't log on its own) */
@@ -1254,7 +1266,7 @@ static int verb_status(int argc, char *argv[], void *userdata) {
                 puts(arg_esp_path);
         }
 
-        r = acquire_xbootldr(geteuid() != 0, &xbootldr_uuid);
+        r = acquire_xbootldr(/* unprivileged_mode= */ geteuid() != 0, &xbootldr_uuid);
         if (arg_print_dollar_boot_path) {
                 if (r == -EACCES)
                         return log_error_errno(r, "Failed to determine XBOOTLDR location: %m");
@@ -1274,7 +1286,7 @@ static int verb_status(int argc, char *argv[], void *userdata) {
         r = 0; /* If we couldn't determine the path, then don't consider that a problem from here on, just show what we
                 * can show */
 
-        (void) pager_open(arg_pager_flags);
+        pager_open(arg_pager_flags);
 
         if (is_efi_boot()) {
                 static const struct {
@@ -1288,6 +1300,7 @@ static int verb_status(int argc, char *argv[], void *userdata) {
                         { EFI_LOADER_FEATURE_ENTRY_ONESHOT,           "One-shot entry control"                },
                         { EFI_LOADER_FEATURE_XBOOTLDR,                "Support for XBOOTLDR partition"        },
                         { EFI_LOADER_FEATURE_RANDOM_SEED,             "Support for passing random seed to OS" },
+                        { EFI_LOADER_FEATURE_LOAD_DRIVER,             "Load drop-in drivers"                  },
                 };
 
                 _cleanup_free_ char *fw_type = NULL, *fw_info = NULL, *loader = NULL, *loader_path = NULL, *stub = NULL;
@@ -1309,10 +1322,12 @@ static int verb_status(int argc, char *argv[], void *userdata) {
                 if (k < 0 && k != -ENOENT)
                         r = log_warning_errno(k, "Failed to read EFI variable LoaderDevicePartUUID: %m");
 
+                SecureBootMode secure = efi_get_secure_boot_mode();
                 printf("System:\n");
                 printf("     Firmware: %s%s (%s)%s\n", ansi_highlight(), strna(fw_type), strna(fw_info), ansi_normal());
-                printf("  Secure Boot: %sd\n", enable_disable(is_efi_secure_boot()));
-                printf("   Setup Mode: %s\n", is_efi_secure_boot_setup_mode() ? "setup" : "user");
+                printf("  Secure Boot: %sd (%s)\n",
+                       enable_disable(IN_SET(secure, SECURE_BOOT_USER, SECURE_BOOT_DEPLOYED)),
+                       secure_boot_mode_to_string(secure));
                 printf(" TPM2 Support: %s\n", yes_no(efi_has_tpm2()));
 
                 k = efi_get_reboot_to_firmware();
@@ -1402,13 +1417,13 @@ static int verb_list(int argc, char *argv[], void *userdata) {
          * off logging about access errors and turn off potentially privileged device probing. Here we're interested in
          * the latter but not the former, hence request the mode, and log about EACCES. */
 
-        r = acquire_esp(geteuid() != 0, NULL, NULL, NULL, NULL);
+        r = acquire_esp(/* unprivileged_mode= */ geteuid() != 0, /* graceful= */ false, NULL, NULL, NULL, NULL);
         if (r == -EACCES) /* We really need the ESP path for this call, hence also log about access errors */
                 return log_error_errno(r, "Failed to determine ESP: %m");
         if (r < 0)
                 return r;
 
-        r = acquire_xbootldr(geteuid() != 0, NULL);
+        r = acquire_xbootldr(/* unprivileged_mode= */ geteuid() != 0, NULL);
         if (r == -EACCES)
                 return log_error_errno(r, "Failed to determine XBOOTLDR partition: %m");
         if (r < 0)
@@ -1429,7 +1444,7 @@ static int verb_list(int argc, char *argv[], void *userdata) {
         if (config.n_entries == 0)
                 log_info("No boot loader entries found.");
         else {
-                (void) pager_open(arg_pager_flags);
+                pager_open(arg_pager_flags);
 
                 printf("Boot Loader Entries:\n");
 
@@ -1600,20 +1615,23 @@ static int verb_install(int argc, char *argv[], void *userdata) {
         sd_id128_t uuid = SD_ID128_NULL;
         uint64_t pstart = 0, psize = 0;
         uint32_t part = 0;
-        bool install;
+        bool install, graceful;
         int r;
 
-        r = acquire_esp(false, &part, &pstart, &psize, &uuid);
+        install = streq(argv[0], "install");
+        graceful = !install && arg_graceful; /* support graceful mode for updates */
+
+        r = acquire_esp(/* unprivileged_mode= */ false, graceful, &part, &pstart, &psize, &uuid);
+        if (graceful && r == -ENOKEY)
+                return 0; /* If --graceful is specified and we can't find an ESP, handle this cleanly */
         if (r < 0)
                 return r;
 
-        r = acquire_xbootldr(false, NULL);
+        r = acquire_xbootldr(/* unprivileged_mode= */ false, NULL);
         if (r < 0)
                 return r;
 
         settle_make_machine_id_directory();
-
-        install = streq(argv[0], "install");
 
         RUN_WITH_UMASK(0002) {
                 if (install) {
@@ -1663,11 +1681,11 @@ static int verb_remove(int argc, char *argv[], void *userdata) {
         sd_id128_t uuid = SD_ID128_NULL;
         int r, q;
 
-        r = acquire_esp(false, NULL, NULL, NULL, &uuid);
+        r = acquire_esp(/* unprivileged_mode= */ false, /* graceful= */ false, NULL, NULL, NULL, &uuid);
         if (r < 0)
                 return r;
 
-        r = acquire_xbootldr(false, NULL);
+        r = acquire_xbootldr(/* unprivileged_mode= */ false, NULL);
         if (r < 0)
                 return r;
 
@@ -1726,7 +1744,7 @@ static int verb_is_installed(int argc, char *argv[], void *userdata) {
         _cleanup_free_ char *p = NULL;
         int r;
 
-        r = acquire_esp(false, NULL, NULL, NULL, NULL);
+        r = acquire_esp(/* privileged_mode= */ false, /* graceful= */ false, NULL, NULL, NULL, NULL);
         if (r < 0)
                 return r;
 
@@ -1760,32 +1778,77 @@ static int verb_is_installed(int argc, char *argv[], void *userdata) {
         return EXIT_SUCCESS;
 }
 
-static int parse_loader_entry_target_arg(const char *arg1, char16_t **ret_target, size_t *ret_target_size) {
+static int parse_timeout(const char *arg1, char16_t **ret_timeout, size_t *ret_timeout_size) {
+        char utf8[DECIMAL_STR_MAX(usec_t)];
+        char16_t *encoded;
+        usec_t timeout;
         int r;
+
+        assert(arg1);
+        assert(ret_timeout);
+        assert(ret_timeout_size);
+
+        if (streq(arg1, "menu-force"))
+                timeout = USEC_INFINITY;
+        else if (streq(arg1, "menu-hidden"))
+                timeout = 0;
+        else {
+                r = parse_time(arg1, &timeout, USEC_PER_SEC);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to parse timeout '%s': %m", arg1);
+                if (timeout != USEC_INFINITY && timeout > UINT32_MAX * USEC_PER_SEC)
+                        log_warning("Timeout is too long and will be treated as 'menu-force' instead.");
+        }
+
+        xsprintf(utf8, USEC_FMT, MIN(timeout / USEC_PER_SEC, UINT32_MAX));
+
+        encoded = utf8_to_utf16(utf8, strlen(utf8));
+        if (!encoded)
+                return log_oom();
+
+        *ret_timeout = encoded;
+        *ret_timeout_size = char16_strlen(encoded) * 2 + 2;
+        return 0;
+}
+
+static int parse_loader_entry_target_arg(const char *arg1, char16_t **ret_target, size_t *ret_target_size) {
+        char16_t *encoded = NULL;
+        int r;
+
+        assert(arg1);
+        assert(ret_target);
+        assert(ret_target_size);
+
         if (streq(arg1, "@current")) {
                 r = efi_get_variable(EFI_LOADER_VARIABLE(LoaderEntrySelected), NULL, (void *) ret_target, ret_target_size);
                 if (r < 0)
                         return log_error_errno(r, "Failed to get EFI variable 'LoaderEntrySelected': %m");
+
         } else if (streq(arg1, "@oneshot")) {
                 r = efi_get_variable(EFI_LOADER_VARIABLE(LoaderEntryOneShot), NULL, (void *) ret_target, ret_target_size);
                 if (r < 0)
                         return log_error_errno(r, "Failed to get EFI variable 'LoaderEntryOneShot': %m");
+
         } else if (streq(arg1, "@default")) {
                 r = efi_get_variable(EFI_LOADER_VARIABLE(LoaderEntryDefault), NULL, (void *) ret_target, ret_target_size);
                 if (r < 0)
                         return log_error_errno(r, "Failed to get EFI variable 'LoaderEntryDefault': %m");
-        } else {
-                char16_t *encoded = NULL;
+
+        } else if (arg1[0] == '@' && !streq(arg1, "@saved"))
+                return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unsupported special entry identifier: %s", arg1);
+        else {
                 encoded = utf8_to_utf16(arg1, strlen(arg1));
                 if (!encoded)
                         return log_oom();
+
                 *ret_target = encoded;
                 *ret_target_size = char16_strlen(encoded) * 2 + 2;
         }
+
         return 0;
 }
 
-static int verb_set_default(int argc, char *argv[], void *userdata) {
+static int verb_set_efivar(int argc, char *argv[], void *userdata) {
         int r;
 
         if (!is_efi_boot())
@@ -1808,24 +1871,39 @@ static int verb_set_default(int argc, char *argv[], void *userdata) {
 
         if (!arg_touch_variables)
                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
-                                       "'%s' operation cannot be combined with --touch-variables=no.",
+                                       "'%s' operation cannot be combined with --no-variables.",
                                        argv[0]);
 
-        const char *variable = streq(argv[0], "set-default") ?
-                EFI_LOADER_VARIABLE(LoaderEntryDefault) : EFI_LOADER_VARIABLE(LoaderEntryOneShot);
+        const char *variable;
+        int (* arg_parser)(const char *, char16_t **, size_t *);
+
+        if (streq(argv[0], "set-default")) {
+                variable = EFI_LOADER_VARIABLE(LoaderEntryDefault);
+                arg_parser = parse_loader_entry_target_arg;
+        } else if (streq(argv[0], "set-oneshot")) {
+                variable = EFI_LOADER_VARIABLE(LoaderEntryOneShot);
+                arg_parser = parse_loader_entry_target_arg;
+        } else if (streq(argv[0], "set-timeout")) {
+                variable = EFI_LOADER_VARIABLE(LoaderConfigTimeout);
+                arg_parser = parse_timeout;
+        } else if (streq(argv[0], "set-timeout-oneshot")) {
+                variable = EFI_LOADER_VARIABLE(LoaderConfigTimeoutOneShot);
+                arg_parser = parse_timeout;
+        } else
+                assert_not_reached();
 
         if (isempty(argv[1])) {
                 r = efi_set_variable(variable, NULL, 0);
                 if (r < 0 && r != -ENOENT)
                         return log_error_errno(r, "Failed to remove EFI variable '%s': %m", variable);
         } else {
-                _cleanup_free_ char16_t *target = NULL;
-                size_t target_size = 0;
+                _cleanup_free_ char16_t *value = NULL;
+                size_t value_size = 0;
 
-                r = parse_loader_entry_target_arg(argv[1], &target, &target_size);
+                r = arg_parser(argv[1], &value, &value_size);
                 if (r < 0)
                         return r;
-                r = efi_set_variable(variable, target, target_size);
+                r = efi_set_variable(variable, value, value_size);
                 if (r < 0)
                         return log_error_errno(r, "Failed to update EFI variable '%s': %m", variable);
         }
@@ -1930,8 +2008,10 @@ static int bootctl_main(int argc, char *argv[]) {
                 { "remove",              VERB_ANY, 1,        0,            verb_remove              },
                 { "is-installed",        VERB_ANY, 1,        0,            verb_is_installed        },
                 { "list",                VERB_ANY, 1,        0,            verb_list                },
-                { "set-default",         2,        2,        0,            verb_set_default         },
-                { "set-oneshot",         2,        2,        0,            verb_set_default         },
+                { "set-default",         2,        2,        0,            verb_set_efivar          },
+                { "set-oneshot",         2,        2,        0,            verb_set_efivar          },
+                { "set-timeout",         2,        2,        0,            verb_set_efivar          },
+                { "set-timeout-oneshot", 2,        2,        0,            verb_set_efivar          },
                 { "random-seed",         VERB_ANY, 1,        0,            verb_random_seed         },
                 { "systemd-efi-options", VERB_ANY, 2,        0,            verb_systemd_efi_options },
                 { "reboot-to-firmware",  VERB_ANY, 2,        0,            verb_reboot_to_firmware  },

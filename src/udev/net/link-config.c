@@ -10,18 +10,20 @@
 #include "alloc-util.h"
 #include "conf-files.h"
 #include "conf-parser.h"
+#include "creds-util.h"
 #include "def.h"
 #include "device-private.h"
 #include "device-util.h"
 #include "ethtool-util.h"
 #include "fd-util.h"
+#include "fileio.h"
 #include "link-config.h"
 #include "log.h"
 #include "memory-util.h"
 #include "net-condition.h"
 #include "netif-naming-scheme.h"
+#include "netif-util.h"
 #include "netlink-util.h"
-#include "network-util.h"
 #include "parse-util.h"
 #include "path-lookup.h"
 #include "path-util.h"
@@ -37,7 +39,6 @@ struct LinkConfigContext {
         LIST_HEAD(LinkConfig, links);
         int ethtool_fd;
         bool enable_name_policy;
-        sd_netlink *rtnl;
         usec_t network_dirs_ts_usec;
 };
 
@@ -57,6 +58,8 @@ static LinkConfig* link_config_free(LinkConfig *link) {
         strv_free(link->alternative_names);
         free(link->alternative_names_policy);
         free(link->alias);
+        free(link->wol_password_file);
+        erase_and_free(link->wol_password);
 
         return mfree(link);
 }
@@ -78,7 +81,6 @@ LinkConfigContext *link_config_ctx_free(LinkConfigContext *ctx) {
                 return NULL;
 
         safe_close(ctx->ethtool_fd);
-        sd_netlink_unref(ctx->rtnl);
         link_configs_free(ctx);
         return mfree(ctx);
 }
@@ -99,6 +101,108 @@ int link_config_ctx_new(LinkConfigContext **ret) {
         };
 
         *ret = TAKE_PTR(ctx);
+
+        return 0;
+}
+
+static int link_parse_wol_password(LinkConfig *link, const char *str) {
+        _cleanup_(erase_and_freep) uint8_t *p = NULL;
+        int r;
+
+        assert(link);
+        assert(str);
+
+        assert_cc(sizeof(struct ether_addr) == SOPASS_MAX);
+
+        p = new(uint8_t, SOPASS_MAX);
+        if (!p)
+                return -ENOMEM;
+
+        /* Reuse parse_ether_addr(), as their formats are equivalent. */
+        r = parse_ether_addr(str, (struct ether_addr*) p);
+        if (r < 0)
+                return r;
+
+        erase_and_free(link->wol_password);
+        link->wol_password = TAKE_PTR(p);
+        return 0;
+}
+
+static int link_read_wol_password_from_file(LinkConfig *link) {
+        _cleanup_(erase_and_freep) char *password = NULL;
+        int r;
+
+        assert(link);
+
+        if (!link->wol_password_file)
+                return 0;
+
+        r = read_full_file_full(
+                        AT_FDCWD, link->wol_password_file, UINT64_MAX, SIZE_MAX,
+                        READ_FULL_FILE_SECURE | READ_FULL_FILE_WARN_WORLD_READABLE | READ_FULL_FILE_CONNECT_SOCKET,
+                        NULL, &password, NULL);
+        if (r < 0)
+                return r;
+
+        return link_parse_wol_password(link, password);
+}
+
+static int link_read_wol_password_from_cred(LinkConfig *link) {
+        _cleanup_free_ char *base = NULL, *cred_name = NULL;
+        _cleanup_(erase_and_freep) char *password = NULL;
+        int r;
+
+        assert(link);
+        assert(link->filename);
+
+        if (link->wol == UINT32_MAX)
+                return 0; /* WakeOnLan= is not specified. */
+        if (!FLAGS_SET(link->wol, WAKE_MAGICSECURE))
+                return 0; /* secureon is not specified in WakeOnLan=. */
+        if (link->wol_password)
+                return 0; /* WakeOnLanPassword= is specified. */
+        if (link->wol_password_file)
+                return 0; /* a file name is specified in WakeOnLanPassword=, but failed to read it. */
+
+        r = path_extract_filename(link->filename, &base);
+        if (r < 0)
+                return r;
+
+        cred_name = strjoin(base, ".wol.password");
+        if (!cred_name)
+                return -ENOMEM;
+
+        r = read_credential(cred_name, (void**) &password, NULL);
+        if (r == -ENOENT)
+                r = read_credential("wol.password", (void**) &password, NULL);
+        if (r < 0)
+                return r;
+
+        return link_parse_wol_password(link, password);
+}
+
+static int link_adjust_wol_options(LinkConfig *link) {
+        int r;
+
+        assert(link);
+
+        r = link_read_wol_password_from_file(link);
+        if (r == -ENOMEM)
+                return log_oom();
+        if (r < 0)
+                log_warning_errno(r, "Failed to read WakeOnLan password from %s, ignoring: %m", link->wol_password_file);
+
+        r = link_read_wol_password_from_cred(link);
+        if (r == -ENOMEM)
+                return log_oom();
+        if (r < 0)
+                log_warning_errno(r, "Failed to read WakeOnLan password from credential, ignoring: %m");
+
+        if (link->wol != UINT32_MAX && link->wol_password)
+                /* Enable WAKE_MAGICSECURE flag when WakeOnLanPassword=. Note that when
+                 * WakeOnLanPassword= is set without WakeOnLan=, then ethtool_set_wol() enables
+                 * WAKE_MAGICSECURE flag and other flags are not changed. */
+                link->wol |= WAKE_MAGICSECURE;
 
         return 0;
 }
@@ -142,6 +246,8 @@ int link_load_one(LinkConfigContext *ctx, const char *filename) {
                 .tx_flow_control = -1,
                 .autoneg_flow_control = -1,
                 .txqueuelen = UINT32_MAX,
+                .coalesce.use_adaptive_rx_coalesce = -1,
+                .coalesce.use_adaptive_tx_coalesce = -1,
         };
 
         for (i = 0; i < ELEMENTSOF(link->features); i++)
@@ -176,6 +282,10 @@ int link_load_one(LinkConfigContext *ctx, const char *filename) {
                             filename);
                 link->mac = mfree(link->mac);
         }
+
+        r = link_adjust_wol_options(link);
+        if (r < 0)
+                return r;
 
         log_debug("Parsed configuration file %s", filename);
 
@@ -237,7 +347,7 @@ bool link_config_should_reload(LinkConfigContext *ctx) {
         return paths_check_timestamp(NETWORK_DIRS, &ctx->network_dirs_ts_usec, false);
 }
 
-int link_config_get(LinkConfigContext *ctx, sd_device *device, LinkConfig **ret) {
+int link_config_get(LinkConfigContext *ctx, sd_netlink **rtnl, sd_device *device, LinkConfig **ret) {
         unsigned name_assign_type = NET_NAME_UNKNOWN;
         struct ether_addr permanent_mac = {};
         unsigned short iftype;
@@ -247,6 +357,7 @@ int link_config_get(LinkConfigContext *ctx, sd_device *device, LinkConfig **ret)
         int ifindex, r;
 
         assert(ctx);
+        assert(rtnl);
         assert(device);
         assert(ret);
 
@@ -258,7 +369,7 @@ int link_config_get(LinkConfigContext *ctx, sd_device *device, LinkConfig **ret)
         if (r < 0)
                 return r;
 
-        r = rtnl_get_link_info(&ctx->rtnl, ifindex, &iftype, &flags);
+        r = rtnl_get_link_info(rtnl, ifindex, &iftype, &flags);
         if (r < 0)
                 return r;
 
@@ -328,13 +439,13 @@ static int link_config_apply_ethtool_settings(int *ethtool_fd, const LinkConfig 
                                                  port_to_string(config->port));
         }
 
-        r = ethtool_set_wol(ethtool_fd, name, config->wol);
+        r = ethtool_set_wol(ethtool_fd, name, config->wol, config->wol_password);
         if (r < 0) {
                 _cleanup_free_ char *str = NULL;
 
                 (void) wol_options_to_string_alloc(config->wol, &str);
-                log_device_warning_errno(device, r, "Could not set WakeOnLan to %s, ignoring: %m",
-                                         strna(str));
+                log_device_warning_errno(device, r, "Could not set WakeOnLan%s%s, ignoring: %m",
+                                         isempty(str) ? "" : " to ", strempty(str));
         }
 
         r = ethtool_set_features(ethtool_fd, name, config->features);
@@ -352,6 +463,10 @@ static int link_config_apply_ethtool_settings(int *ethtool_fd, const LinkConfig 
         r = ethtool_set_flow_control(ethtool_fd, name, config->rx_flow_control, config->tx_flow_control, config->autoneg_flow_control);
         if (r < 0)
                 log_device_warning_errno(device, r, "Could not set flow control, ignoring: %m");
+
+        r = ethtool_set_nic_coalesce_settings(ethtool_fd, name, &config->coalesce);
+        if (r < 0)
+                log_device_warning_errno(device, r, "Could not set coalesce settings, ignoring: %m");
 
         return 0;
 }
@@ -501,7 +616,7 @@ static int link_config_generate_new_name(const LinkConfigContext *ctx, const Lin
                                 (void) sd_device_get_property_value(device, "ID_NET_NAME_MAC", &new_name);
                                 break;
                         default:
-                                assert_not_reached("invalid policy");
+                                assert_not_reached();
                         }
                         if (ifname_valid(new_name)) {
                                 log_device_debug(device, "Policy *%s* yields \"%s\".", name_policy_to_string(policy), new_name);
@@ -569,7 +684,7 @@ static int link_config_apply_alternative_names(sd_netlink **rtnl, const LinkConf
                                 (void) sd_device_get_property_value(device, "ID_NET_NAME_MAC", &n);
                                 break;
                         default:
-                                assert_not_reached("invalid policy");
+                                assert_not_reached();
                         }
                         if (!isempty(n)) {
                                 r = strv_extend(&altnames, n);
@@ -600,13 +715,14 @@ static int link_config_apply_alternative_names(sd_netlink **rtnl, const LinkConf
         return 0;
 }
 
-int link_config_apply(LinkConfigContext *ctx, const LinkConfig *config, sd_device *device, const char **ret_name) {
+int link_config_apply(LinkConfigContext *ctx, const LinkConfig *config, sd_netlink **rtnl, sd_device *device, const char **ret_name) {
         const char *new_name;
         sd_device_action_t a;
         int r;
 
         assert(ctx);
         assert(config);
+        assert(rtnl);
         assert(device);
         assert(ret_name);
 
@@ -628,7 +744,7 @@ int link_config_apply(LinkConfigContext *ctx, const LinkConfig *config, sd_devic
         if (r < 0)
                 return r;
 
-        r = link_config_apply_rtnl_settings(&ctx->rtnl, config, device);
+        r = link_config_apply_rtnl_settings(rtnl, config, device);
         if (r < 0)
                 return r;
 
@@ -644,7 +760,7 @@ int link_config_apply(LinkConfigContext *ctx, const LinkConfig *config, sd_devic
                         return r;
         }
 
-        r = link_config_apply_alternative_names(&ctx->rtnl, config, device, new_name);
+        r = link_config_apply_alternative_names(rtnl, config, device, new_name);
         if (r < 0)
                 return r;
 
@@ -773,6 +889,52 @@ int config_parse_txqueuelen(
         }
 
         *v = k;
+        return 0;
+}
+
+int config_parse_wol_password(
+                const char *unit,
+                const char *filename,
+                unsigned line,
+                const char *section,
+                unsigned section_line,
+                const char *lvalue,
+                int ltype,
+                const char *rvalue,
+                void *data,
+                void *userdata) {
+
+        LinkConfig *link = userdata;
+        int r;
+
+        assert(filename);
+        assert(lvalue);
+        assert(rvalue);
+        assert(userdata);
+
+        if (isempty(rvalue)) {
+                link->wol_password = erase_and_free(link->wol_password);
+                link->wol_password_file = mfree(link->wol_password_file);
+                return 0;
+        }
+
+        if (path_is_absolute(rvalue) && path_is_safe(rvalue)) {
+                link->wol_password = erase_and_free(link->wol_password);
+                return free_and_strdup_warn(&link->wol_password_file, rvalue);
+        }
+
+        warn_file_is_world_accessible(filename, NULL, unit, line);
+
+        r = link_parse_wol_password(link, rvalue);
+        if (r == -ENOMEM)
+                return log_oom();
+        if (r < 0) {
+                log_syntax(unit, LOG_WARNING, filename, line, r,
+                           "Failed to parse %s=, ignoring assignment: %s.", lvalue, rvalue);
+                return 0;
+        }
+
+        link->wol_password_file = mfree(link->wol_password_file);
         return 0;
 }
 

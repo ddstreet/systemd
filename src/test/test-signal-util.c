@@ -16,7 +16,7 @@ static void test_rt_signals(void) {
         info(SIGRTMAX);
 
         /* We use signals SIGRTMIN+0 to SIGRTMIN+24 unconditionally */
-        assert(SIGRTMAX - SIGRTMIN >= 24);
+        assert_se(SIGRTMAX - SIGRTMIN >= 24);
 }
 
 static void test_signal_to_string_one(int val) {
@@ -133,11 +133,50 @@ static void test_ignore_signals(void) {
         assert_se(default_signals(SIGINT, SIGUSR1, SIGUSR2, SIGTERM, SIGPIPE) >= 0);
 }
 
+static void test_pop_pending_signal(void) {
+
+        assert_se(signal_is_blocked(SIGUSR1) == 0);
+        assert_se(signal_is_blocked(SIGUSR2) == 0);
+        assert_se(pop_pending_signal(SIGUSR1) == 0);
+        assert_se(pop_pending_signal(SIGUSR2) == 0);
+
+        {
+                BLOCK_SIGNALS(SIGUSR1, SIGUSR2);
+
+                assert_se(signal_is_blocked(SIGUSR1) > 0);
+                assert_se(signal_is_blocked(SIGUSR2) > 0);
+
+                assert_se(pop_pending_signal(SIGUSR1) == 0);
+                assert_se(pop_pending_signal(SIGUSR2) == 0);
+
+                assert_se(raise(SIGUSR1) >= 0);
+
+                assert_se(pop_pending_signal(SIGUSR2) == 0);
+                assert_se(pop_pending_signal(SIGUSR1) == SIGUSR1);
+                assert_se(pop_pending_signal(SIGUSR1) == 0);
+
+                assert_se(raise(SIGUSR1) >= 0);
+                assert_se(raise(SIGUSR2) >= 0);
+
+                assert_cc(SIGUSR1 < SIGUSR2);
+
+                assert_se(pop_pending_signal(SIGUSR1, SIGUSR2) == SIGUSR1);
+                assert_se(pop_pending_signal(SIGUSR1, SIGUSR2) == SIGUSR2);
+                assert_se(pop_pending_signal(SIGUSR1, SIGUSR2) == 0);
+        }
+
+        assert_se(signal_is_blocked(SIGUSR1) == 0);
+        assert_se(signal_is_blocked(SIGUSR2) == 0);
+        assert_se(pop_pending_signal(SIGUSR1) == 0);
+        assert_se(pop_pending_signal(SIGUSR2) == 0);
+}
+
 int main(int argc, char *argv[]) {
         test_rt_signals();
         test_signal_from_string();
         test_block_signals();
         test_ignore_signals();
+        test_pop_pending_signal();
 
         return 0;
 }

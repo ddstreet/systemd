@@ -199,10 +199,6 @@ static int determine_space(Server *s, uint64_t *available, uint64_t *limit) {
 }
 
 void server_space_usage_message(Server *s, JournalStorage *storage) {
-        char fb1[FORMAT_BYTES_MAX], fb2[FORMAT_BYTES_MAX], fb3[FORMAT_BYTES_MAX],
-             fb4[FORMAT_BYTES_MAX], fb5[FORMAT_BYTES_MAX], fb6[FORMAT_BYTES_MAX];
-        JournalMetrics *metrics;
-
         assert(s);
 
         if (!storage)
@@ -211,32 +207,29 @@ void server_space_usage_message(Server *s, JournalStorage *storage) {
         if (cache_space_refresh(s, storage) < 0)
                 return;
 
-        metrics = &storage->metrics;
-        format_bytes(fb1, sizeof(fb1), storage->space.vfs_used);
-        format_bytes(fb2, sizeof(fb2), metrics->max_use);
-        format_bytes(fb3, sizeof(fb3), metrics->keep_free);
-        format_bytes(fb4, sizeof(fb4), storage->space.vfs_available);
-        format_bytes(fb5, sizeof(fb5), storage->space.limit);
-        format_bytes(fb6, sizeof(fb6), storage->space.available);
+        const JournalMetrics *metrics = &storage->metrics;
 
         server_driver_message(s, 0,
                               "MESSAGE_ID=" SD_MESSAGE_JOURNAL_USAGE_STR,
                               LOG_MESSAGE("%s (%s) is %s, max %s, %s free.",
-                                          storage->name, storage->path, fb1, fb5, fb6),
+                                          storage->name, storage->path,
+                                          FORMAT_BYTES(storage->space.vfs_used),
+                                          FORMAT_BYTES(storage->space.limit),
+                                          FORMAT_BYTES(storage->space.available)),
                               "JOURNAL_NAME=%s", storage->name,
                               "JOURNAL_PATH=%s", storage->path,
                               "CURRENT_USE=%"PRIu64, storage->space.vfs_used,
-                              "CURRENT_USE_PRETTY=%s", fb1,
+                              "CURRENT_USE_PRETTY=%s", FORMAT_BYTES(storage->space.vfs_used),
                               "MAX_USE=%"PRIu64, metrics->max_use,
-                              "MAX_USE_PRETTY=%s", fb2,
+                              "MAX_USE_PRETTY=%s", FORMAT_BYTES(metrics->max_use),
                               "DISK_KEEP_FREE=%"PRIu64, metrics->keep_free,
-                              "DISK_KEEP_FREE_PRETTY=%s", fb3,
+                              "DISK_KEEP_FREE_PRETTY=%s", FORMAT_BYTES(metrics->keep_free),
                               "DISK_AVAILABLE=%"PRIu64, storage->space.vfs_available,
-                              "DISK_AVAILABLE_PRETTY=%s", fb4,
+                              "DISK_AVAILABLE_PRETTY=%s", FORMAT_BYTES(storage->space.vfs_available),
                               "LIMIT=%"PRIu64, storage->space.limit,
-                              "LIMIT_PRETTY=%s", fb5,
+                              "LIMIT_PRETTY=%s", FORMAT_BYTES(storage->space.limit),
                               "AVAILABLE=%"PRIu64, storage->space.available,
-                              "AVAILABLE_PRETTY=%s", fb6,
+                              "AVAILABLE_PRETTY=%s", FORMAT_BYTES(storage->space.available),
                               NULL);
 }
 
@@ -818,7 +811,7 @@ static void write_to_journal(Server *s, uid_t uid, struct iovec *iovec, size_t n
                  * to ensure that the entries in the journal files are strictly ordered by time, in order to ensure
                  * bisection works correctly. */
 
-                log_debug("Time jumped backwards, rotating.");
+                log_info("Time jumped backwards, rotating.");
                 rotate = true;
         } else {
 
@@ -826,8 +819,8 @@ static void write_to_journal(Server *s, uid_t uid, struct iovec *iovec, size_t n
                 if (!f)
                         return;
 
-                if (journal_file_rotate_suggested(f, s->max_file_usec)) {
-                        log_debug("%s: Journal header limits reached or header out-of-date, rotating.", f->path);
+                if (journal_file_rotate_suggested(f, s->max_file_usec, LOG_INFO)) {
+                        log_info("%s: Journal header limits reached or header out-of-date, rotating.", f->path);
                         rotate = true;
                 }
         }
@@ -854,6 +847,8 @@ static void write_to_journal(Server *s, uid_t uid, struct iovec *iovec, size_t n
                 log_error_errno(r, "Failed to write entry (%zu items, %zu bytes), ignoring: %m", n, IOVEC_TOTAL_SIZE(iovec, n));
                 return;
         }
+
+        log_info_errno(r, "Failed to write entry (%zu items, %zu bytes), rotating before retrying: %m", n, IOVEC_TOTAL_SIZE(iovec, n));
 
         server_rotate(s);
         server_vacuum(s, false);
@@ -910,7 +905,7 @@ static void dispatch_message_real(
                 pid_t object_pid) {
 
         char source_time[sizeof("_SOURCE_REALTIME_TIMESTAMP=") + DECIMAL_STR_MAX(usec_t)];
-        _cleanup_free_ char *cmdline1 = NULL, *cmdline2 = NULL;
+        _unused_ _cleanup_free_ char *cmdline1 = NULL, *cmdline2 = NULL;
         uid_t journal_uid;
         ClientContext *o;
 
@@ -1120,7 +1115,6 @@ void server_dispatch_message(
 }
 
 int server_flush_to_var(Server *s, bool require_flag_file) {
-        char ts[FORMAT_TIMESPAN_MAX];
         sd_journal *j = NULL;
         const char *fn;
         unsigned n = 0;
@@ -1180,6 +1174,8 @@ int server_flush_to_var(Server *s, bool require_flag_file) {
                         goto finish;
                 }
 
+                log_info("Rotating system journal.");
+
                 server_rotate(s);
                 server_vacuum(s, false);
 
@@ -1213,7 +1209,7 @@ finish:
         server_driver_message(s, 0, NULL,
                               LOG_MESSAGE("Time spent on flushing to %s is %s for %u entries.",
                                           s->system_storage.path,
-                                          format_timespan(ts, sizeof(ts), usec_sub_unsigned(now(CLOCK_MONOTONIC), start), 0),
+                                          FORMAT_TIMESPAN(usec_sub_unsigned(now(CLOCK_MONOTONIC), start), 0),
                                           n),
                               NULL);
 
@@ -1436,7 +1432,7 @@ static int dispatch_sigusr2(sd_event_source *es, const struct signalfd_siginfo *
 
         assert(s);
 
-        log_info("Received SIGUSR2 signal from PID " PID_FMT ", as request to rotate journal.", si->ssi_pid);
+        log_info("Received SIGUSR2 signal from PID " PID_FMT ", as request to rotate journal, rotating.", si->ssi_pid);
         server_full_rotate(s);
 
         return 0;
@@ -1768,13 +1764,10 @@ static int dispatch_notify_event(sd_event_source *es, int fd, uint32_t revents, 
          * there's something to send it will be turned on again. */
 
         if (!s->sent_notify_ready) {
-                static const char p[] =
-                        "READY=1\n"
-                        "STATUS=Processing requests...";
-                ssize_t l;
+                static const char p[] = "READY=1\n"
+                                        "STATUS=Processing requests...";
 
-                l = send(s->notify_fd, p, strlen(p), MSG_DONTWAIT);
-                if (l < 0) {
+                if (send(s->notify_fd, p, strlen(p), MSG_DONTWAIT) < 0) {
                         if (errno == EAGAIN)
                                 return 0;
 
@@ -1785,14 +1778,9 @@ static int dispatch_notify_event(sd_event_source *es, int fd, uint32_t revents, 
                 log_debug("Sent READY=1 notification.");
 
         } else if (s->send_watchdog) {
+                static const char p[] = "WATCHDOG=1";
 
-                static const char p[] =
-                        "WATCHDOG=1";
-
-                ssize_t l;
-
-                l = send(s->notify_fd, p, strlen(p), MSG_DONTWAIT);
-                if (l < 0) {
+                if (send(s->notify_fd, p, strlen(p), MSG_DONTWAIT) < 0) {
                         if (errno == EAGAIN)
                                 return 0;
 
@@ -1978,7 +1966,7 @@ static int vl_method_rotate(Varlink *link, JsonVariant *parameters, VarlinkMetho
         if (json_variant_elements(parameters) > 0)
                 return varlink_error_invalid_parameter(link, parameters);
 
-        log_info("Received client request to rotate journal.");
+        log_info("Received client request to rotate journal, rotating.");
         server_full_rotate(s);
 
         return varlink_reply(link, NULL);

@@ -52,7 +52,7 @@ static void test_oomd_cgroup_kill(void) {
         /* Create another cgroup below this one for the pids we forked off. We need this to be managed
          * by the test so that pid1 doesn't delete it before we can read the xattrs. */
         cgroup = path_join(cgroup_root, "oomdkilltest");
-        assert(cgroup);
+        assert_se(cgroup);
         assert_se(cg_create(SYSTEMD_CGROUP_CONTROLLER, cgroup) >= 0);
 
         /* If we don't have permissions to set xattrs we're likely in a userns or missing capabilities */
@@ -90,6 +90,7 @@ static void test_oomd_cgroup_context_acquire_and_insert(void) {
         _cleanup_free_ char *cgroup = NULL;
         ManagedOOMPreference root_pref;
         OomdCGroupContext *c1, *c2;
+        CGroupMask mask;
         bool test_xattrs;
         int root_xattrs, r;
 
@@ -101,6 +102,11 @@ static void test_oomd_cgroup_context_acquire_and_insert(void) {
 
         if (cg_all_unified() <= 0)
                 return (void) log_tests_skipped("cgroups are not running in unified mode");
+
+        assert_se(cg_mask_supported(&mask) >= 0);
+
+        if (!FLAGS_SET(mask, CGROUP_MASK_MEMORY))
+                return (void) log_tests_skipped("cgroup memory controller is not available");
 
         assert_se(cg_pid_get_path(NULL, 0, &cgroup) >= 0);
 

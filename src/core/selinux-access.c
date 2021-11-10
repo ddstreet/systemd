@@ -57,11 +57,11 @@ static int audit_callback(
         if (sd_bus_creds_get_egid(audit->creds, &gid) >= 0)
                 xsprintf(gid_buf, GID_FMT, gid);
 
-        snprintf(msgbuf, msgbufsize,
-                 "auid=%s uid=%s gid=%s%s%s%s%s%s%s",
-                 login_uid_buf, uid_buf, gid_buf,
-                 audit->path ? " path=\"" : "", strempty(audit->path), audit->path ? "\"" : "",
-                 audit->cmdline ? " cmdline=\"" : "", strempty(audit->cmdline), audit->cmdline ? "\"" : "");
+        (void) snprintf(msgbuf, msgbufsize,
+                        "auid=%s uid=%s gid=%s%s%s%s%s%s%s",
+                        login_uid_buf, uid_buf, gid_buf,
+                        audit->path ? " path=\"" : "", strempty(audit->path), audit->path ? "\"" : "",
+                        audit->cmdline ? " cmdline=\"" : "", strempty(audit->cmdline), audit->cmdline ? "\"" : "");
 
         return 0;
 }
@@ -126,7 +126,7 @@ _printf_(2, 3) static int log_callback(int type, const char *fmt, ...) {
 
         DISABLE_WARNING_FORMAT_NONLITERAL;
         log_internalv(LOG_AUTH | callback_type_to_priority(type),
-                      0, PROJECT_FILE, __LINE__, __FUNCTION__,
+                      0, PROJECT_FILE, __LINE__, __func__,
                       fmt2, ap);
         REENABLE_WARNING;
         va_end(ap);

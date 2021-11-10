@@ -11,8 +11,8 @@
 #include "dbus-unit.h"
 #include "escape.h"
 #include "fd-util.h"
-#include "fs-util.h"
 #include "glob-util.h"
+#include "inotify-util.h"
 #include "macro.h"
 #include "mkdir.h"
 #include "path.h"
@@ -480,7 +480,7 @@ static void path_enter_dead(Path *p, PathResult f) {
                 p->result = f;
 
         unit_log_result(UNIT(p), p->result == PATH_SUCCESS, path_result_to_string(p->result));
-        path_set_state(p, p->result != PATH_SUCCESS ? PATH_FAILED : PATH_DEAD);
+        path_set_state(p, p->result == PATH_SUCCESS ? PATH_DEAD : PATH_FAILED);
 }
 
 static void path_enter_running(Path *p) {
@@ -668,13 +668,14 @@ static int path_deserialize_item(Unit *u, const char *key, const char *value, FD
                         p->result = f;
 
         } else if (streq(key, "path-spec")) {
-                int previous_exists, skip = 0, r;
+                int previous_exists, skip = 0;
                 _cleanup_free_ char *type_str = NULL;
 
                 if (sscanf(value, "%ms %i %n", &type_str, &previous_exists, &skip) < 2)
                         log_unit_debug(u, "Failed to parse path-spec value: %s", value);
                 else {
                         _cleanup_free_ char *unescaped = NULL;
+                        ssize_t l;
                         PathType type;
                         PathSpec *s;
 
@@ -684,9 +685,9 @@ static int path_deserialize_item(Unit *u, const char *key, const char *value, FD
                                 return 0;
                         }
 
-                        r = cunescape(value+skip, 0, &unescaped);
-                        if (r < 0) {
-                                log_unit_warning_errno(u, r, "Failed to unescape serialize path: %m");
+                        l = cunescape(value+skip, 0, &unescaped);
+                        if (l < 0) {
+                                log_unit_warning_errno(u, l, "Failed to unescape serialize path: %m");
                                 return 0;
                         }
 
@@ -779,6 +780,11 @@ static void path_trigger_notify(Unit *u, Unit *other) {
                 return;
         }
 
+        if (unit_has_failed_condition_or_assert(other)) {
+                path_enter_dead(p, PATH_FAILURE_UNIT_CONDITION_FAILED);
+                return;
+        }
+
         /* Don't propagate anything if there's still a job queued */
         if (other->job)
                 return;
@@ -821,20 +827,21 @@ static int path_test_start_limit(Unit *u) {
 }
 
 static const char* const path_type_table[_PATH_TYPE_MAX] = {
-        [PATH_EXISTS] = "PathExists",
-        [PATH_EXISTS_GLOB] = "PathExistsGlob",
+        [PATH_EXISTS]              = "PathExists",
+        [PATH_EXISTS_GLOB]         = "PathExistsGlob",
         [PATH_DIRECTORY_NOT_EMPTY] = "DirectoryNotEmpty",
-        [PATH_CHANGED] = "PathChanged",
-        [PATH_MODIFIED] = "PathModified",
+        [PATH_CHANGED]             = "PathChanged",
+        [PATH_MODIFIED]            = "PathModified",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(path_type, PathType);
 
 static const char* const path_result_table[_PATH_RESULT_MAX] = {
-        [PATH_SUCCESS] = "success",
-        [PATH_FAILURE_RESOURCES] = "resources",
-        [PATH_FAILURE_START_LIMIT_HIT] = "start-limit-hit",
-        [PATH_FAILURE_UNIT_START_LIMIT_HIT] = "unit-start-limit-hit",
+        [PATH_SUCCESS]                       = "success",
+        [PATH_FAILURE_RESOURCES]             = "resources",
+        [PATH_FAILURE_START_LIMIT_HIT]       = "start-limit-hit",
+        [PATH_FAILURE_UNIT_START_LIMIT_HIT]  = "unit-start-limit-hit",
+        [PATH_FAILURE_UNIT_CONDITION_FAILED] = "unit-condition-failed",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(path_result, PathResult);

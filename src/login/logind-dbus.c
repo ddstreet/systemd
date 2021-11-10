@@ -1491,41 +1491,59 @@ static int have_multiple_sessions(
         return false;
 }
 
-static int bus_manager_log_shutdown(
-                Manager *m,
-                const char *unit_name) {
-
-        const char *p, *q;
-
+_printf_(2, 0)
+static int log_with_wall_message(Manager *m, const char *d, const char *p, const char *q) {
         assert(m);
-        assert(unit_name);
-
-        if (streq(unit_name, SPECIAL_POWEROFF_TARGET)) {
-                p = "MESSAGE=System is powering down";
-                q = "SHUTDOWN=power-off";
-        } else if (streq(unit_name, SPECIAL_REBOOT_TARGET)) {
-                p = "MESSAGE=System is rebooting";
-                q = "SHUTDOWN=reboot";
-        } else if (streq(unit_name, SPECIAL_HALT_TARGET)) {
-                p = "MESSAGE=System is halting";
-                q = "SHUTDOWN=halt";
-        } else if (streq(unit_name, SPECIAL_KEXEC_TARGET)) {
-                p = "MESSAGE=System is rebooting with kexec";
-                q = "SHUTDOWN=kexec";
-        } else {
-                p = "MESSAGE=System is shutting down";
-                q = NULL;
-        }
 
         if (isempty(m->wall_message))
                 p = strjoina(p, ".");
         else
                 p = strjoina(p, " (", m->wall_message, ").");
 
-        return log_struct(LOG_NOTICE,
-                          "MESSAGE_ID=" SD_MESSAGE_SHUTDOWN_STR,
-                          p,
-                          q);
+        return log_struct(LOG_NOTICE, d, p, q);
+}
+
+static int bus_manager_log_shutdown(
+                Manager *m,
+                const char *unit_name) {
+
+        assert(m);
+        assert(unit_name);
+
+        if (streq(unit_name, SPECIAL_POWEROFF_TARGET))
+                return log_with_wall_message(m,
+                                             "MESSAGE_ID=" SD_MESSAGE_SHUTDOWN_STR,
+                                             "MESSAGE=System is powering down",
+                                             "SHUTDOWN=power-off");
+
+        if (streq(unit_name, SPECIAL_REBOOT_TARGET))
+                return log_with_wall_message(m,
+                                             "MESSAGE_ID=" SD_MESSAGE_SHUTDOWN_STR,
+                                             "MESSAGE=System is rebooting",
+                                             "SHUTDOWN=reboot");
+
+        if (streq(unit_name, SPECIAL_HALT_TARGET))
+                return log_with_wall_message(m,
+                                             "MESSAGE_ID=" SD_MESSAGE_SHUTDOWN_STR,
+                                             "MESSAGE=System is halting",
+                                             "SHUTDOWN=halt");
+
+        if (streq(unit_name, SPECIAL_KEXEC_TARGET))
+                return log_with_wall_message(m,
+                                             "MESSAGE_ID=" SD_MESSAGE_SHUTDOWN_STR,
+                                             "MESSAGE=System is rebooting with kexec",
+                                             "SHUTDOWN=kexec");
+
+        if (streq(unit_name, SPECIAL_FACTORY_RESET_TARGET))
+                return log_with_wall_message(m,
+                                             "MESSAGE_ID=" SD_MESSAGE_FACTORY_RESET_STR,
+                                             "MESSAGE=System is performing factory reset",
+                                             NULL);
+
+        return log_with_wall_message(m,
+                                     "MESSAGE_ID=" SD_MESSAGE_SHUTDOWN_STR,
+                                     "MESSAGE=System is shutting down",
+                                     NULL);
 }
 
 static int lid_switch_ignore_handler(sd_event_source *e, uint64_t usec, void *userdata) {
@@ -1791,6 +1809,9 @@ static int verify_shutdown_creds(
         assert(message);
         assert(w >= 0);
         assert(w <= _INHIBIT_WHAT_MAX);
+        assert(action);
+        assert(action_multiple_sessions);
+        assert(action_ignore_inhibit);
 
         r = sd_bus_query_sender_creds(message, SD_BUS_CREDS_EUID, &creds);
         if (r < 0)
@@ -1808,7 +1829,7 @@ static int verify_shutdown_creds(
         blocked = manager_is_inhibited(m, w, INHIBIT_BLOCK, NULL, false, true, uid, NULL);
         interactive = flags & SD_LOGIND_INTERACTIVE;
 
-        if (multiple_sessions && action_multiple_sessions) {
+        if (multiple_sessions) {
                 r = bus_verify_polkit_async(message, CAP_SYS_BOOT, action_multiple_sessions, NULL, interactive, UID_INVALID, &m->polkit_registry, error);
                 if (r < 0)
                         return r;
@@ -1822,16 +1843,14 @@ static int verify_shutdown_creds(
                         return sd_bus_error_setf(error, SD_BUS_ERROR_ACCESS_DENIED,
                                                  "Access denied to root due to active block inhibitor");
 
-                if (action_ignore_inhibit) {
-                        r = bus_verify_polkit_async(message, CAP_SYS_BOOT, action_ignore_inhibit, NULL, interactive, UID_INVALID, &m->polkit_registry, error);
-                        if (r < 0)
-                                return r;
-                        if (r == 0)
-                                return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
-                }
+                r = bus_verify_polkit_async(message, CAP_SYS_BOOT, action_ignore_inhibit, NULL, interactive, UID_INVALID, &m->polkit_registry, error);
+                if (r < 0)
+                        return r;
+                if (r == 0)
+                        return 1; /* No authorization for now, but the async polkit stuff will call us again when it has it */
         }
 
-        if (!multiple_sessions && !blocked && action) {
+        if (!multiple_sessions && !blocked) {
                 r = bus_verify_polkit_async(message, CAP_SYS_BOOT, action, NULL, interactive, UID_INVALID, &m->polkit_registry, error);
                 if (r < 0)
                         return r;
@@ -2140,7 +2159,7 @@ static int manager_scheduled_shutdown_handler(
         else if (streq(m->scheduled_shutdown_type, "halt"))
                 target = SPECIAL_HALT_TARGET;
         else
-                assert_not_reached("unexpected shutdown type");
+                assert_not_reached();
 
         /* Don't allow multiple jobs being executed at the same time */
         if (m->action_what > 0) {

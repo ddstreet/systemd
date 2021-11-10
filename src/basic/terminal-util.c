@@ -26,6 +26,7 @@
 #include "fd-util.h"
 #include "fileio.h"
 #include "fs-util.h"
+#include "inotify-util.h"
 #include "io-util.h"
 #include "log.h"
 #include "macro.h"
@@ -854,6 +855,39 @@ unsigned lines(void) {
 
         cached_lines = l;
         return cached_lines;
+}
+
+int terminal_set_size_fd(int fd, const char *ident, unsigned rows, unsigned cols) {
+        struct winsize ws;
+
+        if (rows == UINT_MAX && cols == UINT_MAX)
+                return 0;
+
+        if (ioctl(fd, TIOCGWINSZ, &ws) < 0)
+                return log_debug_errno(errno,
+                                       "TIOCGWINSZ ioctl for getting %s size failed, not setting terminal size: %m",
+                                       ident ?: "TTY");
+
+        if (rows == UINT_MAX)
+                rows = ws.ws_row;
+        else if (rows > USHRT_MAX)
+                rows = USHRT_MAX;
+
+        if (cols == UINT_MAX)
+                cols = ws.ws_col;
+        else if (cols > USHRT_MAX)
+                cols = USHRT_MAX;
+
+        if (rows == ws.ws_row && cols == ws.ws_col)
+                return 0;
+
+        ws.ws_row = rows;
+        ws.ws_col = cols;
+
+        if (ioctl(fd, TIOCSWINSZ, &ws) < 0)
+                return log_debug_errno(errno, "TIOCSWINSZ ioctl for setting %s size failed: %m", ident ?: "TTY");
+
+        return 0;
 }
 
 /* intended to be used as a SIGWINCH sighandler */

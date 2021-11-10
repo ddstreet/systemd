@@ -7,8 +7,6 @@ Bugfixes:
 * userdbctl: "Password OK: yes" is shown even when there are no passwords
   or the password is locked.
 
-* Get rid of nftw(). We should refuse to use such useless APIs on principle.
-
 * Jun 01 09:43:02 krowka systemd[1]: Unit user@1000.service has alias user@.service.
   Jun 01 09:43:02 krowka systemd[1]: Unit user@6.service has alias user@.service.
   Jun 01 09:43:02 krowka systemd[1]: Unit user-runtime-dir@6.service has alias user-runtime-dir@.service.
@@ -83,6 +81,84 @@ Janitorial Clean-ups:
 
 Features:
 
+* add tiny service that decrypts encrypted user records passed via initrd
+  credential logic and drops them into /run where nss-systemd can pick them up,
+  similar to /run/host/userdb/. Usecase: drop a root user JSON record there,
+  and use it in the initrd to log in as root with locally selected password,
+  for debugging purposes.
+
+* drop dependency on libcap, replace by direct syscalls based on
+  CapabilityQuintet we already have. (This likely allows us drop drop libcap
+  dep in the base OS image)
+
+* sysext: automatically activate sysext images dropped in via new sd-stub
+  sysext pickup logic.
+
+* add concept for "exitrd" as inverse of "initrd", that we can transition to at
+  shutdown, and has similar security semantics. This should then take the place
+  of dracut's shutdown logic. Should probably support sysexts too. Care needs
+  to be taken that the resulting logic ends up in RAM, i.e. is copied out of
+  on-disk storage.
+
+* sd-stub: automatically pick up microcode from ESP and synthesize initrd from
+  it, and measure it. Signing is not necessary, as microcode does that on its
+  own. Pass as first initrd to kernel.
+
+* userdbd: implement an additional varlink service socket that provides the
+  host user db in restricted form, then allow this to be bind mounted into
+  sandboxed environments that want the host database in minimal form. All
+  records would be stripped of all meta info, except the basic UID/name
+  info. Then use this in portabled environments that do not use PrivateUsers=1.
+
+* logind introduce two types of sessions: "heavy" and "light". The former would
+  be our current sessions. But the latter would be a new type of session that
+  is mostly the same but does not pull in user@.service or wait for it. Then,
+  allow configuration which type of session is desired via pam_systemd
+  parameters, and then make user@.service's session one of these "light" ones.
+  People could then choose to make FTP sessions and suchlike "light" if they
+  don't want the service manager to be started for that.
+
+* /etc/veritytab: allow that the roothash column can be specified as fs path
+  including a path to an AF_UNIX path, similar to how we do things with the
+  keys of /etc/crypttab. That way people can store/provide the roothash
+  externally and provide to us on demand only.
+
+* add high-level lockdown level for GPT dissection logic: e.g. an enum that can
+  be ANY (to mount anything), TRUSTED (to require that /usr is on signed
+  verity, but rest doesn't matter), LOCKEDDOWN (to require that everything is
+  on signed verity, except for ESP), SUPERLOCKDOWN (like LOCKEDDOWN but ESP not
+  allowed). And then maybe some flavours of that that declare what is expected
+  from home/srv/var… Then, add a new cmdline flag to all tools that parse such
+  images, to configure this. Also, add a kernel cmdline option for this, to be
+  honoured by the gpt auto generator.
+
+* nspawn: maybe optionally insert .nspawn file as GPT partition into images, so
+  that such container images are entirely stand-alone and can be updated as
+  one.
+
+* we probably should extend the root verity hash of the root fs into some PCR
+  on boot. (i.e. maybe add a crypttab option tpm2-measure=8 or so to measure it
+  into PCR 8)
+
+* add a "policy" to the dissection logic. i.e. a bit mask what is OK to mount,
+  what must be read-only, what requires encryption, and what requires
+  authentication.
+
+* in uefi stub: query firmware regarding which PCRs are being used, store that
+  in EFI var. then use this when enrolling TPM2 in cryptsetup to verify that
+  the selected PCRs actually are used by firmware.
+
+* rework recursive read-only remount to use new mount API
+
+* PAM: pick auf one authentication token from credentials
+
+* tpm2: figure out if we need to do anything for TPM2 parameter encryption? And
+  if so, what precisely?
+
+* when mounting disk images: if IMAGE_ID/IMAGE_VERSION is set in os-release
+  data in the image, make sure the image filename actually matches this, so
+  that images cannot be misused.
+
 * New udev block device symlink names:
   /dev/disk/by-parttypelabel/<pttype>/<ptlabel>. Use case: if pt label is used
   as partition image version string, this is a safe way to reference a specific
@@ -142,16 +218,37 @@ Features:
 
 * expose MS_NOSYMFOLLOW in various places
 
-* ability to insert trusted configuration and secrets into the boot parameters
-  of a kernel booting in a VM or on baremetal some way, via TPM
-  protection. idea:
-  1. pass via /proc/bootconfig
-  2. for secrets: put secrets in node of /proc/bootconfig, decrypt them via
-     TPM early on in PID 1, put them in $CREDENTIAL_PATH logic
-  3. for config: put signed data in node /proc/booconfig, validate via TPM
-     early on in PID 1, put data into /run/bootconfig/ as individual files
-  4. boot loader/stub should pick these up automatically from the boot loader
-     file systems
+* allow passing creds into kernel when booting: in EFI stub, collect creds
+  files from ESP directory, generate CPIO archive on the fly from them, so that
+  they are dropped into /run/initramfs/creds/ and pass to kernel as additional
+  initrd. Then, use LoadCredentialEncrypted=foo:/run/initramfs/creds/foo to
+  load them.
+
+* make LoadCredential= automatically find credentials in /etc/creds,
+  /run/creds, … and so on, if path component is unqualified
+
+* teach LoadCredential=/LoadCredentialEncrypted= to load credentials from
+  kernel cmdline, maybe: LoadCredentialEncrypted=foobar:proc-cmdline:foobar
+
+* credentials system:
+  - acquire from kernel command line
+  - acquire from EFI variable?
+  - acquire via via ask-password?
+  - acquire creds via keyring?
+  - pass creds via keyring?
+  - pass creds via memfd?
+  - acquire + decrypt creds from pkcs11?
+  - make systemd-cryptsetup acquire pw via creds logic
+  - make PAMName= acquire pw via creds logic
+  - make macsec/wireguard code in networkd read key via creds logic
+  - make gatwayd/remote read key via creds logic
+  - add sd_notify() command for flushing out creds not needed anymore
+
+* teach LoadCredential= the ability to load all files from a specified dir as
+  individual creds
+
+* add tpm.target or so which is delayed until TPM2 device showed up in case
+  firmware indicates there is one.
 
 * tpm2: support a PIN policy, i.e. allowing windows-style short authentication
   passwords by using the TPM2 to enforce ratelimiting and such, use for
@@ -165,9 +262,6 @@ Features:
   and such
 
 * introduce a new group to own TPM devices
-
-* cryptenroll: politely refuse enrolling new keys to homed volumes, since we
-  we cannot update identity info
 
 * cryptsetup: if only recovery keys are registered and no regular passphrases,
   ask user for "recovery key", not "passphrase"
@@ -195,19 +289,6 @@ Features:
   - cryptsetup-generator: allow specification of passwords in crypttab itself
   - support rd.luks.allow-discards= kernel cmdline params in cryptsetup generator
 
-* credentials system:
-  - maybe add AcquireCredential= for querying a cred via ask-password
-  - maybe try to acquire creds via keyring?
-  - maybe try to pass creds via keyring?
-  - maybe optionally pass creds via memfd
-  - maybe add support for decrypting creds via TPM
-  - maybe add support for decrypting/importing creds via pkcs11
-  - make systemd-cryptsetup acquire pw via creds logic
-  - make PAMName= acquire pw via creds logic
-  - make macsec/wireguard code in networkd read key via creds logic
-  - make gatwayd/remote read key via creds logic
-  - add sd_notify() command for flushing out creds not needed anymore
-
 * when configuring loopback netif, and it fails due to EPERM, eat up error if
   it happens to be set up alright already.
 
@@ -223,9 +304,6 @@ Features:
   address as conduit for some minimal connection metainfo, and use it to
   restore the "description" logic that kdbus used to have.
 
-* teach LoadCredential= the ability to load all files from a specified dir as
-  individual creds
-
 * systemd-analyze netif that explains predictable interface (or networkctl)
 
 * Add service setting to run a service within the specified VRF. i.e. do the
@@ -237,6 +315,9 @@ Features:
 
 * special case some calls of chase_symlinks() to use openat2() internally, so
   that the kernel does what we otherwise do.
+
+* add a new flag to chase_symlinks() that stops chasing once the first missing
+  component is found and then allows the caller to create the rest.
 
 * make use of new glibc 2.32 APIs sigabbrev_np() and strerrorname_np().
 
@@ -256,6 +337,8 @@ Features:
 * pid1: Move to tracking of main pid/control pid of units per pidfd
 
 * pid1: support new clone3() fork-into-cgroup feature
+
+* pid1: support new cgroup.kill to terminate all processes in a cgroup
 
 * pid1: also remove PID files of a service when the service starts, not just
   when it exits
@@ -306,11 +389,9 @@ Features:
 
 * unify on openssl (as soon as OpenSSL 3.0 is out, and the Debian license
   confusion is gone)
-  - port sd_id128_get_machine_app_specific() over from khash
   - port resolved over from libgcrypt (DNSSEC code)
   - port journald + fsprg over from libgcrypt
   - port importd over from libgcrypt
-  - when that's done: kill khash.c
   - when that's done: kill gnutls support in resolved
 
 * add growvol and makevol options for /etc/crypttab, similar to
@@ -371,9 +452,8 @@ Features:
   https://docs.microsoft.com/en-us/windows-hardware/design/device-experiences/modern-standby-wake-sources
   at the end).
 
-* We should probably replace /var/log/README, /etc/rc.d/README with symlinks
-  that are linked to these places instead of copied. After all they are
-  constant vendor data.
+* We should probably replace /etc/rc.d/README with a symlink to doc
+  content. After all it is constant vendor data.
 
 * maybe add kernel cmdline params: to force random seed crediting
 
@@ -420,6 +500,7 @@ Features:
 * paranoia: whenever we process passwords, call mlock() on the memory
   first. i.e. look for all places we use free_and_erasep() and
   augment them with mlock(). Also use MADV_DONTDUMP.
+  Alternatively (preferably?) use memfd_secret().
 
 * Move RestrictAddressFamily= to the new cgroup create socket
 
@@ -1010,10 +1091,6 @@ Features:
 
 * bootctl,sd-boot: actually honour the "architecture" key
 
-* sd-boot: add service that automatically runs "bootctl update" on every boot,
-  in a graceful way, so that updated /usr trees automatically propagate into
-  updated boot loaders on reboot.
-
 * bootctl:
   - teach it to prepare an ESP wholesale, i.e. with mkfs.vfat invocation
   - teach it to copy in unified kernel images and maybe type #1 boot loader spec entries from host
@@ -1182,48 +1259,33 @@ Features:
   - introduce API for "making room", that grows/shrinks home directory
     according to elastic parameters, discards blocks, and removes additional snapshots. Call it
     either from UI when disk space gets low
-
-* homed: during login resize fs automatically towards size goal. Specifically,
-  resize to diskSize if possible, but leave a certain amount (configured by a
-  new value diskLeaveFreeSize) of space free on the backing fs.
-
-* homed: permit multiple user record signing keys to be used locally, and pick
-  the right one for signing records automatically depending on a pre-existing
-  signature
-
-* homed: add a way to "adopt" a home directory, i.e. strip foreign signatures
-  and insert a local signature instead.
-
-* homed: as an extension to the directory+subvolume backend: if located on
-  especially marked fs, then sync down password into LUKS header of that fs,
-  and always verify passwords against it too. Bootstrapping is a problem
-  though: if no one is logged in (or no other user even exists yet), how do you
-  unlock the volume in order to create the first user and add the first pw.
-
-* homed: support new FS_IOC_ADD_ENCRYPTION_KEY ioctl for setting up fscrypt
-
-* homed: maybe pre-create ~/.cache as subvol so that it can have separate quota
-  easily?
-
-* homed: if kernel 5.12 uid mapping mounts exist, use that instead of recursive
-  chowns.
-
-* add a switch to homectl (maybe called --first-boot) where it will check if
-  any non-system users exist, and if not prompts interactively for basic user
-  info, mimicking systemd-firstboot. Then, place this in a service that runs
-  after systemd-homed, but before gdm and friends, as a simple, barebones
-  fallback logic to get a regular user created on uninitialized systems.
-
-* homed: store PKCS#11 + FIDO2 token info in LUKS2 header, compatible with
-  systemd-cryptsetup, so that it can unlock homed volumes
-
-* homed: try to unmount in regular intervals when home dir was busy when we
-  tried because idle.
-
-* homed: keep an fd to the homedir open at all times, to keep the fs pinned
-  (autofs and such) while user is logged in.
-
-* when we resize disks (homed?) always round up to 4K sectors, not 512K
+  - when homed is in use, maybe start the user session manager in a mount namespace with MS_SLAVE,
+    so that mounts propagate down but not up - eg, user A setting up a backup volume
+    doesn't mean user B sees it
+  - use credentials logic/TPM2 logic to store homed signing key
+  - during login resize fs automatically towards size goal. Specifically,
+    resize to diskSize if possible, but leave a certain amount (configured by a
+    new value diskLeaveFreeSize) of space free on the backing fs.
+  - permit multiple user record signing keys to be used locally, and pick
+    the right one for signing records automatically depending on a pre-existing
+    signature
+  - add a way to "adopt" a home directory, i.e. strip foreign signatures
+    and insert a local signature instead.
+  - as an extension to the directory+subvolume backend: if located on
+    especially marked fs, then sync down password into LUKS header of that fs,
+    and always verify passwords against it too. Bootstrapping is a problem
+    though: if no one is logged in (or no other user even exists yet), how do you
+    unlock the volume in order to create the first user and add the first pw.
+  - support new FS_IOC_ADD_ENCRYPTION_KEY ioctl for setting up fscrypt
+  - maybe pre-create ~/.cache as subvol so that it can have separate quota
+    easily?
+  - add a switch to homectl (maybe called --first-boot) where it will check if
+    any non-system users exist, and if not prompts interactively for basic user
+    info, mimicking systemd-firstboot. Then, place this in a service that runs
+    after systemd-homed, but before gdm and friends, as a simple, barebones
+    fallback logic to get a regular user created on uninitialized systems.
+  - store PKCS#11 + FIDO2 token info in LUKS2 header, compatible with
+    systemd-cryptsetup, so that it can unlock homed volumes
 
 * add a new switch --auto-definitions=yes/no or so to systemd-repart. If
   specified, synthesize a definition automatically if we can: enlarge last

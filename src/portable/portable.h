@@ -12,10 +12,12 @@ typedef struct PortableMetadata {
         int fd;
         char *source;
         char *image_path;
+        char *selinux_label;
         char name[];
 } PortableMetadata;
 
 #define PORTABLE_METADATA_IS_OS_RELEASE(m) (streq((m)->name, "/etc/os-release"))
+#define PORTABLE_METADATA_IS_EXTENSION_RELEASE(m) (startswith((m)->name, "/usr/lib/extension-release.d/extension-release."))
 #define PORTABLE_METADATA_IS_UNIT(m) (!IN_SET((m)->name[0], 0, '/'))
 
 typedef enum PortableFlags {

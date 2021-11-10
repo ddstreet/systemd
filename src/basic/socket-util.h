@@ -135,9 +135,10 @@ int ip_tos_to_string_alloc(int i, char **s);
 int ip_tos_from_string(const char *s);
 
 typedef enum {
-        IFNAME_VALID_ALTERNATIVE = 1 << 0,
-        IFNAME_VALID_NUMERIC     = 1 << 1,
-        _IFNAME_VALID_ALL        = IFNAME_VALID_ALTERNATIVE | IFNAME_VALID_NUMERIC,
+        IFNAME_VALID_ALTERNATIVE = 1 << 0, /* Allow "altnames" too */
+        IFNAME_VALID_NUMERIC     = 1 << 1, /* Allow decimal formatted ifindexes too */
+        IFNAME_VALID_SPECIAL     = 1 << 2, /* Allow the special names "all" and "default" */
+        _IFNAME_VALID_ALL        = IFNAME_VALID_ALTERNATIVE | IFNAME_VALID_NUMERIC | IFNAME_VALID_SPECIAL,
 } IfnameValidFlags;
 bool ifname_valid_char(char a);
 bool ifname_valid_full(const char *p, IfnameValidFlags flags);
@@ -153,7 +154,7 @@ int getpeergroups(int fd, gid_t **ret);
 ssize_t send_one_fd_iov_sa(
                 int transport_fd,
                 int fd,
-                struct iovec *iov, size_t iovlen,
+                const struct iovec *iov, size_t iovlen,
                 const struct sockaddr *sa, socklen_t len,
                 int flags);
 int send_one_fd_sa(int transport_fd,
@@ -245,7 +246,7 @@ struct cmsghdr* cmsg_find(struct msghdr *mh, int level, int type, socklen_t leng
                         _len = sizeof(struct sockaddr_vm);              \
                         break;                                          \
                 default:                                                \
-                        assert_not_reached("invalid socket family");    \
+                        assert_not_reached();                           \
                 }                                                       \
                 _len;                                                   \
         })
@@ -326,3 +327,6 @@ static inline int socket_set_recvfragsize(int fd, int af, bool b) {
 }
 
 int socket_get_mtu(int fd, int af, size_t *ret);
+
+/* an initializer for struct ucred that initialized all fields to the invalid value appropriate for each */
+#define UCRED_INVALID { .pid = 0, .uid = UID_INVALID, .gid = GID_INVALID }

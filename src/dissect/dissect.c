@@ -8,6 +8,7 @@
 #include <sys/mount.h>
 
 #include "architecture.h"
+#include "chase-symlinks.h"
 #include "copy.h"
 #include "dissect-image.h"
 #include "fd-util.h"
@@ -287,7 +288,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return -EINVAL;
 
                 default:
-                        assert_not_reached("Unhandled option");
+                        assert_not_reached();
                 }
 
         }
@@ -344,7 +345,7 @@ static int parse_argv(int argc, char *argv[]) {
                 break;
 
         default:
-                assert_not_reached("Unknown action.");
+                assert_not_reached();
         }
 
         return 1;
@@ -378,17 +379,15 @@ static int action_dissect(DissectedImage *m, LoopDevice *d) {
         assert(d);
 
         if (arg_json_format_flags & (JSON_FORMAT_OFF|JSON_FORMAT_PRETTY|JSON_FORMAT_PRETTY_AUTO))
-                (void) pager_open(arg_pager_flags);
+                pager_open(arg_pager_flags);
 
         if (arg_json_format_flags & JSON_FORMAT_OFF)
                 printf("      Name: %s\n", basename(arg_image));
 
         if (ioctl(d->fd, BLKGETSIZE64, &size) < 0)
                 log_debug_errno(errno, "Failed to query size of loopback device: %m");
-        else if (arg_json_format_flags & JSON_FORMAT_OFF) {
-                char s[FORMAT_BYTES_MAX];
-                printf("      Size: %s\n", format_bytes(s, sizeof(s), size));
-        }
+        else if (arg_json_format_flags & JSON_FORMAT_OFF)
+                printf("      Size: %s\n", FORMAT_BYTES(size));
 
         if (arg_json_format_flags & JSON_FORMAT_OFF)
                 putc('\n', stdout);
@@ -516,8 +515,10 @@ static int action_dissect(DissectedImage *m, LoopDevice *d) {
 
                 if (arg_verity_settings.data_path)
                         r = table_add_cell(t, NULL, TABLE_STRING, "external");
-                else if (dissected_image_can_do_verity(m, i))
-                        r = table_add_cell(t, NULL, TABLE_STRING, yes_no(dissected_image_has_verity(m, i)));
+                else if (dissected_image_verity_candidate(m, i))
+                        r = table_add_cell(t, NULL, TABLE_STRING,
+                                           dissected_image_verity_sig_ready(m, i) ? "signed" :
+                                           yes_no(dissected_image_verity_ready(m, i)));
                 else
                         r = table_add_cell(t, NULL, TABLE_EMPTY, NULL);
                 if (r < 0)
@@ -681,7 +682,7 @@ static int action_copy(DissectedImage *m, LoopDevice *d) {
                 if (r < 0)
                         return log_error_errno(r, "Failed to copy bytes from %s in mage '%s' to '%s': %m", arg_source, arg_image, arg_target);
 
-                (void) copy_xattr(source_fd, target_fd);
+                (void) copy_xattr(source_fd, target_fd, 0);
                 (void) copy_access(source_fd, target_fd);
                 (void) copy_times(source_fd, target_fd, 0);
 
@@ -750,7 +751,7 @@ static int action_copy(DissectedImage *m, LoopDevice *d) {
                 if (r < 0)
                         return log_error_errno(r, "Failed to copy bytes from '%s' to '%s' in image '%s': %m", arg_source, arg_target, arg_image);
 
-                (void) copy_xattr(source_fd, target_fd);
+                (void) copy_xattr(source_fd, target_fd, 0);
                 (void) copy_access(source_fd, target_fd);
                 (void) copy_times(source_fd, target_fd, 0);
 
@@ -797,10 +798,18 @@ static int run(int argc, char *argv[]) {
                         arg_image,
                         &arg_verity_settings,
                         NULL,
+                        d->diskseq,
                         d->uevent_seqnum_not_before,
                         d->timestamp_not_before,
                         arg_flags,
                         &m);
+        if (r < 0)
+                return r;
+
+        r = dissected_image_load_verity_sig_partition(
+                        m,
+                        d->fd,
+                        &arg_verity_settings);
         if (r < 0)
                 return r;
 
@@ -820,7 +829,7 @@ static int run(int argc, char *argv[]) {
                 break;
 
         default:
-                assert_not_reached("Unknown action.");
+                assert_not_reached();
         }
 
         return r;

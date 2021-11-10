@@ -119,7 +119,7 @@ int sigprocmask_many(int how, sigset_t *old, ...) {
         return 0;
 }
 
-static const char *const __signal_table[] = {
+static const char *const static_signal_table[] = {
         [SIGHUP] = "HUP",
         [SIGINT] = "INT",
         [SIGQUIT] = "QUIT",
@@ -155,13 +155,13 @@ static const char *const __signal_table[] = {
         [SIGSYS] = "SYS"
 };
 
-DEFINE_PRIVATE_STRING_TABLE_LOOKUP(__signal, int);
+DEFINE_PRIVATE_STRING_TABLE_LOOKUP(static_signal, int);
 
 const char *signal_to_string(int signo) {
         static thread_local char buf[STRLEN("RTMIN+") + DECIMAL_STR_MAX(int)];
         const char *name;
 
-        name = __signal_to_string(signo);
+        name = static_signal_to_string(signo);
         if (name)
                 return name;
 
@@ -190,7 +190,7 @@ int signal_from_string(const char *s) {
                 s += 3;
 
         /* Check that the input is a signal name. */
-        signo = __signal_from_string(s);
+        signo = static_signal_from_string(s);
         if (signo > 0)
                 return signo;
 
@@ -252,4 +252,39 @@ int signal_is_blocked(int sig) {
                 return -errno;
 
         return r;
+}
+
+int pop_pending_signal_internal(int sig, ...) {
+        sigset_t ss;
+        va_list ap;
+        int r;
+
+        if (sig < 0) /* Empty list? */
+                return -EINVAL;
+
+        if (sigemptyset(&ss) < 0)
+                return -errno;
+
+        /* Add first signal (if the signal is zero, we'll silently skip it, to make it easier to build
+         * parameter lists where some element are sometimes off, similar to how sigset_add_many_ap() handles
+         * this.) */
+        if (sig > 0 && sigaddset(&ss, sig) < 0)
+                return -errno;
+
+        /* Add all other signals */
+        va_start(ap, sig);
+        r = sigset_add_many_ap(&ss, ap);
+        va_end(ap);
+        if (r < 0)
+                return r;
+
+        r = sigtimedwait(&ss, NULL, &(struct timespec) { 0, 0 });
+        if (r < 0) {
+                if (errno == EAGAIN)
+                        return 0;
+
+                return -errno;
+        }
+
+        return r; /* Returns the signal popped */
 }

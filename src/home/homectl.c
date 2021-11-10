@@ -14,6 +14,8 @@
 #include "fd-util.h"
 #include "fileio.h"
 #include "format-table.h"
+#include "fs-util.h"
+#include "glyph-util.h"
 #include "home-util.h"
 #include "homectl-fido2.h"
 #include "homectl-pkcs11.h"
@@ -102,7 +104,7 @@ static int acquire_bus(sd_bus **bus) {
 
         r = bus_connect_transport(arg_transport, arg_host, false, bus);
         if (r < 0)
-                return bus_log_connect_error(r);
+                return bus_log_connect_error(r, arg_transport);
 
         (void) sd_bus_set_allow_interactive_authorization(*bus, arg_ask_password);
 
@@ -215,9 +217,7 @@ static int acquire_existing_password(
                 if (r < 0)
                         return log_error_errno(r, "Failed to store password: %m");
 
-                string_erase(e);
-                assert_se(unsetenv("PASSWORD") == 0);
-
+                assert_se(unsetenv_erase("PASSWORD") >= 0);
                 return 1;
         }
 
@@ -273,9 +273,7 @@ static int acquire_token_pin(
                 if (r < 0)
                         return log_error_errno(r, "Failed to store token PIN: %m");
 
-                string_erase(e);
-                assert_se(unsetenv("PIN") == 0);
-
+                assert_se(unsetenv_erase("PIN") >= 0);
                 return 1;
         }
 
@@ -615,7 +613,7 @@ static int inspect_home(int argc, char *argv[], void *userdata) {
         int r, ret = 0;
         char **items, **i;
 
-        (void) pager_open(arg_pager_flags);
+        pager_open(arg_pager_flags);
 
         r = acquire_bus(&bus);
         if (r < 0)
@@ -821,14 +819,13 @@ static int apply_identity_changes(JsonVariant **_v) {
 
         if (arg_identity_extra_this_machine || !strv_isempty(arg_identity_filter)) {
                 _cleanup_(json_variant_unrefp) JsonVariant *per_machine = NULL, *mmid = NULL;
-                char mids[SD_ID128_STRING_MAX];
                 sd_id128_t mid;
 
                 r = sd_id128_get_machine(&mid);
                 if (r < 0)
                         return log_error_errno(r, "Failed to acquire machine ID: %m");
 
-                r = json_variant_new_string(&mmid, sd_id128_to_string(mid, mids));
+                r = json_variant_new_string(&mmid, SD_ID128_TO_STRING(mid));
                 if (r < 0)
                         return log_error_errno(r, "Failed to allocate matchMachineId object: %m");
 
@@ -1097,8 +1094,7 @@ static int acquire_new_password(
                 if (r < 0)
                         return log_error_errno(r, "Failed to store password: %m");
 
-                string_erase(e);
-                assert_se(unsetenv("NEWPASSWORD") == 0);
+                assert_se(unsetenv_erase("NEWPASSWORD") >= 0);
 
                 if (ret)
                         *ret = TAKE_PTR(copy);
@@ -2024,7 +2020,7 @@ static int help(int argc, char *argv[], void *userdata) {
         _cleanup_free_ char *link = NULL;
         int r;
 
-        (void) pager_open(arg_pager_flags);
+        pager_open(arg_pager_flags);
 
         r = terminal_urlify_man("homectl", "1", &link);
         if (r < 0)
@@ -2033,143 +2029,146 @@ static int help(int argc, char *argv[], void *userdata) {
         printf("%1$s [OPTIONS...] COMMAND ...\n\n"
                "%2$sCreate, manipulate or inspect home directories.%3$s\n"
                "\n%4$sCommands:%5$s\n"
-               "  list                        List home areas\n"
-               "  activate USER…              Activate a home area\n"
-               "  deactivate USER…            Deactivate a home area\n"
-               "  inspect USER…               Inspect a home area\n"
-               "  authenticate USER…          Authenticate a home area\n"
-               "  create USER                 Create a home area\n"
-               "  remove USER…                Remove a home area\n"
-               "  update USER                 Update a home area\n"
-               "  passwd USER                 Change password of a home area\n"
-               "  resize USER SIZE            Resize a home area\n"
-               "  lock USER…                  Temporarily lock an active home area\n"
-               "  unlock USER…                Unlock a temporarily locked home area\n"
-               "  lock-all                    Lock all suitable home areas\n"
-               "  deactivate-all              Deactivate all active home areas\n"
-               "  with USER [COMMAND…]        Run shell or command with access to a home area\n"
+               "  list                         List home areas\n"
+               "  activate USER…               Activate a home area\n"
+               "  deactivate USER…             Deactivate a home area\n"
+               "  inspect USER…                Inspect a home area\n"
+               "  authenticate USER…           Authenticate a home area\n"
+               "  create USER                  Create a home area\n"
+               "  remove USER…                 Remove a home area\n"
+               "  update USER                  Update a home area\n"
+               "  passwd USER                  Change password of a home area\n"
+               "  resize USER SIZE             Resize a home area\n"
+               "  lock USER…                   Temporarily lock an active home area\n"
+               "  unlock USER…                 Unlock a temporarily locked home area\n"
+               "  lock-all                     Lock all suitable home areas\n"
+               "  deactivate-all               Deactivate all active home areas\n"
+               "  with USER [COMMAND…]         Run shell or command with access to a home area\n"
                "\n%4$sOptions:%5$s\n"
-               "  -h --help                   Show this help\n"
-               "     --version                Show package version\n"
-               "     --no-pager               Do not pipe output into a pager\n"
-               "     --no-legend              Do not show the headers and footers\n"
-               "     --no-ask-password        Do not ask for system passwords\n"
-               "  -H --host=[USER@]HOST       Operate on remote host\n"
-               "  -M --machine=CONTAINER      Operate on local container\n"
-               "     --identity=PATH          Read JSON identity from file\n"
-               "     --json=FORMAT            Output inspection data in JSON (takes one of\n"
-               "                              pretty, short, off)\n"
-               "  -j                          Equivalent to --json=pretty (on TTY) or\n"
-               "                              --json=short (otherwise)\n"
-               "     --export-format=         Strip JSON inspection data (full, stripped,\n"
-               "                              minimal)\n"
-               "  -E                          When specified once equals -j --export-format=\n"
-               "                              stripped, when specified twice equals\n"
-               "                              -j --export-format=minimal\n"
+               "  -h --help                    Show this help\n"
+               "     --version                 Show package version\n"
+               "     --no-pager                Do not pipe output into a pager\n"
+               "     --no-legend               Do not show the headers and footers\n"
+               "     --no-ask-password         Do not ask for system passwords\n"
+               "  -H --host=[USER@]HOST        Operate on remote host\n"
+               "  -M --machine=CONTAINER       Operate on local container\n"
+               "     --identity=PATH           Read JSON identity from file\n"
+               "     --json=FORMAT             Output inspection data in JSON (takes one of\n"
+               "                               pretty, short, off)\n"
+               "  -j                           Equivalent to --json=pretty (on TTY) or\n"
+               "                               --json=short (otherwise)\n"
+               "     --export-format=          Strip JSON inspection data (full, stripped,\n"
+               "                               minimal)\n"
+               "  -E                           When specified once equals -j --export-format=\n"
+               "                               stripped, when specified twice equals\n"
+               "                               -j --export-format=minimal\n"
                "\n%4$sGeneral User Record Properties:%5$s\n"
-               "  -c --real-name=REALNAME     Real name for user\n"
-               "     --realm=REALM            Realm to create user in\n"
-               "     --email-address=EMAIL    Email address for user\n"
-               "     --location=LOCATION      Set location of user on earth\n"
-               "     --icon-name=NAME         Icon name for user\n"
-               "  -d --home-dir=PATH          Home directory\n"
-               "  -u --uid=UID                Numeric UID for user\n"
-               "  -G --member-of=GROUP        Add user to group\n"
-               "     --skel=PATH              Skeleton directory to use\n"
-               "     --shell=PATH             Shell for account\n"
-               "     --setenv=VARIABLE=VALUE  Set an environment variable at log-in\n"
-               "     --timezone=TIMEZONE      Set a time-zone\n"
-               "     --language=LOCALE        Set preferred language\n"
+               "  -c --real-name=REALNAME      Real name for user\n"
+               "     --realm=REALM             Realm to create user in\n"
+               "     --email-address=EMAIL     Email address for user\n"
+               "     --location=LOCATION       Set location of user on earth\n"
+               "     --icon-name=NAME          Icon name for user\n"
+               "  -d --home-dir=PATH           Home directory\n"
+               "  -u --uid=UID                 Numeric UID for user\n"
+               "  -G --member-of=GROUP         Add user to group\n"
+               "     --skel=PATH               Skeleton directory to use\n"
+               "     --shell=PATH              Shell for account\n"
+               "     --setenv=VARIABLE[=VALUE] Set an environment variable at log-in\n"
+               "     --timezone=TIMEZONE       Set a time-zone\n"
+               "     --language=LOCALE         Set preferred language\n"
                "     --ssh-authorized-keys=KEYS\n"
-               "                              Specify SSH public keys\n"
-               "     --pkcs11-token-uri=URI   URI to PKCS#11 security token containing\n"
-               "                              private key and matching X.509 certificate\n"
-               "     --fido2-device=PATH      Path to FIDO2 hidraw device with hmac-secret\n"
-               "                              extension\n"
+               "                               Specify SSH public keys\n"
+               "     --pkcs11-token-uri=URI    URI to PKCS#11 security token containing\n"
+               "                               private key and matching X.509 certificate\n"
+               "     --fido2-device=PATH       Path to FIDO2 hidraw device with hmac-secret\n"
+               "                               extension\n"
                "     --fido2-with-client-pin=BOOL\n"
-               "                              Whether to require entering a PIN to unlock the\n"
-               "                              account\n"
+               "                               Whether to require entering a PIN to unlock the\n"
+               "                               account\n"
                "     --fido2-with-user-presence=BOOL\n"
-               "                              Whether to require user presence to unlock the\n"
-               "                              account\n"
+               "                               Whether to require user presence to unlock the\n"
+               "                               account\n"
                "     --fido2-with-user-verification=BOOL\n"
-               "                              Whether to require user verification to unlock the\n"
-               "                              account\n"
-               "     --recovery-key=BOOL      Add a recovery key\n"
-               "\n%4$sAccount Management User Record Properties:%5$s\n"
-               "     --locked=BOOL            Set locked account state\n"
-               "     --not-before=TIMESTAMP   Do not allow logins before\n"
-               "     --not-after=TIMESTAMP    Do not allow logins after\n"
+               "                               Whether to require user verification to unlock\n"
+               "                               the account\n"
+               "     --recovery-key=BOOL       Add a recovery key\n"
+               "\n%4$sAccount Management User  Record Properties:%5$s\n"
+               "     --locked=BOOL             Set locked account state\n"
+               "     --not-before=TIMESTAMP    Do not allow logins before\n"
+               "     --not-after=TIMESTAMP     Do not allow logins after\n"
                "     --rate-limit-interval=SECS\n"
-               "                              Login rate-limit interval in seconds\n"
+               "                               Login rate-limit interval in seconds\n"
                "     --rate-limit-burst=NUMBER\n"
-               "                              Login rate-limit attempts per interval\n"
+               "                               Login rate-limit attempts per interval\n"
                "\n%4$sPassword Policy User Record Properties:%5$s\n"
-               "     --password-hint=HINT     Set Password hint\n"
+               "     --password-hint=HINT      Set Password hint\n"
                "     --enforce-password-policy=BOOL\n"
-               "                              Control whether to enforce system's password\n"
-               "                              policy for this user\n"
-               "  -P                          Equivalent to --enforce-password-password=no\n"
+               "                               Control whether to enforce system's password\n"
+               "                               policy for this user\n"
+               "  -P                           Same as --enforce-password-password=no\n"
                "     --password-change-now=BOOL\n"
-               "                              Require the password to be changed on next login\n"
+               "                               Require the password to be changed on next login\n"
                "     --password-change-min=TIME\n"
-               "                              Require minimum time between password changes\n"
+               "                               Require minimum time between password changes\n"
                "     --password-change-max=TIME\n"
-               "                              Require maximum time between password changes\n"
+               "                               Require maximum time between password changes\n"
                "     --password-change-warn=TIME\n"
-               "                              How much time to warn before password expiry\n"
+               "                               How much time to warn before password expiry\n"
                "     --password-change-inactive=TIME\n"
-               "                              How much time to block password after expiry\n"
+               "                               How much time to block password after expiry\n"
                "\n%4$sResource Management User Record Properties:%5$s\n"
-               "     --disk-size=BYTES        Size to assign the user on disk\n"
-               "     --access-mode=MODE       User home directory access mode\n"
-               "     --umask=MODE             Umask for user when logging in\n"
-               "     --nice=NICE              Nice level for user\n"
+               "     --disk-size=BYTES         Size to assign the user on disk\n"
+               "     --access-mode=MODE        User home directory access mode\n"
+               "     --umask=MODE              Umask for user when logging in\n"
+               "     --nice=NICE               Nice level for user\n"
                "     --rlimit=LIMIT=VALUE[:VALUE]\n"
-               "                              Set resource limits\n"
-               "     --tasks-max=MAX          Set maximum number of per-user tasks\n"
-               "     --memory-high=BYTES      Set high memory threshold in bytes\n"
-               "     --memory-max=BYTES       Set maximum memory limit\n"
-               "     --cpu-weight=WEIGHT      Set CPU weight\n"
-               "     --io-weight=WEIGHT       Set IO weight\n"
+               "                               Set resource limits\n"
+               "     --tasks-max=MAX           Set maximum number of per-user tasks\n"
+               "     --memory-high=BYTES       Set high memory threshold in bytes\n"
+               "     --memory-max=BYTES        Set maximum memory limit\n"
+               "     --cpu-weight=WEIGHT       Set CPU weight\n"
+               "     --io-weight=WEIGHT        Set IO weight\n"
                "\n%4$sStorage User Record Properties:%5$s\n"
-               "     --storage=STORAGE        Storage type to use (luks, fscrypt, directory,\n"
-               "                              subvolume, cifs)\n"
-               "     --image-path=PATH        Path to image file/directory\n"
+               "     --storage=STORAGE         Storage type to use (luks, fscrypt, directory,\n"
+               "                               subvolume, cifs)\n"
+               "     --image-path=PATH         Path to image file/directory\n"
+               "     --drop-caches=BOOL        Whether to automatically drop caches on logout\n"
                "\n%4$sLUKS Storage User Record Properties:%5$s\n"
-               "     --fs-type=TYPE           File system type to use in case of luks\n"
-               "                              storage (btrfs, ext4, xfs)\n"
-               "     --luks-discard=BOOL      Whether to use 'discard' feature of file system\n"
-               "                              when activated (mounted)\n"
+               "     --fs-type=TYPE            File system type to use in case of luks\n"
+               "                               storage (btrfs, ext4, xfs)\n"
+               "     --luks-discard=BOOL       Whether to use 'discard' feature of file system\n"
+               "                               when activated (mounted)\n"
                "     --luks-offline-discard=BOOL\n"
-               "                              Whether to trim file on logout\n"
-               "     --luks-cipher=CIPHER     Cipher to use for LUKS encryption\n"
-               "     --luks-cipher-mode=MODE  Cipher mode to use for LUKS encryption\n"
+               "                               Whether to trim file on logout\n"
+               "     --luks-cipher=CIPHER      Cipher to use for LUKS encryption\n"
+               "     --luks-cipher-mode=MODE   Cipher mode to use for LUKS encryption\n"
                "     --luks-volume-key-size=BITS\n"
-               "                              Volume key size to use for LUKS encryption\n"
-               "     --luks-pbkdf-type=TYPE   Password-based Key Derivation Function to use\n"
+               "                               Volume key size to use for LUKS encryption\n"
+               "     --luks-pbkdf-type=TYPE    Password-based Key Derivation Function to use\n"
                "     --luks-pbkdf-hash-algorithm=ALGORITHM\n"
-               "                              PBKDF hash algorithm to use\n"
+               "                               PBKDF hash algorithm to use\n"
                "     --luks-pbkdf-time-cost=SECS\n"
-               "                              Time cost for PBKDF in seconds\n"
+               "                               Time cost for PBKDF in seconds\n"
                "     --luks-pbkdf-memory-cost=BYTES\n"
-               "                              Memory cost for PBKDF in bytes\n"
+               "                               Memory cost for PBKDF in bytes\n"
                "     --luks-pbkdf-parallel-threads=NUMBER\n"
-               "                              Number of parallel threads for PKBDF\n"
+               "                               Number of parallel threads for PKBDF\n"
                "\n%4$sMounting User Record Properties:%5$s\n"
-               "     --nosuid=BOOL            Control the 'nosuid' flag of the home mount\n"
-               "     --nodev=BOOL             Control the 'nodev' flag of the home mount\n"
-               "     --noexec=BOOL            Control the 'noexec' flag of the home mount\n"
+               "     --nosuid=BOOL             Control the 'nosuid' flag of the home mount\n"
+               "     --nodev=BOOL              Control the 'nodev' flag of the home mount\n"
+               "     --noexec=BOOL             Control the 'noexec' flag of the home mount\n"
                "\n%4$sCIFS User Record Properties:%5$s\n"
-               "     --cifs-domain=DOMAIN     CIFS (Windows) domain\n"
-               "     --cifs-user-name=USER    CIFS (Windows) user name\n"
-               "     --cifs-service=SERVICE   CIFS (Windows) service to mount as home area\n"
+               "     --cifs-domain=DOMAIN      CIFS (Windows) domain\n"
+               "     --cifs-user-name=USER     CIFS (Windows) user name\n"
+               "     --cifs-service=SERVICE    CIFS (Windows) service to mount as home area\n"
+               "     --cifs-extra-mount-options=OPTIONS\n"
+               "                               CIFS (Windows) extra mount options\n"
                "\n%4$sLogin Behaviour User Record Properties:%5$s\n"
-               "     --stop-delay=SECS        How long to leave user services running after\n"
-               "                              logout\n"
-               "     --kill-processes=BOOL    Whether to kill user processes when sessions\n"
-               "                              terminate\n"
-               "     --auto-login=BOOL        Try to log this user in automatically\n"
+               "     --stop-delay=SECS         How long to leave user services running after\n"
+               "                               logout\n"
+               "     --kill-processes=BOOL     Whether to kill user processes when sessions\n"
+               "                               terminate\n"
+               "     --auto-login=BOOL         Try to log this user in automatically\n"
                "\nSee the %6$s for details.\n",
                program_invocation_short_name,
                ansi_highlight(),
@@ -2220,6 +2219,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_CIFS_DOMAIN,
                 ARG_CIFS_USER_NAME,
                 ARG_CIFS_SERVICE,
+                ARG_CIFS_EXTRA_MOUNT_OPTIONS,
                 ARG_TASKS_MAX,
                 ARG_MEMORY_HIGH,
                 ARG_MEMORY_MAX,
@@ -2250,6 +2250,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_RECOVERY_KEY,
                 ARG_AND_RESIZE,
                 ARG_AND_CHANGE_PASSWORD,
+                ARG_DROP_CACHES,
         };
 
         static const struct option options[] = {
@@ -2311,6 +2312,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "cifs-user-name",              required_argument, NULL, ARG_CIFS_USER_NAME              },
                 { "cifs-domain",                 required_argument, NULL, ARG_CIFS_DOMAIN                 },
                 { "cifs-service",                required_argument, NULL, ARG_CIFS_SERVICE                },
+                { "cifs-extra-mount-options",    required_argument, NULL, ARG_CIFS_EXTRA_MOUNT_OPTIONS    },
                 { "rate-limit-interval",         required_argument, NULL, ARG_RATE_LIMIT_INTERVAL         },
                 { "rate-limit-burst",            required_argument, NULL, ARG_RATE_LIMIT_BURST            },
                 { "stop-delay",                  required_argument, NULL, ARG_STOP_DELAY                  },
@@ -2332,6 +2334,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "recovery-key",                required_argument, NULL, ARG_RECOVERY_KEY                },
                 { "and-resize",                  required_argument, NULL, ARG_AND_RESIZE                  },
                 { "and-change-password",         required_argument, NULL, ARG_AND_CHANGE_PASSWORD         },
+                { "drop-caches",                 required_argument, NULL, ARG_DROP_CACHES                 },
                 {}
         };
 
@@ -2449,16 +2452,16 @@ static int parse_argv(int argc, char *argv[]) {
                 case ARG_ICON_NAME:
                 case ARG_CIFS_USER_NAME:
                 case ARG_CIFS_DOMAIN:
-                case ARG_CIFS_SERVICE: {
+                case ARG_CIFS_EXTRA_MOUNT_OPTIONS: {
 
                         const char *field =
-                                c == ARG_EMAIL_ADDRESS ? "emailAddress" :
-                                     c == ARG_LOCATION ? "location" :
-                                    c == ARG_ICON_NAME ? "iconName" :
-                               c == ARG_CIFS_USER_NAME ? "cifsUserName" :
-                                  c == ARG_CIFS_DOMAIN ? "cifsDomain" :
-                                 c == ARG_CIFS_SERVICE ? "cifsService" :
-                                                         NULL;
+                                           c == ARG_EMAIL_ADDRESS ? "emailAddress" :
+                                                c == ARG_LOCATION ? "location" :
+                                               c == ARG_ICON_NAME ? "iconName" :
+                                          c == ARG_CIFS_USER_NAME ? "cifsUserName" :
+                                             c == ARG_CIFS_DOMAIN ? "cifsDomain" :
+                                c == ARG_CIFS_EXTRA_MOUNT_OPTIONS ? "cifsExtraMountOptions" :
+                                                                    NULL;
 
                         assert(field);
 
@@ -2476,6 +2479,25 @@ static int parse_argv(int argc, char *argv[]) {
 
                         break;
                 }
+
+                case ARG_CIFS_SERVICE:
+                        if (isempty(optarg)) {
+                                r = drop_from_identity("cifsService");
+                                if (r < 0)
+                                        return r;
+
+                                break;
+                        }
+
+                        r = parse_cifs_service(optarg, NULL, NULL, NULL);
+                        if (r < 0)
+                                return log_error_errno(r, "Failed to validate CIFS service name: %s", optarg);
+
+                        r = json_variant_set_field_string(&arg_identity_extra, "cifsService", optarg);
+                        if (r < 0)
+                                return log_error_errno(r, "Failed to set cifsService field: %m");
+
+                        break;
 
                 case ARG_PASSWORD_HINT:
                         if (isempty(optarg)) {
@@ -2673,10 +2695,6 @@ static int parse_argv(int argc, char *argv[]) {
                                 break;
                         }
 
-                        if (!env_assignment_is_valid(optarg))
-                                return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
-                                                       "Environment assignment '%s' not valid.", optarg);
-
                         e = json_variant_by_key(arg_identity_extra, "environment");
                         if (e) {
                                 r = json_variant_strv(e, &l);
@@ -2684,9 +2702,9 @@ static int parse_argv(int argc, char *argv[]) {
                                         return log_error_errno(r, "Failed to parse JSON environment field: %m");
                         }
 
-                        r = strv_env_replace_strdup(&l, optarg);
+                        r = strv_env_replace_strdup_passthrough(&l, optarg);
                         if (r < 0)
-                                return log_error_errno(r, "Failed to replace JSON environment field: %m");
+                                return log_error_errno(r, "Cannot assign environment variable %s: %m", optarg);
 
                         strv_sort(l);
 
@@ -3459,11 +3477,31 @@ static int parse_argv(int argc, char *argv[]) {
                         arg_and_change_password = true;
                         break;
 
+                case ARG_DROP_CACHES: {
+                        bool drop_caches;
+
+                        if (isempty(optarg)) {
+                                r = drop_from_identity("dropCaches");
+                                if (r < 0)
+                                        return r;
+                        }
+
+                        r = parse_boolean_argument("--drop-caches=", optarg, &drop_caches);
+                        if (r < 0)
+                                return r;
+
+                        r = json_variant_set_field_boolean(&arg_identity_extra, "dropCaches", r);
+                        if (r < 0)
+                                return log_error_errno(r, "Failed to set drop caches field: %m");
+
+                        break;
+                }
+
                 case '?':
                         return -EINVAL;
 
                 default:
-                        assert_not_reached("Unhandled option");
+                        assert_not_reached();
                 }
         }
 

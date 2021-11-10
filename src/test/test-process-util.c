@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-2.1-or-later */
 
 #include <fcntl.h>
+#include <linux/oom.h>
 #include <sys/mount.h>
 #include <sys/personality.h>
 #include <sys/prctl.h>
@@ -850,8 +851,14 @@ static void test_get_process_ppid(void) {
         assert_se(get_process_ppid(1, NULL) == -EADDRNOTAVAIL);
 
         /* the process with the PID above the global limit definitely doesn't exist. Verify that */
-        assert_se(procfs_tasks_get_limit(&limit) >= 0);
-        assert_se(limit >= INT_MAX || get_process_ppid(limit+1, NULL) == -ESRCH);
+        assert_se(procfs_get_pid_max(&limit) >= 0);
+        log_debug("kernel.pid_max = %"PRIu64, limit);
+
+        if (limit < INT_MAX) {
+                r = get_process_ppid(limit + 1, NULL);
+                log_debug_errno(r, "get_process_limit(%"PRIu64") → %d/%m", limit + 1, r);
+                assert(r == -ESRCH);
+        }
 
         for (pid_t pid = 0;;) {
                 _cleanup_free_ char *c1 = NULL, *c2 = NULL;
@@ -872,6 +879,24 @@ static void test_get_process_ppid(void) {
 
                 pid = ppid;
         }
+}
+
+static void test_set_oom_score_adjust(void) {
+        int a, b, r;
+
+        assert_se(get_oom_score_adjust(&a) >= 0);
+
+        r = set_oom_score_adjust(OOM_SCORE_ADJ_MIN);
+        assert_se(r >= 0 || ERRNO_IS_PRIVILEGE(r));
+
+        if (r >= 0) {
+                assert_se(get_oom_score_adjust(&b) >= 0);
+                assert_se(b == OOM_SCORE_ADJ_MIN);
+        }
+
+        assert_se(set_oom_score_adjust(a) >= 0);
+        assert_se(get_oom_score_adjust(&b) >= 0);
+        assert_se(b == a);
 }
 
 int main(int argc, char *argv[]) {
@@ -904,6 +929,7 @@ int main(int argc, char *argv[]) {
         test_ioprio_class_from_to_string();
         test_setpriority_closest();
         test_get_process_ppid();
+        test_set_oom_score_adjust();
 
         return 0;
 }

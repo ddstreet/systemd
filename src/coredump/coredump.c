@@ -48,6 +48,7 @@
 #include "string-table.h"
 #include "string-util.h"
 #include "strv.h"
+#include "sync-util.h"
 #include "tmpfile-util.h"
 #include "user-record.h"
 #include "user-util.h"
@@ -261,10 +262,9 @@ static int fix_permissions(
         (void) fix_acl(fd, uid);
         (void) fix_xattr(fd, context);
 
-        if (fsync(fd) < 0)
-                return log_error_errno(errno, "Failed to sync coredump %s: %m", coredump_tmpfile_name(filename));
-
-        (void) fsync_directory_of_file(fd);
+        r = fsync_full(fd);
+        if (r < 0)
+                return log_error_errno(r, "Failed to sync coredump %s: %m", coredump_tmpfile_name(filename));
 
         r = link_tmpfile(fd, filename, target);
         if (r < 0)
@@ -525,6 +525,7 @@ static int save_external_coredump(
         if (lseek(fd, 0, SEEK_SET) == (off_t) -1)
                 return log_error_errno(errno, "Failed to seek on coredump %s: %m", fn);
 
+        *ret_filename = TAKE_PTR(fn);
         *ret_data_fd = TAKE_FD(fd);
         *ret_size = (uint64_t) st.st_size;
         *ret_truncated = truncated;

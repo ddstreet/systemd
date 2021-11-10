@@ -36,6 +36,7 @@
 #include "syslog-util.h"
 #include "tmpfile-util.h"
 #include "unit-name.h"
+#include "user-util.h"
 
 #define STDOUT_STREAMS_MAX 4096
 
@@ -108,7 +109,6 @@ StdoutStream* stdout_stream_free(StdoutStream *s) {
                 return NULL;
 
         if (s->server) {
-
                 if (s->context)
                         client_context_release(s->server, s->context);
 
@@ -122,11 +122,7 @@ StdoutStream* stdout_stream_free(StdoutStream *s) {
                 (void) server_start_or_stop_idle_timer(s->server); /* Maybe we are idle now? */
         }
 
-        if (s->event_source) {
-                sd_event_source_set_enabled(s->event_source, SD_EVENT_OFF);
-                s->event_source = sd_event_source_unref(s->event_source);
-        }
-
+        sd_event_source_disable_unref(s->event_source);
         safe_close(s->fd);
         free(s->label);
         free(s->identifier);
@@ -449,7 +445,7 @@ static int stdout_stream_line(StdoutStream *s, char *p, LineBreak line_break) {
                 return stdout_stream_log(s, orig, line_break);
         }
 
-        assert_not_reached("Unknown stream state");
+        assert_not_reached();
 }
 
 static int stdout_stream_found(
@@ -663,6 +659,7 @@ int stdout_stream_install(Server *s, int fd, StdoutStream **ret) {
         *stream = (StdoutStream) {
                 .fd = -1,
                 .priority = LOG_INFO,
+                .ucred = UCRED_INVALID,
         };
 
         xsprintf(stream->id_field, "_STREAM_ID=" SD_ID128_FORMAT_STR, SD_ID128_FORMAT_VAL(id));
@@ -727,9 +724,9 @@ static int stdout_stream_new(sd_event_source *es, int listen_fd, uint32_t revent
         }
 
         if (s->n_stdout_streams >= STDOUT_STREAMS_MAX) {
-                struct ucred u;
+                struct ucred u = UCRED_INVALID;
 
-                r = getpeercred(fd, &u);
+                (void) getpeercred(fd, &u);
 
                 /* By closing fd here we make sure that the client won't wait too long for journald to
                  * gather all the data it adds to the error message to find out that the connection has
@@ -737,7 +734,7 @@ static int stdout_stream_new(sd_event_source *es, int listen_fd, uint32_t revent
                  */
                 fd = safe_close(fd);
 
-                server_driver_message(s, r < 0 ? 0 : u.pid, NULL, LOG_MESSAGE("Too many stdout streams, refusing connection."), NULL);
+                server_driver_message(s, u.pid, NULL, LOG_MESSAGE("Too many stdout streams, refusing connection."), NULL);
                 return 0;
         }
 

@@ -237,16 +237,12 @@ static void test_condition_test_ac_power(void) {
 
 static void test_condition_test_host(void) {
         _cleanup_free_ char *hostname = NULL;
-        char sid[SD_ID128_STRING_MAX];
         Condition *condition;
         sd_id128_t id;
-        int r;
 
-        r = sd_id128_get_machine(&id);
-        assert_se(r >= 0);
-        assert_se(sd_id128_to_string(id, sid));
+        assert_se(sd_id128_get_machine(&id) >= 0);
 
-        condition = condition_new(CONDITION_HOST, sid, false, false);
+        condition = condition_new(CONDITION_HOST, SD_ID128_TO_STRING(id), false, false);
         assert_se(condition);
         assert_se(condition_test(condition, environ) > 0);
         condition_free(condition);
@@ -256,7 +252,7 @@ static void test_condition_test_host(void) {
         assert_se(condition_test(condition, environ) == 0);
         condition_free(condition);
 
-        condition = condition_new(CONDITION_HOST, sid, false, true);
+        condition = condition_new(CONDITION_HOST, SD_ID128_TO_STRING(id), false, true);
         assert_se(condition);
         assert_se(condition_test(condition, environ) == 0);
         condition_free(condition);
@@ -693,12 +689,12 @@ static void test_condition_test_group(void) {
         free(gid);
 
         ngroups_max = sysconf(_SC_NGROUPS_MAX);
-        assert(ngroups_max > 0);
+        assert_se(ngroups_max > 0);
 
         gids = newa(gid_t, ngroups_max);
 
         ngroups = getgroups(ngroups_max, gids);
-        assert(ngroups >= 0);
+        assert_se(ngroups >= 0);
 
         max_gid = getgid();
         for (i = 0; i < ngroups; i++) {

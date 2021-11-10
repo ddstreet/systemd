@@ -11,7 +11,8 @@
 #include "sd-dhcp6-client.h"
 #include "sd-ipv4acd.h"
 #include "sd-ipv4ll.h"
-#include "sd-lldp.h"
+#include "sd-lldp-rx.h"
+#include "sd-lldp-tx.h"
 #include "sd-ndisc.h"
 #include "sd-radv.h"
 #include "sd-netlink.h"
@@ -38,7 +39,6 @@ typedef enum LinkState {
 
 typedef struct Manager Manager;
 typedef struct Network Network;
-typedef struct Address Address;
 typedef struct DUID DUID;
 
 typedef struct Link {
@@ -91,10 +91,6 @@ typedef struct Link {
         unsigned static_nexthop_messages;
         unsigned static_route_messages;
         unsigned static_routing_policy_rule_messages;
-        unsigned address_remove_messages;
-        unsigned neighbor_remove_messages;
-        unsigned nexthop_remove_messages;
-        unsigned route_remove_messages;
         unsigned tc_messages;
         unsigned sr_iov_messages;
         unsigned set_link_messages;
@@ -103,21 +99,12 @@ typedef struct Link {
         unsigned create_stacked_netdev_after_configured_messages;
 
         Set *addresses;
-        Set *addresses_foreign;
-        Set *addresses_ipv4acd;
-        Set *pool_addresses;
-        Set *static_addresses;
         Set *neighbors;
-        Set *neighbors_foreign;
         Set *routes;
-        Set *routes_foreign;
         Set *nexthops;
-        Set *nexthops_foreign;
 
         sd_dhcp_client *dhcp_client;
         sd_dhcp_lease *dhcp_lease;
-        Address *dhcp_address, *dhcp_address_old;
-        Set *dhcp_routes, *dhcp_routes_old;
         char *lease_file;
         unsigned dhcp4_messages;
         bool dhcp4_route_failed:1;
@@ -148,39 +135,25 @@ typedef struct Link {
         sd_ndisc *ndisc;
         Set *ndisc_rdnss;
         Set *ndisc_dnssl;
-        Set *ndisc_addresses;
-        Set *ndisc_routes;
-        unsigned ndisc_addresses_messages;
-        unsigned ndisc_routes_messages;
-        bool ndisc_addresses_configured:1;
-        bool ndisc_routes_configured:1;
+        unsigned ndisc_messages;
+        bool ndisc_configured:1;
 
         sd_radv *radv;
 
         sd_dhcp6_client *dhcp6_client;
         sd_dhcp6_lease *dhcp6_lease;
-        Set *dhcp6_addresses, *dhcp6_addresses_old;
-        Set *dhcp6_routes, *dhcp6_routes_old;
         Set *dhcp6_pd_prefixes;
-        Set *dhcp6_pd_addresses, *dhcp6_pd_addresses_old;
-        Set *dhcp6_pd_routes, *dhcp6_pd_routes_old;
-        unsigned dhcp6_address_messages;
-        unsigned dhcp6_route_messages;
-        unsigned dhcp6_pd_address_messages;
-        unsigned dhcp6_pd_route_messages;
-        bool dhcp6_address_configured:1;
-        bool dhcp6_route_configured:1;
-        bool dhcp6_pd_address_configured:1;
-        bool dhcp6_pd_route_configured:1;
-        bool dhcp6_pd_prefixes_assigned:1;
+        unsigned dhcp6_messages;
+        unsigned dhcp6_pd_messages;
+        bool dhcp6_configured:1;
+        bool dhcp6_pd_configured:1;
 
         /* This is about LLDP reception */
-        sd_lldp *lldp;
+        sd_lldp_rx *lldp_rx;
         char *lldp_file;
 
         /* This is about LLDP transmission */
-        unsigned lldp_tx_fast; /* The LLDP txFast counter (See 802.1ab-2009, section 9.2.5.18) */
-        sd_event_source *lldp_emit_event_source;
+        sd_lldp_tx *lldp_tx;
 
         Hashmap *bound_by_links;
         Hashmap *bound_to_links;
@@ -232,12 +205,11 @@ void link_check_ready(Link *link);
 
 void link_update_operstate(Link *link, bool also_update_bond_master);
 
-int link_carrier_reset(Link *link);
 bool link_has_carrier(Link *link);
 
 bool link_ipv6_enabled(Link *link);
 bool link_ipv6ll_enabled(Link *link);
-int link_ipv6ll_gained(Link *link, const struct in6_addr *address);
+int link_ipv6ll_gained(Link *link);
 
 bool link_ipv4ll_enabled(Link *link);
 
@@ -247,6 +219,7 @@ const char* link_state_to_string(LinkState s) _const_;
 LinkState link_state_from_string(const char *s) _pure_;
 
 int link_reconfigure(Link *link, bool force);
+int link_reconfigure_after_sleep(Link *link);
 
 int manager_udev_process_link(sd_device_monitor *monitor, sd_device *device, void *userdata);
 int manager_rtnl_process_link(sd_netlink *rtnl, sd_netlink_message *message, Manager *m);

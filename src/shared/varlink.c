@@ -258,8 +258,7 @@ static int varlink_new(Varlink **ret) {
 
                 .state = _VARLINK_STATE_INVALID,
 
-                .ucred.uid = UID_INVALID,
-                .ucred.gid = GID_INVALID,
+                .ucred = UCRED_INVALID,
 
                 .timestamp = USEC_INFINITY,
                 .timeout = VARLINK_DEFAULT_TIMEOUT_USEC
@@ -417,9 +416,10 @@ static int varlink_test_disconnect(Varlink *v) {
         if (IN_SET(v->state, VARLINK_IDLE_CLIENT) && (v->write_disconnected || v->got_pollhup))
                 goto disconnect;
 
-        /* The server is still expecting to write more, but its write end is disconnected and it got a POLLHUP
-         * (i.e. from a disconnected client), so disconnect. */
-        if (IN_SET(v->state, VARLINK_PENDING_METHOD, VARLINK_PENDING_METHOD_MORE) && v->write_disconnected && v->got_pollhup)
+        /* We are on the server side and still want to send out more replies, but we saw POLLHUP already, and
+         * either got no buffered bytes to write anymore or already saw a write error. In that case we should
+         * shut down the varlink link. */
+        if (IN_SET(v->state, VARLINK_PENDING_METHOD, VARLINK_PENDING_METHOD_MORE) && (v->write_disconnected || v->output_buffer_size == 0) && v->got_pollhup)
                 goto disconnect;
 
         return 0;
@@ -905,7 +905,7 @@ static int varlink_dispatch_method(Varlink *v) {
                 break;
 
         default:
-                assert_not_reached("Unexpected state");
+                assert_not_reached();
 
         }
 
@@ -1521,7 +1521,7 @@ int varlink_call(
                 return varlink_log_errno(v, SYNTHETIC_ERRNO(ETIME), "Connection timed out.");
 
         default:
-                assert_not_reached("Unexpected state after method call.");
+                assert_not_reached();
         }
 }
 
@@ -2077,7 +2077,7 @@ static int validate_connection(VarlinkServer *server, const struct ucred *ucred)
         return 1;
 }
 
-static int count_connection(VarlinkServer *server, struct ucred *ucred) {
+static int count_connection(VarlinkServer *server, const struct ucred *ucred) {
         unsigned c;
         int r;
 
@@ -2106,8 +2106,8 @@ static int count_connection(VarlinkServer *server, struct ucred *ucred) {
 
 int varlink_server_add_connection(VarlinkServer *server, int fd, Varlink **ret) {
         _cleanup_(varlink_unrefp) Varlink *v = NULL;
+        struct ucred ucred = UCRED_INVALID;
         bool ucred_acquired;
-        struct ucred ucred;
         int r;
 
         assert_return(server, -EINVAL);
@@ -2145,7 +2145,9 @@ int varlink_server_add_connection(VarlinkServer *server, int fd, Varlink **ret) 
                 v->ucred_acquired = true;
         }
 
-        (void) asprintf(&v->description, "%s-%i", server->description ?: "varlink", v->fd);
+        _cleanup_free_ char *desc = NULL;
+        if (asprintf(&desc, "%s-%i", server->description ?: "varlink", v->fd) >= 0)
+                v->description = TAKE_PTR(desc);
 
         /* Link up the server and the connection, and take reference in both directions. Note that the
          * reference on the connection is left dangling. It will be dropped when the connection is closed,
@@ -2363,14 +2365,8 @@ int varlink_server_detach_event(VarlinkServer *s) {
 
         assert_return(s, -EINVAL);
 
-        LIST_FOREACH(sockets, ss, s->sockets) {
-
-                if (!ss->event_source)
-                        continue;
-
-                (void) sd_event_source_set_enabled(ss->event_source, SD_EVENT_OFF);
-                ss->event_source = sd_event_source_unref(ss->event_source);
-        }
+        LIST_FOREACH(sockets, ss, s->sockets)
+                ss->event_source = sd_event_source_disable_unref(ss->event_source);
 
         sd_event_unref(s->event);
         return 0;

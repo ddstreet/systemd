@@ -438,7 +438,8 @@ static int resolve_remote(Connection *c) {
 
         service = strrchr(arg_remote_host, ':');
         if (service) {
-                node = strndupa(arg_remote_host, service - arg_remote_host);
+                node = strndupa_safe(arg_remote_host,
+                                     service - arg_remote_host);
                 service++;
         } else {
                 node = arg_remote_host;
@@ -657,7 +658,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return -EINVAL;
 
                 default:
-                        assert_not_reached("Unhandled option");
+                        assert_not_reached();
                 }
 
         if (optind >= argc)

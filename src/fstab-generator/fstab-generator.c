@@ -5,9 +5,9 @@
 #include <unistd.h>
 
 #include "alloc-util.h"
+#include "chase-symlinks.h"
 #include "fd-util.h"
 #include "fileio.h"
-#include "fs-util.h"
 #include "fstab-util.h"
 #include "generator.h"
 #include "log.h"
@@ -196,7 +196,6 @@ static int write_timeout(
                 const char *variable) {
 
         _cleanup_free_ char *timeout = NULL;
-        char timespan[FORMAT_TIMESPAN_MAX];
         usec_t u;
         int r;
 
@@ -212,7 +211,7 @@ static int write_timeout(
                 return 0;
         }
 
-        fprintf(f, "%s=%s\n", variable, format_timespan(timespan, sizeof(timespan), u, 0));
+        fprintf(f, "%s=%s\n", variable, FORMAT_TIMESPAN(u, 0));
 
         return 0;
 }
@@ -453,6 +452,10 @@ static int add_mount(
                 "\n"
                 "[Mount]\n");
 
+        r = write_what(f, what);
+        if (r < 0)
+                return r;
+
         if (original_where)
                 fprintf(f, "# Canonicalized from %s\n", original_where);
 
@@ -460,10 +463,6 @@ static int add_mount(
         if (!where_escaped)
                 return log_oom();
         fprintf(f, "Where=%s\n", where_escaped);
-
-        r = write_what(f, what);
-        if (r < 0)
-                return r;
 
         if (!isempty(fstype) && !streq(fstype, "auto")) {
                 _cleanup_free_ char *t = NULL;

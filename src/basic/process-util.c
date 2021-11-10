@@ -27,7 +27,6 @@
 #include "fd-util.h"
 #include "fileio.h"
 #include "fs-util.h"
-#include "ioprio.h"
 #include "locale-util.h"
 #include "log.h"
 #include "macro.h"
@@ -858,8 +857,8 @@ int wait_for_terminate_with_timeout(pid_t pid, usec_t timeout) {
 void sigkill_wait(pid_t pid) {
         assert(pid > 1);
 
-        if (kill(pid, SIGKILL) >= 0)
-                (void) wait_for_terminate(pid, NULL);
+        (void) kill(pid, SIGKILL);
+        (void) wait_for_terminate(pid, NULL);
 }
 
 void sigkill_waitp(pid_t *pid) {
@@ -876,8 +875,8 @@ void sigkill_waitp(pid_t *pid) {
 void sigterm_wait(pid_t pid) {
         assert(pid > 1);
 
-        if (kill_and_sigcont(pid, SIGTERM) >= 0)
-                (void) wait_for_terminate(pid, NULL);
+        (void) kill_and_sigcont(pid, SIGTERM);
+        (void) wait_for_terminate(pid, NULL);
 }
 
 int kill_and_sigcont(pid_t pid, int sig) {
@@ -1035,30 +1034,6 @@ bool is_main_thread(void) {
                 cached = getpid_cached() == gettid() ? 1 : -1;
 
         return cached > 0;
-}
-
-_noreturn_ void freeze(void) {
-
-        log_close();
-
-        /* Make sure nobody waits for us on a socket anymore */
-        (void) close_all_fds(NULL, 0);
-
-        sync();
-
-        /* Let's not freeze right away, but keep reaping zombies. */
-        for (;;) {
-                int r;
-                siginfo_t si = {};
-
-                r = waitid(P_ALL, 0, &si, WEXITED);
-                if (r < 0 && errno != EINTR)
-                        break;
-        }
-
-        /* waitid() failed with an unexpected error, things are really borked. Freeze now! */
-        for (;;)
-                pause();
 }
 
 bool oom_score_adjust_is_valid(int oa) {
@@ -1278,7 +1253,7 @@ int safe_fork_full(
 
         pid_t original_pid, pid;
         sigset_t saved_ss, ss;
-        _cleanup_(restore_sigsetp) sigset_t *saved_ssp = NULL;
+        _unused_ _cleanup_(restore_sigsetp) sigset_t *saved_ssp = NULL;
         bool block_signals = false, block_all = false;
         int prio, r;
 
@@ -1517,89 +1492,31 @@ int namespace_fork(
         return 1;
 }
 
-int fork_agent(const char *name, const int except[], size_t n_except, pid_t *ret_pid, const char *path, ...) {
-        bool stdout_is_tty, stderr_is_tty;
-        size_t n, i;
-        va_list ap;
-        char **l;
-        int r;
-
-        assert(path);
-
-        /* Spawns a temporary TTY agent, making sure it goes away when we go away */
-
-        r = safe_fork_full(name,
-                           except,
-                           n_except,
-                           FORK_RESET_SIGNALS|FORK_DEATHSIG|FORK_CLOSE_ALL_FDS|FORK_REOPEN_LOG,
-                           ret_pid);
-        if (r < 0)
-                return r;
-        if (r > 0)
-                return 0;
-
-        /* In the child: */
-
-        stdout_is_tty = isatty(STDOUT_FILENO);
-        stderr_is_tty = isatty(STDERR_FILENO);
-
-        if (!stdout_is_tty || !stderr_is_tty) {
-                int fd;
-
-                /* Detach from stdout/stderr. and reopen
-                 * /dev/tty for them. This is important to
-                 * ensure that when systemctl is started via
-                 * popen() or a similar call that expects to
-                 * read EOF we actually do generate EOF and
-                 * not delay this indefinitely by because we
-                 * keep an unused copy of stdin around. */
-                fd = open("/dev/tty", O_WRONLY);
-                if (fd < 0) {
-                        log_error_errno(errno, "Failed to open /dev/tty: %m");
-                        _exit(EXIT_FAILURE);
-                }
-
-                if (!stdout_is_tty && dup2(fd, STDOUT_FILENO) < 0) {
-                        log_error_errno(errno, "Failed to dup2 /dev/tty: %m");
-                        _exit(EXIT_FAILURE);
-                }
-
-                if (!stderr_is_tty && dup2(fd, STDERR_FILENO) < 0) {
-                        log_error_errno(errno, "Failed to dup2 /dev/tty: %m");
-                        _exit(EXIT_FAILURE);
-                }
-
-                safe_close_above_stdio(fd);
-        }
-
-        (void) rlimit_nofile_safe();
-
-        /* Count arguments */
-        va_start(ap, path);
-        for (n = 0; va_arg(ap, char*); n++)
-                ;
-        va_end(ap);
-
-        /* Allocate strv */
-        l = newa(char*, n + 1);
-
-        /* Fill in arguments */
-        va_start(ap, path);
-        for (i = 0; i <= n; i++)
-                l[i] = va_arg(ap, char*);
-        va_end(ap);
-
-        execv(path, l);
-        _exit(EXIT_FAILURE);
-}
-
 int set_oom_score_adjust(int value) {
         char t[DECIMAL_STR_MAX(int)];
 
-        sprintf(t, "%i", value);
+        xsprintf(t, "%i", value);
 
         return write_string_file("/proc/self/oom_score_adj", t,
                                  WRITE_STRING_FILE_VERIFY_ON_FAILURE|WRITE_STRING_FILE_DISABLE_BUFFER);
+}
+
+int get_oom_score_adjust(int *ret) {
+        _cleanup_free_ char *t;
+        int r, a;
+
+        r = read_virtual_file("/proc/self/oom_score_adj", SIZE_MAX, &t, NULL);
+        if (r < 0)
+                return r;
+
+        delete_trailing_chars(t, WHITESPACE);
+
+        assert_se(safe_atoi(t, &a) >= 0);
+        assert_se(oom_score_adjust_is_valid(a));
+
+        if (ret)
+                *ret = a;
+        return 0;
 }
 
 int pidfd_get_pid(int fd, pid_t *ret) {
@@ -1698,6 +1615,27 @@ bool invoked_as(char *argv[], const char *token) {
                 return false;
 
         return strstr(last_path_component(argv[0]), token);
+}
+
+_noreturn_ void freeze(void) {
+        log_close();
+
+        /* Make sure nobody waits for us (i.e. on one of our sockets) anymore. Note that we use
+         * close_all_fds_without_malloc() instead of plain close_all_fds() here, since we want this function
+         * to be compatible with being called from signal handlers. */
+        (void) close_all_fds_without_malloc(NULL, 0);
+
+        /* Let's not freeze right away, but keep reaping zombies. */
+        for (;;) {
+                siginfo_t si = {};
+
+                if (waitid(P_ALL, 0, &si, WEXITED) < 0 && errno != EINTR)
+                        break;
+        }
+
+        /* waitid() failed with an unexpected error, things are really borked. Freeze now! */
+        for (;;)
+                pause();
 }
 
 static const char *const ioprio_class_table[] = {

@@ -10,13 +10,13 @@
 
 #include "alloc-util.h"
 #include "base-filesystem.h"
+#include "chase-symlinks.h"
 #include "dev-setup.h"
 #include "env-util.h"
 #include "escape.h"
 #include "extension-release.h"
 #include "fd-util.h"
 #include "format-util.h"
-#include "fs-util.h"
 #include "label.h"
 #include "list.h"
 #include "loop-util.h"
@@ -570,7 +570,7 @@ static int append_protect_home(MountEntry **p, ProtectHome protect_home, bool ig
                 return append_static_mounts(p, protect_home_yes_table, ELEMENTSOF(protect_home_yes_table), ignore_protect);
 
         default:
-                assert_not_reached("Unexpected ProtectHome= value");
+                assert_not_reached();
         }
 }
 
@@ -592,7 +592,7 @@ static int append_protect_system(MountEntry **p, ProtectSystem protect_system, b
                 return append_static_mounts(p, protect_system_full_table, ELEMENTSOF(protect_system_full_table), ignore_protect);
 
         default:
-                assert_not_reached("Unexpected ProtectSystem= value");
+                assert_not_reached();
         }
 }
 
@@ -853,7 +853,7 @@ static int mount_private_dev(MountEntry *m) {
         char temporary_mount[] = "/tmp/namespace-dev-XXXXXX";
         const char *d, *dev = NULL, *devpts = NULL, *devshm = NULL, *devhugepages = NULL, *devmqueue = NULL, *devlog = NULL, *devptmx = NULL;
         bool can_mknod = true;
-        _cleanup_umask_ mode_t u;
+        _unused_ _cleanup_umask_ mode_t u;
         int r;
 
         assert(m);
@@ -1359,7 +1359,7 @@ static int apply_one_mount(
                 return mount_overlay(m);
 
         default:
-                assert_not_reached("Unknown mode");
+                assert_not_reached();
         }
 
         assert(what);
@@ -1586,11 +1586,36 @@ static void normalize_mounts(const char *root_directory, MountEntry *mounts, siz
         drop_nop(mounts, n_mounts);
 }
 
+static int create_symlinks_from_tuples(const char *root, char **strv_symlinks) {
+        char **src, **dst;
+        int r;
+
+        STRV_FOREACH_PAIR(src, dst, strv_symlinks) {
+                _cleanup_free_ char *src_abs = NULL, *dst_abs = NULL;
+
+                src_abs = path_join(root, *src);
+                dst_abs = path_join(root, *dst);
+                if (!src_abs || !dst_abs)
+                        return -ENOMEM;
+
+                r = mkdir_parents_label(dst_abs, 0755);
+                if (r < 0)
+                        return r;
+
+                r = symlink_idempotent(src_abs, dst_abs, true);
+                if (r < 0)
+                        return r;
+        }
+
+        return 0;
+}
+
 static int apply_mounts(
                 const char *root,
                 const NamespaceInfo *ns_info,
                 MountEntry *mounts,
                 size_t *n_mounts,
+                char **exec_dir_symlinks,
                 char **error_path) {
 
         _cleanup_fclose_ FILE *proc_self_mountinfo = NULL;
@@ -1656,6 +1681,14 @@ static int apply_mounts(
 
                 normalize_mounts(root, mounts, n_mounts);
         }
+
+        /* Now that all filesystems have been set up, but before the
+         * read-only switches are flipped, create the exec dirs symlinks.
+         * Note that when /var/lib is not empty/tmpfs, these symlinks will already
+         * exist, which means this will be a no-op. */
+        r = create_symlinks_from_tuples(root, exec_dir_symlinks);
+        if (r < 0)
+                return r;
 
         /* Create a deny list we can pass to bind_mount_recursive() */
         deny_list = new(char*, (*n_mounts)+1);
@@ -1820,6 +1853,7 @@ int setup_namespace(
                 char** exec_paths,
                 char** no_exec_paths,
                 char** empty_directories,
+                char** exec_dir_symlinks,
                 const BindMount *bind_mounts,
                 size_t n_bind_mounts,
                 const TemporaryFileSystem *temporary_filesystems,
@@ -1905,12 +1939,20 @@ int setup_namespace(
                                 loop_device->fd,
                                 &verity,
                                 root_image_options,
+                                loop_device->diskseq,
                                 loop_device->uevent_seqnum_not_before,
                                 loop_device->timestamp_not_before,
                                 dissect_image_flags,
                                 &dissected_image);
                 if (r < 0)
                         return log_debug_errno(r, "Failed to dissect image: %m");
+
+                r = dissected_image_load_verity_sig_partition(
+                                dissected_image,
+                                loop_device->fd,
+                                &verity);
+                if (r < 0)
+                        return r;
 
                 r = dissected_image_decrypt(
                                 dissected_image,
@@ -2253,7 +2295,7 @@ int setup_namespace(
                 (void) base_filesystem_create(root, UID_INVALID, GID_INVALID);
 
         /* Now make the magic happen */
-        r = apply_mounts(root, ns_info, mounts, &n_mounts, error_path);
+        r = apply_mounts(root, ns_info, mounts, &n_mounts, exec_dir_symlinks, error_path);
         if (r < 0)
                 goto finish;
 
@@ -2497,7 +2539,6 @@ static int make_tmp_prefix(const char *prefix) {
 static int setup_one_tmp_dir(const char *id, const char *prefix, char **path, char **tmp_path) {
         _cleanup_free_ char *x = NULL;
         _cleanup_free_ char *y = NULL;
-        char bid[SD_ID128_STRING_MAX];
         sd_id128_t boot_id;
         bool rw = true;
         int r;
@@ -2513,7 +2554,7 @@ static int setup_one_tmp_dir(const char *id, const char *prefix, char **path, ch
         if (r < 0)
                 return r;
 
-        x = strjoin(prefix, "/systemd-private-", sd_id128_to_string(boot_id, bid), "-", id, "-XXXXXX");
+        x = strjoin(prefix, "/systemd-private-", SD_ID128_TO_STRING(boot_id), "-", id, "-XXXXXX");
         if (!x)
                 return -ENOMEM;
 

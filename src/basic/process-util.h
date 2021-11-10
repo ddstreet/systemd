@@ -13,8 +13,8 @@
 
 #include "alloc-util.h"
 #include "format-util.h"
-#include "ioprio.h"
 #include "macro.h"
+#include "missing_ioprio.h"
 #include "time-util.h"
 
 #define procfs_file_alloca(pid, field)                                  \
@@ -81,8 +81,6 @@ int pid_is_my_child(pid_t pid);
 int pid_from_same_root_fs(pid_t pid);
 
 bool is_main_thread(void);
-
-_noreturn_ void freeze(void);
 
 bool oom_score_adjust_is_valid(int oa);
 
@@ -176,9 +174,8 @@ static inline int safe_fork(const char *name, ForkFlags flags, pid_t *ret_pid) {
 
 int namespace_fork(const char *outer_name, const char *inner_name, const int except_fds[], size_t n_except_fds, ForkFlags flags, int pidns_fd, int mntns_fd, int netns_fd, int userns_fd, int root_fd, pid_t *ret_pid);
 
-int fork_agent(const char *name, const int except[], size_t n_except, pid_t *pid, const char *path, ...) _sentinel_;
-
 int set_oom_score_adjust(int value);
+int get_oom_score_adjust(int *ret);
 
 /* The highest possibly (theoretic) pid_t value on this architecture. */
 #define PID_T_MAX ((pid_t) INT32_MAX)
@@ -195,8 +192,9 @@ assert_cc(TASKS_MAX <= (unsigned long) PID_T_MAX);
 /* Like TAKE_PTR() but for child PIDs, resetting them to 0 */
 #define TAKE_PID(pid)                           \
         ({                                      \
-                pid_t _pid_ = (pid);            \
-                (pid) = 0;                      \
+                pid_t *_ppid_ = &(pid);         \
+                pid_t _pid_ = *_ppid_;          \
+                *_ppid_ = 0;                    \
                 _pid_;                          \
         })
 
@@ -205,3 +203,5 @@ int pidfd_get_pid(int fd, pid_t *ret);
 int setpriority_closest(int priority);
 
 bool invoked_as(char *argv[], const char *token);
+
+_noreturn_ void freeze(void);

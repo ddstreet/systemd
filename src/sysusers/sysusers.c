@@ -29,6 +29,7 @@
 #include "specifier.h"
 #include "string-util.h"
 #include "strv.h"
+#include "sync-util.h"
 #include "tmpfile-util-label.h"
 #include "uid-range.h"
 #include "user-record.h"
@@ -443,7 +444,7 @@ static int write_temporary_passwd(const char *passwd_path, FILE **tmpfile, char 
                         .pw_name = i->name,
                         .pw_uid = i->uid,
                         .pw_gid = i->gid,
-                        .pw_gecos = i->description,
+                        .pw_gecos = (char*) strempty(i->description),
 
                         /* "x" means the password is stored in the shadow file */
                         .pw_passwd = (char*) PASSWORD_SEE_SHADOW,
@@ -1345,7 +1346,7 @@ static int process_item(Item *i) {
                 return add_group(i);
 
         default:
-                assert_not_reached("Unknown item type");
+                assert_not_reached();
         }
 }
 
@@ -1806,7 +1807,7 @@ static int cat_config(void) {
         if (r < 0)
                 return r;
 
-        (void) pager_open(arg_pager_flags);
+        pager_open(arg_pager_flags);
 
         return cat_files(NULL, files, 0);
 }
@@ -1917,7 +1918,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return -EINVAL;
 
                 default:
-                        assert_not_reached("Unhandled option");
+                        assert_not_reached();
                 }
 
         if (arg_replace && arg_cat_config)

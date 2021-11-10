@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "capability-util.h"
+#include "chase-symlinks.h"
 #include "discover-image.h"
 #include "dissect-image.h"
 #include "env-util.h"
@@ -532,10 +533,18 @@ static int merge_subprocess(Hashmap *images, const char *workspace) {
                                         img->path,
                                         &verity_settings,
                                         NULL,
+                                        d->diskseq,
                                         d->uevent_seqnum_not_before,
                                         d->timestamp_not_before,
                                         flags,
                                         &m);
+                        if (r < 0)
+                                return r;
+
+                        r = dissected_image_load_verity_sig_partition(
+                                        m,
+                                        d->fd,
+                                        &verity_settings);
                         if (r < 0)
                                 return r;
 
@@ -566,7 +575,7 @@ static int merge_subprocess(Hashmap *images, const char *workspace) {
                         break;
                 }
                 default:
-                        assert_not_reached("Unsupported image type");
+                        assert_not_reached();
                 }
 
                 r = validate_version(
@@ -582,7 +591,7 @@ static int merge_subprocess(Hashmap *images, const char *workspace) {
                         continue;
                 }
 
-                /* Noice! This one is an extension we want. */
+                /* Nice! This one is an extension we want. */
                 r = strv_extend(&extensions, img->name);
                 if (r < 0)
                         return log_oom();
@@ -957,7 +966,7 @@ static int parse_argv(int argc, char *argv[]) {
                         return -EINVAL;
 
                 default:
-                        assert_not_reached("Unhandled option");
+                        assert_not_reached();
                 }
 
         return 1;

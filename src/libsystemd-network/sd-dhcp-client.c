@@ -238,7 +238,7 @@ int sd_dhcp_client_set_callback(
 int sd_dhcp_client_set_request_broadcast(sd_dhcp_client *client, int broadcast) {
         assert_return(client, -EINVAL);
 
-        client->request_broadcast = !!broadcast;
+        client->request_broadcast = broadcast;
 
         return 0;
 }
@@ -297,11 +297,19 @@ int sd_dhcp_client_set_ifname(sd_dhcp_client *client, const char *ifname) {
         return free_and_strdup(&client->ifname, ifname);
 }
 
-const char *sd_dhcp_client_get_ifname(sd_dhcp_client *client) {
-        if (!client)
-                return NULL;
+int sd_dhcp_client_get_ifname(sd_dhcp_client *client, const char **ret) {
+        int r;
 
-        return get_ifname(client->ifindex, &client->ifname);
+        assert_return(client, -EINVAL);
+
+        r = get_ifname(client->ifindex, &client->ifname);
+        if (r < 0)
+                return r;
+
+        if (ret)
+                *ret = client->ifname;
+
+        return 0;
 }
 
 int sd_dhcp_client_set_mac(
@@ -1308,7 +1316,7 @@ static int client_timeout_resend(
                 goto error;
 
         default:
-                assert_not_reached("Unhandled choice");
+                assert_not_reached();
         }
 
         r = event_reset_time(client->event, &client->timeout_resend,
@@ -1686,7 +1694,6 @@ static int client_handle_ack(sd_dhcp_client *client, DHCPMessage *ack, size_t le
 
 static int client_set_lease_timeouts(sd_dhcp_client *client) {
         usec_t time_now;
-        char time_string[FORMAT_TIMESPAN_MAX];
         int r;
 
         assert(client);
@@ -1748,7 +1755,7 @@ static int client_set_lease_timeouts(sd_dhcp_client *client) {
                 return 0;
 
         log_dhcp_client(client, "lease expires in %s",
-                        format_timespan(time_string, FORMAT_TIMESPAN_MAX, client->expire_time - time_now, USEC_PER_SEC));
+                        FORMAT_TIMESPAN(client->expire_time - time_now, USEC_PER_SEC));
 
         /* arm T2 timeout */
         r = event_reset_time(client->event, &client->timeout_t2,
@@ -1764,7 +1771,7 @@ static int client_set_lease_timeouts(sd_dhcp_client *client) {
                 return 0;
 
         log_dhcp_client(client, "T2 expires in %s",
-                        format_timespan(time_string, FORMAT_TIMESPAN_MAX, client->t2_time - time_now, USEC_PER_SEC));
+                        FORMAT_TIMESPAN(client->t2_time - time_now, USEC_PER_SEC));
 
         /* arm T1 timeout */
         r = event_reset_time(client->event, &client->timeout_t1,
@@ -1777,14 +1784,13 @@ static int client_set_lease_timeouts(sd_dhcp_client *client) {
 
         if (client->t1_time > time_now)
                 log_dhcp_client(client, "T1 expires in %s",
-                                format_timespan(time_string, FORMAT_TIMESPAN_MAX, client->t1_time - time_now, USEC_PER_SEC));
+                                FORMAT_TIMESPAN(client->t1_time - time_now, USEC_PER_SEC));
 
         return 0;
 }
 
 static int client_handle_message(sd_dhcp_client *client, DHCPMessage *message, int len) {
         DHCP_CLIENT_DONT_DESTROY(client);
-        char time_string[FORMAT_TIMESPAN_MAX];
         int r, notify_event;
 
         assert(client);
@@ -1830,8 +1836,7 @@ static int client_handle_message(sd_dhcp_client *client, DHCPMessage *message, i
                         if (r < 0)
                                 goto error;
 
-                        log_dhcp_client(client, "REBOOT in %s", format_timespan(time_string, FORMAT_TIMESPAN_MAX,
-                                                                                client->start_delay, USEC_PER_SEC));
+                        log_dhcp_client(client, "REBOOT in %s", FORMAT_TIMESPAN(client->start_delay, USEC_PER_SEC));
 
                         client->start_delay = CLAMP(client->start_delay * 2,
                                                     RESTART_AFTER_NAK_MIN_USEC, RESTART_AFTER_NAK_MAX_USEC);
@@ -1899,7 +1904,7 @@ static int client_handle_message(sd_dhcp_client *client, DHCPMessage *message, i
                 r = -EINVAL;
                 goto error;
         default:
-                assert_not_reached("invalid state");
+                assert_not_reached();
         }
 
 error:

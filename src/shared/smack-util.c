@@ -52,7 +52,7 @@ int mac_smack_read(const char *path, SmackAttr attr, char **label) {
         if (!mac_smack_use())
                 return 0;
 
-        return getxattr_malloc(path, smack_attr_to_string(attr), label, true);
+        return getxattr_malloc(path, smack_attr_to_string(attr), label);
 }
 
 int mac_smack_read_fd(int fd, SmackAttr attr, char **label) {
@@ -121,8 +121,7 @@ int mac_smack_apply_pid(pid_t pid, const char *label) {
         return r;
 }
 
-static int smack_fix_fd(int fd , const char *abspath, LabelFixFlags flags) {
-        char procfs_path[STRLEN("/proc/self/fd/") + DECIMAL_STR_MAX(int)];
+static int smack_fix_fd(int fd, const char *abspath, LabelFixFlags flags) {
         const char *label;
         struct stat st;
         int r;
@@ -153,8 +152,7 @@ static int smack_fix_fd(int fd , const char *abspath, LabelFixFlags flags) {
         else
                 return 0;
 
-        xsprintf(procfs_path, "/proc/self/fd/%i", fd);
-        if (setxattr(procfs_path, "security.SMACK64", label, strlen(label), 0) < 0) {
+        if (setxattr(FORMAT_PROC_FD_PATH(fd), "security.SMACK64", label, strlen(label), 0) < 0) {
                 _cleanup_free_ char *old_label = NULL;
 
                 r = -errno;
@@ -168,7 +166,7 @@ static int smack_fix_fd(int fd , const char *abspath, LabelFixFlags flags) {
                         return 0;
 
                 /* If the old label is identical to the new one, suppress any kind of error */
-                if (getxattr_malloc(procfs_path, "security.SMACK64", &old_label, false) >= 0 &&
+                if (lgetxattr_malloc(FORMAT_PROC_FD_PATH(fd), "security.SMACK64", &old_label) >= 0 &&
                     streq(old_label, label))
                         return 0;
 
@@ -286,3 +284,15 @@ int mac_smack_copy(const char *dest, const char *src) {
         return 0;
 }
 #endif
+
+int rename_and_apply_smack_floor_label(const char *from, const char *to) {
+
+        if (rename(from, to) < 0)
+                return -errno;
+
+#if HAVE_SMACK_RUN_LABEL
+        return mac_smack_apply(to, SMACK_ATTR_ACCESS, SMACK_FLOOR_LABEL);
+#else
+        return 0;
+#endif
+}

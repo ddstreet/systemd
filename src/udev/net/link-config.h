@@ -2,6 +2,7 @@
 #pragma once
 
 #include "sd-device.h"
+#include "sd-netlink.h"
 
 #include "condition.h"
 #include "conf-parser.h"
@@ -57,6 +58,8 @@ struct LinkConfig {
         int autonegotiation;
         uint32_t advertise[N_ADVERTISE];
         uint32_t wol;
+        char *wol_password_file;
+        uint8_t *wol_password;
         NetDevPort port;
         int features[_NET_DEV_FEAT_MAX];
         netdev_channels channels;
@@ -64,6 +67,7 @@ struct LinkConfig {
         int rx_flow_control;
         int tx_flow_control;
         int autoneg_flow_control;
+        netdev_coalesce_param coalesce;
 
         LIST_FIELDS(LinkConfig, links);
 };
@@ -76,8 +80,8 @@ int link_load_one(LinkConfigContext *ctx, const char *filename);
 int link_config_load(LinkConfigContext *ctx);
 bool link_config_should_reload(LinkConfigContext *ctx);
 
-int link_config_get(LinkConfigContext *ctx, sd_device *device, LinkConfig **ret);
-int link_config_apply(LinkConfigContext *ctx, const LinkConfig *config, sd_device *device, const char **ret_name);
+int link_config_get(LinkConfigContext *ctx, sd_netlink **rtnl, sd_device *device, LinkConfig **ret);
+int link_config_apply(LinkConfigContext *ctx, const LinkConfig *config, sd_netlink **rtnl, sd_device *device, const char **ret_name);
 int link_get_driver(LinkConfigContext *ctx, sd_device *device, char **ret);
 
 const char *name_policy_to_string(NamePolicy p) _const_;
@@ -95,6 +99,7 @@ const struct ConfigPerfItem* link_config_gperf_lookup(const char *key, GPERF_LEN
 CONFIG_PARSER_PROTOTYPE(config_parse_ifalias);
 CONFIG_PARSER_PROTOTYPE(config_parse_rx_tx_queues);
 CONFIG_PARSER_PROTOTYPE(config_parse_txqueuelen);
+CONFIG_PARSER_PROTOTYPE(config_parse_wol_password);
 CONFIG_PARSER_PROTOTYPE(config_parse_mac_address_policy);
 CONFIG_PARSER_PROTOTYPE(config_parse_name_policy);
 CONFIG_PARSER_PROTOTYPE(config_parse_alternative_names_policy);

@@ -155,8 +155,7 @@ static void swap_unwatch_control_pid(Swap *s) {
         if (s->control_pid <= 0)
                 return;
 
-        unit_unwatch_pid(UNIT(s), s->control_pid);
-        s->control_pid = 0;
+        unit_unwatch_pid(UNIT(s), TAKE_PID(s->control_pid));
 }
 
 static void swap_done(Unit *u) {
@@ -609,7 +608,6 @@ static int swap_coldplug(Unit *u) {
 }
 
 static void swap_dump(Unit *u, FILE *f, const char *prefix) {
-        char buf[FORMAT_TIMESPAN_MAX];
         Swap *s = SWAP(u);
         SwapParameters *p;
 
@@ -651,7 +649,7 @@ static void swap_dump(Unit *u, FILE *f, const char *prefix) {
 
         fprintf(f,
                 "%sTimeoutSec: %s\n",
-                prefix, format_timespan(buf, sizeof(buf), s->timeout_usec, USEC_PER_SEC));
+                prefix, FORMAT_TIMESPAN(s->timeout_usec, USEC_PER_SEC));
 
         if (s->control_pid > 0)
                 fprintf(f,
@@ -974,7 +972,7 @@ static int swap_stop(Unit *u) {
                 return 0;
 
         default:
-                assert_not_reached("Unexpected state.");
+                assert_not_reached();
         }
 }
 
@@ -1068,7 +1066,7 @@ static void swap_sigchld_event(Unit *u, pid_t pid, int code, int status) {
         else if (code == CLD_DUMPED)
                 f = SWAP_FAILURE_CORE_DUMP;
         else
-                assert_not_reached("Unknown code");
+                assert_not_reached();
 
         if (s->result == SWAP_SUCCESS)
                 s->result = f;
@@ -1113,7 +1111,7 @@ static void swap_sigchld_event(Unit *u, pid_t pid, int code, int status) {
                 break;
 
         default:
-                assert_not_reached("Uh, control process died at wrong time.");
+                assert_not_reached();
         }
 
         /* Notify clients about changed exit status */
@@ -1164,7 +1162,7 @@ static int swap_dispatch_timer(sd_event_source *source, usec_t usec, void *userd
                 break;
 
         default:
-                assert_not_reached("Timeout at wrong time.");
+                assert_not_reached();
         }
 
         return 0;
@@ -1196,8 +1194,9 @@ static int swap_load_proc_swaps(Manager *m, bool set_flags) {
                         continue;
                 }
 
-                if (cunescape(dev, UNESCAPE_RELAX, &d) < 0)
-                        return log_oom();
+                ssize_t l = cunescape(dev, UNESCAPE_RELAX, &d);
+                if (l < 0)
+                        return log_error_errno(l, "Failed to unescape device path: %m");
 
                 device_found_node(m, d, DEVICE_FOUND_SWAP, DEVICE_FOUND_SWAP);
 
@@ -1317,11 +1316,11 @@ static Unit *swap_following(Unit *u) {
         if (streq_ptr(s->what, s->devnode))
                 return NULL;
 
-        LIST_FOREACH_AFTER(same_devnode, other, s)
+        LIST_FOREACH(same_devnode, other, s->same_devnode_next)
                 if (streq_ptr(other->what, other->devnode))
                         return UNIT(other);
 
-        LIST_FOREACH_BEFORE(same_devnode, other, s) {
+        LIST_FOREACH_BACKWARDS(same_devnode, other, s->same_devnode_prev) {
                 if (streq_ptr(other->what, other->devnode))
                         return UNIT(other);
 
@@ -1598,19 +1597,19 @@ static int swap_test_start_limit(Unit *u) {
 }
 
 static const char* const swap_exec_command_table[_SWAP_EXEC_COMMAND_MAX] = {
-        [SWAP_EXEC_ACTIVATE] = "ExecActivate",
+        [SWAP_EXEC_ACTIVATE]   = "ExecActivate",
         [SWAP_EXEC_DEACTIVATE] = "ExecDeactivate",
 };
 
 DEFINE_STRING_TABLE_LOOKUP(swap_exec_command, SwapExecCommand);
 
 static const char* const swap_result_table[_SWAP_RESULT_MAX] = {
-        [SWAP_SUCCESS] = "success",
-        [SWAP_FAILURE_RESOURCES] = "resources",
-        [SWAP_FAILURE_TIMEOUT] = "timeout",
-        [SWAP_FAILURE_EXIT_CODE] = "exit-code",
-        [SWAP_FAILURE_SIGNAL] = "signal",
-        [SWAP_FAILURE_CORE_DUMP] = "core-dump",
+        [SWAP_SUCCESS]                 = "success",
+        [SWAP_FAILURE_RESOURCES]       = "resources",
+        [SWAP_FAILURE_TIMEOUT]         = "timeout",
+        [SWAP_FAILURE_EXIT_CODE]       = "exit-code",
+        [SWAP_FAILURE_SIGNAL]          = "signal",
+        [SWAP_FAILURE_CORE_DUMP]       = "core-dump",
         [SWAP_FAILURE_START_LIMIT_HIT] = "start-limit-hit",
 };
 
