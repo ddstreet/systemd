@@ -56,7 +56,6 @@
 #include "networkd-wifi.h"
 #include "set.h"
 #include "socket-util.h"
-#include "stat-util.h"
 #include "stdio-util.h"
 #include "string-table.h"
 #include "strv.h"
@@ -64,6 +63,7 @@
 #include "tmpfile-util.h"
 #include "udev-util.h"
 #include "util.h"
+#include "virt.h"
 #include "vrf.h"
 
 bool link_ipv4ll_enabled(Link *link) {
@@ -1433,11 +1433,11 @@ static int link_check_initialized(Link *link) {
 
         assert(link);
 
-        if (path_is_read_only_fs("/sys") > 0)
+        if (detect_container() > 0)
                 /* no udev */
                 return link_initialized_and_synced(link);
 
-        /* udev should be around */
+        /* not in a container, udev will be around */
         r = sd_device_new_from_ifindex(&device, link->ifindex);
         if (r < 0) {
                 log_link_debug_errno(link, r, "Could not find device, waiting for device initialization: %m");
