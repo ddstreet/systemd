@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: optional
-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>,
            Marco d'Itri <md@linux.it>,
            Sjoerd Simons <sjoerd@debian.org>,
@@ -9,8 +10,8 @@ Uploaders: Michael Biebl <biebl@debian.org>,
            Felipe Sateler <fsateler@debian.org>
 Standards-Version: 4.5.1
 Rules-Requires-Root: no
-Vcs-Git: https://salsa.debian.org/systemd-team/systemd.git
-Vcs-Browser: https://salsa.debian.org/systemd-team/systemd
+Vcs-Git: https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd
+Vcs-Browser:  https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd
 Homepage: https://www.freedesktop.org/wiki/Software/systemd
 Build-Depends: debhelper-compat (= 13),
                pkg-config,
@@ -67,6 +68,7 @@ Multi-Arch: foreign
 Section: admin
 Priority: important
 Recommends: dbus,
+            networkd-dispatcher,
             systemd-timesyncd | time-daemon,
 Suggests: systemd-container,
           policykit-1
@@ -111,6 +113,7 @@ Replaces: sysvinit-core,
           upstart (<< 1.13.2-0ubuntu10~),
 Pre-Depends: systemd
 Depends: ${shlibs:Depends},
+         systemd (= ${binary:Version}),
          ${misc:Depends}
 Recommends: libpam-systemd,
             libnss-systemd
@@ -342,6 +345,7 @@ Depends: ${shlibs:Depends},
          util-linux (>= 2.27.1),
          s390-tools (>> 1.6.2) [s390],
 Conflicts: hal
+Breaks: systemd (<< ${binary:Version}),
 Description: /dev/ and hotplug management daemon
  udev is a daemon which dynamically creates and removes device nodes from
  /dev/, handles hotplug events and loads drivers at boot time.
