@@ -1,12 +1,16 @@
 systemd (237-3ubuntu10.53) UNRELEASED; urgency=medium
 
+  [ Ratchanan Srirattanamet ]
   * d/p/debian/timedatectl-lp1650688.patch,
     d/p/debian/UBUNTU-Fix-timezone-setting-on-read-only-etc.patch:
     Fix timedated unable to retrieve & properly set timezone on
     read-only /etc (e.g. Ubuntu Core and system-image-based systems)
     (LP: #1650688)
 
- -- Ratchanan Srirattanamet <ratchanan@ubports.com>  Fri, 24 Sep 2021 16:54:31 +0700
+  [ Lukas Märdian ]
+  * Support detection for ARM64 Hyper-V guests (LP: #1952599)
+
+ -- Lukas Märdian <slyon@ubuntu.com>  Wed, 08 Dec 2021 10:41:05 +0100
 
 systemd (237-3ubuntu10.52) bionic; urgency=medium
 
