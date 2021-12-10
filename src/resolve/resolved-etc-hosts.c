@@ -196,28 +196,29 @@ static int parse_line(Manager *m, unsigned nr, const char *line) {
 
         r = extract_first_word(&line, &address, NULL, EXTRACT_RELAX);
         if (r < 0)
-                return log_error_errno(r, "Couldn't extract address, in line /etc/hosts:%u.", nr);
-        if (r == 0) {
-                log_error("Premature end of line, in line /etc/hosts:%u.", nr);
-                return -EINVAL;
-        }
+                return log_error_errno(r, "/etc/hosts:%u: failed to extract address: %m", nr);
+        assert(r > 0); /* We already checked that the line is not empty, so it should contain *something* */
 
         r = in_addr_from_string_auto(address, &family, &in);
-        if (r < 0)
-                return log_error_errno(r, "Address '%s' is invalid, in line /etc/hosts:%u.", address, nr);
+        if (r < 0) {
+                log_warning_errno(r, "/etc/hosts:%u: address '%s' is invalid, ignoring: %m", nr, address);
+                return 0;
+        }
 
         for (;;) {
                 _cleanup_free_ char *name = NULL;
 
                 r = extract_first_word(&line, &name, NULL, EXTRACT_RELAX);
                 if (r < 0)
-                        return log_error_errno(r, "Couldn't extract host name, in line /etc/hosts:%u.", nr);
+                        return log_error_errno(r, "/etc/hosts:%u: couldn't extract host name: %m", nr);
                 if (r == 0)
                         break;
 
                 r = dns_name_is_valid(name);
-                if (r <= 0)
-                        return log_error_errno(r, "Hostname %s is not valid, ignoring, in line /etc/hosts:%u.", name, nr);
+                if (r <= 0) {
+                        log_warning_errno(r, "/etc/hosts:%u: hostname \"%s\" is not valid, ignoring.", nr, name);
+                        continue;
+                }
 
                 if (is_localhost(name)) {
                         /* Suppress the "localhost" line that is often seen */
@@ -237,8 +238,8 @@ static int parse_line(Manager *m, unsigned nr, const char *line) {
                 if (suppressed)
                         return 0;
 
-                log_error("Line is missing any host names, in line /etc/hosts:%u.", nr);
-                return -EINVAL;
+                log_warning("/etc/hosts:%u: line is missing any host names", nr);
+                return 0;
         }
 
         /* Takes possession of the names strv */
@@ -304,10 +305,12 @@ int manager_etc_hosts_read(Manager *m) {
 
                 nr++;
 
+                l = strchr(line, '#');
+                if (l)
+                        *l = '\0';
+
                 l = strstrip(line);
                 if (isempty(l))
-                        continue;
-                if (l[0] == '#')
                         continue;
 
                 r = parse_line(m, nr, l);
