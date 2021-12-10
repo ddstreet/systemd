@@ -1,4 +1,4 @@
-systemd (237-3ubuntu10.53) UNRELEASED; urgency=medium
+systemd (237-3ubuntu10.53) bionic; urgency=medium
 
   [ Ratchanan Srirattanamet ]
   * d/p/debian/timedatectl-lp1650688.patch,
@@ -10,7 +10,7 @@ systemd (237-3ubuntu10.53) UNRELEASED; urgency=medium
   [ Lukas Märdian ]
   * Support detection for ARM64 Hyper-V guests (LP: #1952599)
 
- -- Lukas Märdian <slyon@ubuntu.com>  Wed, 08 Dec 2021 10:41:05 +0100
+ -- Lukas Märdian <slyon@ubuntu.com>  Fri, 10 Dec 2021 10:15:49 +0100
 
 systemd (237-3ubuntu10.52) bionic; urgency=medium
 
