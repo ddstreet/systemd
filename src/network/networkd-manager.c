@@ -1469,7 +1469,7 @@ void manager_free(Manager *m) {
         hashmap_free(m->dhcp6_prefixes);
 
         while ((link = hashmap_steal_first(m->links))) {
-                link_stop_clients(link);
+                (void) link_stop_clients(link, true);
                 link_unref(link);
          }
 
