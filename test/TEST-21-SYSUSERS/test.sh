@@ -37,6 +37,7 @@ test_run() {
                 rm -f $TESTDIR/etc/*
                 cp $f $TESTDIR/usr/lib/sysusers.d/test.conf
                 systemd-sysusers --root=$TESTDIR 2> /dev/null
+                journalctl --sync
                 journalctl -t systemd-sysusers -o cat | tail -n1 > $TESTDIR/tmp/err
                 if ! diff -u $TESTDIR/tmp/err  ${f%.*}.expected-err; then
                         echo "**** Unexpected error output for $f"
