@@ -1380,13 +1380,32 @@ bool clock_supported(clockid_t clock) {
         }
 }
 
+/* Hack for Ubuntu phone: check if path is an existing symlink to
+ * /etc/writable; if it is, update that instead */
+static const char* writable_filename(const char *path) {
+        ssize_t r;
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
+        const char *result = path;
+        int orig_errno = errno;
+
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
+        }
+
+        errno = orig_errno;
+        return result;
+}
+
 int get_timezone(char **tz) {
         _cleanup_free_ char *t = NULL;
         const char *e;
         char *z;
         int r;
 
-        r = readlink_malloc("/etc/localtime", &t);
+        r = readlink_malloc(writable_filename("/etc/localtime"), &t);
         if (r < 0) {
                 if (r != -EINVAL)
                         return r; /* returns EINVAL if not a symlink */
