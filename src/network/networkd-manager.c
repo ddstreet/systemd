@@ -1468,8 +1468,10 @@ void manager_free(Manager *m) {
                 link_unref(link);
         hashmap_free(m->dhcp6_prefixes);
 
-        while ((link = hashmap_first(m->links)))
+        while ((link = hashmap_steal_first(m->links))) {
                 link_unref(link);
+         }
+
         hashmap_free(m->links);
 
         hashmap_free(m->networks_by_name);
