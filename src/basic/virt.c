@@ -153,6 +153,7 @@ static int detect_vm_dmi(void) {
                 { "Parallels",           VIRTUALIZATION_PARALLELS },
                 /* https://wiki.freebsd.org/bhyve */
                 { "BHYVE",               VIRTUALIZATION_BHYVE     },
+                { "Microsoft",           VIRTUALIZATION_MICROSOFT },
         };
         unsigned i;
         int r;
