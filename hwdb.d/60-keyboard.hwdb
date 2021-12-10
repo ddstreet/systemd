@@ -591,6 +591,8 @@ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHewlett-Packard*:pnHPLicrice:pvr*
 # HP EliteBook
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHewlett-Packard*:pnHPEliteBook*:pvr*
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook*:pvr*
+# HP Elite Dragonfly
+evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteDragonfly*:pvr*
 # HP ProBook 440 G2
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHewlett-Packard*:pnHP440G2:pvr*
 # HP ProBook
