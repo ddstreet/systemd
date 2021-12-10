@@ -1171,6 +1171,8 @@ static void manager_clear_jobs_and_units(Manager *m) {
         assert(!m->cleanup_queue);
         assert(!m->gc_unit_queue);
         assert(!m->gc_job_queue);
+        assert(!m->cgroup_realize_queue);
+        assert(!m->cgroup_empty_queue);
 
         assert(hashmap_isempty(m->jobs));
         assert(hashmap_isempty(m->units));
