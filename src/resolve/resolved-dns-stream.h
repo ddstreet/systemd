@@ -24,6 +24,15 @@
 
 typedef struct DnsStream DnsStream;
 
+typedef enum DnsStreamType {
+        DNS_STREAM_LOOKUP,        /* Outgoing connection to a classic DNS server */
+        DNS_STREAM_LLMNR_SEND,    /* Outgoing LLMNR TCP lookup */
+        DNS_STREAM_LLMNR_RECV,    /* Incoming LLMNR TCP lookup */
+        DNS_STREAM_STUB,          /* Incoming DNS stub connection */
+        _DNS_STREAM_TYPE_MAX,
+        _DNS_STREAM_TYPE_INVALID = -1,
+} DnsStreamType;
+
 #include "resolved-dns-packet.h"
 #include "resolved-dns-transaction.h"
 #include "resolved-manager.h"
@@ -39,6 +48,7 @@ struct DnsStream {
         Manager *manager;
         int n_ref;
 
+        DnsStreamType type;
         DnsProtocol protocol;
 
         int fd;
@@ -68,7 +78,7 @@ struct DnsStream {
         LIST_FIELDS(DnsStream, streams);
 };
 
-int dns_stream_new(Manager *m, DnsStream **s, DnsProtocol protocol, int fd);
+int dns_stream_new(Manager *m, DnsStream **s, DnsStreamType type, DnsProtocol protocol, int fd);
 DnsStream *dns_stream_unref(DnsStream *s);
 DnsStream *dns_stream_ref(DnsStream *s);
 
