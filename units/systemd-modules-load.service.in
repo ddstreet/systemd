@@ -14,6 +14,7 @@ DefaultDependencies=no
 Conflicts=shutdown.target
 Before=sysinit.target shutdown.target
 ConditionCapability=CAP_SYS_MODULE
+ConditionVirtualization=!container
 ConditionDirectoryNotEmpty=|/lib/modules-load.d
 ConditionDirectoryNotEmpty=|/usr/lib/modules-load.d
 ConditionDirectoryNotEmpty=|/usr/local/lib/modules-load.d
