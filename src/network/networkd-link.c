@@ -2109,6 +2109,14 @@ static int link_joined(Link *link) {
         case ACTIVATION_POLICY_UP:
                 if (link->activated)
                         break;
+                if (link->flags & IFF_UP)
+                        /* WARNING: This retains the previous, buggy, behavior
+                         * which avoids changing an interface 'master' if
+                         * the interface is already up; some misconfigured systems
+                         * expect this buggy behavior and will break on restart
+                         * of systemd-networkd if this is fixed. LP: #1937117
+                         */
+                        break;
                 _fallthrough_;
         case ACTIVATION_POLICY_ALWAYS_UP:
                 r = link_up(link);
