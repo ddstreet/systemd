@@ -2300,6 +2300,7 @@ if conf.get('ENABLE_HWDB') == 1
                          'src/libsystemd/sd-hwdb/hwdb-internal.h',
                          include_directories : includes,
                          link_with : [libudev_static],
+                         dependencies : [threads],
                          install_rpath : udev_rpath,
                          install : true,
                          install_dir : rootbindir)
