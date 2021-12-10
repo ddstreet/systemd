@@ -658,7 +658,7 @@ static usec_t client_compute_request_timeout(usec_t now, uint64_t attempt) {
  * Note that while the default T1/T2 initial times do have random 'fuzz' applied,
  * the RFC sec 4.4.5 does not mention adding any fuzz to retries. */
 static usec_t client_compute_reacquisition_timeout(usec_t now, usec_t expire) {
-        return MAX(usec_sub_unsigned(expire, now) / 2, 60 * USEC_PER_SEC);
+        return now + MAX(usec_sub_unsigned(expire, now) / 2, 60 * USEC_PER_SEC);
 }
 
 static int client_message_init(
