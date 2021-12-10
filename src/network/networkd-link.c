@@ -4039,6 +4039,9 @@ int link_save(Link *link) {
                                 log_link_debug(link, "No DHCPv6 lease");
                 }
 
+                fprintf(f, "ACTIVATION_POLICY=%s\n",
+                        activation_policy_to_string(link->network->activation_policy));
+
                 fprintf(f, "NETWORK_FILE=%s\n", link->network->filename);
 
                 fputs("DNS=", f);
