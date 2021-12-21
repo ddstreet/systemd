@@ -34,7 +34,7 @@ export DEB_BUILD_PROFILES += noudeb
 endif
 
 CONFFLAGS = \
-	-Db_lto=false \
+	-Db_lto=true \
 	-Db_pie=true \
 	-Dmode=release \
 	-Drootlibdir=/usr/lib/$(DEB_HOST_MULTIARCH) \
@@ -78,6 +78,8 @@ CONFFLAGS = \
 	-Dp11kit=false \
 	-Dtpm2=false \
 	-Doomd=false \
+	-Durlify=false \
+	-Dopenssl=false \
 	-Dsysext=true \
 	-Dnscd=true \
 	-Dntp-servers="$(DEFAULT_NTP_SERVERS)" \
@@ -227,6 +229,7 @@ endif
 
 override_dh_install:
 	# remove unnecessary / unused files
+	rm -rf debian/install/*/usr/share/doc/systemd/LICENSES/
 	rm -f debian/install/*/usr/share/doc/systemd/LICENSE.*
 	rm -f debian/install/*/var/log/README
 	rm -f debian/install/*/etc/init.d/README
@@ -236,6 +239,8 @@ override_dh_install:
 	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
+	# those files should probably be shipped in a -dev package, remove for now
+	rm -rf debian/install/*/usr/share/dbus-1/interfaces/
 	# remove files related to factory-reset feature
 	find debian/install/ \( -name 'systemd-update-done*' -o \
 		-name systemd-journal-catalog-update.service -o \
