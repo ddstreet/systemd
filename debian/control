@@ -44,6 +44,7 @@ Build-Depends: debhelper-compat (= 13),
                libkmod-dev (>= 15),
                libblkid-dev (>= 2.24),
                libmount-dev (>= 2.30),
+               libfdisk-dev (>= 2.33),
                libseccomp-dev (>= 2.3.1) [amd64 arm64 armel armhf i386 mips mipsel mips64 mips64el x32 powerpc ppc64 ppc64el riscv64 s390x],
                libdw-dev (>= 0.158) <!stage1>,
                libpolkit-gobject-1-dev <!stage1>,
@@ -60,6 +61,7 @@ Build-Depends: debhelper-compat (= 13),
                iproute2 <!nocheck>,
                zstd <!nocheck>,
                gawk <!nocheck>,
+               fdisk <!nocheck>,
 
 Package: systemd
 Architecture: linux-any
@@ -426,3 +428,14 @@ Description: Standalone tmpfiles binary for use in non-systemd systems
  Standalone tmpfiles binary with minimal dependencies.
  This package conflicts with the main systemd package and is meant for use in
  non-systemd systems.
+
+Package: systemd-oomd
+Section: admin
+Architecture: linux-any
+Priority: optional
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: A userspace out-of-memory (OOM) killer
+ systemd-oomd is a system service that uses cgroups-v2 and
+ pressure stall information (PSI) to monitor and take action on
+ processes before an OOM occurs in kernel space.
