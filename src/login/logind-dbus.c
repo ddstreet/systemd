@@ -1997,7 +1997,7 @@ static int method_suspend_then_hibernate(sd_bus_message *message, void *userdata
                         "org.freedesktop.login1.hibernate",
                         "org.freedesktop.login1.hibernate-multiple-sessions",
                         "org.freedesktop.login1.hibernate-ignore-inhibit",
-                        "hybrid-sleep",
+                        "suspend-then-hibernate",
                         error);
 }
 
