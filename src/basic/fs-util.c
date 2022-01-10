@@ -1480,7 +1480,7 @@ int open_parent(const char *path, int flags, mode_t mode) {
         return fd;
 }
 
-int conservative_rename(
+int conservative_renameat(
                 int olddirfd, const char *oldpath,
                 int newdirfd, const char *newpath) {
 
