@@ -356,6 +356,7 @@ $KERNEL_APPEND \
 -net none \
 -m $QEMU_MEM \
 -nographic \
+-vga none \
 -kernel $KERNEL_BIN \
 -drive format=raw,cache=unsafe,file=$image \
 $QEMU_OPTIONS \
