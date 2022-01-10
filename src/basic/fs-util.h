@@ -122,3 +122,5 @@ int fsync_path_at(int at_fd, const char *path);
 int syncfs_path(int atfd, const char *path);
 
 int open_parent(const char *path, int flags, mode_t mode);
+
+int conservative_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
