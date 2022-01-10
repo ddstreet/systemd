@@ -4787,10 +4787,11 @@ int unit_load_fragment(Unit *u) {
                         u->source_mtime = 0;
         }
 
-        /* We do the merge dance here because for some unit types, the unit might have aliases which are not
+        /* Call merge_by_names with the name derived from the fragment path as the preferred name.
+         *
+         * We do the merge dance here because for some unit types, the unit might have aliases which are not
          * declared in the file system. In particular, this is true (and frequent) for device and swap units.
          */
-        Unit *merged;
         const char *id = u->id;
         _cleanup_free_ char *free_id = NULL;
 
@@ -4807,7 +4808,7 @@ int unit_load_fragment(Unit *u) {
                 }
         }
 
-        merged = u;
+        Unit *merged = u;
         r = merge_by_names(&merged, names, id);
         if (r < 0)
                 return r;
