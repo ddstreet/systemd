@@ -67,10 +67,8 @@ CONFFLAGS = \
 	-Dwheel-group=false \
 	-Duserdb=false \
 	-Dhomed=false \
-	-Dlibfido2=false \
 	-Dpwquality=false \
 	-Dp11kit=false \
-	-Dtpm2=false \
 	-Doomd=true \
 	-Durlify=false \
 	-Dopenssl=false \
@@ -93,6 +91,7 @@ CONFFLAGS = \
 	-Dhwdb=true \
 	-Dsysusers=true \
 	-Dinstall-tests=$(if $(filter noinsttest,$(DEB_BUILD_PROFILES)),false,true) \
+	-Dlibcryptsetup-plugins=false \
 	-Defi=true \
 	-Dman=true \
 	-Dtranslations=true \
@@ -116,6 +115,8 @@ CONFFLAGS += \
 	-Dimportd=true \
 	-Dmicrohttpd=true \
 	-Dgnutls=true \
+	-Dlibfido2=true \
+	-Dtpm2=true \
 	-Dpcre2=true
 else
 CONFFLAGS += \
@@ -130,6 +131,8 @@ CONFFLAGS += \
 	-Dimportd=false \
 	-Dmicrohttpd=false \
 	-Dgnutls=false \
+	-Dlibfido2=false \
+	-Dtpm2=false \
 	-Dpcre2=false
 endif
 
@@ -236,7 +239,8 @@ override_dh_installinit:
 
 override_dh_installsystemd:
 	dh_installsystemd -psystemd-timesyncd
-	dh_installsystemd -psystemd-oomd
+	dh_installsystemd -psystemd-oomd systemd-oomd.service
+	dh_installsystemd -psystemd-oomd --no-stop-on-upgrade systemd-oomd.socket
 
 override_dh_installsystemduser:
 
