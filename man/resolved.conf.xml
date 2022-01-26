@@ -1,6 +1,9 @@
 <?xml version='1.0'?>
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
-  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+  "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY % entities SYSTEM "custom-entities.ent" >
+%entities;
+]>
 <!-- SPDX-License-Identifier: LGPL-2.1-or-later -->
 
 <refentry id="resolved.conf" conditional='ENABLE_RESOLVE'
@@ -199,7 +202,7 @@
         domains (TLDs) that are not known by the DNS root server. This
         logic does not work in all private zone setups.</para>
 
-        <para>Defaults to <literal>allow-downgrade</literal>.</para>
+        <para>Defaults to <literal>&DEFAULT_DNSSEC_MODE;</literal>.</para>
         </listitem>
       </varlistentry>
 
@@ -239,17 +242,17 @@
         <varname>DNSOverTLS=</varname> setting is in effect. For per-link DNS servers the per-link setting is in effect, unless
         it is unset in which case the global setting is used instead.</para>
 
-        <para>Defaults to off.</para>
+        <para>Defaults to <literal>&DEFAULT_DNS_OVER_TLS_MODE;</literal>.</para>
         </listitem>
       </varlistentry>
 
       <varlistentry>
         <term><varname>Cache=</varname></term>
         <listitem><para>Takes a boolean or <literal>no-negative</literal> as argument. If
-        <literal>yes</literal> (the default), resolving a domain name which already got queried earlier will
+        <literal>yes</literal>, resolving a domain name which already got queried earlier will
         return the previous result as long as it is still valid, and thus does not result in a new network
         request. Be aware that turning off caching comes at a performance penalty, which is particularly high
-        when DNSSEC is used. If <literal>no-negative</literal>, only positive answers are cached.</para>
+        when DNSSEC is used. If <literal>no-negative</literal> (the default), only positive answers are cached.</para>
 
         <para>Note that caching is turned off by default for host-local DNS servers.
         See <varname>CacheFromLocalhost=</varname> for details.</para></listitem>

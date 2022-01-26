@@ -254,8 +254,8 @@
           <para>Specifies the policy for <command>systemd-networkd</command> managing the link
           administrative state. Specifically, this controls how <command>systemd-networkd</command>
           changes the network device's <literal>IFF_UP</literal> flag, which is sometimes
-          controlled by system administrators by running e.g., <command>ip set dev eth0 up</command>
-          or <command>ip set dev eth0 down</command>, and can also be changed with
+          controlled by system administrators by running e.g., <command>ip link set dev eth0 up</command>
+          or <command>ip link set dev eth0 down</command>, and can also be changed with
           <command>networkctl up eth0</command> or <command>networkctl down eth0</command>.</para>
 
           <para>Takes one of <literal>up</literal>, <literal>always-up</literal>,
@@ -401,7 +401,7 @@
             <literal>IPv6AcceptRA=</literal>.</para>
 
             <para>Furthermore, note that by default the domain name
-            specified through DHCP is not used for name resolution.
+            specified through DHCP, on Ubuntu, are used for name resolution.
             See option <option>UseDomains=</option> below.</para>
 
             <para>See the [DHCPv4] or [DHCPv6] sections below for further configuration options for the DHCP
@@ -1843,7 +1843,7 @@ IPv6Token=prefixstable:2002:da8:1::</programlisting></para>
             effect of the <option>Domains=</option> setting. If set to <option>route</option>, the domain
             name received from the DHCP server will be used for routing DNS queries only, but not for
             searching, similar to the effect of the <option>Domains=</option> setting when the argument is
-            prefixed with <literal>~</literal>. Defaults to false.</para>
+            prefixed with <literal>~</literal>. Defaults to true on Ubuntu.</para>
 
             <para>It is recommended to enable this option only on trusted networks, as setting this affects
             resolution of all hostnames, in particular of single-label names. It is generally safer to use
@@ -2223,7 +2223,7 @@ IPv6Token=prefixstable:2002:da8:1::</programlisting></para>
             the effect of the <option>Domains=</option> setting. If set to <literal>route</literal>, the domain name
             received via IPv6 RA will be used for routing DNS queries only, but not for searching, similar to the
             effect of the <option>Domains=</option> setting when the argument is prefixed with
-            <literal>~</literal>. Defaults to false.</para>
+            <literal>~</literal>. Defaults to true on Ubuntu.</para>
 
             <para>It is recommended to enable this option only on trusted networks, as setting this affects resolution
             of all hostnames, in particular of single-label names. It is generally safer to use the supplied domain
@@ -3991,10 +3991,10 @@ Bridge=bridge0</programlisting>
     </example>
 
     <example>
-      <title></title>
+      <title>Bridge port with VLAN forwarding</title>
 
       <programlisting>
-# /etc/systemd/network/20-bridge-slave-interface-vlan.network
+# /etc/systemd/network/25-bridge-slave-interface-1.network
 [Match]
 Name=enp2s0
 
@@ -4134,6 +4134,7 @@ MACVTAP=macvtap-test
       <programlisting># /etc/systemd/network/27-xfrm.netdev
 [NetDev]
 Name=xfrm0
+Kind=xfrm
 
 [Xfrm]
 InterfaceId=7</programlisting>

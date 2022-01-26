@@ -60,7 +60,7 @@
 #include "glob-util.h"
 #include "hexdecoct.h"
 #include "io-util.h"
-#include "ioprio.h"
+#include "ioprio-util.h"
 #include "label.h"
 #include "log.h"
 #include "macro.h"
@@ -68,6 +68,7 @@
 #include "manager-dump.h"
 #include "memory-util.h"
 #include "missing_fs.h"
+#include "missing_ioprio.h"
 #include "mkdir.h"
 #include "mount-util.h"
 #include "mountpoint-util.h"
@@ -3283,6 +3284,13 @@ static int apply_mount_namespace(
 
 finalize:
         bind_mount_free_many(bind_mounts, n_bind_mounts);
+
+        /* If we couldn't set up the namespace this is probably due to a
+         * missing capability. In this case, silently proceeed. */
+        if (IN_SET(r, -EPERM, -EACCES)) {
+                log_unit_debug_errno(u, r, "Failed to set up namespace, assuming containerized execution, ignoring: %m");
+                return 0;
+        }
         return r;
 }
 
@@ -3988,7 +3996,11 @@ static int exec_child(
 
         if (context->nice_set) {
                 r = setpriority_closest(context->nice);
-                if (r < 0)
+                if (ERRNO_IS_PRIVILEGE(r)) {
+                        log_open();
+                        log_unit_debug_errno(unit, r, "Failed to adjust Nice setting, assuming containerized execution, ignoring: %m");
+                        log_close();
+                } else if (r < 0)
                         return log_unit_error_errno(unit, r, "Failed to set up process scheduling priority (nice level): %m");
         }
 
@@ -4832,7 +4844,7 @@ void exec_context_init(ExecContext *c) {
         assert(c);
 
         c->umask = 0022;
-        c->ioprio = IOPRIO_PRIO_VALUE(IOPRIO_CLASS_BE, 0);
+        c->ioprio = IOPRIO_DEFAULT_CLASS_AND_PRIO;
         c->cpu_sched_policy = SCHED_OTHER;
         c->syslog_priority = LOG_DAEMON|LOG_INFO;
         c->syslog_level_prefix = true;
@@ -5402,11 +5414,11 @@ void exec_context_dump(const ExecContext *c, FILE* f, const char *prefix) {
         if (c->ioprio_set) {
                 _cleanup_free_ char *class_str = NULL;
 
-                r = ioprio_class_to_string_alloc(IOPRIO_PRIO_CLASS(c->ioprio), &class_str);
+                r = ioprio_class_to_string_alloc(ioprio_prio_class(c->ioprio), &class_str);
                 if (r >= 0)
                         fprintf(f, "%sIOSchedulingClass: %s\n", prefix, class_str);
 
-                fprintf(f, "%sIOPriority: %lu\n", prefix, IOPRIO_PRIO_DATA(c->ioprio));
+                fprintf(f, "%sIOPriority: %d\n", prefix, ioprio_prio_data(c->ioprio));
         }
 
         if (c->cpu_sched_set) {
@@ -5762,9 +5774,9 @@ int exec_context_get_effective_ioprio(const ExecContext *c) {
 
         p = ioprio_get(IOPRIO_WHO_PROCESS, 0);
         if (p < 0)
-                return IOPRIO_PRIO_VALUE(IOPRIO_CLASS_BE, 4);
+                return IOPRIO_DEFAULT_CLASS_AND_PRIO;
 
-        return p;
+        return ioprio_normalize(p);
 }
 
 bool exec_context_get_effective_mount_apivfs(const ExecContext *c) {
