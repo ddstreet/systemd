@@ -10,7 +10,12 @@ include /usr/share/dpkg/default.mk
 ifeq ($(DEB_VENDOR),Ubuntu)
     DEFAULT_NTP_SERVERS = ntp.ubuntu.com
     SUPPORT_URL = http://www.ubuntu.com/support
-    CONFFLAGS_DISTRO =
+    CONFFLAGS_DISTRO = -Dtpm-pcrindex=12
+ifeq ($(DEB_HOST_ARCH),amd64)
+# enable CET on ubuntu amd64, until compiler is fixed to do it correctly with
+# -flto
+export DEB_LDFLAGS_MAINT_APPEND=-fcf-protection
+endif
 else
     DEFAULT_NTP_SERVERS = 0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org
     SUPPORT_URL = https://www.debian.org/support
@@ -34,11 +39,12 @@ export DEB_BUILD_PROFILES += noudeb
 endif
 
 CONFFLAGS = \
-	-Db_lto=false \
+	-Db_lto=true \
 	-Db_pie=true \
 	-Dmode=release \
 	-Drootlibdir=/usr/lib/$(DEB_HOST_MULTIARCH) \
 	-Dsplit-usr=true \
+	-Duser-path=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
 	-Dversion-tag="$(DEB_VERSION)" \
 	-Dquotaon-path=/sbin/quotaon \
 	-Dquotacheck-path=/sbin/quotacheck \
@@ -61,6 +67,8 @@ CONFFLAGS = \
 	-Ddefault-kill-user-processes=false \
 	-Ddefault-hierarchy=unified \
 	-Ddefault-dnssec=no \
+	-Ddefault-llmnr=no \
+	-Ddefault-mdns=no \
 	-Dpamconfdir=no \
 	-Dpamlibdir=/lib/$(DEB_HOST_MULTIARCH)/security \
 	-Drpmmacrosdir=no \
@@ -77,7 +85,7 @@ CONFFLAGS = \
 	-Dpwquality=false \
 	-Dp11kit=false \
 	-Dtpm2=false \
-	-Doomd=false \
+	-Doomd=true \
 	-Dsysext=true \
 	-Dnscd=true \
 	-Dntp-servers="$(DEFAULT_NTP_SERVERS)" \
@@ -170,6 +178,7 @@ CONFFLAGS_udeb = \
 	-Dnss-resolve=false \
 	-Dnss-systemd=false \
 	-Dresolve=false \
+	-Doomd=false \
 	-Dportabled=false \
 	-Dpolkit=false \
 	-Dacl=false \
@@ -233,7 +242,6 @@ override_dh_install:
 	rm -f debian/install/*/lib/*.d/README
 	rm -f debian/install/*/lib/udev/*.d/README
 	rm -f debian/install/*/usr/lib/*.d/README
-	rm -f debian/install/*/usr/lib/sysctl.d/50-default.conf
 	rm -f debian/install/*/etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 	rmdir -p --ignore-fail-on-non-empty debian/install/*/etc/X11/xinit/xinitrc.d/
 	# remove files related to factory-reset feature
@@ -293,14 +301,21 @@ ifeq ($(DEB_VENDOR),Ubuntu)
 	cp -a debian/extra/units-ubuntu/* debian/systemd/lib/systemd/system/
 endif
 
+	# Remove unneeded file that produces errors in debugedit (LP: #1950445)
+ifeq ($(DEB_HOST_ARCH),i386)
+	rm -f debian/systemd/usr/lib/systemd/boot/efi/linuxia32.elf.stub
+endif
+
 override_dh_missing:
 	dh_missing --sourcedir debian/install/deb $(DH_MISSING)
 
 override_dh_installinit:
-	dh_installinit --no-start
+	dh_installinit --no-scripts -psystemd
+	dh_installinit --no-start -Nsystemd
 
 override_dh_installsystemd:
 	dh_installsystemd -psystemd-timesyncd
+	dh_installsystemd -psystemd-oomd
 
 override_dh_installsystemduser:
 
