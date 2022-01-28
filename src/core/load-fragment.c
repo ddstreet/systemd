@@ -1271,7 +1271,7 @@ int config_parse_exec_io_class(const char *unit,
 
         if (isempty(rvalue)) {
                 c->ioprio_set = false;
-                c->ioprio = ioprio_prio_value(IOPRIO_CLASS_BE, 0);
+                c->ioprio = IOPRIO_DEFAULT_CLASS_AND_PRIO;
                 return 0;
         }
 
@@ -1308,7 +1308,7 @@ int config_parse_exec_io_priority(const char *unit,
 
         if (isempty(rvalue)) {
                 c->ioprio_set = false;
-                c->ioprio = ioprio_prio_value(IOPRIO_CLASS_BE, 0);
+                c->ioprio = IOPRIO_DEFAULT_CLASS_AND_PRIO;
                 return 0;
         }
 
