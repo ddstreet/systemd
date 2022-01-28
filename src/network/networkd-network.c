@@ -341,6 +341,7 @@ int network_load_one(Manager *manager, OrderedHashmap **networks, const char *fi
                 .dhcp_use_gateway = -1,
                 .dhcp_send_hostname = true,
                 .dhcp_send_release = true,
+                .dhcp_use_domains = DHCP_USE_DOMAINS_YES,
                 .dhcp_route_metric = DHCP_ROUTE_METRIC,
                 .dhcp_client_identifier = _DHCP_CLIENT_ID_INVALID,
                 .dhcp_route_table = RT_TABLE_MAIN,
@@ -407,6 +408,7 @@ int network_load_one(Manager *manager, OrderedHashmap **networks, const char *fi
                 .proxy_arp = -1,
 
                 .ipv6_accept_ra_use_dns = true,
+                .ipv6_accept_ra_use_domains = DHCP_USE_DOMAINS_YES,
                 .ipv6_accept_ra_use_autonomous_prefix = true,
                 .ipv6_accept_ra_use_onlink_prefix = true,
                 .ipv6_accept_ra_route_table = RT_TABLE_MAIN,
