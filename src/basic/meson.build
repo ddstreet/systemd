@@ -76,6 +76,8 @@ basic_sources = files('''
         io-util.h
         khash.c
         khash.h
+        ioprio-util.c
+        ioprio-util.h
         limits-util.c
         limits-util.h
         linux/btrfs.h
