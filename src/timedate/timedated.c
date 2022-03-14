@@ -290,6 +290,25 @@ static int context_read_data(Context *c) {
         return 0;
 }
 
+/* Hack for Ubuntu phone: check if path is an existing symlink to
+ * /etc/writable; if it is, update that instead */
+static const char* writable_filename(const char *path) {
+        ssize_t r;
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
+        const char *result = path;
+        int orig_errno = errno;
+
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
+        }
+
+        errno = orig_errno;
+        return result;
+}
+
 static int context_write_data_timezone(Context *c) {
         _cleanup_free_ char *p = NULL;
         const char *source;
@@ -307,10 +326,10 @@ static int context_write_data_timezone(Context *c) {
 
                 if (access("/usr/share/zoneinfo/UTC", F_OK) < 0) {
 
-                        if (unlink("/etc/localtime") < 0 && errno != ENOENT)
+                        if (unlink(writable_filename("/etc/localtime")) < 0 && errno != ENOENT)
                                 r = -errno;
 
-                        if (unlink("/etc/timezone") < 0 && errno != ENOENT)
+                        if (unlink(writable_filename("/etc/timezone")) < 0 && errno != ENOENT)
                                 r = -errno;
 
                         return r;
@@ -325,12 +344,12 @@ static int context_write_data_timezone(Context *c) {
                 source = p;
         }
 
-        r = symlink_atomic(source, "/etc/localtime");
+        r = symlink_atomic(source, writable_filename("/etc/localtime"));
         if (r < 0)
                 return r;
 
-        if (stat("/etc/timezone", &st) == 0 && S_ISREG(st.st_mode)) {
-                r = write_string_file("/etc/timezone", c->zone, WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_ATOMIC);
+        if (stat(writable_filename("/etc/timezone"), &st) == 0 && S_ISREG(st.st_mode)) {
+                r = write_string_file(writable_filename("/etc/timezone"), c->zone, WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_ATOMIC);
                 if (r < 0)
                         return r;
         }
@@ -396,7 +415,7 @@ static int context_write_data_local_rtc(Context *c) {
                 *(char*) mempcpy(stpcpy(stpcpy(mempcpy(w, s, a), prepend), c->local_rtc ? "LOCAL" : "UTC"), e, b) = 0;
 
                 if (streq(w, NULL_ADJTIME_UTC)) {
-                        if (unlink("/etc/adjtime") < 0)
+                        if (unlink(writable_filename("/etc/adjtime")) < 0)
                                 if (errno != ENOENT)
                                         return -errno;
 
