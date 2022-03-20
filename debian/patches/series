@@ -10,6 +10,20 @@ network-Delay-addition-of-IPv6-Proxy-NDP-addresses.patch
 unit-name-generate-a-clear-error-code-when-convertin.patch
 basic-unit-name-do-not-use-strdupa-on-a-path.patch
 basic-unit-name-adjust-comments.patch
+udevadm-trigger-do-not-return-immediately-on-EACCES.patch
+btrfs-util-add-helper-that-abstracts-might-be-btrfs-subvo.patch
+rm-rf-fstatat-might-fail-if-containing-dir-has-limited-ac.patch
+rm-rf-refactor-rm_rf_children-split-out-body-of-directory.patch
+rm-rf-optionally-fsync-after-removing-directory-tree.patch
+tmpfiles-st-may-have-been-used-uninitialized.patch
+shared-rm_rf-refactor-rm_rf_children_inner-to-shorten-cod.patch
+shared-rm_rf-refactor-rm_rf-to-shorten-code-a-bit.patch
+shared-rm-rf-loop-over-nested-directories-instead-of-inst.patch
+basic-add-make_mount_point_inode-helper.patch
+machine-basic-factor-out-helper-function-to-add-airlocked.patch
+machine-adjust-error-message-to-use-normalized-instead-of.patch
+shared-mount-util-use-namespace_fork-utils.patch
+machine-enter-target-PID-namespace-when-adding-a-live-mou.patch
 debian/Use-Debian-specific-config-files.patch
 debian/Bring-tmpfiles.d-tmp.conf-in-line-with-Debian-defaul.patch
 debian/Make-run-lock-tmpfs-an-API-fs.patch
@@ -32,3 +46,6 @@ debian/Move-sysusers.d-sysctl.d-binfmt.d-modules-load.d-back-to-.patch
 debian/systemctl-do-not-shutdown-immediately-on-scheduled-shutdo.patch
 debian/test-disable-DnsmasqClientTest.test_resolved_etc_hosts-in.patch
 debian/Downgrade-a-couple-of-warnings-to-debug.patch
+debian/Revert-udev-fix-memleak.patch
+debian/Revert-udev-link_update-should-fail-if-the-entry-in-symli.patch
+debian/Revert-udev-make-algorithm-that-selects-highest-priority-.patch
