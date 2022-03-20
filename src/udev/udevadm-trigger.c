@@ -45,13 +45,39 @@ static int exec_list(sd_device_enumerator *e, const char *action, Set **settle_s
 
                 r = write_string_file(filename, action, WRITE_STRING_FILE_DISABLE_BUFFER);
                 if (r < 0) {
-                        bool ignore = IN_SET(r, -ENOENT, -ENODEV);
+                        /* ENOENT may be returned when a device does not have /uevent or is already
+                         * removed. Hence, this is logged at debug level and ignored.
+                         *
+                         * ENODEV may be returned by some buggy device drivers e.g. /sys/devices/vio.
+                         * See,
+                         * https://github.com/systemd/systemd/issues/13652#issuecomment-535129791 and
+                         * https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1845319.
+                         * So, this error is ignored, but logged at warning level to encourage people to
+                         * fix the driver.
+                         *
+                         * EROFS is returned when /sys is read only. In that case, all subsequent
+                         * writes will also fail, hence return immediately.
+                         *
+                         * EACCES or EPERM may be returned when this is invoked by non-priviledged user.
+                         * We do NOT return immediately, but continue operation and propagate the error.
+                         * Why? Some device can be owned by a user, e.g., network devices configured in
+                         * a network namespace. See, https://github.com/systemd/systemd/pull/18559 and
+                         * https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ebb4a4bf76f164457184a3f43ebc1552416bc823
+                         *
+                         * All other errors are logged at error level, but let's continue the operation,
+                         * and propagate the error.
+                         */
 
-                        log_full_errno(ignore ? LOG_DEBUG : LOG_ERR, r,
+                        bool ignore = IN_SET(r, -ENOENT, -ENODEV);
+                        int level =
+                                r == -ENOENT ? LOG_DEBUG :
+                                r == -ENODEV ? LOG_WARNING : LOG_ERR;
+
+                        log_full_errno(level, r,
                                        "Failed to write '%s' to '%s'%s: %m",
                                        action, filename, ignore ? ", ignoring" : "");
-                        if (IN_SET(r, -EACCES, -EROFS))
-                                /* Inovoked by unpriviledged user, or read only filesystem. Return earlier. */
+
+                        if (r == -EROFS)
                                 return r;
                         if (ret == 0 && !ignore)
                                 ret = r;
