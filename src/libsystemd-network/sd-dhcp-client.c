@@ -188,8 +188,10 @@ int sd_dhcp_client_set_request_option(sd_dhcp_client *client, uint8_t option) {
         }
 
         for (i = 0; i < client->req_opts_size; i++)
-                if (client->req_opts[i] == option)
-                        return -EEXIST;
+                if (client->req_opts[i] == option) {
+                        log_dhcp_client(client, "Setting already set request option %d", option);
+                        return 0;
+                }
 
         if (!GREEDY_REALLOC(client->req_opts, client->req_opts_allocated,
                             client->req_opts_size + 1))
