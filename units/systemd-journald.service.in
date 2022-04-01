@@ -40,7 +40,6 @@ SystemCallArchitectures=native
 SystemCallErrorNumber=EPERM
 SystemCallFilter=@system-service
 Type=notify
-@SERVICE_WATCHDOG@
 
 # In case you're wondering why CAP_SYS_PTRACE is needed, access to
 # /proc/<pid>/exe requires this capability. Thus if this capability is missing
