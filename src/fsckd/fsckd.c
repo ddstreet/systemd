@@ -210,7 +210,6 @@ static void manager_disconnect_plymouth(Manager *m) {
 
 static int manager_plymouth_feedback_handler(sd_event_source *s, int fd, uint32_t revents, void *userdata) {
         Manager *m = userdata;
-        Client *current;
         char buffer[6];
         ssize_t l;
 
@@ -333,7 +332,6 @@ static int manager_send_plymouth_message(Manager *m, const char *message) {
 }
 
 static int manager_update_global_progress(Manager *m) {
-        Client *current = NULL;
         _cleanup_free_ char *console_message = NULL;
         _cleanup_free_ char *fsck_message = NULL;
         int current_numdevices = 0, r;
