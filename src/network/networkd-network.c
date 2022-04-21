@@ -441,6 +441,7 @@ int network_load_one(Manager *manager, OrderedHashmap **networks, const char *fi
                 .dhcp_use_mtu = false,
                 /* NOTE: from man: UseTimezone=... Defaults to "no".*/
                 .dhcp_use_timezone = false,
+                .dhcp_broadcast = -1,
                 .rapid_commit = true,
 
                 .dhcp6_use_ntp = true,
