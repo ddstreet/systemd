@@ -501,6 +501,11 @@ evdev:input:b0003v0458p0708*
 evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pn*:*
  KEYBOARD_KEY_8=unknown                                 # Use hp-wireless instead
 
+# The allowlist to unblock intel-hid on HP machines.
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPZBookFury16inchG9MobileWorkstationPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPZBookStudio16.0InchMobileWorkstationPC:pvr*
+ KEYBOARD_KEY_8=wlan
+
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHewlett-Packard*:pn*:*
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHP*:pn*:*
  KEYBOARD_KEY_81=fn_esc
