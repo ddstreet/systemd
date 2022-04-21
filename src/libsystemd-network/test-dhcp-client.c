@@ -71,17 +71,17 @@ static void test_request_basic(sd_event *e) {
         assert_se(sd_dhcp_client_set_hostname(client, "~host.domain") == -EINVAL);
 
         assert_se(sd_dhcp_client_set_request_option(client,
-                                        SD_DHCP_OPTION_SUBNET_MASK) == -EEXIST);
+                                        SD_DHCP_OPTION_SUBNET_MASK) == 0);
         assert_se(sd_dhcp_client_set_request_option(client,
-                                        SD_DHCP_OPTION_ROUTER) == -EEXIST);
+                                        SD_DHCP_OPTION_ROUTER) == 0);
         /* This PRL option is not set when using Anonymize, but in this test
          * Anonymize settings are not being used. */
         assert_se(sd_dhcp_client_set_request_option(client,
-                                        SD_DHCP_OPTION_HOST_NAME) == -EEXIST);
+                                        SD_DHCP_OPTION_HOST_NAME) == 0);
         assert_se(sd_dhcp_client_set_request_option(client,
-                                        SD_DHCP_OPTION_DOMAIN_NAME) == -EEXIST);
+                                        SD_DHCP_OPTION_DOMAIN_NAME) == 0);
         assert_se(sd_dhcp_client_set_request_option(client,
-                                        SD_DHCP_OPTION_DOMAIN_NAME_SERVER) == -EEXIST);
+                                        SD_DHCP_OPTION_DOMAIN_NAME_SERVER) == 0);
 
         assert_se(sd_dhcp_client_set_request_option(client,
                                         SD_DHCP_OPTION_PAD) == -EINVAL);
@@ -101,9 +101,9 @@ static void test_request_basic(sd_event *e) {
          * Options not set by default (using or not anonymize) are option 17
          * (SD_DHCP_OPTION_ROOT_PATH) and 42 (SD_DHCP_OPTION_NTP_SERVER) */
         assert_se(sd_dhcp_client_set_request_option(client, 17) == 0);
-        assert_se(sd_dhcp_client_set_request_option(client, 17) == -EEXIST);
+        assert_se(sd_dhcp_client_set_request_option(client, 17) == 0);
         assert_se(sd_dhcp_client_set_request_option(client, 42) == 0);
-        assert_se(sd_dhcp_client_set_request_option(client, 17) == -EEXIST);
+        assert_se(sd_dhcp_client_set_request_option(client, 17) == 0);
 
         sd_dhcp_client_unref(client);
 }
@@ -126,7 +126,7 @@ static void test_request_anonymize(sd_event *e) {
         assert_se(r >= 0);
 
         assert_se(sd_dhcp_client_set_request_option(client,
-                                        SD_DHCP_OPTION_NETBIOS_NAMESERVER) == -EEXIST);
+                                        SD_DHCP_OPTION_NETBIOS_NAMESERVER) == 0);
         /* This PRL option is not set when using Anonymize */
         assert_se(sd_dhcp_client_set_request_option(client,
                                         SD_DHCP_OPTION_HOST_NAME) == 0);
@@ -137,7 +137,7 @@ static void test_request_anonymize(sd_event *e) {
         /* RFC7844: option 101 (SD_DHCP_OPTION_NEW_TZDB_TIMEZONE) is not set in the
          * default PRL when using Anonymize, */
         assert_se(sd_dhcp_client_set_request_option(client, 101) == 0);
-        assert_se(sd_dhcp_client_set_request_option(client, 101) == -EEXIST);
+        assert_se(sd_dhcp_client_set_request_option(client, 101) == 0);
 
         sd_dhcp_client_unref(client);
 }
