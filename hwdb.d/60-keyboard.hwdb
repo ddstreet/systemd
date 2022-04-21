@@ -493,8 +493,19 @@ evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pn*:pvr*
  KEYBOARD_KEY_8=unknown					# Use hp-wireless instead
 
 # The allowlist to unblock intel-hid on HP machines.
-evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPZBookFury16inchG9MobileWorkstationPC:pvr*
-evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPZBookStudio16.0InchMobileWorkstationPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPZBookFury16G9MobileWorkstationPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPZBookStudio16inchG9MobileWorkstationPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPProBook44014inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPProBook45015.6inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPElitex36083013inchG92-in-1NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook104014inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook84014inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPElitex360104014inchG92-in-1NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook86016inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook64014inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook65015.6inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook83013inchG9NotebookPC:pvr*
+evdev:name:Intel HID events:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook63013inchG9NotebookPC:pvr*
  KEYBOARD_KEY_8=wlan
 
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHewlett-Packard*:pn*:pvr*
@@ -600,6 +611,8 @@ evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHewlett-Packard*:pnHPLicrice:pvr*
 # HP EliteBook
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHewlett-Packard*:pnHPEliteBook*:pvr*
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteBook*:pvr*
+# HP Elite x360
+evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHP*:pnHPElite*x360*:*
 # HP Elite Dragonfly
 evdev:atkbd:dmi:bvn*:bvr*:bd*:svnHP*:pnHPEliteDragonfly*:pvr*
 # HP ProBook 440 G2
