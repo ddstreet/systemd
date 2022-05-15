@@ -440,7 +440,7 @@ _public_ int sd_device_new_from_subsystem_sysname(
                 sep = strchr(name, ':');
                 if (sep && sep[1] != '\0') { /* Require ":" and something non-empty after that. */
 
-                        const char *subsys = strndupa_safe(name, sep - name);
+                        const char *subsys = memdupa_suffix0(name, sep - name);
                         sep++;
 
                         if (streq(sep, "drivers")) /* If the sysname is "drivers", then it's the drivers directory itself that is meant. */
