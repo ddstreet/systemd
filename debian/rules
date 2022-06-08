@@ -67,8 +67,6 @@ CONFFLAGS = \
 	-Dsysupdate=false \
 	-Dxkbcommon=false \
 	-Dwheel-group=false \
-	-Duserdb=false \
-	-Dhomed=false \
 	-Dpwquality=false \
 	-Dp11kit=false \
 	-Doomd=true \
@@ -121,6 +119,8 @@ CONFFLAGS += \
 	-Ddns-over-tls=openssl \
 	-Dlibfido2=true \
 	-Dtpm2=true \
+	-Dhomed=true \
+	-Duserdb=true \
 	-Dpcre2=true
 else
 CONFFLAGS += \
@@ -137,6 +137,8 @@ CONFFLAGS += \
 	-Dopenssl=false \
 	-Dlibfido2=false \
 	-Dtpm2=false \
+	-Dhomed=false \
+	-Duserdb=false \
 	-Dpcre2=false
 endif
 
@@ -253,6 +255,8 @@ override_dh_installsystemd:
 	dh_installsystemd -psystemd-timesyncd
 	dh_installsystemd -psystemd-oomd systemd-oomd.service
 	dh_installsystemd -psystemd-oomd --no-stop-on-upgrade systemd-oomd.socket
+	dh_installsystemd -psystemd-userdbd --no-stop-on-upgrade systemd-userdbd.socket
+	dh_installsystemd -psystemd-homed --no-also systemd-homed.service systemd-homed-activate.service
 
 override_dh_installsystemduser:
 
@@ -262,15 +266,16 @@ PROJECT_VERSION ?= $(shell awk '/(PROJECT|PACKAGE)_VERSION/ {print $$3}' build-d
 # quasi-essential, so add their dependencies to Pre-Depends
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=753589
 override_dh_shlibdeps:
-	dh_shlibdeps -psystemd -llib/systemd/ -- \
+	dh_shlibdeps -psystemd -Llibsystemd-shared -- \
 		-dPre-Depends -edebian/systemd/bin/systemctl \
 		-dDepends
-	dh_shlibdeps --remaining-packages -Lsystemd
+	dh_shlibdeps -plibsystemd-shared -lusr/lib/$(DEB_HOST_MULTIARCH)/systemd
+	dh_shlibdeps --remaining-packages -Llibsystemd-shared
 
 override_dh_makeshlibs:
 	sed 's/SHARED_LIB_VERSION/$(PROJECT_VERSION)/' debian/shlibs.local.in > debian/shlibs.local
 	dh_makeshlibs -plibudev1 --add-udeb=libudev1-udeb -- -c$(GENSYMBOLS_LEVEL)
-	dh_makeshlibs -psystemd -Xlibsystemd-shared -Xlibsystemd-core -- -c$(GENSYMBOLS_LEVEL)
+	dh_makeshlibs -plibsystemd-shared -Xlibsystemd-shared -Xlibsystemd-core -- -c$(GENSYMBOLS_LEVEL)
 	dh_makeshlibs --remaining-packages -- -c$(GENSYMBOLS_LEVEL)
 
 override_dh_auto_test:
