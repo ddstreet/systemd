@@ -95,6 +95,7 @@ Conflicts: consolekit,
 Breaks: resolvconf (<< 1.83~),
         udev (<< 247~),
         less (<< 563),
+        sicherboot (<< 0.1.6),
 Provides: systemd-sysusers (= ${binary:Version}),
           systemd-tmpfiles (= ${binary:Version}),
 Description: system and service manager
@@ -325,9 +326,9 @@ Package: libsystemd-shared
 Architecture: linux-any
 Multi-Arch: same
 Section: libs
-Pre-Depends: ${shlibs:Depends},
-             ${misc:Pre-Depends}
-Depends: ${misc:Depends}
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
 Description: systemd shared private library
  This internal shared library provides common code used by various systemd
  components. It is supposed to decrease memory and disk footprint.
@@ -343,7 +344,6 @@ Depends: ${shlibs:Depends},
          adduser,
          libudev1 (= ${binary:Version}),
          s390-tools [s390],
-Conflicts: hal
 Description: /dev/ and hotplug management daemon
  udev is a daemon which dynamically creates and removes device nodes from
  /dev/, handles hotplug events and loads drivers at boot time.
@@ -460,7 +460,8 @@ Depends: ${shlibs:Depends},
          libpam-runtime,
 Description: home area manager
  systemd-homed is a system service designed to manage home directories. This
- package includes the homed and userdbd services, tools and documentation.
+ package includes the homed service, a PAM module to automatically mount home
+ directories on user login, tools and documentation.
 
 Package: systemd-boot
 Architecture: amd64 i386 arm64 armhf
