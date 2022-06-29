@@ -9,6 +9,7 @@ TEST_NO_NSPAWN=1
 . "${TEST_BASE_DIR:?}/test-functions"
 
 QEMU_TIMEOUT=600
+QEMU_MEM="1024M"
 UNIFIED_CGROUP_HIERARCHY=yes
 
 do_test "$@"

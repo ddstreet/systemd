@@ -21,6 +21,11 @@ test_append_files() {
         install_dmevent
         generate_module_dependencies
         inst_binary tpm2_pcrextend
+
+        # On Debian, cryptsetup does not link against libgcc_s.so.1
+        if get_bool "$LOOKS_LIKE_DEBIAN"; then
+            inst_library "/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)/libgcc_s.so.1"
+        fi
     )
 }
 
@@ -36,5 +41,6 @@ tpmstate=$(mktemp -d)
 swtpm socket --tpm2 --tpmstate dir="$tpmstate" --ctrl type=unixio,path="$tpmstate/sock" &
 trap 'kill %%; rm -rf $tpmstate' SIGINT EXIT
 QEMU_OPTIONS="-chardev socket,id=chrtpm,path=$tpmstate/sock -tpmdev emulator,id=tpm0,chardev=chrtpm -device $tpmdevice,tpmdev=tpm0"
+QEMU_MEM="1024M"
 
 do_test "$@"
