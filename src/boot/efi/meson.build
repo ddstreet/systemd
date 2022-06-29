@@ -266,6 +266,7 @@ if efi_arch[1] in ['aarch64', 'arm', 'riscv64']
         # Aarch64, ARM32 and 64bit RISC-V don't have an EFI capable objcopy.
         # Use 'binary' instead, and add required symbols manually.
         efi_ldflags += ['-Wl,--defsym=EFI_SUBSYSTEM=0xa']
+        efi_ldflags += ['-Wl,--no-warn-rwx-segments']
         efi_format = ['-O', 'binary']
 else
         efi_ldflags += ['-pie']
@@ -280,6 +281,7 @@ if efi_arch[1] == 'arm'
         # is because libgcc is not compiled with -fshort-wchar, but it does not
         # have any occurrences of wchar_t in its sources or the documentation, so
         # it is safe to assume that we can ignore this warning.
+        efi_ldflags += ['-Wl,--no-warn-rwx-segments']
         efi_ldflags += ['-Wl,--no-wchar-size-warning']
 endif
 
