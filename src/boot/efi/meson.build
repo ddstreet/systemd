@@ -256,6 +256,7 @@ efi_ldflags = [
         '-Wl,--fatal-warnings',
         '-Wl,--no-undefined',
         '-Wl,--warn-common',
+        '-Wl,--no-warn-execstack',
         '-Wl,-Bsymbolic',
         '-z', 'nocombreloc',
         efi_crt0,
