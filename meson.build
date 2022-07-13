@@ -2566,8 +2566,7 @@ if conf.get('ENABLE_USERDB') == 1
                 link_with : [libshared],
                 dependencies : [threads],
                 install_rpath : rootlibexecdir,
-                install : true,
-                install_dir : rootbindir)
+                install : true)
 endif
 
 if conf.get('ENABLE_HOMED') == 1
@@ -2610,8 +2609,7 @@ if conf.get('ENABLE_HOMED') == 1
                                 libp11kit,
                                 libdl],
                 install_rpath : rootlibexecdir,
-                install : true,
-                install_dir : rootbindir)
+                install : true)
 
         if conf.get('HAVE_PAM') == 1
                 version_script_arg = project_source_root / pam_systemd_home_sym
