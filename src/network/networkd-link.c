@@ -66,6 +66,7 @@
 #include "tmpfile-util.h"
 #include "udev-util.h"
 #include "util.h"
+#include "virt.h"
 #include "vrf.h"
 
 bool link_ipv4ll_enabled(Link *link) {
@@ -1456,7 +1457,7 @@ static int link_check_initialized(Link *link) {
 
         assert(link);
 
-        if (!udev_available())
+        if (detect_container() > 0)
                 return link_initialized_and_synced(link);
 
         /* udev should be around */
