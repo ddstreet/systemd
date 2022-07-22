@@ -1147,16 +1147,6 @@ static void test_exec_condition(Manager *m) {
         test_service(m, "exec-condition-skip.service", SERVICE_SKIP_CONDITION);
 }
 
-static void test_exec_umask_namespace(Manager *m) {
-        /* exec-specifier-credentials-dir.service creates /run/credentials and enables implicit
-         * InaccessiblePath= for the directory for all later services with mount namespace. */
-        if (!is_inaccessible_available()) {
-                log_notice("Testing without inaccessible, skipping %s", __func__);
-                return;
-        }
-        test(m, "exec-umask-namespace.service", can_unshare ? 0 : EXIT_NAMESPACE, CLD_EXITED);
-}
-
 typedef struct test_entry {
         test_function_t f;
         const char *name;
@@ -1239,7 +1229,6 @@ int main(int argc, char *argv[]) {
                 entry(test_exec_specifier),
                 entry(test_exec_execsearchpath_specifier),
                 entry(test_exec_systemcallfilter_system),
-                entry(test_exec_umask_namespace),
                 {},
         };
         int r;
