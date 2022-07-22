@@ -36,5 +36,6 @@ tpmstate=$(mktemp -d)
 swtpm socket --tpm2 --tpmstate dir="$tpmstate" --ctrl type=unixio,path="$tpmstate/sock" &
 trap 'kill %%; rm -rf $tpmstate' SIGINT EXIT
 QEMU_OPTIONS="-chardev socket,id=chrtpm,path=$tpmstate/sock -tpmdev emulator,id=tpm0,chardev=chrtpm -device $tpmdevice,tpmdev=tpm0"
+QEMU_MEM="1024M"
 
 do_test "$@"
