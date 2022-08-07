@@ -140,7 +140,8 @@ static int detect_vm_dmi(void) {
                 "/sys/class/dmi/id/product_name", /* Test this before sys_vendor to detect KVM over QEMU */
                 "/sys/class/dmi/id/sys_vendor",
                 "/sys/class/dmi/id/board_vendor",
-                "/sys/class/dmi/id/bios_vendor"
+                "/sys/class/dmi/id/bios_vendor",
+                "/sys/class/dmi/id/product_version" /* For Hyper-V VMs test */
         };
 
         static const struct {
@@ -148,6 +149,7 @@ static int detect_vm_dmi(void) {
                 int id;
         } dmi_vendor_table[] = {
                 { "KVM",                 VIRTUALIZATION_KVM       },
+                { "OpenStack",           VIRTUALIZATION_KVM       }, /* Detect OpenStack instance as KVM in non x86 architecture */
                 { "QEMU",                VIRTUALIZATION_QEMU      },
                 { "VMware",              VIRTUALIZATION_VMWARE    }, /* https://kb.vmware.com/s/article/1009458 */
                 { "VMW",                 VIRTUALIZATION_VMWARE    },
@@ -158,6 +160,7 @@ static int detect_vm_dmi(void) {
                 { "Parallels",           VIRTUALIZATION_PARALLELS },
                 /* https://wiki.freebsd.org/bhyve */
                 { "BHYVE",               VIRTUALIZATION_BHYVE     },
+                { "Hyper-V",             VIRTUALIZATION_MICROSOFT },
         };
         unsigned i;
         int r;
