@@ -17,6 +17,8 @@ $KERNEL_APPEND
 # shellcheck source=test/test-functions
 . "${TEST_BASE_DIR:?}/test-functions"
 
+QEMU_MEM="1024M"
+
 check_result_nspawn() {
     check_result_nspawn_unittests "${1}"
 }
