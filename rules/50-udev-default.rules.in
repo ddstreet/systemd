@@ -80,4 +80,6 @@ KERNEL=="fuse", MODE="0666", OPTIONS+="static_node=fuse"
 
 SUBSYSTEM=="ptp", ATTR{clock_name}=="KVM virtual PTP", SYMLINK += "ptp_kvm"
 
+SUBSYSTEM=="ptp", ATTR{clock_name}=="hyperv", SYMLINK += "ptp_hyperv"
+
 LABEL="default_end"
