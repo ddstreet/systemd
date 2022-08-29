@@ -118,7 +118,7 @@ static int context_write_data_timezone(Context *c) {
                 return r;
         }
 
-        p = strappend("../usr/share/zoneinfo/", c->zone);
+        p = strappend("/usr/share/zoneinfo/", c->zone);
         if (!p)
                 return log_oom();
 
