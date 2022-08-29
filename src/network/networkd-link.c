@@ -2499,6 +2499,22 @@ static int link_set_ipv6_hop_limit(Link *link) {
         return 0;
 }
 
+static bool link_is_static_route_configured(Link *link, Route *route) {
+        Route *net_route;
+
+        assert(link);
+        assert(route);
+
+        if (!link->network)
+                return false;
+
+        LIST_FOREACH(routes, net_route, link->network->static_routes)
+                if (route_equal(net_route, route))
+                        return true;
+
+        return false;
+}
+
 static int link_drop_foreign_config(Link *link) {
         Address *address;
         Route *route;
@@ -2520,9 +2536,15 @@ static int link_drop_foreign_config(Link *link) {
                 if (route->protocol == RTPROT_KERNEL)
                         continue;
 
-                r = route_remove(route, link, link_route_remove_handler);
-                if (r < 0)
-                        return r;
+                if (link_is_static_route_configured(link, route)) {
+                        r = route_add(link, route->family, &route->dst, route->dst_prefixlen, route->tos, route->priority, route->table, NULL);
+                        if (r < 0)
+                                return r;
+                } else {
+                        r = route_remove(route, link, link_route_remove_handler);
+                        if (r < 0)
+                                return r;
+                }
         }
 
         return 0;
