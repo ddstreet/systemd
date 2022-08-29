@@ -1,3 +1,12 @@
+systemd (237-3ubuntu10.54) bionic-security; urgency=medium
+
+  * SECURITY UPDATE: Use-after-free vulnerability in systemd.                   
+    - debian/patches/CVE-2022-2526.patch: pin stream while calling callbacks     
+      for it in src/resolve/resolved-dns-stream.c                               
+    - CVE-2022-2526 
+
+ -- Nishit Majithia <nishit.majithia@canonical.com>  Mon, 29 Aug 2022 10:28:49 +0530
+
 systemd (237-3ubuntu10.53) bionic; urgency=medium
 
   [ Ratchanan Srirattanamet ]
