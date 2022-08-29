@@ -85,9 +85,6 @@ static int link_set_dhcp_routes(Link *link) {
         if (!link->network) /* link went down while we configured the IP addresses? */
                 return 0;
 
-        if (!link->network->dhcp_use_routes)
-                return 0;
-
         /* When the interface is part of an VRF use the VRFs routing table, unless
          * there is a another table specified. */
         table = link->network->dhcp_route_table;
@@ -110,34 +107,36 @@ static int link_set_dhcp_routes(Link *link) {
                         static_route = true;
         }
 
-        for (i = 0; i < n; i++) {
-                _cleanup_route_free_ Route *route = NULL;
+        if (link->network->dhcp_use_routes) {
+                for (i = 0; i < n; i++) {
+                        _cleanup_route_free_ Route *route = NULL;
 
-                /* if the DHCP server returns both a Classless Static Routes option and a Static Routes option,
-                   the DHCP client MUST ignore the Static Routes option. */
-                if (classless_route && static_routes[i]->option == SD_DHCP_OPTION_STATIC_ROUTE)
-                        continue;
+                        /* if the DHCP server returns both a Classless Static Routes option and a Static Routes option,
+                           the DHCP client MUST ignore the Static Routes option. */
+                        if (classless_route && static_routes[i]->option == SD_DHCP_OPTION_STATIC_ROUTE)
+                                continue;
 
-                r = route_new(&route);
-                if (r < 0)
-                        return log_link_error_errno(link, r, "Could not allocate route: %m");
+                        r = route_new(&route);
+                        if (r < 0)
+                                return log_link_error_errno(link, r, "Could not allocate route: %m");
 
-                route->family = AF_INET;
-                route->protocol = RTPROT_DHCP;
-                assert_se(sd_dhcp_route_get_gateway(static_routes[i], &route->gw.in) >= 0);
-                assert_se(sd_dhcp_route_get_destination(static_routes[i], &route->dst.in) >= 0);
-                assert_se(sd_dhcp_route_get_destination_prefix_length(static_routes[i], &route->dst_prefixlen) >= 0);
-                route->priority = link->network->dhcp_route_metric;
-                route->table = table;
-                route->scope = route_scope_from_address(route, &address);
-                if (IN_SET(route->scope, RT_SCOPE_LINK, RT_SCOPE_UNIVERSE))
-                        route->prefsrc.in = address;
+                        route->family = AF_INET;
+                        route->protocol = RTPROT_DHCP;
+                        assert_se(sd_dhcp_route_get_gateway(static_routes[i], &route->gw.in) >= 0);
+                        assert_se(sd_dhcp_route_get_destination(static_routes[i], &route->dst.in) >= 0);
+                        assert_se(sd_dhcp_route_get_destination_prefix_length(static_routes[i], &route->dst_prefixlen) >= 0);
+                        route->priority = link->network->dhcp_route_metric;
+                        route->table = table;
+                        route->scope = route_scope_from_address(route, &address);
+                        if (IN_SET(route->scope, RT_SCOPE_LINK, RT_SCOPE_UNIVERSE))
+                                route->prefsrc.in = address;
 
-                r = route_configure(route, link, dhcp4_route_handler);
-                if (r < 0)
-                        return log_link_warning_errno(link, r, "Could not set host route: %m");
+                        r = route_configure(route, link, dhcp4_route_handler);
+                        if (r < 0)
+                                return log_link_warning_errno(link, r, "Could not set host route: %m");
 
-                link->dhcp4_messages++;
+                        link->dhcp4_messages++;
+                }
         }
 
         r = sd_dhcp_lease_get_router(link->dhcp_lease, &gateway);
