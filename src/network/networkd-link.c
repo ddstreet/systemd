@@ -1329,7 +1329,7 @@ static int link_set_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userd
         return 0;
 }
 
-static int link_configure_after_setting_mtu(Link *link);
+static int link_configure_continue(Link *link);
 
 static int set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userdata) {
         _cleanup_link_unref_ Link *link = userdata;
@@ -1353,7 +1353,7 @@ static int set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, void *userda
         log_link_debug(link, "Setting MTU done.");
 
         if (link->state == LINK_STATE_PENDING)
-                (void) link_configure_after_setting_mtu(link);
+                (void) link_configure_continue(link);
 
         return 1;
 }
@@ -2892,10 +2892,22 @@ static int link_configure(Link *link) {
         if (r < 0)
                 return r;
 
-        return link_configure_after_setting_mtu(link);
+        return link_configure_continue(link);
 }
 
-static int link_configure_after_setting_mtu(Link *link) {
+/* The configuration continues in this separate function, instead of
+ * including this in the above link_configure() function, for two
+ * reasons:
+ * 1) some devices reset the link when the mtu is set, which caused
+ *    an infinite loop here in networkd; see:
+ *    https://github.com/systemd/systemd/issues/6593
+ *    https://github.com/systemd/systemd/issues/9831
+ * 2) if ipv6ll is disabled, then bringing the interface up must be
+ *    delayed until after we get confirmation from the kernel that
+ *    the addr_gen_mode parameter has been set (via netlink), see:
+ *    https://github.com/systemd/systemd/issues/13882
+ */
+static int link_configure_continue(Link *link) {
         int r;
 
         assert(link);
