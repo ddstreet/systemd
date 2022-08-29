@@ -1290,7 +1290,9 @@ static void manager_coldplug(Manager *m) {
 
         assert(m);
 
-        /* Then, let's set up their initial state. */
+        log_debug("Invoking unit coldplug() handlers…");
+
+        /* Let's place the units back into their deserialized state */
         HASHMAP_FOREACH_KEY(u, k, m->units, i) {
 
                 /* ignore aliases */
@@ -1300,6 +1302,26 @@ static void manager_coldplug(Manager *m) {
                 r = unit_coldplug(u);
                 if (r < 0)
                         log_warning_errno(r, "We couldn't coldplug %s, proceeding anyway: %m", u->id);
+        }
+}
+
+static void manager_catchup(Manager *m) {
+        Iterator i;
+        Unit *u;
+        char *k;
+
+        assert(m);
+
+        log_debug("Invoking unit catchup() handlers…");
+
+        /* Let's catch up on any state changes that happened while we were reloading/reexecing */
+        HASHMAP_FOREACH_KEY(u, k, m->units, i) {
+
+                /* ignore aliases */
+                if (u->id != k)
+                        continue;
+
+                unit_catchup(u);
         }
 }
 
@@ -1476,6 +1498,9 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
                  * finished */
                 m->send_reloading_done = true;
         }
+
+        /* Let's finally catch up with any changes that took place while we were reloading/reexecing */
+        manager_catchup(m);
 
         return 0;
 }
@@ -3138,6 +3163,9 @@ int manager_reload(Manager *m) {
 
         /* It might be safe to log to the journal now. */
         manager_recheck_journal(m);
+
+        /* Let's finally catch up with any changes that took place while we were reloading/reexecing */
+        manager_catchup(m);
 
         /* Sync current state of bus names with our set of listening units */
         if (m->api_bus)
