@@ -2610,6 +2610,10 @@ static int link_drop_foreign_config(Link *link) {
                 if (address->family == AF_INET6 && in_addr_is_link_local(AF_INET6, &address->in_addr) == 1 && link_ipv6ll_enabled(link))
                         continue;
 
+                /* Do not remove localhost address (127.0.0.1 and ::1) */
+                if (link->flags & IFF_LOOPBACK && in_addr_is_localhost_one(address->family, &address->in_addr) > 0)
+                        continue;
+
                 if (link_address_is_dynamic(link, address)) {
                         if (link->network && FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP))
                                 continue;
