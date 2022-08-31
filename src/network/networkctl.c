@@ -1143,7 +1143,7 @@ static int link_status_one(
                 const LinkInfo *info) {
 
         _cleanup_strv_free_ char **dns = NULL, **ntp = NULL, **search_domains = NULL, **route_domains = NULL;
-        _cleanup_free_ char *setup_state = NULL, *operational_state = NULL, *tz = NULL;
+        _cleanup_free_ char *setup_state = NULL, *operational_state = NULL, *tz = NULL, *activation_policy = NULL;
         _cleanup_free_ char *t = NULL, *network = NULL;
         const char *driver = NULL, *path = NULL, *vendor = NULL, *model = NULL, *link = NULL;
         const char *on_color_operational, *off_color_operational,
@@ -1530,6 +1530,16 @@ static int link_status_one(
         r = dump_ifindexes(table, "Carrier Bound By:", carrier_bound_by);
         if (r < 0)
                 return r;
+
+        r = sd_network_link_get_activation_policy(info->ifindex, &activation_policy);
+        if (r >= 0) {
+                r = table_add_many(table,
+                                   TABLE_EMPTY,
+                                   TABLE_STRING, "Activation Policy:",
+                                   TABLE_STRING, activation_policy);
+                if (r < 0)
+                        return table_log_add_error(r);
+        }
 
         (void) sd_network_link_get_timezone(info->ifindex, &tz);
         if (tz) {
