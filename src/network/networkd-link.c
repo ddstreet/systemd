@@ -3569,7 +3569,7 @@ int link_ipv6ll_gained(Link *link, const struct in6_addr *address) {
         link->ipv6ll_address = *address;
         link_check_ready(link);
 
-        if (IN_SET(link->state, LINK_STATE_CONFIGURING, LINK_STATE_CONFIGURED)) {
+        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_UNMANAGED, LINK_STATE_FAILED)) {
                 r = link_acquire_ipv6_conf(link);
                 if (r < 0) {
                         link_enter_failed(link);
@@ -3596,7 +3596,7 @@ static int link_carrier_gained(Link *link) {
                 }
         }
 
-        if (IN_SET(link->state, LINK_STATE_CONFIGURING, LINK_STATE_CONFIGURED)) {
+        if (!IN_SET(link->state, LINK_STATE_PENDING, LINK_STATE_UNMANAGED, LINK_STATE_FAILED)) {
                 r = link_acquire_conf(link);
                 if (r < 0) {
                         link_enter_failed(link);
