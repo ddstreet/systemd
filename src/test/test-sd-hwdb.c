@@ -5,6 +5,8 @@
 #include "alloc-util.h"
 #include "errno-util.h"
 #include "errno.h"
+#include "hwdb-internal.h"
+#include "nulstr-util.h"
 #include "tests.h"
 
 static int test_failed_enumerate(void) {
@@ -62,6 +64,26 @@ static void test_basic_enumerate(void) {
         assert_se(len1 == len2);
 }
 
+static void test_sd_hwdb_new_from_path(void) {
+        _cleanup_(sd_hwdb_unrefp) sd_hwdb *hwdb = NULL;
+        const char *hwdb_bin_path = NULL;
+        int r;
+
+        log_info("/* %s */", __func__);
+
+        assert_se(sd_hwdb_new_from_path(NULL, &hwdb) == -EINVAL);
+        assert_se(sd_hwdb_new_from_path("", &hwdb) == -EINVAL);
+        assert_se(sd_hwdb_new_from_path("/path/that/should/not/exist", &hwdb) < 0);
+
+        NULSTR_FOREACH(hwdb_bin_path, hwdb_bin_paths) {
+                r = sd_hwdb_new_from_path(hwdb_bin_path, &hwdb);
+                if (r >= 0)
+                        break;
+        }
+
+        assert_se(r >= 0);
+}
+
 int main(int argc, char *argv[]) {
         int r;
 
@@ -72,6 +94,7 @@ int main(int argc, char *argv[]) {
                 return log_tests_skipped_errno(r, "cannot open hwdb");
 
         test_basic_enumerate();
+        test_sd_hwdb_new_from_path();
 
         return 0;
 }
