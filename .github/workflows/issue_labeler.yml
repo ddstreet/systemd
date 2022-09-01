@@ -27,7 +27,7 @@ jobs:
           node-version: '16'
 
       - name: Parse issue form
-        uses: stefanbuck/github-issue-parser@fc06b2a0adc5ccb7702ab6b641fd8a742a5e9cc0
+        uses: stefanbuck/github-issue-parser@7da1c3a96e2657d61f8fdd6555ee31be7410e617
         id: issue-parser
         with:
           template-path: .github/ISSUE_TEMPLATE/${{ matrix.template }}
