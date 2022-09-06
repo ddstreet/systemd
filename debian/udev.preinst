@@ -55,6 +55,17 @@ END
   fi
 }
 
+check_ID_NET_DRIVER() {
+  # Ensure ID_NET_DRIVER is set on Network interfaces LP: #1988119
+  for i in /sys/class/net/[!lo]*; do
+    if ! (udevadm info $i | grep --silent ID_NET_DRIVER); then
+      logger --id=$$ --priority=user.info "udev.preinst: Executing trigger on link $(basename $i) to add ID_NET_DRIVER."
+      udevadm trigger -c add -y $(basename $i) || true
+    fi
+  done
+  udevadm settle || true
+}
+
 check_version() {
   # $2 is non-empty when installing from the "config-files" state
   [ -n "$2" ] || return 0
@@ -70,6 +81,10 @@ check_version() {
       udevadm control --log-priority=0 || true
     fi
   fi # 204-4
+
+  if dpkg --compare-versions $2 lt 237-3ubuntu10.56; then
+    check_ID_NET_DRIVER  
+  fi # 237-3ubuntu10.56  
 }
 
 case "$1" in

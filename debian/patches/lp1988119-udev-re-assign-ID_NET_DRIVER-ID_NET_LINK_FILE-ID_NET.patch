@@ -1,0 +1,92 @@
+From e0e789c1e97e2cdf1cafe0c6b7d7e43fa054f151 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 14 Sep 2020 15:21:04 +0900
+Subject: [PATCH] udev: re-assign ID_NET_DRIVER=, ID_NET_LINK_FILE=,
+ ID_NET_NAME= properties on non-'add' uevent
+Bug: https://github.com/systemd/systemd/issues/17532
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/systemd/+bug/1988119
+Origin: upstream, https://github.com/systemd/systemd/commit/e0e789c1e97e2cdf1cafe0c6b7d7e43fa054f151
+
+Previous commit makes drop ID_NET_DRIVER=, ID_NET_LINK_FILE=, and
+ID_NET_NAME= properties for network interfaces on 'move' uevent.
+ID_NET_DRIVER= and ID_NET_LINK_FILE= properties are used by networkctl.
+ID_NET_NAME= may be used by end-user rules or programs. So, let's
+re-assign them on 'move' uevent. (Note that strictly speaking, this
+makes them re-assigned on all but 'remove' uevent.)
+---
+NOTE: backported from upstream, to keep as much backwards compatibility as possible;
+specifically 1) don't return failure if device_get_action() fails, and 2) context
+adjustments since the upstream commit builds on splitting out the function
+action into separate functions, which our code doesn't include.
+ rules/80-net-setup-link.rules |  2 +-
+ src/udev/net/link-config.c    | 20 ++++++++++++++++++++
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/rules/80-net-setup-link.rules b/rules/80-net-setup-link.rules
+index 6e411a9..bafc3fb 100644
+--- a/rules/80-net-setup-link.rules
++++ b/rules/80-net-setup-link.rules
+@@ -4,7 +4,7 @@ SUBSYSTEM!="net", GOTO="net_setup_link_end"
+ 
+ IMPORT{builtin}="path_id"
+ 
+-ACTION!="add", GOTO="net_setup_link_end"
++ACTION=="remove", GOTO="net_setup_link_end"
+ 
+ IMPORT{builtin}="net_setup_link"
+ 
+diff --git a/src/udev/net/link-config.c b/src/udev/net/link-config.c
+index a4368f0..4c7e87d 100644
+--- a/src/udev/net/link-config.c
++++ b/src/udev/net/link-config.c
+@@ -25,6 +25,8 @@
+ #include "alloc-util.h"
+ #include "conf-files.h"
+ #include "conf-parser.h"
++#include "device-private.h"
++#include "device-internal.h"
+ #include "ethtool-util.h"
+ #include "fd-util.h"
+ #include "libudev-private.h"
+@@ -371,6 +373,7 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
+         struct ether_addr *mac = NULL;
+         const char *new_name = NULL;
+         const char *old_name;
++        DeviceAction a = _DEVICE_ACTION_INVALID;
+         unsigned speed;
+         int r, ifindex;
+ 
+@@ -383,6 +386,16 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
+         if (!old_name)
+                 return -EINVAL;
+ 
++        a = device_action_from_string(udev_device_get_action(device));
++        if (a < 0)
++                log_warning_errno(errno, "Failed to get ACTION= property: %m");
++        else if (!IN_SET(a, DEVICE_ACTION_ADD, DEVICE_ACTION_BIND, DEVICE_ACTION_MOVE)) {
++                log_debug("Skipping to apply .link settings on %s device for '%s' uevent.", udev_device_get_sysname(device), device_action_to_string(a));
++
++                *name = old_name;
++                return 0;
++        }
++
+         r = ethtool_set_glinksettings(&ctx->ethtool_fd, old_name, config);
+         if (r < 0) {
+ 
+@@ -413,6 +426,13 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
+                 return -ENODEV;
+         }
+ 
++        if (a == DEVICE_ACTION_MOVE) {
++                log_debug("Skipping to apply Name= and NamePolicy= on %s device for '%s' uevent.", udev_device_get_sysname(device), device_action_to_string(a));
++
++                *name = old_name;
++                return 0;
++        }
++
+         if (ctx->enable_name_policy && config->name_policy) {
+                 NamePolicy *policy;
+ 
+-- 
+2.34.1
+
