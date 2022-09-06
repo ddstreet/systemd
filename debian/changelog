@@ -1,3 +1,20 @@
+systemd (237-3ubuntu10.56) bionic-security; urgency=medium
+
+  * debian/udev.preinst:
+    Add check_ID_NET_DRIVER() to ensure that on upgrade or install
+    from an earlier version ID_NET_DRIVER is present on network
+    interfaces. (LP: #1988119)
+
+ -- Matthew Ruffell <matthew.ruffell@canonical.com>  Tue, 06 Sep 2022 15:18:05 +1200
+
+systemd (237-3ubuntu10.55) bionic-security; urgency=medium
+
+  * d/p/lp1988119-udev-re-assign-ID_NET_DRIVER-ID_NET_LINK_FILE-ID_NET.patch:
+    Run net_setup_link on 'change' uevents, important for users of the
+    hv_netvsc driver on Azure. (LP: #1988119)
+
+ -- Matthew Ruffell <matthew.ruffell@canonical.com>  Wed, 31 Aug 2022 16:35:20 +1200
+
 systemd (237-3ubuntu10.54) bionic-security; urgency=medium
 
   * SECURITY UPDATE: Use-after-free vulnerability in systemd.                   
