@@ -2563,6 +2563,20 @@ void unit_invalidate_cgroup_bpf(Unit *u) {
         }
 }
 
+void unit_cgroup_catchup(Unit *u) {
+        assert(u);
+
+        if (!UNIT_HAS_CGROUP_CONTEXT(u))
+                return;
+
+        /* We dropped the inotify watch during reexec/reload, so we need to
+         * check these as they may have changed.
+         * Note that (currently) the kernel doesn't actually update cgroup
+         * file modification times, so we can't just serialize and then check
+         * the mtime for file(s) we are interested in. */
+        unit_add_to_cgroup_empty_queue(u);
+}
+
 void manager_invalidate_startup_units(Manager *m) {
         Iterator i;
         Unit *u;
