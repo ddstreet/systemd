@@ -25,6 +25,8 @@
 #include "alloc-util.h"
 #include "conf-files.h"
 #include "conf-parser.h"
+#include "device-private.h"
+#include "device-internal.h"
 #include "ethtool-util.h"
 #include "fd-util.h"
 #include "libudev-private.h"
@@ -371,6 +373,7 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
         struct ether_addr *mac = NULL;
         const char *new_name = NULL;
         const char *old_name;
+        DeviceAction a = _DEVICE_ACTION_INVALID;
         unsigned speed;
         int r, ifindex;
 
@@ -382,6 +385,16 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
         old_name = udev_device_get_sysname(device);
         if (!old_name)
                 return -EINVAL;
+
+        a = device_action_from_string(udev_device_get_action(device));
+        if (a < 0)
+                log_warning_errno(errno, "Failed to get ACTION= property: %m");
+        else if (!IN_SET(a, DEVICE_ACTION_ADD, DEVICE_ACTION_BIND, DEVICE_ACTION_MOVE)) {
+                log_debug("Skipping to apply .link settings on %s device for '%s' uevent.", udev_device_get_sysname(device), device_action_to_string(a));
+
+                *name = old_name;
+                return 0;
+        }
 
         r = ethtool_set_glinksettings(&ctx->ethtool_fd, old_name, config);
         if (r < 0) {
@@ -411,6 +424,13 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
         if (ifindex <= 0) {
                 log_warning("Could not find ifindex");
                 return -ENODEV;
+        }
+
+        if (a == DEVICE_ACTION_MOVE) {
+                log_debug("Skipping to apply Name= and NamePolicy= on %s device for '%s' uevent.", udev_device_get_sysname(device), device_action_to_string(a));
+
+                *name = old_name;
+                return 0;
         }
 
         if (ctx->enable_name_policy && config->name_policy) {
