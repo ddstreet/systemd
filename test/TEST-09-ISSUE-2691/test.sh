@@ -7,7 +7,7 @@ TEST_NO_NSPAWN=1
 
 . $TEST_BASE_DIR/test-functions
 SKIP_INITRD=yes
-QEMU_TIMEOUT=90
+QEMU_TIMEOUT=300
 
 test_setup() {
     create_empty_image
