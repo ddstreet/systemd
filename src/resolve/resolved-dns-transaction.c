@@ -569,8 +569,9 @@ static int dns_stream_on_packet(DnsStream *s) {
 }
 
 static int dns_transaction_emit_tcp(DnsTransaction *t) {
-        _cleanup_close_ int fd = -1;
         _cleanup_(dns_stream_unrefp) DnsStream *s = NULL;
+        _cleanup_close_ int fd = -1;
+        DnsStreamType type;
         int r;
 
         assert(t);
@@ -596,6 +597,7 @@ static int dns_transaction_emit_tcp(DnsTransaction *t) {
                 else
                         fd = dns_scope_socket_tcp(t->scope, AF_UNSPEC, NULL, t->server, 53);
 
+                type = DNS_STREAM_LOOKUP;
                 break;
 
         case DNS_PROTOCOL_LLMNR:
@@ -621,6 +623,7 @@ static int dns_transaction_emit_tcp(DnsTransaction *t) {
                         fd = dns_scope_socket_tcp(t->scope, family, &address, NULL, LLMNR_PORT);
                 }
 
+                type = DNS_STREAM_LLMNR_SEND;
                 break;
 
         default:
@@ -631,7 +634,7 @@ static int dns_transaction_emit_tcp(DnsTransaction *t) {
                 if (fd < 0)
                         return fd;
 
-                r = dns_stream_new(t->scope->manager, &s, t->scope->protocol, fd);
+                r = dns_stream_new(t->scope->manager, &s, type, t->scope->protocol, fd);
                 if (r < 0)
                         return r;
 
