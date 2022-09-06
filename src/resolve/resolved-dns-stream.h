@@ -73,7 +73,7 @@ struct DnsStream {
 
         LIST_HEAD(DnsTransaction, transactions); /* when used by the transaction logic */
         DnsServer *server;                       /* when used by the transaction logic */
-        DnsQuery *query;             /* when used by the DNS stub logic */
+        Set *queries;                            /* when used by the DNS stub logic */
 
         LIST_FIELDS(DnsStream, streams);
 };
