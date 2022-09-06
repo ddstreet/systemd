@@ -11,9 +11,9 @@
 #include "netif-util.h"
 #include "siphash24.h"
 #include "sparse-endian.h"
-#include "stat-util.h"
 #include "string-table.h"
 #include "udev-util.h"
+#include "virt.h"
 
 #define HASH_KEY       SD_ID128_MAKE(80,11,8c,c2,fe,4a,03,ee,3e,d6,0c,6f,36,39,14,09)
 #define APPLICATION_ID SD_ID128_MAKE(a5,0a,d1,12,bf,60,45,77,a2,fb,74,1a,b1,95,5b,03)
@@ -213,8 +213,8 @@ int dhcp_identifier_set_iaid(
         uint64_t id;
         int r;
 
-        if (path_is_read_only_fs("/sys") <= 0 && !use_mac) {
-                /* udev should be around */
+        if (detect_container() <= 0 && !use_mac) {
+                /* not in a container, udev will be around */
 
                 r = sd_device_new_from_ifindex(&device, ifindex);
                 if (r < 0)
