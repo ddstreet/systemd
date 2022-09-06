@@ -1130,7 +1130,7 @@ static int setup_pam(
                 gid_t gid,
                 const char *tty,
                 char ***env,
-                int fds[], unsigned n_fds) {
+                const int fds[], unsigned n_fds) {
 
 #if HAVE_PAM
 
@@ -2590,7 +2590,7 @@ static int close_remaining_fds(
                 DynamicCreds *dcreds,
                 int user_lookup_fd,
                 int socket_fd,
-                int *fds, unsigned n_fds) {
+                const int *fds, unsigned n_fds) {
 
         unsigned n_dont_close = 0;
         int dont_close[n_fds + 12];
