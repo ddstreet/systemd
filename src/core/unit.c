@@ -2331,7 +2331,6 @@ static void unit_update_on_console(Unit *u) {
                 manager_ref_console(u->manager);
         else
                 manager_unref_console(u->manager);
-
 }
 
 static bool unit_process_job(Job *j, UnitActiveState ns, UnitNotifyFlags flags) {
@@ -3788,8 +3787,7 @@ int unit_coldplug(Unit *u) {
 
         assert(u);
 
-        /* Make sure we don't enter a loop, when coldplugging
-         * recursively. */
+        /* Make sure we don't enter a loop, when coldplugging recursively. */
         if (u->coldplugged)
                 return 0;
 
@@ -3815,6 +3813,13 @@ int unit_coldplug(Unit *u) {
         }
 
         return r;
+}
+
+void unit_catchup(Unit *u) {
+        assert(u);
+
+        if (UNIT_VTABLE(u)->catchup)
+                UNIT_VTABLE(u)->catchup(u);
 }
 
 static bool fragment_mtime_newer(const char *path, usec_t mtime, bool path_masked) {
