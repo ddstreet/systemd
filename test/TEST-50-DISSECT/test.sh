@@ -13,6 +13,7 @@ TEST_INSTALL_VERITY_MINIMAL=1
 . "${TEST_BASE_DIR:?}/test-functions"
 
 QEMU_TIMEOUT=1200
+QEMU_MEM="1024M"
 
 command -v mksquashfs >/dev/null 2>&1 || exit 0
 command -v veritysetup >/dev/null 2>&1 || exit 0
