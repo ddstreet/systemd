@@ -26,7 +26,7 @@
 #DNSOverTLS={{DEFAULT_DNS_OVER_TLS_MODE_STR}}
 #MulticastDNS={{DEFAULT_MDNS_MODE_STR}}
 #LLMNR={{DEFAULT_LLMNR_MODE_STR}}
-#Cache=yes
+#Cache=no-negative
 #CacheFromLocalhost=no
 #DNSStubListener=yes
 #DNSStubListenerExtra=
