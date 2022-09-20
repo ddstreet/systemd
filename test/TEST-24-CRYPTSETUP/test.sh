@@ -14,6 +14,7 @@ PART_UUID="deadbeef-dead-dead-beef-000000000000"
 DM_NAME="test24_varcrypt"
 KERNEL_APPEND+=" rd.luks=1 luks.name=$PART_UUID=$DM_NAME luks.key=$PART_UUID=/keyfile:LABEL=varcrypt_keydev"
 QEMU_OPTIONS+=" -drive format=raw,cache=unsafe,file=${STATEDIR:?}/keydev.img"
+QEMU_MEM="1024M"
 
 check_result_qemu() {
     local ret=1
