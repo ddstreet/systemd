@@ -438,7 +438,7 @@ static int deliver_fd(Manager *m, const char *fdname, int fd) {
 
 static int manager_attach_fds(Manager *m) {
         _cleanup_strv_free_ char **fdnames = NULL;
-        int r, n;
+        int n;
 
         /* Upon restart, PID1 will send us back all fds of session devices that we previously opened. Each
          * file descriptor is associated with a given session. The session ids are passed through FDNAMES. */
@@ -455,15 +455,9 @@ static int manager_attach_fds(Manager *m) {
                 if (deliver_fd(m, fdnames[i], fd) >= 0)
                         continue;
 
-                /* Hmm, we couldn't deliver the fd to any session device object? If so, let's close the fd */
-                safe_close(fd);
-
-                /* Remove from fdstore as well */
-                r = sd_notifyf(false,
-                               "FDSTOREREMOVE=1\n"
-                               "FDNAME=%s", fdnames[i]);
-                if (r < 0)
-                        log_warning_errno(r, "Failed to remove file descriptor from the store, ignoring: %m");
+                /* Hmm, we couldn't deliver the fd to any session device object? If so, let's close the fd
+                 * and remove it from fdstore. */
+                close_and_notify_warn(fd, fdnames[i]);
         }
 
         return 0;
@@ -546,9 +540,8 @@ static int manager_enumerate_inhibitors(Manager *m) {
 }
 
 static int manager_dispatch_seat_udev(sd_device_monitor *monitor, sd_device *device, void *userdata) {
-        Manager *m = userdata;
+        Manager *m = ASSERT_PTR(userdata);
 
-        assert(m);
         assert(device);
 
         manager_process_seat_device(m, device);
@@ -556,9 +549,8 @@ static int manager_dispatch_seat_udev(sd_device_monitor *monitor, sd_device *dev
 }
 
 static int manager_dispatch_device_udev(sd_device_monitor *monitor, sd_device *device, void *userdata) {
-        Manager *m = userdata;
+        Manager *m = ASSERT_PTR(userdata);
 
-        assert(m);
         assert(device);
 
         manager_process_seat_device(m, device);
@@ -566,10 +558,9 @@ static int manager_dispatch_device_udev(sd_device_monitor *monitor, sd_device *d
 }
 
 static int manager_dispatch_vcsa_udev(sd_device_monitor *monitor, sd_device *device, void *userdata) {
-        Manager *m = userdata;
+        Manager *m = ASSERT_PTR(userdata);
         const char *name;
 
-        assert(m);
         assert(device);
 
         /* Whenever a VCSA device is removed try to reallocate our
@@ -584,9 +575,8 @@ static int manager_dispatch_vcsa_udev(sd_device_monitor *monitor, sd_device *dev
 }
 
 static int manager_dispatch_button_udev(sd_device_monitor *monitor, sd_device *device, void *userdata) {
-        Manager *m = userdata;
+        Manager *m = ASSERT_PTR(userdata);
 
-        assert(m);
         assert(device);
 
         manager_process_button_device(m, device);
@@ -594,9 +584,8 @@ static int manager_dispatch_button_udev(sd_device_monitor *monitor, sd_device *d
 }
 
 static int manager_dispatch_console(sd_event_source *s, int fd, uint32_t revents, void *userdata) {
-        Manager *m = userdata;
+        Manager *m = ASSERT_PTR(userdata);
 
-        assert(m);
         assert(m->seat0);
         assert(m->console_active_fd == fd);
 
@@ -782,7 +771,7 @@ static int manager_connect_console(Manager *m) {
 
         if (SIGRTMIN + 1 > SIGRTMAX)
                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
-                                       "Not enough real-time signals available: %u-%u",
+                                       "Not enough real-time signals available: %i-%i",
                                        SIGRTMIN, SIGRTMAX);
 
         assert_se(ignore_signals(SIGRTMIN + 1) >= 0);
@@ -949,12 +938,10 @@ static void manager_gc(Manager *m, bool drop_not_started) {
 }
 
 static int manager_dispatch_idle_action(sd_event_source *s, uint64_t t, void *userdata) {
-        Manager *m = userdata;
+        Manager *m = ASSERT_PTR(userdata);
         struct dual_timestamp since;
         usec_t n, elapse;
         int r;
-
-        assert(m);
 
         if (m->idle_action == HANDLE_IGNORE ||
             m->idle_action_usec <= 0)
