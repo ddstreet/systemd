@@ -215,8 +215,8 @@ TEST(chase_symlinks) {
         assert_se(streq(result, "/test-chase.fsldajfl"));
         result = mfree(result);
 
-        r = chase_symlinks("/etc/passwd/foo", NULL, 0, &result, NULL);
-        assert_se(r == -ENOTDIR);
+        r = chase_symlinks("/etc/machine-id/foo", NULL, 0, &result, NULL);
+        assert_se(IN_SET(r, -ENOTDIR, -ENOENT));
         result = mfree(result);
 
         /* Path that loops back to self */
@@ -288,26 +288,23 @@ TEST(chase_symlinks) {
                 assert_se(chase_symlinks(q, NULL, CHASE_SAFE, NULL, NULL) >= 0);
         }
 
-        p = strjoina(temp, "/passwd-test");
-        assert_se(symlink("/usr/../etc/./passwd", p) >= 0);
+        p = strjoina(temp, "/machine-id-test");
+        assert_se(symlink("/usr/../etc/./machine-id", p) >= 0);
 
         r = chase_symlinks(p, NULL, 0, NULL, &pfd);
         if (r != -ENOENT) {
                 _cleanup_close_ int fd = -1;
-/*
                 sd_id128_t a, b;
-*/
 
                 assert_se(pfd >= 0);
 
                 fd = fd_reopen(pfd, O_RDONLY|O_CLOEXEC);
                 assert_se(fd >= 0);
                 safe_close(pfd);
-/*
+
                 assert_se(id128_read_fd(fd, ID128_PLAIN, &a) >= 0);
                 assert_se(sd_id128_get_machine(&b) >= 0);
                 assert_se(sd_id128_equal(a, b));
-*/
         }
 
         /* Test CHASE_NOFOLLOW */
