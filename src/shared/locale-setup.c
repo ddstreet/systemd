@@ -49,14 +49,20 @@ int locale_context_load(LocaleContext *c, LocaleLoadFlag flag) {
         }
 
         if (FLAGS_SET(flag, LOCALE_LOAD_LOCALE_CONF)) {
+                const char *path = "/etc/locale.conf";
                 struct stat st;
                 usec_t t;
 
-                r = stat("/etc/locale.conf", &st);
+                r = stat(path, &st);
+                if (r < 0 && errno == ENOENT) {
+                        path = "/etc/default/locale";
+                        r = stat(path, &st);
+                }
                 if (r < 0 && errno != ENOENT)
-                        return log_debug_errno(errno, "Failed to stat /etc/locale.conf: %m");
+                        return log_debug_errno(errno, "Failed to stat %s: %m", path);
 
                 if (r >= 0) {
+
                         /* If mtime is not changed, then we do not need to re-read the file. */
                         t = timespec_load(&st.st_mtim);
                         if (c->mtime != USEC_INFINITY && t == c->mtime)
@@ -65,7 +71,7 @@ int locale_context_load(LocaleContext *c, LocaleLoadFlag flag) {
                         locale_context_clear(c);
                         c->mtime = t;
 
-                        r = parse_env_file(NULL, "/etc/locale.conf",
+                        r = parse_env_file(NULL, path,
                                            "LANG",              &c->locale[VARIABLE_LANG],
                                            "LANGUAGE",          &c->locale[VARIABLE_LANGUAGE],
                                            "LC_CTYPE",          &c->locale[VARIABLE_LC_CTYPE],
@@ -81,7 +87,7 @@ int locale_context_load(LocaleContext *c, LocaleLoadFlag flag) {
                                            "LC_MEASUREMENT",    &c->locale[VARIABLE_LC_MEASUREMENT],
                                            "LC_IDENTIFICATION", &c->locale[VARIABLE_LC_IDENTIFICATION]);
                         if (r < 0)
-                                return log_debug_errno(r, "Failed to read /etc/locale.conf: %m");
+                                return log_debug_errno(r, "Failed to read %s: %m", path);
 
                         goto finalize;
                 }
@@ -149,17 +155,21 @@ int locale_context_save(LocaleContext *c, char ***ret_set, char ***ret_unset) {
         _cleanup_strv_free_ char **set = NULL, **unset = NULL;
         struct stat st;
         int r;
+        const char *path = "/etc/locale.conf";
 
         assert(c);
 
         /* Set values will be returned as strv in *ret on success. */
+
+        if (access(path, F_OK) < 0 && errno == ENOENT)
+                path = "/etc/default/locale";
 
         r = locale_context_build_env(c, &set, ret_unset ? &unset : NULL);
         if (r < 0)
                 return r;
 
         if (strv_isempty(set)) {
-                if (unlink("/etc/locale.conf") < 0)
+                if (unlink(path) < 0)
                         return errno == ENOENT ? 0 : -errno;
 
                 c->mtime = USEC_INFINITY;
@@ -170,11 +180,11 @@ int locale_context_save(LocaleContext *c, char ***ret_set, char ***ret_unset) {
                 return 0;
         }
 
-        r = write_env_file_label("/etc/locale.conf", set);
+        r = write_env_file_label(path, set);
         if (r < 0)
                 return r;
 
-        if (stat("/etc/locale.conf", &st) >= 0)
+        if (stat(path, &st) >= 0)
                 c->mtime = timespec_load(&st.st_mtim);
 
         if (ret_set)
