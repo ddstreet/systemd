@@ -1511,9 +1511,11 @@ int tpm2_seal(const char *device,
                 k *= 2;
         }
 
-        hash = memdup(policy_digest->buffer, policy_digest->size);
-        if (!hash)
-                return log_oom();
+        if (hash_pcr_mask) {
+                hash = memdup(policy_digest->buffer, policy_digest->size);
+                if (!hash)
+                        return log_oom();
+        }
 
         if (DEBUG_LOGGING)
                 log_debug("Completed TPM2 key sealing in %s.", FORMAT_TIMESPAN(now(CLOCK_MONOTONIC) - start, 1));
@@ -1523,7 +1525,7 @@ int tpm2_seal(const char *device,
         *ret_blob = TAKE_PTR(blob);
         *ret_blob_size = blob_size;
         *ret_pcr_hash = TAKE_PTR(hash);
-        *ret_pcr_hash_size = policy_digest->size;
+        *ret_pcr_hash_size = hash ? policy_digest->size : 0;
         *ret_pcr_bank = pcr_bank;
         *ret_primary_alg = primary_alg;
 
