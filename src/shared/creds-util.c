@@ -649,6 +649,9 @@ int encrypt_credential_and_warn(
                         tpm2_pubkey_pcr_mask = 0;
 
                 r = tpm2_seal(tpm2_device,
+                              /* srk_handle= */ 0,
+                              /* srk_pubkey= */ NULL,
+                              /* srk_pubkey_size= */ 0,
                               tpm2_hash_pcr_mask,
                               pubkey, pubkey_size,
                               tpm2_pubkey_pcr_mask,

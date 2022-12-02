@@ -131,6 +131,8 @@ int enroll_tpm2(struct crypt_device *cd,
                 const void *volume_key,
                 size_t volume_key_size,
                 const char *device,
+                uint32_t srk_handle,
+                const char *srk_pubkey_path,
                 uint32_t hash_pcr_mask,
                 const char *pubkey_path,
                 uint32_t pubkey_pcr_mask,
@@ -140,8 +142,8 @@ int enroll_tpm2(struct crypt_device *cd,
         _cleanup_(erase_and_freep) void *secret = NULL;
         _cleanup_(json_variant_unrefp) JsonVariant *v = NULL, *signature_json = NULL;
         _cleanup_(erase_and_freep) char *base64_encoded = NULL;
-        size_t secret_size, blob_size, hash_size, pubkey_size = 0;
-        _cleanup_free_ void *blob = NULL, *hash = NULL, *pubkey = NULL;
+        size_t secret_size, blob_size, hash_size, srk_pubkey_size = 0, pubkey_size = 0;
+        _cleanup_free_ void *blob = NULL, *hash = NULL, *srk_pubkey = NULL, *pubkey = NULL;
         uint16_t pcr_bank, primary_alg;
         const char *node;
         _cleanup_(erase_and_freep) char *pin_str = NULL;
@@ -160,6 +162,16 @@ int enroll_tpm2(struct crypt_device *cd,
                 r = get_pin(&pin_str, &flags);
                 if (r < 0)
                         return r;
+        }
+
+        if (srk_pubkey_path) {
+                if (srk == UINT32_MAX)
+                        return log_error_errno(SYNTHETIC_ERROR(EINVAL),
+                                               "SRK public key provided without SRK handle");
+
+                r = read_full_file(srk_pubkey_path, &srk_pubkey, &srk_pubkey_size);
+                if (r < 0)
+                        return log_error_errno(r, "Failed to read TPM2 SRK public key: %m");
         }
 
         r = tpm2_load_pcr_public_key(pubkey_path, &pubkey, &pubkey_size);
@@ -182,6 +194,8 @@ int enroll_tpm2(struct crypt_device *cd,
         }
 
         r = tpm2_seal(device,
+                      srk_handle,
+                      srk_pubkey, srk_pubkey_size,
                       hash_pcr_mask,
                       pubkey, pubkey_size,
                       pubkey_pcr_mask,

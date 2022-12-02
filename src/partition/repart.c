@@ -3040,6 +3040,9 @@ static int partition_encrypt(
                 }
 
                 r = tpm2_seal(arg_tpm2_device,
+                              /* srk_handle= */ 0,
+                              /* srk_pubkey= */ NULL,
+                              /* srk_pubkey_size= */ 0,
                               arg_tpm2_pcr_mask,
                               pubkey, pubkey_size,
                               arg_tpm2_public_key_pcr_mask,

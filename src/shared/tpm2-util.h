@@ -35,6 +35,7 @@ extern TSS2_RC (*sym_Esys_PolicyPCR)(ESYS_CONTEXT *esysContext, ESYS_TR policySe
 extern TSS2_RC (*sym_Esys_StartAuthSession)(ESYS_CONTEXT *esysContext, ESYS_TR tpmKey, ESYS_TR bind, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_NONCE *nonceCaller, TPM2_SE sessionType, const TPMT_SYM_DEF *symmetric, TPMI_ALG_HASH authHash, ESYS_TR *sessionHandle);
 extern TSS2_RC (*sym_Esys_Startup)(ESYS_CONTEXT *esysContext, TPM2_SU startupType);
 extern TSS2_RC (*sym_Esys_TRSess_SetAttributes)(ESYS_CONTEXT *esysContext, ESYS_TR session, TPMA_SESSION flags, TPMA_SESSION mask);
+extern TSS2_RC (*sym_Esys_TR_FromTPMPublic)(ESYS_CONTEXT *esysContext, TPM2_HANDLE tpmHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, ESYS_TR *object);
 extern TSS2_RC (*sym_Esys_TR_GetName)(ESYS_CONTEXT *esysContext, ESYS_TR handle, TPM2B_NAME **name);
 extern TSS2_RC (*sym_Esys_TR_SetAuth)(ESYS_CONTEXT *esysContext, ESYS_TR handle, TPM2B_AUTH const *authValue);
 extern TSS2_RC (*sym_Esys_Unseal)(ESYS_CONTEXT *esysContext, ESYS_TR itemHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, TPM2B_SENSITIVE_DATA **outData);
@@ -49,8 +50,8 @@ extern TSS2_RC (*sym_Tss2_MU_TPM2B_PUBLIC_Unmarshal)(uint8_t const buffer[], siz
 
 int dlopen_tpm2(void);
 
-int tpm2_seal(const char *device, uint32_t hash_pcr_mask, const void *pubkey, size_t pubkey_size, uint32_t pubkey_pcr_mask, const char *pin, void **ret_secret, size_t *ret_secret_size, void **ret_blob, size_t *ret_blob_size, void **ret_pcr_hash, size_t *ret_pcr_hash_size, uint16_t *ret_pcr_bank, uint16_t *ret_primary_alg);
-int tpm2_unseal(const char *device, uint32_t hash_pcr_mask, uint16_t pcr_bank, const void *pubkey, size_t pubkey_size, uint32_t pubkey_pcr_mask, JsonVariant *signature, const char *pin, uint16_t primary_alg, const void *blob, size_t blob_size, const void *policy_hash, size_t policy_hash_size, void **ret_secret, size_t *ret_secret_size);
+int tpm2_seal(const char *device, uint32_t srk_handle, const char *srk_pubkey, size_t srk_pubkey_size, uint32_t hash_pcr_mask, const void *pubkey, size_t pubkey_size, uint32_t pubkey_pcr_mask, const char *pin, void **ret_secret, size_t *ret_secret_size, void **ret_blob, size_t *ret_blob_size, void **ret_pcr_hash, size_t *ret_pcr_hash_size, uint16_t *ret_pcr_bank, uint16_t *ret_primary_alg);
+int tpm2_unseal(const char *device, uint32_t srk_handle, uint32_t hash_pcr_mask, uint16_t pcr_bank, const void *pubkey, size_t pubkey_size, uint32_t pubkey_pcr_mask, JsonVariant *signature, const char *pin, uint16_t primary_alg, const void *blob, size_t blob_size, const void *policy_hash, size_t policy_hash_size, void **ret_secret, size_t *ret_secret_size);
 
 struct tpm2_context {
         void *tcti_dl;
@@ -96,8 +97,7 @@ static inline bool TPM2_PCR_MASK_VALID(uint64_t pcr_mask) {
 /* Default to PCR 7 only */
 #define TPM2_PCR_MASK_DEFAULT (UINT32_C(1) << 7)
 
-/* We want the helpers below to work also if TPM2 libs are not available, hence define these four defines if
- * they are missing. */
+/* We want the helpers below to work also if TPM2 libs are not available, hence define these if missing. */
 #ifndef TPM2_ALG_SHA1
 #define TPM2_ALG_SHA1 0x4
 #endif
@@ -121,6 +121,26 @@ static inline bool TPM2_PCR_MASK_VALID(uint64_t pcr_mask) {
 #ifndef TPM2_ALG_RSA
 #define TPM2_ALG_RSA 0x1
 #endif
+
+#ifndef TPM2_PERSISTENT_FIRST
+#define TPM2_PERSISTENT_FIRST ((uint32_t) 0x81000000)
+#endif
+
+#ifndef TPM2_PERSISTENT_LAST
+#define TPM2_PERSISTENT_LAST ((uint32_t) 0x81FFFFFF)
+#endif
+
+/* These "reserved" (only as guidance) handles are defined by "TCG TPM v2.0 Provisioning Guidance". */
+#define TPM2_PERSISTENT_EK  ((uint32_t) 0x81010001)
+#define TPM2_PERSISTENT_SRK ((uint32_t) 0x81000001)
+
+#define TPM2_HANDLE_VALID(handle, first, last) ((handle) >= (first) && (handle) <= (last))
+#define TPM2_PERSISTENT_HANDLE_VALID(handle) TPM2_HANDLE_VALID((handle), TPM2_PERSISTENT_FIRST, TPM2_PERSISTENT_LAST)
+
+int tpm2_parse_handle(const char *arg, uint32_t *handle, uint32_t first, uint32_t last);
+static inline int tpm2_parse_persistent_handle(const char *arg, uint32_t *handle) {
+        return tpm2_parse_handle(arg, handle, TPM2_PERSISTENT_FIRST, TPM2_PERSISTENT_LAST);
+}
 
 const char *tpm2_pcr_bank_to_string(uint16_t bank);
 int tpm2_pcr_bank_from_string(const char *bank);

@@ -46,6 +46,7 @@ TSS2_RC (*sym_Esys_PolicyPCR)(ESYS_CONTEXT *esysContext, ESYS_TR policySession, 
 TSS2_RC (*sym_Esys_StartAuthSession)(ESYS_CONTEXT *esysContext, ESYS_TR tpmKey, ESYS_TR bind, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_NONCE *nonceCaller, TPM2_SE sessionType, const TPMT_SYM_DEF *symmetric, TPMI_ALG_HASH authHash, ESYS_TR *sessionHandle) = NULL;
 TSS2_RC (*sym_Esys_Startup)(ESYS_CONTEXT *esysContext, TPM2_SU startupType) = NULL;
 TSS2_RC (*sym_Esys_TRSess_SetAttributes)(ESYS_CONTEXT *esysContext, ESYS_TR session, TPMA_SESSION flags, TPMA_SESSION mask);
+TSS2_RC (*sym_Esys_TR_FromTPMPublic)(ESYS_CONTEXT *esysContext, TPM2_HANDLE tpmHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, ESYS_TR *object) = NULL;
 TSS2_RC (*sym_Esys_TR_GetName)(ESYS_CONTEXT *esysContext, ESYS_TR handle, TPM2B_NAME **name);
 TSS2_RC (*sym_Esys_TR_SetAuth)(ESYS_CONTEXT *esysContext, ESYS_TR handle, TPM2B_AUTH const *authValue) = NULL;
 TSS2_RC (*sym_Esys_Unseal)(ESYS_CONTEXT *esysContext, ESYS_TR itemHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, TPM2B_SENSITIVE_DATA **outData) = NULL;
@@ -82,6 +83,7 @@ int dlopen_tpm2(void) {
                         DLSYM_ARG(Esys_StartAuthSession),
                         DLSYM_ARG(Esys_Startup),
                         DLSYM_ARG(Esys_TRSess_SetAttributes),
+                        DLSYM_ARG(Esys_TR_FromTPMPublic),
                         DLSYM_ARG(Esys_TR_GetName),
                         DLSYM_ARG(Esys_TR_SetAuth),
                         DLSYM_ARG(Esys_Unseal),
@@ -285,6 +287,11 @@ static int tpm2_credit_random(ESYS_CONTEXT *c) {
                 log_debug_errno(r, "Failed to touch '" TPM2_CREDIT_RANDOM_FLAG_PATH "', ignoring: %m");
 
         return 0;
+}
+
+static int tpm2_from_handle(
+                ESYS_CONTEXT *c,
+                ESYS_TR *ret_object) {
 }
 
 static int tpm2_make_primary(
@@ -1319,6 +1326,9 @@ finish:
 }
 
 int tpm2_seal(const char *device,
+              uint32_t srk_handle,
+              const char *srk_pubkey,
+              size_t srk_pubkey_size,
               uint32_t hash_pcr_mask,
               const void *pubkey,
               const size_t pubkey_size,
@@ -1349,6 +1359,10 @@ int tpm2_seal(const char *device,
         usec_t start;
         TSS2_RC rc;
         int r;
+
+        assert(!srk_handle || TPM2_PERSISTENT_HANDLE_VALID(srk_handle));
+        assert(srk_pubkey || srk_pubkey_size == 0);
+        assert(!srk_pubkey || srk_handle);
 
         assert(pubkey || pubkey_size == 0);
 
@@ -2293,5 +2307,24 @@ int pcr_mask_to_string(uint32_t mask, char **ret) {
         }
 
         *ret = TAKE_PTR(buf);
+        return 0;
+}
+
+int tpm2_parse_handle(const char *arg, uint32_t *handle, uint32_t first, uint32_t last) {
+        int r;
+        uint32_t n;
+
+        assert(handle);
+
+        r = safe_atou32(arg, &n);
+        if (r < 0)
+                return r;
+
+        if (!TPM2_HANDLE_VALID(n, first, last))
+                return log_error_errno(SYNTHETIC_ERRNO(ERANGE),
+                                       "Handle out of valid range 0x%x…0x%x: 0x%x",
+                                       first, last, n);
+
+        *handle = n;
         return 0;
 }
