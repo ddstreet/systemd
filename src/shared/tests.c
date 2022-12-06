@@ -35,6 +35,7 @@
 #include "strv.h"
 #include "tests.h"
 #include "tmpfile-util.h"
+#include "id128-util.h"
 
 char* setup_fake_runtime_dir(void) {
         char t[] = "/tmp/fake-xdg-runtime-XXXXXX", *p;
@@ -360,4 +361,15 @@ const char *ci_environment(void) {
         }
 
         return (ans = NULL);
+}
+
+int machine_id_initialized(void) {
+        sd_id128_t id;
+        int r;
+
+        r = id128_read("/etc/machine-id", ID128_PLAIN_OR_UNINIT, &id);
+        if (IN_SET(r, 0, -ENOENT, -ENOMEDIUM))
+                return !r;
+
+        return r;
 }
