@@ -131,6 +131,7 @@ int enroll_tpm2(struct crypt_device *cd,
                 const void *volume_key,
                 size_t volume_key_size,
                 const char *device,
+                const char *external_pubkey_path,
                 uint32_t hash_pcr_mask,
                 const char *pubkey_path,
                 uint32_t pubkey_pcr_mask,
@@ -141,7 +142,7 @@ int enroll_tpm2(struct crypt_device *cd,
         _cleanup_(json_variant_unrefp) JsonVariant *v = NULL, *signature_json = NULL;
         _cleanup_(erase_and_freep) char *base64_encoded = NULL;
         size_t secret_size, blob_size, hash_size, pubkey_size = 0;
-        _cleanup_free_ void *blob = NULL, *hash = NULL, *pubkey = NULL;
+        _cleanup_free_ void *blob = NULL, *hash = NULL, *external_pubkey = NULL, *pubkey = NULL;
         uint16_t pcr_bank, primary_alg;
         const char *node;
         _cleanup_(erase_and_freep) char *pin_str = NULL;
@@ -206,7 +207,7 @@ int enroll_tpm2(struct crypt_device *cd,
         }
 
         /* Quick verification that everything is in order, we are not in a hurry after all.*/
-        if (!pubkey || signature_json) {
+        if (!external_pubkey && (!pubkey || signature_json)) {
                 _cleanup_(erase_and_freep) void *secret2 = NULL;
                 size_t secret2_size;
 
@@ -250,6 +251,7 @@ int enroll_tpm2(struct crypt_device *cd,
 
         r = tpm2_make_luks2_json(
                         keyslot,
+                        !!external_pubkey,
                         hash_pcr_mask,
                         pcr_bank,
                         pubkey, pubkey_size,
