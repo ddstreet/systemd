@@ -18,4 +18,6 @@ test_append_files() {
     fi
 }
 
+QEMU_MEM="1024M"
+
 do_test "$@"

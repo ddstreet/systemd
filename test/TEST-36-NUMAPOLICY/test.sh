@@ -8,6 +8,8 @@ TEST_NO_NSPAWN=1
 # shellcheck source=test/test-functions
 . "${TEST_BASE_DIR:?}/test-functions"
 
+QEMU_MEM="1024M"
+
 if qemu_min_version "5.2.0"; then
     QEMU_OPTIONS+=" -object memory-backend-ram,id=mem0,size=${QEMU_MEM:-768M} -numa node,memdev=mem0,nodeid=0"
 else
