@@ -423,6 +423,25 @@ static int manager_setup_time_change(Manager *m) {
         return 0;
 }
 
+/* Hack for Ubuntu Phone/Core: check if path is an existing symlink to
+ * /etc/writable; if it is, update that instead */
+static const char* writable_filename(const char *path) {
+        ssize_t r;
+        static char realfile_buf[PATH_MAX];
+        _cleanup_free_ char *realfile = NULL;
+        const char *result = path;
+        int orig_errno = errno;
+
+        r = readlink_and_make_absolute(path, &realfile);
+        if (r >= 0 && startswith(realfile, "/etc/writable")) {
+                snprintf(realfile_buf, sizeof(realfile_buf), "%s", realfile);
+                result = realfile_buf;
+        }
+
+        errno = orig_errno;
+        return result;
+}
+
 static int manager_read_timezone_stat(Manager *m) {
         struct stat st;
         bool changed;
@@ -430,7 +449,7 @@ static int manager_read_timezone_stat(Manager *m) {
         assert(m);
 
         /* Read the current stat() data of /etc/localtime so that we detect changes */
-        if (lstat("/etc/localtime", &st) < 0) {
+        if (lstat(writable_filename("/etc/localtime"), &st) < 0) {
                 log_debug_errno(errno, "Failed to stat /etc/localtime, ignoring: %m");
                 changed = m->etc_localtime_accessible;
                 m->etc_localtime_accessible = false;
@@ -467,7 +486,7 @@ static int manager_setup_timezone_change(Manager *m) {
          * Note that we create the new event source first here, before releasing the old one. This should optimize
          * behaviour as this way sd-event can reuse the old watch in case the inode didn't change. */
 
-        r = sd_event_add_inotify(m->event, &new_event, "/etc/localtime",
+        r = sd_event_add_inotify(m->event, &new_event, writable_filename("/etc/localtime"),
                                  IN_ATTRIB|IN_MOVE_SELF|IN_CLOSE_WRITE|IN_DONT_FOLLOW, manager_dispatch_timezone_change, m);
         if (r == -ENOENT) {
                 /* If the file doesn't exist yet, subscribe to /etc instead, and wait until it is created either by
