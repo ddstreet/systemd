@@ -816,10 +816,8 @@ static int tpm2_make_encryption_session(
                                 "Failed to configure TPM session: %s",
                                 sym_Tss2_RC_Decode(rc));
 
-        if (ret_session) {
-                *ret_session = session;
-                session = ESYS_TR_NONE;
-        }
+        if (ret_session)
+                *ret_session = TAKE_ESYS_TR(session);
 
         session = tpm2_flush_context_verbose(c, session);
         return 0;
@@ -1328,10 +1326,8 @@ static int tpm2_make_policy_session(
                 }
         }
 
-        if (ret_session) {
-                *ret_session = session;
-                session = ESYS_TR_NONE;
-        }
+        if (ret_session)
+                *ret_session = TAKE_ESYS_TR(session);
 
         if (ret_policy_digest)
                 *ret_policy_digest = TAKE_PTR(policy_digest);

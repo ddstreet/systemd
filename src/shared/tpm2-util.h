@@ -153,3 +153,6 @@ int tpm2_load_pcr_signature(const char *path, JsonVariant **ret);
 int tpm2_load_pcr_public_key(const char *path, void **ret_pubkey, size_t *ret_pubkey_size);
 
 int pcr_mask_to_string(uint32_t mask, char **ret);
+
+/* Like TAKE_PTR() but for ESYS_TR handles, resetting them to ESYS_TR_NONE */
+#define TAKE_ESYS_TR(handle) TAKE_GENERIC(handle, ESYS_TR_NONE)
