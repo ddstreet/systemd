@@ -10,5 +10,6 @@ TEST_NO_NSPAWN=1
 . "${TEST_BASE_DIR:?}/test-functions"
 
 TEST_FORCE_NEWIMAGE=1
+QEMU_MEM="1024M"
 
 do_test "$@"

@@ -12,6 +12,11 @@ ifeq ($(DEB_VENDOR),Ubuntu)
     DEFAULT_NTP_SERVERS = ntp.ubuntu.com
     SUPPORT_URL = http://www.ubuntu.com/support
     CONFFLAGS_DISTRO =
+ifeq ($(DEB_HOST_ARCH),amd64)
+# enable CET on ubuntu amd64, until compiler is fixed to do it correctly with
+# -flto
+export DEB_LDFLAGS_MAINT_APPEND=-fcf-protection
+endif
 else
     DEFAULT_NTP_SERVERS = 0.debian.pool.ntp.org 1.debian.pool.ntp.org 2.debian.pool.ntp.org 3.debian.pool.ntp.org
     SUPPORT_URL = https://www.debian.org/support
@@ -36,6 +41,7 @@ CONFFLAGS = \
 	-Dmode=release \
 	-Drootlibdir=/usr/lib/$(DEB_HOST_MULTIARCH) \
 	-Dsplit-usr=true \
+	-Duser-path=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
 	-Dversion-tag="$(DEB_VERSION)" \
 	-Dquotaon-path=/sbin/quotaon \
 	-Dquotacheck-path=/sbin/quotacheck \
@@ -58,6 +64,8 @@ CONFFLAGS = \
 	-Ddefault-kill-user-processes=false \
 	-Ddefault-hierarchy=unified \
 	-Ddefault-dnssec=no \
+	-Ddefault-llmnr=no \
+	-Ddefault-mdns=no \
 	-Dpamconfdir=no \
 	-Dpamlibdir=/lib/$(DEB_HOST_MULTIARCH)/security \
 	-Drpmmacrosdir=no \
@@ -117,8 +125,8 @@ CONFFLAGS += \
 	-Dcryptolib=openssl \
 	-Ddns-over-tls=openssl \
 	-Dlibfido2=true \
-	-Dtpm2=true \
-	-Dqrencode=true \
+	-Dtpm2=$(if $(filter i386,$(DEB_HOST_ARCH)),false,true) \
+	-Dqrencode=$(if $(filter i386,$(DEB_HOST_ARCH)),false,true) \
 	-Dhomed=true \
 	-Duserdb=true \
 	-Dpcre2=true
@@ -234,6 +242,12 @@ ifeq ($(DEB_VENDOR),Ubuntu)
 	cp -a debian/extra/units-ubuntu/* debian/systemd/lib/systemd/system/
 endif
 
+	# Remove unneeded file that produces errors in debugedit (LP: #1950445)
+ifeq ($(DEB_HOST_ARCH),i386)
+	rm -f debian/systemd/usr/lib/systemd/boot/efi/linuxia32.elf.stub
+	rm -f debian/systemd-boot-efi/usr/lib/systemd/boot/efi/linuxia32.elf.stub
+endif
+
 execute_after_dh_installman:
 	# remove duplicate files shipped by systemd-*/udev
 	# run after dh_installman, which runs after dh_install, to include manpages
@@ -259,7 +273,8 @@ override_dh_missing:
 	dh_missing $(DH_MISSING)
 
 override_dh_installinit:
-	dh_installinit --no-start
+	dh_installinit --no-scripts -psystemd
+	dh_installinit --no-start -Nsystemd
 
 override_dh_installsystemd:
 	dh_installsystemd -psystemd-timesyncd
