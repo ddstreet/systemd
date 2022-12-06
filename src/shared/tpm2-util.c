@@ -762,6 +762,7 @@ static int tpm2_make_encryption_session(
         int r = 0;
 
         assert(c);
+        assert(ret_session);
 
         log_debug("Starting HMAC encryption session.");
 
@@ -798,8 +799,7 @@ static int tpm2_make_encryption_session(
                 goto finish;
         }
 
-        if (ret_session)
-                *ret_session = TAKE_ESYS_TR(session);
+        *ret_session = TAKE_ESYS_TR(session);
 
 finish:
         session = tpm2_flush_context_verbose(c, session);
