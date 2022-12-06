@@ -759,6 +759,7 @@ static int tpm2_make_encryption_session(
                         TPMA_SESSION_CONTINUESESSION;
         ESYS_TR session = ESYS_TR_NONE;
         TSS2_RC rc;
+        int r = 0;
 
         assert(c);
 
@@ -779,25 +780,30 @@ static int tpm2_make_encryption_session(
                         &symmetric,
                         TPM2_ALG_SHA256,
                         &session);
-        if (rc != TSS2_RC_SUCCESS)
-                return log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
+        if (rc != TSS2_RC_SUCCESS) {
+                r = log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
                                        "Failed to open session in TPM: %s", sym_Tss2_RC_Decode(rc));
+                goto finish;
+        }
 
         /* Enable parameter encryption/decryption with AES in CFB mode. Together with HMAC digests (which are
          * always used for sessions), this provides confidentiality, integrity and replay protection for
          * operations that use this session. */
         rc = sym_Esys_TRSess_SetAttributes(c, session, sessionAttributes, 0xff);
-        if (rc != TSS2_RC_SUCCESS)
-                return log_error_errno(
+        if (rc != TSS2_RC_SUCCESS) {
+                r = log_error_errno(
                                 SYNTHETIC_ERRNO(ENOTRECOVERABLE),
                                 "Failed to configure TPM session: %s",
                                 sym_Tss2_RC_Decode(rc));
+                goto finish;
+        }
 
         if (ret_session)
                 *ret_session = TAKE_ESYS_TR(session);
 
+finish:
         session = tpm2_flush_context_verbose(c, session);
-        return 0;
+        return r;
 }
 
 int tpm2_set_auth(ESYS_CONTEXT *c, ESYS_TR handle, const char *pin) {
