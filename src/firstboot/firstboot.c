@@ -311,7 +311,7 @@ static int process_locale(void) {
         const char *etc_localeconf, *path = "/etc/locale.conf";
         char* locales[3];
         unsigned i = 0;
-        int r, ret = 0;
+        int r = 0;
 
         if (laccess(path, F_OK) < 0 && errno == ENOENT)
                 path = "/etc/default/locale";

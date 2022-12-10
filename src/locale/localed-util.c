@@ -128,7 +128,6 @@ int vconsole_read_data(Context *c, sd_bus_message *m) {
 
 int x11_read_data(Context *c, sd_bus_message *m) {
         _cleanup_fclose_ FILE *f = NULL;
-        bool in_section = false;
         struct stat st;
         usec_t t;
         int r;
