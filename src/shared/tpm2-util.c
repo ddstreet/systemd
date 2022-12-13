@@ -35,6 +35,7 @@ static void *libtss2_mu_dl = NULL;
 static TSS2_RC (*sym_Esys_Create)(ESYS_CONTEXT *esysContext, ESYS_TR parentHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_SENSITIVE_CREATE *inSensitive, const TPM2B_PUBLIC *inPublic, const TPM2B_DATA *outsideInfo, const TPML_PCR_SELECTION *creationPCR, TPM2B_PRIVATE **outPrivate, TPM2B_PUBLIC **outPublic, TPM2B_CREATION_DATA **creationData, TPM2B_DIGEST **creationHash, TPMT_TK_CREATION **creationTicket) = NULL;
 static TSS2_RC (*sym_Esys_CreateLoaded)(ESYS_CONTEXT *esysContext, ESYS_TR parentHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_SENSITIVE_CREATE *inSensitive, const TPM2B_TEMPLATE *inPublic, ESYS_TR *objectHandle, TPM2B_PRIVATE **outPrivate, TPM2B_PUBLIC **outPublic) = NULL;
 static TSS2_RC (*sym_Esys_CreatePrimary)(ESYS_CONTEXT *esysContext, ESYS_TR primaryHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_SENSITIVE_CREATE *inSensitive, const TPM2B_PUBLIC *inPublic, const TPM2B_DATA *outsideInfo, const TPML_PCR_SELECTION *creationPCR, ESYS_TR *objectHandle, TPM2B_PUBLIC **outPublic, TPM2B_CREATION_DATA **creationData, TPM2B_DIGEST **creationHash, TPMT_TK_CREATION **creationTicket) = NULL;
+static TSS2_RC (*sym_Esys_Duplicate)(ESYS_CONTEXT *esysContext, ESYS_TR objectHandle, ESYS_TR newParentHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_DATA *encryptionKeyIn, const TPMT_SYM_DEF_OBJECT *symmetricAlg, TPM2B_DATA **encryptionKeyOut, TPM2B_PRIVATE **duplicate, TPM2B_ENCRYPTED_SECRET **outSymSeed) = NULL;
 static TSS2_RC (*sym_Esys_EvictControl)(ESYS_CONTEXT *esysContext, ESYS_TR auth, ESYS_TR objectHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, TPMI_DH_PERSISTENT persistentHandle, ESYS_TR *newObjectHandle) = NULL;
 static void (*sym_Esys_Finalize)(ESYS_CONTEXT **context) = NULL;
 static TSS2_RC (*sym_Esys_FlushContext)(ESYS_CONTEXT *esysContext, ESYS_TR flushHandle) = NULL;
@@ -86,6 +87,7 @@ int dlopen_tpm2(void) {
                         DLSYM_ARG(Esys_Create),
                         DLSYM_ARG(Esys_CreateLoaded),
                         DLSYM_ARG(Esys_CreatePrimary),
+                        DLSYM_ARG(Esys_Duplicate),
                         DLSYM_ARG(Esys_EvictControl),
                         DLSYM_ARG(Esys_Finalize),
                         DLSYM_ARG(Esys_FlushContext),
@@ -3172,6 +3174,86 @@ static int tpm2_calculate_sealing_policy(
                 if (r < 0)
                         return r;
         }
+
+        return 0;
+}
+
+/* This requires the object authPolicy to use DuplicationSelect with include_object set to TPM2_NO. */
+static int tpm2_duplicate(
+                Tpm2Context *c,
+                const Tpm2Handle *session,
+                const Tpm2Handle *object,
+                const Tpm2Handle *new_parent,
+                const TPMT_SYM_DEF_OBJECT *symmetric,
+                TPM2B_DATA **ret_sym_key,
+                TPM2B_PRIVATE **ret_dup,
+                TPM2B_ENCRYPTED_SECRET **ret_seed) {
+
+        TSS2_RC rc;
+        int r;
+
+        assert(c);
+        assert(session);
+        assert(object);
+        assert(new_parent);
+        assert(ret_dup);
+        assert(ret_seed);
+
+        log_debug("Duplicating object.");
+
+        _cleanup_(Esys_Freep) TPM2B_NAME *name = NULL;
+        r = tpm2_get_name(c, object, &name);
+        if (r < 0)
+                return r;
+
+        _cleanup_(Esys_Freep) TPM2B_NAME *new_parent_name = NULL;
+        r = tpm2_get_name(c, new_parent, &new_parent_name);
+        if (r < 0)
+                return r;
+
+        _cleanup_tpm2_handle_ Tpm2Handle *duplication_session = NULL;
+        r = tpm2_make_policy_session(
+                        c,
+                        object,
+                        session,
+                        /* trial= */ false,
+                        &duplication_session);
+        if (r < 0)
+                return r;
+
+        r = tpm2_policy_duplication_select(
+                        c,
+                        duplication_session,
+                        name,
+                        new_parent_name,
+                        TPM2_NO,
+                        NULL);
+        if (r < 0)
+                return r;
+
+        _cleanup_(Esys_Freep) TPM2B_DATA *sym_key = NULL;
+        _cleanup_(Esys_Freep) TPM2B_PRIVATE *dup = NULL;
+        _cleanup_(Esys_Freep) TPM2B_ENCRYPTED_SECRET *seed = NULL;
+        rc = sym_Esys_Duplicate(
+                        c->esys_context,
+                        object->esys_handle,
+                        new_parent->esys_handle,
+                        duplication_session->esys_handle,
+                        ESYS_TR_NONE,
+                        ESYS_TR_NONE,
+                        NULL,
+                        symmetric ?: &(TPMT_SYM_DEF_OBJECT){ .algorithm = TPM2_ALG_NULL, },
+                        &sym_key,
+                        &dup,
+                        &seed);
+        if (rc != TSS2_RC_SUCCESS)
+                return log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
+                                       "Failed to duplicate key: %s", sym_Tss2_RC_Decode(rc));
+
+        if (ret_sym_key)
+                *ret_sym_key = TAKE_PTR(sym_key);
+        *ret_dup = TAKE_PTR(dup);
+        *ret_seed = TAKE_PTR(seed);
 
         return 0;
 }
