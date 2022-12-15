@@ -49,6 +49,7 @@ static TSS2_RC (*sym_Esys_PCR_Extend)(ESYS_CONTEXT *esysContext, ESYS_TR pcrHand
 static TSS2_RC (*sym_Esys_PCR_Read)(ESYS_CONTEXT *esysContext, ESYS_TR shandle1,ESYS_TR shandle2, ESYS_TR shandle3, const TPML_PCR_SELECTION *pcrSelectionIn, UINT32 *pcrUpdateCounter, TPML_PCR_SELECTION **pcrSelectionOut, TPML_DIGEST **pcrValues) = NULL;
 static TSS2_RC (*sym_Esys_PolicyAuthorize)(ESYS_CONTEXT *esysContext, ESYS_TR policySession, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_DIGEST *approvedPolicy, const TPM2B_NONCE *policyRef, const TPM2B_NAME *keySign, const TPMT_TK_VERIFIED *checkTicket) = NULL;
 static TSS2_RC (*sym_Esys_PolicyAuthValue)(ESYS_CONTEXT *esysContext, ESYS_TR policySession, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3) = NULL;
+static TSS2_RC (*sym_Esys_PolicyDuplicationSelect)(ESYS_CONTEXT *esysContext, ESYS_TR policySession, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_NAME *objectName, const TPM2B_NAME *newParentName, TPMI_YES_NO includeObject) = NULL;
 static TSS2_RC (*sym_Esys_PolicyGetDigest)(ESYS_CONTEXT *esysContext, ESYS_TR policySession, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, TPM2B_DIGEST **policyDigest) = NULL;
 static TSS2_RC (*sym_Esys_PolicyPCR)(ESYS_CONTEXT *esysContext, ESYS_TR policySession, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_DIGEST *pcrDigest, const TPML_PCR_SELECTION *pcrs) = NULL;
 static TSS2_RC (*sym_Esys_ReadPublic)(ESYS_CONTEXT *esysContext, ESYS_TR objectHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, TPM2B_PUBLIC **outPublic, TPM2B_NAME **name, TPM2B_NAME **qualifiedName) = NULL;
@@ -99,6 +100,7 @@ int dlopen_tpm2(void) {
                         DLSYM_ARG(Esys_PCR_Read),
                         DLSYM_ARG(Esys_PolicyAuthorize),
                         DLSYM_ARG(Esys_PolicyAuthValue),
+                        DLSYM_ARG(Esys_PolicyDuplicationSelect),
                         DLSYM_ARG(Esys_PolicyGetDigest),
                         DLSYM_ARG(Esys_PolicyPCR),
                         DLSYM_ARG(Esys_ReadPublic),
@@ -3053,6 +3055,89 @@ static int tpm2_policy_authorize(
         if (rc != TSS2_RC_SUCCESS)
                 return log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
                                        "Failed to push Authorize policy into TPM: %s", sym_Tss2_RC_Decode(rc));
+
+        return tpm2_get_policy_digest(c, session, ret_policy_digest);
+}
+
+static int tpm2_calculate_policy_duplication_select(
+                const TPM2B_NAME *object_name,
+                const TPM2B_NAME *new_parent_name,
+                TPMI_YES_NO include_object,
+                TPM2B_DIGEST *digest) {
+
+        const TPM2_CC command = TPM2_CC_PolicyDuplicationSelect;
+        int r;
+
+        assert(new_parent_name);
+        assert(!include_object || object_name);
+        assert(digest);
+
+        r = dlopen_tpm2();
+        if (r < 0)
+                return log_error_errno(r, "TPM2 support not installed: %m");
+
+        uint8_t buf[sizeof(command)];
+        size_t offset = 0;
+
+        rc = sym_Tss2_MU_TPM2_CC_Marshal(command, buf, sizeof(buf), &offset);
+        if (rc != TSS2_RC_SUCCESS)
+                return log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
+                                       "Failed to marshal PolicyDuplicationSelect command: %s",
+                                       sym_Tss2_RC_Decode(rc));
+
+        if (offset != sizeof(command))
+                return log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
+                                       "Offset 0x%zx wrong after marshalling PolicyDuplicationSelect command", offset);
+
+        /* data max size is 4: { buf, object_name, new_parent_name, include_object } */
+        struct iovec data[4];
+        size_t n_data = 0;
+
+        data[n_data++] = IOVEC_MAKE(buf, offset);
+
+        if (include_object)
+                data[n_data++] = IOVEC_MAKE(object_name->name, object_name->size);
+
+        data[n_data++] = IOVEC_MAKE(new_parent_name->name, new_parent_name->size);
+        data[n_data++] = IOVEC_MAKE((void*) &include_object, sizeof(include_object));
+
+        tpm2_digest_many(TPM2_ALG_SHA256, digest, data, n_data, true);
+
+        tpm2_log_debug_digest(digest, "PolicyDuplicationSelect calculated digest");
+
+        return 0;
+}
+
+static int tpm2_policy_duplication_select(
+                Tpm2Context *c,
+                const Tpm2Handle *session,
+                TPM2B_NAME *object_name,
+                TPM2B_NAME *new_parent_name,
+                TPMI_YES_NO include_object,
+                TPM2B_DIGEST **ret_policy_digest) {
+
+        TSS2_RC rc;
+
+        assert(c);
+        assert(session);
+        assert(new_parent_name);
+        assert(!include_object || object_name);
+
+        log_debug("Adding Duplication Select policy.");
+
+        rc = sym_Esys_PolicyDuplicationSelect(
+                        c->esys_context,
+                        session->esys_handle,
+                        ESYS_TR_NONE,
+                        ESYS_TR_NONE,
+                        ESYS_TR_NONE,
+                        object_name,
+                        new_parent_name,
+                        include_object);
+        if (rc != TSS2_RC_SUCCESS)
+                return log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
+                                       "Failed to add duplication select policy to TPM: %s",
+                                       sym_Tss2_RC_Decode(rc));
 
         return tpm2_get_policy_digest(c, session, ret_policy_digest);
 }
