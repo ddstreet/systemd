@@ -41,6 +41,7 @@ static TSS2_RC (*sym_Esys_FlushContext)(ESYS_CONTEXT *esysContext, ESYS_TR flush
 static void (*sym_Esys_Free)(void *ptr) = NULL;
 static TSS2_RC (*sym_Esys_GetCapability)(ESYS_CONTEXT *esysContext, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, TPM2_CAP capability, UINT32 property, UINT32 propertyCount, TPMI_YES_NO *moreData, TPMS_CAPABILITY_DATA **capabilityData) = NULL;
 static TSS2_RC (*sym_Esys_GetRandom)(ESYS_CONTEXT *esysContext, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, UINT16 bytesRequested, TPM2B_DIGEST **randomBytes) = NULL;
+static TSS2_RC (*sym_Esys_Import)(ESYS_CONTEXT *esysContext, ESYS_TR parentHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_DATA *encryptionKey, const TPM2B_PUBLIC *objectPublic, const TPM2B_PRIVATE *duplicate, const TPM2B_ENCRYPTED_SECRET *inSymSeed, const TPMT_SYM_DEF_OBJECT *symmetricAlg, TPM2B_PRIVATE **outPrivate) = NULL;
 static TSS2_RC (*sym_Esys_Initialize)(ESYS_CONTEXT **esys_context,  TSS2_TCTI_CONTEXT *tcti, TSS2_ABI_VERSION *abiVersion) = NULL;
 static TSS2_RC (*sym_Esys_Load)(ESYS_CONTEXT *esysContext, ESYS_TR parentHandle, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_PRIVATE *inPrivate, const TPM2B_PUBLIC *inPublic, ESYS_TR *objectHandle) = NULL;
 static TSS2_RC (*sym_Esys_LoadExternal)(ESYS_CONTEXT *esysContext, ESYS_TR shandle1, ESYS_TR shandle2, ESYS_TR shandle3, const TPM2B_SENSITIVE *inPrivate, const TPM2B_PUBLIC *inPublic, ESYS_TR hierarchy, ESYS_TR *objectHandle) = NULL;
@@ -90,6 +91,7 @@ int dlopen_tpm2(void) {
                         DLSYM_ARG(Esys_Free),
                         DLSYM_ARG(Esys_GetCapability),
                         DLSYM_ARG(Esys_GetRandom),
+                        DLSYM_ARG(Esys_Import),
                         DLSYM_ARG(Esys_Initialize),
                         DLSYM_ARG(Esys_Load),
                         DLSYM_ARG(Esys_LoadExternal),
@@ -1824,6 +1826,49 @@ static int tpm2_create_loaded(
                 *ret_private = TAKE_PTR(private);
         if (ret_handle)
                 *ret_handle = TAKE_PTR(handle);
+
+        return 0;
+}
+
+static int tpm2_import(
+                Tpm2Context *c,
+                const Tpm2Handle *parent,
+                const Tpm2Handle *encryption_session,
+                const TPM2B_PUBLIC *public,
+                const TPM2B_PRIVATE *private,
+                const TPM2B_ENCRYPTED_SECRET *seed,
+                const TPM2B_DATA *encryption_key,
+                const TPMT_SYM_DEF_OBJECT *symmetric,
+                TPM2B_PRIVATE **ret_private) {
+
+        TSS2_RC rc;
+
+        assert(c);
+        assert(parent);
+        assert(encryption_session);
+        assert(!!encryption_key == !!symmetric);
+        assert(public);
+        assert(private);
+        assert(seed);
+        assert(ret_private);
+
+        log_debug("Importing key into TPM.");
+
+        rc = sym_Esys_Import(
+                        c->esys_context,
+                        parent->esys_handle,
+                        encryption_session->esys_handle,
+                        ESYS_TR_NONE,
+                        ESYS_TR_NONE,
+                        encryption_key,
+                        public,
+                        private,
+                        seed,
+                        symmetric ?: &(TPMT_SYM_DEF_OBJECT){ .algorithm = TPM2_ALG_NULL, },
+                        ret_private);
+        if (rc != TSS2_RC_SUCCESS)
+                return log_error_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE),
+                                       "Failed to import key into TPM: %s", sym_Tss2_RC_Decode(rc));
 
         return 0;
 }
