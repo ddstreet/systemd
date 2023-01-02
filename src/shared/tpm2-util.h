@@ -47,6 +47,8 @@ typedef struct {
         size_t n_capability_algorithms;
         TPMA_CC *capability_commands;
         size_t n_capability_commands;
+        TPMS_TAGGED_PROPERTY *capability_fixed_tpm_properties;
+        size_t n_capability_fixed_tpm_properties;
         TPML_PCR_SELECTION capability_pcrs;
 } Tpm2Context;
 

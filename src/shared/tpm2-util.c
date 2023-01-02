@@ -277,6 +277,39 @@ static int tpm2_cache_capabilities(Tpm2Context *c) {
                 current_cc = TPMA_CC_TO_TPM2_CC(commands.commandAttributes[commands.count - 1]) + 1;
         }
 
+        /* Cache the fixed TPM properties; the spec states these "are not changeable through programmatic
+         * means other than a firmware update". */
+        TPM_PT current_pt = TPM2_PT_FIXED;
+        for (;;) {
+                r = tpm2_get_capability(
+                                c,
+                                TPM2_CAP_TPM_PROPERTIES,
+                                current_pt,
+                                TPM2_PT_GROUP,
+                                &capability);
+                if (r < 0)
+                        return r;
+
+                TPML_TAGGED_TPM_PROPERTY properties = capability.tpmProperties;
+
+                /* We should never get 0; the TPM must provide some properties, and it must not set 'more' if
+                 * there are no more. */
+                assert(properties.count > 0);
+
+                if (!GREEDY_REALLOC_APPEND(
+                                c->capability_fixed_tpm_properties,
+                                c->n_capability_fixed_tpm_properties,
+                                properties.tpmProperty,
+                                properties.count))
+                        return log_oom();
+
+                if (r == 0)
+                        break;
+
+                /* Set current_pt to index after last pt the TPM provided */
+                current_pt = properties.tpmProperty[properties.count - 1].property + 1;
+        }
+
         /* Cache the PCR capabilities, which are safe to cache, as the only way they can change is
          * TPM2_PCR_Allocate(), which changes the allocation after the next _TPM_Init(). If the TPM is
          * reinitialized while we are using it, all our context and sessions will be invalid, so we can
@@ -443,6 +476,49 @@ static int tpm2_get_capability_handle(Tpm2Context *c, TPM2_HANDLE handle) {
         return n_handles == 0 ? false : handles[0] == handle;
 }
 
+#define tpm2_property_type_group(g) ((TPM2_PT)((g) & UINT32_C(0xffffff00)))
+
+/* Get the TPM property. The property must be in either the fixed or variable group. Returns 1 if the
+ * property was found and the value provided, 0 if the property was not found, or < 0 on error. */
+static int tpm2_get_capability_tpm_property(Tpm2Context *c, TPM2_PT property, uint32_t *ret) {
+        TPMU_CAPABILITIES capability;
+        TPMS_TAGGED_PROPERTY *properties;
+        size_t n_properties;
+        int r;
+
+        assert(c);
+
+        if (tpm2_property_type_group(property) == TPM2_PT_FIXED) {
+                properties = c->capability_fixed_tpm_properties;
+                n_properties = c->n_capability_fixed_tpm_properties;
+        } else if (tpm2_property_type_group(property) == TPM2_PT_VAR) {
+                r = tpm2_get_capability(
+                                c,
+                                TPM2_CAP_TPM_PROPERTIES,
+                                property,
+                                /* count= */ 1,
+                                &capability);
+                if (r < 0)
+                        return r;
+
+                properties = capability.tpmProperties.tpmProperty;
+                n_properties = capability.tpmProperties.count;
+        } else
+                return log_debug_errno(SYNTHETIC_ERRNO(EINVAL), "Invalid TPM2_PT: 0x%x", property);
+
+        for (size_t i = 0; i < n_properties; i++) {
+                if (properties[i].property == property) {
+                        if (ret)
+                                *ret = properties[i].value;
+                        return 1;
+                }
+        }
+
+        log_debug("TPM property 0x%x not found.", property);
+
+        return 0;
+}
+
 /* Returns 1 if the TPM supports the parms, or 0 if the TPM does not support the parms. */
 bool tpm2_test_parms(Tpm2Context *c, TPMI_ALG_PUBLIC alg, const TPMU_PUBLIC_PARMS *parms) {
         TSS2_RC rc;
@@ -509,8 +585,12 @@ static Tpm2Context *tpm2_context_free(Tpm2Context *c) {
         c->tcti_context = mfree(c->tcti_context);
         c->tcti_dl = safe_dlclose(c->tcti_dl);
 
+        c->n_capability_algorithms = 0;
         c->capability_algorithms = mfree(c->capability_algorithms);
+        c->n_capability_commands = 0;
         c->capability_commands = mfree(c->capability_commands);
+        c->n_capability_fixed_tpm_properties = 0;
+        c->capability_fixed_tpm_properties = mfree(c->capability_fixed_tpm_properties);
 
         return mfree(c);
 }
