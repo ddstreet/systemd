@@ -15,6 +15,7 @@
 #undef basename
 
 #include "sd-bus.h"
+#include "sd-id128.h"
 
 #include "alloc-util.h"
 #include "bus-error.h"
@@ -360,4 +361,10 @@ const char *ci_environment(void) {
         }
 
         return (ans = NULL);
+}
+
+int machine_id_initialized(void) {
+        sd_id128_t id;
+
+        return sd_id128_get_machine(&id);
 }
