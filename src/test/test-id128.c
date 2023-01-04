@@ -195,8 +195,8 @@ TEST(benchmark_sd_id128_get_machine_app_specific) {
         unsigned iterations = slow_tests_enabled() ? 1000000 : 1000;
         usec_t t, q;
 
-        if (access("/etc/machine-id", F_OK) < 0 && errno == ENOENT)
-                return (void) log_tests_skipped("/etc/machine-id does not exist");
+        if (machine_id_initialized() <= 0)
+                return (void) log_tests_skipped("/etc/machine-id is not initialized");
 
         log_info("/* %s (%u iterations) */", __func__, iterations);
 
