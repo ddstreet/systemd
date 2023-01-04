@@ -1,7 +1,8 @@
 Source: systemd
 Section: admin
 Priority: optional
-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian systemd Maintainers <pkg-systemd-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>,
            Marco d'Itri <md@linux.it>,
            Sjoerd Simons <sjoerd@debian.org>,
@@ -10,8 +11,8 @@ Uploaders: Michael Biebl <biebl@debian.org>,
            Luca Boccassi <bluca@debian.org>,
 Standards-Version: 4.6.2
 Rules-Requires-Root: no
-Vcs-Git: https://salsa.debian.org/systemd-team/systemd.git
-Vcs-Browser: https://salsa.debian.org/systemd-team/systemd
+Vcs-Git: https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd
+Vcs-Browser:  https://git.launchpad.net/~ubuntu-core-dev/ubuntu/+source/systemd
 Homepage: https://www.freedesktop.org/wiki/Software/systemd
 Build-Depends: debhelper-compat (= 13),
                dh-exec,
@@ -54,11 +55,11 @@ Build-Depends: debhelper-compat (= 13),
                libdw-dev (>= 0.158) <!stage1>,
                libpolkit-gobject-1-dev <!stage1>,
                libzstd-dev (>= 1.4.0),
-               libtss2-dev <!stage1>,
+               libtss2-dev [!i386] <!stage1>,
                libfido2-dev <!stage1>,
                libp11-kit-dev <!stage1>,
                libssl-dev <!stage1>,
-               libqrencode-dev <!stage1>,
+               libqrencode-dev [!i386] <!stage1>,
                linux-base <!nocheck>,
                acl <!nocheck>,
                python3:native,
@@ -78,12 +79,13 @@ Architecture: linux-any
 Multi-Arch: foreign
 Priority: important
 Recommends: default-dbus-system-bus | dbus-system-bus,
+            networkd-dispatcher,
             systemd-timesyncd | time-daemon,
+            systemd-resolved,
 Suggests: systemd-container,
           systemd-homed,
           systemd-userdbd,
           systemd-boot,
-          systemd-resolved,
           libfido2-1,
           libp11-kit0,
           libqrencode4,
@@ -97,6 +99,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          libsystemd0 (= ${binary:Version}),
          mount,
+Replaces: systemd-repart (<< 250.2-3~)
 Conflicts: consolekit,
            libpam-ck-connector,
            systemd-shim,
@@ -104,8 +107,10 @@ Breaks: resolvconf (<< 1.83~),
         udev (<< 247~),
         less (<< 563),
         sicherboot (<< 0.1.6),
+        systemd-repart (<< 250.2-3~),
 Provides: systemd-sysusers (= ${binary:Version}),
           systemd-tmpfiles (= ${binary:Version}),
+          systemd-repart (= ${binary:Version}),
 Description: system and service manager
  systemd is a system and service manager for Linux. It provides aggressive
  parallelization capabilities, uses socket and D-Bus activation for starting
@@ -128,7 +133,8 @@ Conflicts: sysvinit-core,
            systemd-shim,
 Replaces: sysvinit-core,
 Pre-Depends: systemd
-Depends: ${misc:Depends},
+Depends: systemd (= ${binary:Version}),
+         ${misc:Depends}
 Recommends: libpam-systemd,
             libnss-systemd
 Description: system and service manager - SysV links
@@ -348,6 +354,8 @@ Depends: ${shlibs:Depends},
          adduser,
          libudev1 (= ${binary:Version}),
          s390-tools [s390],
+Recommends: systemd-hwe-hwdb,
+Breaks: systemd (<< ${binary:Version}),
 Description: /dev/ and hotplug management daemon
  udev is a daemon which dynamically creates and removes device nodes from
  /dev/, handles hotplug events and loads drivers at boot time.
@@ -504,14 +512,13 @@ Description: simple UEFI boot manager - EFI binaries
 
 Package: systemd-resolved
 Multi-Arch: foreign
+Priority: important
 Architecture: linux-any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          systemd (= ${binary:Version}),
          default-dbus-system-bus | dbus-system-bus
-Recommends: libnss-myhostname,
-            libnss-resolve,
 Suggests: polkitd | policykit-1,
 Provides: resolvconf
 Conflicts: resolvconf
