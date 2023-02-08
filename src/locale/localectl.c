@@ -5,6 +5,7 @@
 
 #include "sd-bus.h"
 
+#include "build.h"
 #include "bus-error.h"
 #include "bus-locator.h"
 #include "bus-map-properties.h"
@@ -60,7 +61,7 @@ static int print_status_info(StatusInfo *i) {
         assert(i);
 
         if (arg_transport == BUS_TRANSPORT_LOCAL) {
-                _cleanup_(locale_context_clear) LocaleContext c = { .mtime = USEC_INFINITY };
+                _cleanup_(locale_context_clear) LocaleContext c = {};
 
                 r = locale_context_load(&c, LOCALE_LOAD_PROC_CMDLINE);
                 if (r < 0)
@@ -71,22 +72,19 @@ static int print_status_info(StatusInfo *i) {
                         return log_error_errno(r, "Failed to build locale settings from kernel command line: %m");
         }
 
-        table = table_new("key", "value");
+        table = table_new_vertical();
         if (!table)
                 return log_oom();
 
         assert_se(cell = table_get_cell(table, 0, 0));
         (void) table_set_ellipsize_percent(table, cell, 100);
-        (void) table_set_align_percent(table, cell, 100);
-
-        table_set_header(table, false);
 
         table_set_ersatz_string(table, TABLE_ERSATZ_UNSET);
 
         if (!strv_isempty(kernel_locale)) {
                 log_warning("Warning: Settings on kernel command line override system locale settings in /etc/locale.conf.");
                 r = table_add_many(table,
-                                   TABLE_STRING, "Command Line:",
+                                   TABLE_FIELD, "Command Line",
                                    TABLE_SET_COLOR, ansi_highlight_yellow(),
                                    TABLE_STRV, kernel_locale,
                                    TABLE_SET_COLOR, ansi_highlight_yellow());
@@ -95,30 +93,30 @@ static int print_status_info(StatusInfo *i) {
         }
 
         r = table_add_many(table,
-                           TABLE_STRING, "System Locale:",
+                           TABLE_FIELD, "System Locale",
                            TABLE_STRV, i->locale,
-                           TABLE_STRING, "VC Keymap:",
+                           TABLE_FIELD, "VC Keymap",
                            TABLE_STRING, i->vconsole_keymap);
         if (r < 0)
                 return table_log_add_error(r);
 
         if (!isempty(i->vconsole_keymap_toggle)) {
                 r = table_add_many(table,
-                                   TABLE_STRING, "VC Toggle Keymap:",
+                                   TABLE_FIELD, "VC Toggle Keymap",
                                    TABLE_STRING, i->vconsole_keymap_toggle);
                 if (r < 0)
                         return table_log_add_error(r);
         }
 
         r = table_add_many(table,
-                           TABLE_STRING, "X11 Layout:",
+                           TABLE_FIELD, "X11 Layout",
                            TABLE_STRING, i->x11_layout);
         if (r < 0)
                 return table_log_add_error(r);
 
         if (!isempty(i->x11_model)) {
                 r = table_add_many(table,
-                                   TABLE_STRING, "X11 Model:",
+                                   TABLE_FIELD, "X11 Model",
                                    TABLE_STRING, i->x11_model);
                 if (r < 0)
                         return table_log_add_error(r);
@@ -126,7 +124,7 @@ static int print_status_info(StatusInfo *i) {
 
         if (!isempty(i->x11_variant)) {
                 r = table_add_many(table,
-                                   TABLE_STRING, "X11 Variant:",
+                                   TABLE_FIELD, "X11 Variant",
                                    TABLE_STRING, i->x11_variant);
                 if (r < 0)
                         return table_log_add_error(r);
@@ -134,7 +132,7 @@ static int print_status_info(StatusInfo *i) {
 
         if (!isempty(i->x11_options)) {
                 r = table_add_many(table,
-                                   TABLE_STRING, "X11 Options:",
+                                   TABLE_FIELD, "X11 Options",
                                    TABLE_STRING, i->x11_options);
                 if (r < 0)
                         return table_log_add_error(r);
@@ -388,6 +386,10 @@ static int list_x11_keymaps(int argc, char **argv, void *userdata) {
         return 0;
 }
 
+static int not_supported(int argc, char **argv, void *userdata) {
+        return log_error_errno(SYNTHETIC_ERRNO(EOPNOTSUPP), "Managing X11 and console keymaps is not supported in Debian.");
+}
+
 static int help(void) {
         _cleanup_free_ char *link = NULL;
         int r;
@@ -397,20 +399,11 @@ static int help(void) {
                 return log_oom();
 
         printf("%s [OPTIONS...] COMMAND ...\n\n"
-               "%sQuery or change system locale and keyboard settings.%s\n"
+               "%sQuery or change system locale settings.%s\n"
                "\nCommands:\n"
                "  status                   Show current locale settings\n"
                "  set-locale LOCALE...     Set system locale\n"
                "  list-locales             Show known locales\n"
-               "  set-keymap MAP [MAP]     Set console and X11 keyboard mappings\n"
-               "  list-keymaps             Show known virtual console keyboard mappings\n"
-               "  set-x11-keymap LAYOUT [MODEL [VARIANT [OPTIONS]]]\n"
-               "                           Set X11 and console keyboard mappings\n"
-               "  list-x11-keymap-models   Show known X11 keyboard mapping models\n"
-               "  list-x11-keymap-layouts  Show known X11 keyboard mapping layouts\n"
-               "  list-x11-keymap-variants [LAYOUT]\n"
-               "                           Show known X11 keyboard mapping variants\n"
-               "  list-x11-keymap-options  Show known X11 keyboard mapping options\n"
                "\nOptions:\n"
                "  -h --help                Show this help\n"
                "     --version             Show package version\n"
@@ -505,13 +498,13 @@ static int localectl_main(sd_bus *bus, int argc, char *argv[]) {
                 { "status",                   VERB_ANY, 1,        VERB_DEFAULT, show_status           },
                 { "set-locale",               2,        VERB_ANY, 0,            set_locale            },
                 { "list-locales",             VERB_ANY, 1,        0,            list_locales          },
-                { "set-keymap",               2,        3,        0,            set_vconsole_keymap   },
-                { "list-keymaps",             VERB_ANY, 1,        0,            list_vconsole_keymaps },
-                { "set-x11-keymap",           2,        5,        0,            set_x11_keymap        },
-                { "list-x11-keymap-models",   VERB_ANY, 1,        0,            list_x11_keymaps      },
-                { "list-x11-keymap-layouts",  VERB_ANY, 1,        0,            list_x11_keymaps      },
-                { "list-x11-keymap-variants", VERB_ANY, 2,        0,            list_x11_keymaps      },
-                { "list-x11-keymap-options",  VERB_ANY, 1,        0,            list_x11_keymaps      },
+                { "set-keymap",               2,        3,        0,            not_supported         },
+                { "list-keymaps",             VERB_ANY, 1,        0,            not_supported         },
+                { "set-x11-keymap",           2,        5,        0,            not_supported         },
+                { "list-x11-keymap-models",   VERB_ANY, 1,        0,            not_supported         },
+                { "list-x11-keymap-layouts",  VERB_ANY, 1,        0,            not_supported         },
+                { "list-x11-keymap-variants", VERB_ANY, 2,        0,            not_supported         },
+                { "list-x11-keymap-options",  VERB_ANY, 1,        0,            not_supported         },
                 { "help",                     VERB_ANY, VERB_ANY, 0,            verb_help             }, /* Not documented, but supported since it is created. */
                 {}
         };

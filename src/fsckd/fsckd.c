@@ -36,7 +36,7 @@
 
 #include "sd-daemon.h"
 #include "build.h"
-#include "def.h"
+#include "constants.h"
 #include "sd-event.h"
 #include "log.h"
 #include "list.h"
@@ -46,9 +46,9 @@
 #include "fd-util.h"
 #include "string-util.h"
 #include "io-util.h"
-#include "util.h"
 #include "alloc-util.h"
 #include "locale-util.h"
+#include "logarithm.h"
 
 #define FSCKD_SOCKET_PATH "/run/systemd/fsck.progress"
 #define IDLE_TIME_SECONDS 30

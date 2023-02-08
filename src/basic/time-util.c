@@ -308,54 +308,48 @@ char *format_timestamp_style(
         };
 
         struct tm tm;
+        bool utc, us;
         time_t sec;
         size_t n;
-        bool utc = false, us = false;
-        int r;
 
         assert(buf);
+        assert(style >= 0);
+        assert(style < _TIMESTAMP_STYLE_MAX);
 
-        switch (style) {
-                case TIMESTAMP_PRETTY:
-                case TIMESTAMP_UNIX:
-                        break;
-                case TIMESTAMP_US:
-                        us = true;
-                        break;
-                case TIMESTAMP_UTC:
-                        utc = true;
-                        break;
-                case TIMESTAMP_US_UTC:
-                        us = true;
-                        utc = true;
-                        break;
-                default:
-                        return NULL;
-        }
-
-        if (l < (size_t) (3 +                  /* week day */
-                          1 + 10 +             /* space and date */
-                          1 + 8 +              /* space and time */
-                          (us ? 1 + 6 : 0) +   /* "." and microsecond part */
-                          1 + 1 +              /* space and shortest possible zone */
-                          1))
-                return NULL; /* Not enough space even for the shortest form. */
         if (!timestamp_is_set(t))
                 return NULL; /* Timestamp is unset */
 
         if (style == TIMESTAMP_UNIX) {
-                r = snprintf(buf, l, "@" USEC_FMT, t / USEC_PER_SEC);  /* round down µs → s */
-                if (r < 0 || (size_t) r >= l)
-                        return NULL; /* Doesn't fit */
+                if (l < (size_t) (1 + 1 + 1))
+                        return NULL; /* not enough space for even the shortest of forms */
 
-                return buf;
+                return snprintf_ok(buf, l, "@" USEC_FMT, t / USEC_PER_SEC);  /* round down µs → s */
         }
+
+        utc = IN_SET(style, TIMESTAMP_UTC, TIMESTAMP_US_UTC, TIMESTAMP_DATE);
+        us = IN_SET(style, TIMESTAMP_US, TIMESTAMP_US_UTC);
+
+        if (l < (size_t) (3 +                   /* week day */
+                          1 + 10 +              /* space and date */
+                          style == TIMESTAMP_DATE ? 0 :
+                          (1 + 8 +              /* space and time */
+                           (us ? 1 + 6 : 0) +   /* "." and microsecond part */
+                           1 + (utc ? 3 : 1)) + /* space and shortest possible zone */
+                          1))
+                return NULL; /* Not enough space even for the shortest form. */
 
         /* Let's not format times with years > 9999 */
         if (t > USEC_TIMESTAMP_FORMATTABLE_MAX) {
-                assert(l >= STRLEN("--- XXXX-XX-XX XX:XX:XX") + 1);
-                strcpy(buf, "--- XXXX-XX-XX XX:XX:XX");
-                return buf;
+                static const char* const xxx[_TIMESTAMP_STYLE_MAX] = {
+                        [TIMESTAMP_PRETTY] = "--- XXXX-XX-XX XX:XX:XX",
+                        [TIMESTAMP_US]     = "--- XXXX-XX-XX XX:XX:XX.XXXXXX",
+                        [TIMESTAMP_UTC]    = "--- XXXX-XX-XX XX:XX:XX UTC",
+                        [TIMESTAMP_US_UTC] = "--- XXXX-XX-XX XX:XX:XX.XXXXXX UTC",
+                        [TIMESTAMP_DATE]   = "--- XXXX-XX-XX",
+                };
+
+                assert(l >= strlen(xxx[style]) + 1);
+                return strcpy(buf, xxx[style]);
         }
 
         sec = (time_t) (t / USEC_PER_SEC); /* Round down */
@@ -366,6 +360,14 @@ char *format_timestamp_style(
         /* Start with the week day */
         assert((size_t) tm.tm_wday < ELEMENTSOF(weekdays));
         memcpy(buf, weekdays[tm.tm_wday], 4);
+
+        if (style == TIMESTAMP_DATE) {
+                /* Special format string if only date should be shown. */
+                if (strftime(buf + 3, l - 3, " %Y-%m-%d", &tm) <= 0)
+                        return NULL; /* Doesn't fit */
+
+                return buf;
+        }
 
         /* Add the main components */
         if (strftime(buf + 3, l - 3, " %Y-%m-%d %H:%M:%S", &tm) <= 0)
@@ -1395,7 +1397,7 @@ int get_timezones(char ***ret) {
 int verify_timezone(const char *name, int log_level) {
         bool slash = false;
         const char *p, *t;
-        _cleanup_close_ int fd = -1;
+        _cleanup_close_ int fd = -EBADF;
         char buf[4];
         int r;
 
@@ -1475,43 +1477,19 @@ int get_timezone(char **ret) {
         const char *e;
         char *z;
         int r;
-        bool use_utc_fallback = false;
 
         r = readlink_malloc("/etc/localtime", &t);
-        if (r < 0) {
-                if (r == -ENOENT)
-                        use_utc_fallback = true;
-                else if (r != -EINVAL)
-                        return r; /* returns EINVAL if not a symlink */
-
-                r = read_one_line_file("/etc/timezone", &t);
-                if (r < 0) {
-                        if (r != -ENOENT)
-                                log_warning_errno(r, "Failed to read /etc/timezone: %m");
-
-                        if (use_utc_fallback) {
-                                /* If the /etc/localtime symlink does not exist and we failed
-                                 * to read /etc/timezone, assume "UTC", like glibc does */
-                                z = strdup("UTC");
-                                if (!z)
-                                        return -ENOMEM;
-
-                                *ret = z;
-                                return 0;
-                        }
-
-                        return -EINVAL;
-                }
-
-                if (!timezone_is_valid(t, LOG_DEBUG))
-                        return -EINVAL;
-                z = strdup(t);
+        if (r == -ENOENT) {
+                /* If the symlink does not exist, assume "UTC", like glibc does */
+                z = strdup("UTC");
                 if (!z)
                         return -ENOMEM;
 
                 *ret = z;
                 return 0;
         }
+        if (r < 0)
+                return r; /* returns EINVAL if not a symlink */
 
         e = PATH_STARTSWITH_SET(t, "/usr/share/zoneinfo/", "../usr/share/zoneinfo/");
         if (!e)
@@ -1592,7 +1570,7 @@ int time_change_fd(void) {
                 .it_value.tv_sec = TIME_T_MAX,
         };
 
-        _cleanup_close_ int fd = -1;
+        _cleanup_close_ int fd = -EBADF;
 
         assert_cc(sizeof(time_t) == sizeof(TIME_T_MAX));
 

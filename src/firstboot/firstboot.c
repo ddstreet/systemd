@@ -9,6 +9,7 @@
 
 #include "alloc-util.h"
 #include "ask-password-api.h"
+#include "build.h"
 #include "chase-symlinks.h"
 #include "copy.h"
 #include "creds-util.h"
@@ -96,7 +97,7 @@ static bool press_any_key(void) {
 }
 
 static void print_welcome(void) {
-        _cleanup_free_ char *pretty_name = NULL, *ansi_color = NULL;
+        _cleanup_free_ char *pretty_name = NULL, *os_name = NULL, *ansi_color = NULL;
         static bool done = false;
         const char *pn, *ac;
         int r;
@@ -110,12 +111,13 @@ static void print_welcome(void) {
         r = parse_os_release(
                         arg_root,
                         "PRETTY_NAME", &pretty_name,
+                        "NAME", &os_name,
                         "ANSI_COLOR", &ansi_color);
         if (r < 0)
                 log_full_errno(r == -ENOENT ? LOG_DEBUG : LOG_WARNING, r,
                                "Failed to read os-release file, ignoring: %m");
 
-        pn = isempty(pretty_name) ? "Linux" : pretty_name;
+        pn = os_release_pretty_name(pretty_name, os_name);
         ac = isempty(ansi_color) ? "0" : ansi_color;
 
         if (colors_enabled())
@@ -308,16 +310,12 @@ static int prompt_locale(void) {
 }
 
 static int process_locale(void) {
-        const char *etc_localeconf, *path = "/etc/locale.conf";
+        const char *etc_localeconf;
         char* locales[3];
         unsigned i = 0;
-        int r = 0;
+        int r;
 
-        if (laccess(path, F_OK) < 0 && errno == ENOENT)
-                path = "/etc/default/locale";
-
-        etc_localeconf = prefix_roota(arg_root, path);
-
+        etc_localeconf = prefix_roota(arg_root, "/etc/locale.conf");
         if (laccess(etc_localeconf, F_OK) >= 0 && !arg_force) {
                 log_debug("Found %s, assuming locale information has been configured.",
                           etc_localeconf);
@@ -327,7 +325,7 @@ static int process_locale(void) {
         if (arg_copy_locale && arg_root) {
 
                 (void) mkdir_parents(etc_localeconf, 0755);
-                r = copy_file(path, etc_localeconf, 0, 0644, 0, 0, COPY_REFLINK);
+                r = copy_file("/etc/locale.conf", etc_localeconf, 0, 0644, 0, 0, COPY_REFLINK);
                 if (r != -ENOENT) {
                         if (r < 0)
                                 return log_error_errno(r, "Failed to copy %s: %m", etc_localeconf);
@@ -884,7 +882,7 @@ static int write_root_shadow(const char *shadow_path, const char *hashed_passwor
 }
 
 static int process_root_account(void) {
-        _cleanup_close_ int lock = -1;
+        _cleanup_close_ int lock = -EBADF;
         _cleanup_(erase_and_freep) char *_hashed_password = NULL;
         const char *password, *hashed_password;
         const char *etc_passwd, *etc_shadow;
@@ -905,8 +903,6 @@ static int process_root_account(void) {
                 log_debug("Initialization of root account was not requested, skipping.");
                 return 0;
         }
-
-        (void) mkdir_parents(etc_passwd, 0755);
 
         lock = take_etc_passwd_lock(arg_root);
         if (lock < 0)
