@@ -10,6 +10,7 @@ Restrictions: needs-root, isolation-container
 
 Tests: unit-config
 Depends: systemd,
+  udev,
   libpam-systemd,
   libnss-systemd,
   acl,
@@ -21,6 +22,7 @@ Restrictions: needs-root, allow-stderr
 
 Tests: storage
 Depends: systemd,
+  udev,
   libpam-systemd,
   libnss-systemd,
   acl,
@@ -34,6 +36,7 @@ Restrictions: needs-root, isolation-machine
 Tests: networkd-test.py
 Tests-Directory: test
 Depends: systemd,
+  udev,
   systemd-resolved,
   libpam-systemd,
   libnss-systemd,
@@ -51,6 +54,7 @@ Restrictions: needs-root, isolation-container, breaks-testbed
 
 Tests: build-login
 Depends: systemd,
+  udev,
   libpam-systemd,
   libnss-systemd,
   acl,
@@ -68,12 +72,14 @@ Restrictions: isolation-container
 
 Tests: boot-and-services
 Depends: systemd-sysv,
+  systemd,
+  udev,
   systemd-container,
   systemd-coredump,
   libpam-systemd,
   xserver-xorg-video-dummy,
   xserver-xorg,
-  gdm3 [!s390x],
+  gdm3 [amd64],
   cron,
   network-manager,
   busybox-static,
@@ -85,11 +91,12 @@ Restrictions: needs-root, isolation-container, breaks-testbed, allow-stderr
 
 Tests: udev
 Depends: systemd-tests,
+  udev,
   python3,
   tree,
   perl,
   xz-utils,
-Restrictions: needs-root, allow-stderr, isolation-container, skippable
+Restrictions: needs-root, allow-stderr, isolation-machine, skippable
 
 Tests: unit-tests
 Depends: systemd-tests,
@@ -111,13 +118,22 @@ Depends: systemd-tests,
   iputils-ping,
   dbus-user-session,
   zstd,
-  libtss2-dev,
+  libtss2-dev [!i386],
   libfido2-dev,
   libdw-dev,
-  libqrencode-dev,
+  libqrencode-dev [!i386],
 Restrictions: needs-root, isolation-container, breaks-testbed
 
-Tests: upstream
+Tests: tests-in-lxd
+Depends: systemd-tests,
+  udev,
+  libpam-systemd,
+  autopkgtest,
+  lsb-release,
+  snapd,
+Restrictions: needs-root, allow-stderr, isolation-machine, breaks-testbed, skip-not-installable, skippable
+
+Tests: upstream-1, upstream-2
 Depends: systemd-tests,
   systemd-journal-remote,
   systemd-container,
@@ -172,14 +188,15 @@ Depends: systemd-tests,
   libdw-dev,
   libelf-dev,
   dbus-user-session,
-  libtss2-dev,
+  libtss2-dev [!i386],
   libfido2-dev,
-  libqrencode-dev,
+  libqrencode-dev [!i386],
   libp11-kit-dev,
   python3-pexpect,
   screen,
   swtpm,
   tpm2-tools,
+  libgcc-s1,
   openssl,
   bsdutils,
   knot,
@@ -198,4 +215,6 @@ Depends: systemd-sysv,
   network-manager,
   gdm3 [!s390x],
   xserver-xorg-video-dummy,
+  systemd,
+  udev,
 Restrictions: needs-root, isolation-container, allow-stderr, breaks-testbed
