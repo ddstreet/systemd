@@ -19,6 +19,7 @@
 #include "strv.h"
 #include "tests.h"
 #include "tmpfile-util.h"
+#include "virt.h"
 
 TEST(mount_option_mangle) {
         char *opts = NULL;
@@ -129,6 +130,11 @@ TEST(bind_remount_recursive) {
         _cleanup_(rm_rf_physical_and_freep) char *tmp = NULL;
         _cleanup_free_ char *subdir = NULL;
 
+        if (detect_container() == VIRTUALIZATION_LXC) {
+                log_notice("Testing in LXC, skipping %s due to LP: #1878051", __func__);
+                return;
+        }
+
         if (geteuid() != 0 || have_effective_cap(CAP_SYS_ADMIN) <= 0) {
                 (void) log_tests_skipped("not running privileged");
                 return;
@@ -184,6 +190,11 @@ TEST(bind_remount_one) {
 
         if (geteuid() != 0 || have_effective_cap(CAP_SYS_ADMIN) <= 0) {
                 (void) log_tests_skipped("not running privileged");
+                return;
+        }
+
+        if (detect_container() == VIRTUALIZATION_LXC) {
+                log_notice("Testing in LXC, skipping %s due to LP: #1878051", __func__);
                 return;
         }
 
