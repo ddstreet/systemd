@@ -308,12 +308,16 @@ static int prompt_locale(void) {
 }
 
 static int process_locale(void) {
-        const char *etc_localeconf;
+        const char *etc_localeconf, *path = "/etc/locale.conf";
         char* locales[3];
         unsigned i = 0;
-        int r;
+        int r = 0;
 
-        etc_localeconf = prefix_roota(arg_root, "/etc/locale.conf");
+        if (laccess(path, F_OK) < 0 && errno == ENOENT)
+                path = "/etc/default/locale";
+
+        etc_localeconf = prefix_roota(arg_root, path);
+
         if (laccess(etc_localeconf, F_OK) >= 0 && !arg_force) {
                 log_debug("Found %s, assuming locale information has been configured.",
                           etc_localeconf);
@@ -323,7 +327,7 @@ static int process_locale(void) {
         if (arg_copy_locale && arg_root) {
 
                 (void) mkdir_parents(etc_localeconf, 0755);
-                r = copy_file("/etc/locale.conf", etc_localeconf, 0, 0644, 0, 0, COPY_REFLINK);
+                r = copy_file(path, etc_localeconf, 0, 0644, 0, 0, COPY_REFLINK);
                 if (r != -ENOENT) {
                         if (r < 0)
                                 return log_error_errno(r, "Failed to copy %s: %m", etc_localeconf);
