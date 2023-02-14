@@ -493,6 +493,7 @@ run_qemu() {
         -net none
         -m "${QEMU_MEM:-768M}"
         -nographic
+        -vga none
         -kernel "$KERNEL_BIN"
         -drive "format=raw,cache=unsafe,file=$image"
         -device "virtio-rng-pci,max-bytes=1024,period=1000"

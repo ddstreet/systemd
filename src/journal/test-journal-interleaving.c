@@ -263,22 +263,24 @@ static void test_sequence_numbers_one(void) {
 
         test_close(one);
 
-        /* restart server */
-        seqnum = 0;
+        if (machine_id_initialized() > 0) {
+                /* restart server */
+                seqnum = 0;
 
-        assert_se(managed_journal_file_open(-1, "two.journal", O_RDWR, JOURNAL_COMPRESS, 0,
-                                            UINT64_MAX, NULL, m, NULL, NULL, &two) == 0);
+                assert_se(managed_journal_file_open(-1, "two.journal", O_RDWR, JOURNAL_COMPRESS, 0,
+                                                    UINT64_MAX, NULL, m, NULL, NULL, &two) == 0);
 
-        assert_se(sd_id128_equal(two->file->header->seqnum_id, seqnum_id));
+                assert_se(sd_id128_equal(two->file->header->seqnum_id, seqnum_id));
 
-        append_number(two, 7, &seqnum);
-        printf("seqnum=%"PRIu64"\n", seqnum);
-        assert_se(seqnum == 5);
+                append_number(two, 7, &seqnum);
+                printf("seqnum=%"PRIu64"\n", seqnum);
+                assert_se(seqnum == 5);
 
-        /* So..., here we have the same seqnum in two files with the
-         * same seqnum_id. */
+                /* So..., here we have the same seqnum in two files with the
+                 * same seqnum_id. */
 
-        test_close(two);
+                test_close(two);
+        }
 
         log_info("Done...");
 
