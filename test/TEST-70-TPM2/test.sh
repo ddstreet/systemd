@@ -40,5 +40,6 @@ swtpm socket --tpm2 --tpmstate dir="$TEST_70_TPM_STATE" --ctrl type=unixio,path=
 TEST_70_SWTPM_PID=$!
 add_at_exit_handler TEST_70_at_exit
 QEMU_OPTIONS+=" -chardev socket,id=chrtpm,path=$TEST_70_TPM_STATE/sock -tpmdev emulator,id=tpm0,chardev=chrtpm -device $TEST_70_TPM_DEVICE,tpmdev=tpm0"
+QEMU_MEM="1024M"
 
 do_test "$@"
