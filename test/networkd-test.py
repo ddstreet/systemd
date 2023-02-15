@@ -618,6 +618,7 @@ class DnsmasqClientTest(ClientTestBase, unittest.TestCase):
         with open(self.dnsmasq_log) as f:
             sys.stdout.write('\n\n---- dnsmasq log ----\n{}\n------\n\n'.format(f.read()))
 
+    @unittest.skip("test is flaky:  https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1025908")
     def test_resolved_domain_restricted_dns(self):
         '''resolved: domain-restricted DNS servers'''
 
