@@ -3463,6 +3463,137 @@ int tpm2_seal(const char *device,
         if (r < 0)
                 return r;
 
+        /* We need a key to seal the secret data; best case is we can use an existing persistent key in the
+         * TPM, preferably the TCG-defined shared SRK.  If no parent handle was specified, and there is no
+         * SRK, then we will create a transient key using one of our TCG-defined SRK templates.
+         *
+         * If we are sealing to an external TPM (i.e. if we have an external pubkey), then the parent tpm
+         * handle, if provided, is referring to a handle on the remote TPM, not this TPM, so we can't use it;
+         * but also, it really doesn't matter what key we create here, because we will create a secondary key
+         * to actually perform the secret sealing, and then duplicate that secondary key using the external
+         * pubkey. */
+        TPMT_PUBLIC template;
+        _cleanup_tpm2_handle_ Tpm2Handle *parent_handle = NULL;
+        if (!external_pubkey && parent_tpm_handle > 0) { /* Use the specified handle. */
+                if (!IN_SET(tpm2_handle_ht(parent_tpm_handle), TPM2_HT_PERSISTENT, TPM2_HT_NV_INDEX))
+                        return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
+                                               "Refusing to seal to non-persistent handle 0x%x.",
+                                               parent_tpm_handle);
+
+                r = tpm2_esys_handle_from_tpm_handle(c, parent_tpm_handle, NULL, &parent_handle);
+                if (r < 0)
+                        return r;
+
+                _cleanup_(Esys_Freep) TPM2B_PUBLIC *parent_public = NULL
+                r = tpm2_read_public(c, parent_handle, NULL, &parent_public, NULL, NULL);
+                if (r < 0)
+                        return r;
+
+                template = parent_public->publicArea;
+        } else { /* Create a transient key to use. */
+                r = tpm2_get_best_srk_template(c, &template);
+                if (r < 0)
+                        return r;
+
+                r = tpm2_create_loaded(c, NULL, NULL, &template, NULL, NULL, NULL, &parent_handle);
+                if (r < 0)
+                        return r;
+        }
+
+        _cleanup_(Esys_Freep) TPM2B_PRIVATE *secondary_private = NULL, *dup_private = NULL;
+        _cleanup_(Esys_Freep) TPM2B_PUBLIC *secondary_public = NULL;
+        _cleanup_(Esys_Freep) TPM2B_ENCRYPTED_SECRET *dup_seed = NULL;
+        if (external_pubkey) {
+                TPM2B_PUBLIC external_public = {};
+                size_t offset = 0;
+
+                r = tpm2_unmarshal("external public key", external_pubkey, external_pubkey_size,
+                                   &offset, &external_public);
+                if (r < 0)
+                        return r;
+
+                _cleanup_tpm2_handle_ Tpm2Handle *load_external_session = NULL;
+                r = tpm2_make_encryption_session(c, parent_handle, &TPM2_HANDLE_NONE, &load_external_session);
+                if (r < 0)
+                        return r;
+
+                _cleanup_tpm2_handle_ Tpm2Handle *external_handle = NULL;
+                r = tpm2_load_external(c, load_external_session, &external_public, NULL, &external_handle);
+                if (r < 0)
+                        return r;
+
+                _cleanup_free_ TPM2B_NAME *external_name = NULL;
+                r = tpm2_get_name(c, external_handle, &external_name);
+                if (r < 0)
+                        return r;
+
+                TPM2B_DIGEST duplication_policy = { .size = SHA256_DIGEST_SIZE, };
+                r = tpm2_calculate_policy_duplication_select(NULL, external_name, TPM2_NO, &duplication_policy);
+                if (r < 0)
+                        return r;
+
+                /* Create a secondary key based on the external template, which guarantees the secondary can
+                 * be loaded into the external TPM; it is better to fail now (if our local TPM can't create
+                 * the secondary key) instead of succeeding now but then failing on the external TPM. */
+                TPMT_PUBLIC secondary_template = external_public.publicArea;
+
+                /* Set the policy to only allow duplication. */
+                secondary_template.authPolicy = duplication_policy;
+
+                /* Set the attributes to allow restricted decription without auth. */
+                secondary_template.objectAttributes = (TPMA_OBJECT_ADMINWITHPOLICY |
+                                                       TPMA_OBJECT_DECRYPT |
+                                                       TPMA_OBJECT_RESTRICTED |
+                                                       TPMA_OBJECT_SENSITIVEDATAORIGIN |
+                                                       TPMA_OBJECT_USERWITHAUTH);
+
+                _cleanup_tpm2_handle_ Tpm2Handle *secondary_handle = NULL;
+                r = tpm2_create_loaded(
+                                c,
+                                parent_handle,
+                                load_external_session,
+                                &secondary_template,
+                                /* sensitive= */ NULL,
+                                &secondary_public,
+                                &secondary_private,
+                                &secondary_handle);
+                if (r < 0)
+                        return r;
+
+                r = tpm2_duplicate(
+                                c,
+                                load_external_session,
+                                secondary_handle,
+                                external_handle,
+                                /* symmetric= */ NULL,
+                                /* ret_sym_key= */ NULL,
+                                &dup_private,
+                                &dup_seed);
+                if (r < 0)
+                        return r;
+
+                /* Remove the fixed tpm and fixed parent attributes from our hmac attributes, since it will
+                   be imported into an external TPM. */
+                hmac_attributes &= ~(TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT);
+
+                /* Switch to using the secondary handle. */
+                parent_handle = tpm2_handle_free(parent_handle);
+                parent_handle = TAKE_PTR(secondary_handle);
+
+                /* Use the external key template for unsealing. */
+                template = external_public.publicArea;
+        }
+
+        size_t primary_template_max_size = sizeof(template), primary_template_size = 0;
+        _cleanup_free_ void *primary_template = malloc0(primary_template_max_size);
+        if (!primary_template)
+                return log_oom();
+
+        r = tpm2_marshal("primary template public key", &template, primary_template,
+                         primary_template_max_size, &primary_template_size);
+        if (r < 0)
+                return r;
+
         /* We use a keyed hash object (i.e. HMAC) to store the secret key we want to use for unlocking the
          * LUKS2 volume with. We don't ever use for HMAC/keyed hash operations however, we just use it
          * because it's a key type that is universally supported and suitable for symmetric binary blobs. */
