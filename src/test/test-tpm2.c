@@ -1,6 +1,11 @@
 /* SPDX-License-Identifier: LGPL-2.1-or-later */
 
 #include "hexdecoct.h"
+#include "fd-util.h"
+#include "fs-util.h"
+#include "path-util.h"
+#include "process-util.h"
+#include "tmpfile-util.h"
 #include "tpm2-util.h"
 #include "tests.h"
 
@@ -760,11 +765,136 @@ TEST(calculate_policy_pcr) {
         assert_se(digest_check(&d, "7481fd1b116078eb3ac2456e4ad542c9b46b9b8eb891335771ca8e7c8f8e4415"));
 }
 
-TEST(supports_alg) {
+struct Swtpm {
+        char *dir;
+        char *socket;
+        pid_t pid;
+};
+
+#define SWTPM_TMP_PREFIX "/tmp/systemd-test-tpm2.swtpm"
+
+static void remove_swtpm_dir(char *dir) {
         int r;
 
+        if (!strneq(dir, SWTPM_TMP_PREFIX, strlen(SWTPM_TMP_PREFIX))) {
+                log_warning("Unexpected swtpm tmp dir, not removing: %s", dir);
+                return;
+        }
+
+        _cleanup_strv_free_ char **list = NULL;
+        r = get_files_in_directory(dir, &list);
+        if (r >= 0) {
+                STRV_FOREACH(file, list) {
+                        _cleanup_free_ char *f = path_join(dir, *file);
+                        assert_se(f);
+
+                        (void) unlink(f);
+                }
+        } else
+                assert_se(r == -ENOENT);
+
+        (void) rmdir(dir);
+}
+
+static struct Swtpm *stop_swtpm(struct Swtpm *swtpm) {
+        if (!swtpm)
+                return NULL;
+
+        if (swtpm->pid) {
+                sigkill_wait(swtpm->pid);
+                swtpm->pid = 0;
+        }
+
+        if (swtpm->dir) {
+                remove_swtpm_dir(swtpm->dir);
+                swtpm->dir = mfree(swtpm->dir);
+        }
+
+        swtpm->socket = mfree(swtpm->socket);
+        return mfree(swtpm);
+}
+
+DEFINE_TRIVIAL_CLEANUP_FUNC(struct Swtpm*, stop_swtpm);
+
+static bool start_swtpm(struct Swtpm **ret) {
+        _cleanup_(stop_swtpmp) struct Swtpm *swtpm = NULL;
+        int r;
+
+        assert(ret);
+
+        swtpm = new0(struct Swtpm, 1);
+        assert(swtpm);
+
+        _cleanup_(closep) int dirfd = -1;
+        dirfd = mkdtemp_open(SWTPM_TMP_PREFIX ".XXXXXX", 0, &swtpm->dir);
+        assert(dirfd >= 0);
+
+        swtpm->socket = path_join(swtpm->dir, "socket");
+        assert_se(swtpm->socket);
+
+        _cleanup_free_ char *swtpm_setup = NULL;
+        if (find_executable("swtpm_setup", &swtpm_setup))
+                return false;
+
+        assert_se(system(strjoina(swtpm_setup, " --tpm2 --tpm-state ", swtpm->dir)) == 0);
+
+        _cleanup_free_ char *swtpm_cmd = NULL;
+        if (find_executable("swtpm", &swtpm_cmd))
+                return false;
+
+        pid_t pid;
+        r = safe_fork("(swtpm)", FORK_DEATHSIG, &pid);
+        assert(r >= 0);
+        if (r == 0) {
+                const char *cmdline[] = {
+                        swtpm_cmd,
+                        "socket",
+                        "--log", "file=-", /* suppress logging */
+                        "--tpm2",
+                        "--flags", "startup-clear",
+                        "--server", strjoina("type=unixio,path=", swtpm->socket),
+                        "--ctrl", strjoina("type=unixio,path=", swtpm->socket, ".ctrl"),
+                        "--tpmstate", strjoina("dir=", swtpm->dir),
+                        NULL,
+                };
+                execvp(cmdline[0], (char* const*) cmdline);
+                log_error_errno(errno, "Failed to execute %s: %m", cmdline[0]);
+                _exit(EXIT_FAILURE);
+        }
+
+        swtpm->pid = pid;
+
+        _cleanup_free_ char *swtpm_ioctl = NULL;
+        if (find_executable("swtpm_ioctl", &swtpm_ioctl))
+                return false;
+
+        /* Wait up to 10 secs (arbitrary) for swtpm to start up */
+        for (unsigned i = 0; i < 10; i++) {
+                usleep(USEC_PER_SEC);
+
+                if (system(strjoina(swtpm_ioctl, " --info 1 --unix ", swtpm->dir, "/socket.ctrl")) == 0) {
+                        *ret = TAKE_PTR(swtpm);
+                        return true;
+                }
+        }
+
+        log_error("swtpm failed to start.");
+
+        return false;
+}
+
+TEST(supports_alg) {
+        char *swtpm_device = NULL;
+        int r;
+
+        _cleanup_(stop_swtpmp) struct Swtpm *swtpm = NULL;
+        if (start_swtpm(&swtpm))
+                swtpm_device = strjoina("swtpm:path=", swtpm->socket);
+        else
+                log_debug("Could not start swtpm, trying local TPM.");
+
         _cleanup_tpm2_context_ Tpm2Context *c = NULL;
-        r = tpm2_context_new(NULL, &c);
+        r = tpm2_context_new(swtpm_device, &c);
         if (r < 0) {
                 log_tests_skipped("Could not find TPM");
                 return;
