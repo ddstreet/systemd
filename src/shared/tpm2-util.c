@@ -1276,10 +1276,8 @@ int tpm2_get_or_create_srk(
                 return 0; /* 0 → SRK already set up */
 
         /* No SRK, create and persist one */
-        TPM2B_PUBLIC template = {
-                .size = sizeof(TPMT_PUBLIC),
-        };
-        r = tpm2_get_best_srk_template(c, &template.publicArea);
+        TPMT_PUBLIC template;
+        r = tpm2_get_best_srk_template(c, &template);
         if (r < 0)
                 return log_debug_errno(r, "Could not get best SRK template: %m");
 
@@ -1287,7 +1285,7 @@ int tpm2_get_or_create_srk(
         r = tpm2_create_primary(
                         c,
                         session,
-                        &template,
+                        &TPM2B_PUBLIC_MAKE(template, sizeof(template)),
                         /* sensitive= */ NULL,
                         /* ret_public= */ NULL,
                         &transient_handle);

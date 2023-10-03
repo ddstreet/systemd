@@ -313,7 +313,8 @@ int tpm2_load_public_key_file(const char *path, TPM2B_PUBLIC *ret);
  * buffer/object and size, while also checking the size for safety with the struct buffer/object size. If the
  * provided buffer/object is NULL, the resulting struct's buffer/object will be 0s. If the provided size is
  * larger than the struct's buffer/object size, this results in assertion failure; to check the size, use one
- * of the TPM2B_*_CHECK_SIZE() macros. */
+ * of the TPM2B_*_CHECK_SIZE() macros. For structs that contain an object instead of a buffer
+ * (e.g. TPM2B_PUBLIC), the size may be omitted, and will be set to the sizeof of the object. */
 #define TPM2B_AUTH_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_AUTH, buffer, size)
 #define TPM2B_DATA_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_DATA, buffer, size)
 #define TPM2B_DIGEST_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_DIGEST, buffer, size)
@@ -323,6 +324,7 @@ int tpm2_load_public_key_file(const char *path, TPM2B_PUBLIC *ret);
 #define TPM2B_NAME_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_NAME, name, size)
 #define TPM2B_PRIVATE_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_PRIVATE, buffer, size)
 #define TPM2B_PRIVATE_KEY_RSA_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_PRIVATE_KEY_RSA, buffer, size)
+#define TPM2B_PUBLIC_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_PUBLIC, publicArea, size)
 #define TPM2B_PUBLIC_KEY_RSA_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_PUBLIC_KEY_RSA, buffer, size)
 #define TPM2B_SENSITIVE_DATA_MAKE(b, s) TPM2B_BUF_SIZE_STRUCT_MAKE(b, s, TPM2B_SENSITIVE_DATA, buffer, size)
 #define TPM2B_BUF_SIZE_STRUCT_MAKE(buf, size, struct_type, buffer_field, size_field) \
