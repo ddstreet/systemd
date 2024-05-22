@@ -4,6 +4,8 @@
 
 #include "pcrlock-firmware.h"
 #include "unaligned.h"
+#include "hexdecoct.h"
+#include "alloc-util.h"
 
 static int tcg_pcr_event2_digests_size(
                 const TCG_EfiSpecIdEventAlgorithmSize *algorithms,
@@ -25,6 +27,26 @@ static int tcg_pcr_event2_digests_size(
 
         *ret = m;
         return 0;
+}
+
+static int tcg_pcr_event2_digest_size(
+                const TCG_EfiSpecIdEventAlgorithmSize *algorithms,
+                size_t n_algorithms,
+                uint16_t algorithmId,
+                uint16_t *ret) {
+
+        assert(algorithms || n_algorithms == 0);
+        assert(ret);
+
+        FOREACH_ARRAY(a, algorithms, n_algorithms) {
+
+                if (a->algorithmId == algorithmId) {
+                        *ret = a->digestSize;
+                        return 0;
+                }
+        }
+
+        return log_error_errno(SYNTHETIC_ERRNO(EBADMSG), "No entry found for algorithm 0x%" PRIx16 ".", algorithmId);
 }
 
 int validate_firmware_event(
@@ -59,7 +81,32 @@ int validate_firmware_event(
                 return log_error_errno(SYNTHETIC_ERRNO(EBADMSG), "Event header too short.");
 
         if (event->digests.count != n_algorithms)
-                return log_error_errno(SYNTHETIC_ERRNO(EBADMSG), "Number of digests in event doesn't match log.");
+                return log_error_errno(SYNTHETIC_ERRNO(EBADMSG),
+                                       "Number of digests in event (%" PRIu32 ") doesn't match log (%zu).",
+                                       event->digests.count, n_algorithms);
+
+        for (uint32_t i = 0; i < event->digests.count; i++) {
+                packed_TPMT_HA ha = event->digests.digests[i];
+                const char *a;
+
+                a = tpm2_hash_alg_to_string(ha.hashAlg);
+                if (!a) {
+                        log_notice("Event contains unknown hash algorithm 0x%4x, can't validate.",
+                                   ha.hashAlg);
+                        continue;
+                }
+
+                uint16_t digest_size;
+                r = tcg_pcr_event2_digest_size(algorithms, n_algorithms, ha.hashAlg, &digest_size);
+                if (r < 0)
+                        continue;
+
+                _cleanup_free_ char *v = hexmem((void *) &ha.digest, digest_size);
+                assert(v);
+
+                log_debug("Event PCR %" PRIu32 " type %" PRIu32 " digest #%" PRIu32 " (%s): %s.",
+                          event->pcrIndex, event->eventType, i, a, v);
+        }
 
         uint32_t eventSize = unaligned_read_ne32((const uint8_t*) &event->digests.digests + digests_size);
         uint64_t size = (uint64_t) offsetof(TCG_PCR_EVENT2, digests.digests) + (uint64_t) digests_size + sizeof(uint32_t) + eventSize;
@@ -155,6 +202,8 @@ int validate_firmware_header(
 
                 if (EVP_MD_size(implementation) !=  id->digestSizes[i].digestSize)
                         return log_error_errno(SYNTHETIC_ERRNO(EBADMSG), "Advertised digest size for '%s' is wrong, refusing.", a);
+
+                log_debug("Event log advertises hash algorithm '%s' (size 0x%x).", a, id->digestSizes[i].digestSize);
         }
 
         *ret_algorithms = id->digestSizes;
