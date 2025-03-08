@@ -24,6 +24,7 @@ static char *arg_certificate_source = NULL;
 static CertificateSourceType arg_certificate_source_type = OPENSSL_CERTIFICATE_SOURCE_FILE;
 static char *arg_signature = NULL;
 static char *arg_content = NULL;
+static char *arg_digest = NULL;
 static char *arg_output = NULL;
 
 STATIC_DESTRUCTOR_REGISTER(arg_private_key, freep);
@@ -32,6 +33,7 @@ STATIC_DESTRUCTOR_REGISTER(arg_certificate, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_certificate_source, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_signature, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_content, freep);
+STATIC_DESTRUCTOR_REGISTER(arg_digest, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_output, freep);
 
 static int help(int argc, char *argv[], void *userdata) {
@@ -64,6 +66,7 @@ static int help(int argc, char *argv[], void *userdata) {
                "                         from an OpenSSL provider\n"
                "     --content=PATH      Raw data content to embed in PKCS#7 signature\n"
                "     --signature=PATH    PKCS#1 signature to embed in PKCS#7 signature\n"
+               "     --digest=PATH       Digest function used to create the PKCS#1 signature\n"
                "     --output=PATH       Where to write the PKCS#7 signature\n"
                "\nSee the %2$s for details.\n",
                program_invocation_short_name,
@@ -85,6 +88,7 @@ static int parse_argv(int argc, char *argv[]) {
                 ARG_CERTIFICATE_SOURCE,
                 ARG_SIGNATURE,
                 ARG_CONTENT,
+                ARG_DIGEST,
                 ARG_OUTPUT,
         };
 
@@ -97,6 +101,7 @@ static int parse_argv(int argc, char *argv[]) {
                 { "certificate-source", required_argument, NULL, ARG_CERTIFICATE_SOURCE },
                 { "signature",          required_argument, NULL, ARG_SIGNATURE          },
                 { "content",            required_argument, NULL, ARG_CONTENT            },
+                { "digest",             required_argument, NULL, ARG_DIGEST             },
                 { "output",             required_argument, NULL, ARG_OUTPUT             },
                 {}
         };
@@ -157,6 +162,13 @@ static int parse_argv(int argc, char *argv[]) {
 
                 case ARG_CONTENT:
                         r = parse_path_argument(optarg, /*suppress_root=*/ false, &arg_content);
+                        if (r < 0)
+                                return r;
+
+                        break;
+
+                case ARG_DIGEST:
+                        r = parse_path_argument(optarg, /*suppress_root=*/ false, &arg_digest);
                         if (r < 0)
                                 return r;
 
