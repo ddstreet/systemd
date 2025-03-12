@@ -1143,14 +1143,18 @@ int digest_and_sign(
         return 0;
 }
 
-int pkcs7_new(X509 *certificate, EVP_PKEY *private_key, PKCS7 **ret_p7, PKCS7_SIGNER_INFO **ret_si) {
+/* Create a new PKCS#7 object.
+ *
+ * There are several types of PKCS#7 objects (https://www.rfc-editor.org/rfc/rfc2315#section-14), but we only
+ * care about the "signedData" type, which is used for both ".p7b" (PKCS#7 "bundle"; includes cert but no
+ * signature) and ".p7s" (PKCS#7 "signature"; includes cert and signature) files.
+ *
+ * This creates a new PKCS#7 object that contains only the provided X509 certificate, similar to what is
+ * created by "openssl crl2pkcs7 -nocrl -certfile ...".
+ */
+int pkcs7_signed_new(X509 *certificate, PKCS7 **ret_p7) {
         assert(certificate);
         assert(ret_p7);
-
-        /* This function sets up a new PKCS7 signing context. If a private key is provided, the context is
-         * set up for "in-band" signing with PKCS7_dataFinal(). If a private key is not provided, the context
-         * is set up for "out-of-band" signing, meaning the signature has to be provided by the user and
-         * copied into the signer info's "enc_digest" field. */
 
         _cleanup_(PKCS7_freep) PKCS7 *p7 = PKCS7_new();
         if (!p7)
@@ -1168,14 +1172,24 @@ int pkcs7_new(X509 *certificate, EVP_PKEY *private_key, PKCS7 **ret_p7, PKCS7_SI
                 return log_debug_errno(SYNTHETIC_ERRNO(EIO), "Failed to set PKCS7 certificate: %s",
                                        ERR_error_string(ERR_get_error(), NULL));
 
-        int x509_mdnid = 0, x509_pknid = 0;
-        if (X509_get_signature_info(certificate, &x509_mdnid, &x509_pknid, NULL, NULL) == 0)
-                return log_debug_errno(SYNTHETIC_ERRNO(EIO), "Failed to get X509 digest NID: %s",
-                                       ERR_error_string(ERR_get_error(), NULL));
+        *ret_p7 = TAKE_PTR(p7);
+        if (ret_si)
+                /* We do not pass ownership here, 'si' object remains owned by 'p7' object. */
+                *ret_si = si;
 
-        const EVP_MD *md = EVP_get_digestbynid(x509_mdnid);
-        if (!md)
-                return log_debug_errno(SYNTHETIC_ERRNO(EIO), "Failed to get digest algorithm via digest NID");
+        TAKE_PTR(si);
+
+        return 0;
+}
+
+/* Sign the provided payload using the provided private key and hash algorithm, and place the result into the
+ * proivded PKCS#7 object. If the hash algorithm is NULL, SHA256 is used. This does not include any extra
+ * attributes in the signing (i.e. this behaves like "openssl smime -sign -noattr"). */
+int pkcs7_sign(PKCS7 *p7, EVP_PKEY *private_key, const char *digest, void *payload, size_t payload_len) {
+        assert(p7);
+        assert(private_key);
+        assert(payload);
+        assert(payload_len);
 
         _cleanup_(PKCS7_SIGNER_INFO_freep) PKCS7_SIGNER_INFO *si = PKCS7_SIGNER_INFO_new();
         if (!si)
@@ -1213,14 +1227,7 @@ int pkcs7_new(X509 *certificate, EVP_PKEY *private_key, PKCS7 **ret_p7, PKCS7_SI
                 return log_debug_errno(SYNTHETIC_ERRNO(EIO), "Failed to set PKCS7 signer info: %s",
                                        ERR_error_string(ERR_get_error(), NULL));
 
-        *ret_p7 = TAKE_PTR(p7);
-        if (ret_si)
-                /* We do not pass ownership here, 'si' object remains owned by 'p7' object. */
-                *ret_si = si;
 
-        TAKE_PTR(si);
-
-        return 0;
 }
 
 #  if PREFER_OPENSSL
