@@ -582,6 +582,30 @@ static int tpm2_get_capability_handle(Tpm2Context *c, TPM2_HANDLE handle) {
         return n_handles == 0 ? false : handles[0] == handle;
 }
 
+static int tpm2_transient_available(Tpm2Context *c) {
+        int r;
+
+        TPMU_CAPABILITIES capability;
+        r = tpm2_get_capability(
+                        c,
+                        TPM2_CAP_TPM_PROPERTIES,
+                        TPM2_PT_HR_TRANSIENT_AVAIL,
+                        /* count= */ 1,
+                        &capability);
+        if (r < 0)
+                return r;
+
+        TPML_TAGGED_TPM_PROPERTY properties = capability.tpmProperties;
+        assert(properties.count == 1);
+
+        TPMS_TAGGED_PROPERTY property = properties.tpmProperty[0];
+        assert(property.property == TPM2_PT_HR_TRANSIENT_AVAIL);
+
+        log_debug("TPM has at least %" PRIu32 " transient handles available.", property.value);
+
+        return (int) property.value;
+}
+
 /* Returns 1 if the TPM supports the parms, or 0 if the TPM does not support the parms. */
 bool tpm2_test_parms(Tpm2Context *c, TPMI_ALG_PUBLIC alg, const TPMU_PUBLIC_PARMS *parms) {
         TSS2_RC rc;
@@ -2269,6 +2293,9 @@ static int tpm2_load_external(
         r = tpm2_handle_new(c, &handle);
         if (r < 0)
                 return r;
+
+        if (!tpm2_transient_available(c))
+                return -ENOSPC;
 
         rc = sym_Esys_LoadExternal(
                         c->esys_context,
