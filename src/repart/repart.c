@@ -4636,6 +4636,10 @@ static int partition_encrypt(Context *context, Partition *p, PartitionTarget *ta
                         }
                 }
 
+                _cleanup_free_ char *key_hex = hexmem(pubkey.iov_base, pubkey.iov_len);
+                log_debug("Public key is:");
+                log_debug("%s", key_hex);
+
                 TPM2B_PUBLIC public;
                 if (iovec_is_set(&pubkey)) {
                         r = tpm2_tpm2b_public_from_pem(pubkey.iov_base, pubkey.iov_len, &public);

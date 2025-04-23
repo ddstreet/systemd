@@ -94,6 +94,10 @@ int acquire_luks2_key(
         if (r < 0)
                 return r;
 
+        _cleanup_free_ char *key_hex = hexmem(pubkey->iov_base, pubkey->iov_len);
+        log_debug("Public key is:");
+        log_debug("%s", key_hex);
+
         r = tpm2_unseal(tpm2_context,
                         hash_pcr_mask,
                         pcr_bank,
