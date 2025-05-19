@@ -92,7 +92,7 @@ int mkdir_parents_internal(const char *prefix, const char *path, mode_t mode, ui
         assert(_mkdirat != mkdirat);
 
         if (prefix) {
-                p = path_startswith_full(path, prefix, /* accept_dot_dot= */ false);
+                p = path_startswith_full(path, prefix, /* flags= */ 0);
                 if (!p)
                         return -ENOTDIR;
         } else
@@ -137,7 +137,7 @@ int mkdir_parents_internal(const char *prefix, const char *path, mode_t mode, ui
 
                 s[n] = '\0';
 
-                if (!prefix || !path_startswith_full(prefix, path, /* accept_dot_dot= */ false)) {
+                if (!prefix || !path_startswith_full(prefix, path, /* flags= */ 0)) {
                         r = mkdir_safe_internal(path, mode, uid, gid, flags, _mkdirat);
                         if (r < 0 && r != -EEXIST)
                                 return r;
