@@ -35,7 +35,6 @@ STATIC_DESTRUCTOR_REGISTER(arg_certificate, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_certificate_source, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_signature, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_content, freep);
-STATIC_DESTRUCTOR_REGISTER(arg_hashalg, freep);
 STATIC_DESTRUCTOR_REGISTER(arg_output, freep);
 
 static int help(int argc, char *argv[], void *userdata) {
@@ -170,7 +169,7 @@ static int parse_argv(int argc, char *argv[]) {
                         break;
 
                 case ARG_HASHALG:
-                        r = parse_path_argument(optarg, /*suppress_root=*/ false, &arg_hashalg);
+                        arg_hashalg = optarg;
                         if (r < 0)
                                 return r;
 
