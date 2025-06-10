@@ -127,12 +127,7 @@ int openssl_digest_size(const char *digest_alg, size_t *ret_digest_size) {
         if (r < 0)
                 return r;
 
-        size_t digest_size;
-#if OPENSSL_VERSION_MAJOR >= 3
-        digest_size = EVP_MD_get_size(md);
-#else
-        digest_size = EVP_MD_size(md);
-#endif
+        size_t digest_size = EVP_MD_size(md);
         if (digest_size == 0)
                 return log_openssl_errors("Failed to get Digest size");
 
