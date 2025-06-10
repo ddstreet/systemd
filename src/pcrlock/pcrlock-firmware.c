@@ -140,8 +140,9 @@ int validate_firmware_header(
                 return log_error_errno(SYNTHETIC_ERRNO(EBADMSG), "Event log header doesn't fit vendor info.");
 
         for (size_t i = 0; i < id->numberOfAlgorithms; i++) {
-                const EVP_MD *implementation;
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 const char *a;
+                int r;
 
                 a = tpm2_hash_alg_to_string(id->digestSizes[i].algorithmId);
                 if (!a) {
@@ -149,8 +150,8 @@ int validate_firmware_header(
                         continue;
                 }
 
-                implementation = EVP_get_digestbyname(a);
-                if (!implementation) {
+                r = openssl_get_digest(a, &md);
+                if (r < 0) {
                         log_notice("Event log advertises hash algorithm '%s' we don't implement, can't validate.", a);
                         continue;
                 }

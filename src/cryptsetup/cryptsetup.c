@@ -542,13 +542,12 @@ static int parse_one_option(const char *option) {
                         return log_oom();
 
                 STRV_FOREACH(i, l) {
-                        const EVP_MD *implementation;
-
-                        implementation = EVP_get_digestbyname(*i);
-                        if (!implementation)
+                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+                        r = openssl_get_digest(*i, &md);
+                        if (r < 0)
                                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown bank '%s', refusing.", val);
 
-                        if (strv_extend(&arg_tpm2_measure_banks, EVP_MD_name(implementation)) < 0)
+                        if (strv_extend(&arg_tpm2_measure_banks, EVP_MD_name(md)) < 0)
                                 return log_oom();
                 }
 #else

@@ -243,13 +243,12 @@ static int parse_argv(int argc, char *argv[]) {
                         break;
 
                 case ARG_BANK: {
-                        const EVP_MD *implementation;
-
-                        implementation = EVP_get_digestbyname(optarg);
-                        if (!implementation)
+                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+                        r = openssl_get_digest(optarg, &md);
+                        if (r < 0)
                                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown bank '%s', refusing.", optarg);
 
-                        if (strv_extend(&arg_banks, EVP_MD_name(implementation)) < 0)
+                        if (strv_extend(&arg_banks, EVP_MD_name(md)) < 0)
                                 return log_oom();
 
                         break;
@@ -394,7 +393,7 @@ static int parse_argv(int argc, char *argv[]) {
 /* The PCR 11 state for one specific bank */
 typedef struct PcrState {
         char *bank;
-        const EVP_MD *md;
+        EVP_MD *md;
         void *value;
         size_t value_size;
         void *saved_value; /* A copy of the original value we calculated, used by pcr_states_save()/pcr_states_restore() to come later back to */
@@ -408,6 +407,7 @@ static void pcr_state_free_all(PcrState **pcr_state) {
 
         for (size_t i = 0; (*pcr_state)[i].value; i++) {
                 free((*pcr_state)[i].bank);
+                EVP_MD_free((*pcr_state)[i].md);
                 free((*pcr_state)[i].value);
                 free((*pcr_state)[i].saved_value);
         }
@@ -643,18 +643,18 @@ static int pcr_states_allocate(PcrState **ret) {
 
         /* Allocate a PCR state structure, one for each bank */
         STRV_FOREACH(d, arg_banks) {
-                const EVP_MD *implementation;
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 _cleanup_free_ void *v = NULL;
                 _cleanup_free_ char *b = NULL;
                 int sz;
 
-                assert_se(implementation = EVP_get_digestbyname(*d)); /* Must work, we already checked while parsing  command line */
+                assert_se(openssl_get_digest(*d, &md) == 0); /* Must work, we already checked while parsing  command line */
 
-                b = strdup(EVP_MD_name(implementation));
+                b = strdup(EVP_MD_name(md));
                 if (!b)
                         return log_oom();
 
-                sz = EVP_MD_size(implementation);
+                sz = EVP_MD_size(md);
                 if (sz <= 0 || sz >= INT_MAX)
                         return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unexpected digest size: %i", sz);
 
@@ -664,7 +664,7 @@ static int pcr_states_allocate(PcrState **ret) {
 
                 pcr_states[n++] = (struct PcrState) {
                         .bank = ascii_strlower(TAKE_PTR(b)),
-                        .md = implementation,
+                        .md = TAKE_PTR(md),
                         .value = TAKE_PTR(v),
                         .value_size = sz,
                 };
