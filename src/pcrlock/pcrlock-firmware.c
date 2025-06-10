@@ -156,7 +156,7 @@ int validate_firmware_header(
                         continue;
                 }
 
-                if (EVP_MD_size(implementation) !=  id->digestSizes[i].digestSize)
+                if (EVP_MD_size(md) !=  id->digestSizes[i].digestSize)
                         return log_error_errno(SYNTHETIC_ERRNO(EBADMSG), "Advertised digest size for '%s' is wrong, refusing.", a);
         }
 
