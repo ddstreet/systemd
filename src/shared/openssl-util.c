@@ -202,6 +202,8 @@ int openssl_hmac_many(
                 void **ret_digest,
                 size_t *ret_digest_size) {
 
+        int r;
+
         assert(digest_alg);
         assert(key);
         assert(data || n_data == 0);
@@ -582,6 +584,8 @@ int rsa_oaep_encrypt_bytes(
                 size_t decrypted_key_size,
                 void **ret_encrypt_key,
                 size_t *ret_encrypt_key_size) {
+
+        int r;
 
         assert(pkey);
         assert(digest_alg);
