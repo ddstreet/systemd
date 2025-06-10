@@ -96,7 +96,6 @@ DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(EVP_KDF*, EVP_KDF_free, NULL);
 DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(EVP_KDF_CTX*, EVP_KDF_CTX_free, NULL);
 DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(EVP_MAC*, EVP_MAC_free, NULL);
 DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(EVP_MAC_CTX*, EVP_MAC_CTX_free, NULL);
-DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(EVP_MD*, EVP_MD_free, NULL);
 DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(OSSL_PARAM*, OSSL_PARAM_free, NULL);
 DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(OSSL_PARAM_BLD*, OSSL_PARAM_BLD_free, NULL);
 DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(OSSL_STORE_CTX*, OSSL_STORE_close, NULL);
@@ -116,6 +115,14 @@ static inline void sk_X509_free_allp(STACK_OF(X509) **sk) {
 
 int openssl_pubkey_from_pem(const void *pem, size_t pem_size, EVP_PKEY **ret);
 int openssl_pubkey_to_pem(EVP_PKEY *pkey, char **ret);
+
+#if OPENSSL_VERSION_MAJOR < 3
+void EVP_MD_free(EVP_MD *md);
+#endif
+
+DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(EVP_MD*, EVP_MD_free, NULL);
+
+int openssl_get_digest(const char *digest_alg, EVP_MD **ret_md);
 
 int openssl_digest_size(const char *digest_alg, size_t *ret_digest_size);
 
