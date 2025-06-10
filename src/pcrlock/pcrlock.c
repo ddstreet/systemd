@@ -1307,13 +1307,13 @@ static int event_log_calculate_pcrs(EventLog *el) {
                 return log_oom();
 
         for (size_t i = 0; i < el->n_algorithms; i++) {
-                const EVP_MD *md;
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 const char *a;
 
                 assert_se(a = tpm2_hash_alg_to_string(el->algorithms[i]));
-                assert_se(md = EVP_get_digestbyname(a));
+                assert_se(openssl_get_digest(a, &md) == 0);
 
-                el->mds[i] = md;
+                el->mds[i] = TAKE_PTR(md);
         }
 
         for (uint32_t pcr = 0; pcr < TPM2_PCRS_MAX; pcr++)
@@ -1532,11 +1532,11 @@ static int event_log_validate_record_hashes(EventLog *el) {
         FOREACH_ARRAY(rr, el->records, el->n_records) {
 
                 LIST_FOREACH(banks, bank, (*rr)->banks) {
-                        const EVP_MD *md;
+                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                         const char *a;
 
                         assert_se(a = tpm2_hash_alg_to_string(bank->algorithm));
-                        assert_se(md = EVP_get_digestbyname(a));
+                        assert_se(openssl_get_digest(a, &md) == 0);
 
                         r = event_log_record_validate_hash_firmware(*rr, bank, md);
                         if (r < 0)
@@ -2706,14 +2706,14 @@ static int make_pcrlock_record(
         /* Generates a .pcrlock record for the given PCR and data/data size. This is a subset of TCG CEL. */
 
         FOREACH_ARRAY(pa, tpm2_hash_algorithms, TPM2_N_HASH_ALGORITHMS) {
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 _cleanup_free_ unsigned char *hash = NULL;
                 int hash_ssize;
                 unsigned hash_usize;
-                const EVP_MD *md;
                 const char *a;
 
                 assert_se(a = tpm2_hash_alg_to_string(*pa));
-                assert_se(md = EVP_get_digestbyname(a));
+                assert_se(openssl_get_digest(a, &md) == 0);
                 hash_ssize = EVP_MD_size(md);
                 assert(hash_ssize > 0);
                 hash_usize = hash_ssize;
@@ -2762,11 +2762,11 @@ static int make_pcrlock_record_from_stream(
         assert(ret_records);
 
         for (size_t i = 0; i < TPM2_N_HASH_ALGORITHMS; i++) {
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 const char *a;
-                const EVP_MD *md;
 
                 assert_se(a = tpm2_hash_alg_to_string(tpm2_hash_algorithms[i]));
-                assert_se(md = EVP_get_digestbyname(a));
+                assert_se(openssl_get_digest(a, &md) == 0);
 
                 mdctx[i] = EVP_MD_CTX_new();
                 if (!mdctx[i])
@@ -3676,13 +3676,13 @@ static int verb_lock_pe(int argc, char *argv[], void *userdata) {
                         continue;
 
                 FOREACH_ARRAY(pa, tpm2_hash_algorithms, TPM2_N_HASH_ALGORITHMS) {
+                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                         _cleanup_free_ void *hash = NULL;
                         size_t hash_size;
-                        const EVP_MD *md;
                         const char *a;
 
                         assert_se(a = tpm2_hash_alg_to_string(*pa));
-                        assert_se(md = EVP_get_digestbyname(a));
+                        assert_se(openssl_get_digest(a, &md) == 0);
 
                         r = pe_hash(fd < 0 ? STDIN_FILENO : fd, md, &hash, &hash_size);
                         if (r < 0)
@@ -3733,12 +3733,12 @@ static int verb_lock_uki(int argc, char *argv[], void *userdata) {
         }
 
         for (size_t i = 0; i < TPM2_N_HASH_ALGORITHMS; i++) {
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 _cleanup_free_ void *peh = NULL;
-                const EVP_MD *md;
                 const char *a;
 
                 assert_se(a = tpm2_hash_alg_to_string(tpm2_hash_algorithms[i]));
-                assert_se(md = EVP_get_digestbyname(a));
+                assert_se(openssl_get_digest(a, &md) == 0);
 
                 r = pe_hash(fd < 0 ? STDIN_FILENO : fd, md, &peh, hash_sizes + i);
                 if (r < 0)
@@ -3971,14 +3971,24 @@ static int pcr_prediction_add_result(
         return 0;
 }
 
-static const EVP_MD* evp_from_tpm2_alg(uint16_t alg) {
+static int evp_from_tpm2_alg(uint16_t alg, EVP_MD **ret_md) {
+        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
         const char *name;
+        int r;
+
+        assert(ret_md);
 
         name = tpm2_hash_alg_to_string(alg);
         if (!name)
-                return NULL;
+                return -EINVAL;
 
-        return EVP_get_digestbyname(name);
+        r = openssl_get_digest(name, &md);
+        if (r < 0)
+                return r;
+
+        *ret_md = TAKE_PTR(md);
+
+        return 0;
 }
 
 static int event_log_component_variant_calculate(
@@ -4020,7 +4030,9 @@ static int event_log_component_variant_calculate(
                         if (!md_ctx)
                                 return log_oom();
 
-                        const EVP_MD *md = ASSERT_PTR(evp_from_tpm2_alg(tpm2_hash_algorithms[i]));
+                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+
+                        assert(evp_from_tpm2_alg(tpm2_hash_algorithms[i], &md) == 0);
 
                         int sz = EVP_MD_size(md);
                         assert(sz > 0);

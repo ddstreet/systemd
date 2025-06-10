@@ -2834,18 +2834,17 @@ int tpm2_get_good_pcr_banks_strv(
 
         FOREACH_ARRAY(a, algs, n_algs) {
                 _cleanup_free_ char *n = NULL;
-                const EVP_MD *implementation;
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 const char *salg;
 
                 salg = tpm2_hash_alg_to_string(*a);
                 if (!salg)
                         return log_debug_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE), "TPM2 operates with unknown PCR algorithm, can't measure.");
 
-                implementation = EVP_get_digestbyname(salg);
-                if (!implementation)
+                if (openssl_get_digest(salg, &md) < 0)
                         return log_debug_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE), "TPM2 operates with unsupported PCR algorithm, can't measure.");
 
-                n = strdup(ASSERT_PTR(EVP_MD_name(implementation)));
+                n = strdup(ASSERT_PTR(EVP_MD_name(md)));
                 if (!n)
                         return log_oom_debug();
 
@@ -6265,16 +6264,16 @@ static int tpm2_userspace_log(
                 return 0;
 
         for (size_t i = 0; i < values->count; i++) {
-                const EVP_MD *implementation;
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 const char *a;
 
                 assert_se(a = tpm2_hash_alg_to_string(values->digests[i].hashAlg));
-                assert_se(implementation = EVP_get_digestbyname(a));
+                assert_se(openssl_get_digest(a, &md) == 0);
 
                 r = sd_json_variant_append_arraybo(
                                 &array,
                                 SD_JSON_BUILD_PAIR_STRING("hashAlg", a),
-                                SD_JSON_BUILD_PAIR("digest", SD_JSON_BUILD_HEX(&values->digests[i].digest, EVP_MD_size(implementation))));
+                                SD_JSON_BUILD_PAIR("digest", SD_JSON_BUILD_HEX(&values->digests[i].digest, EVP_MD_size(md))));
                 if (r < 0)
                         return log_debug_errno(r, "Failed to append digest object to JSON array: %m");
         }
@@ -6356,18 +6355,18 @@ int tpm2_extend_bytes(
                 return 0;
 
         STRV_FOREACH(bank, banks) {
-                const EVP_MD *implementation;
+                _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
                 int id;
 
-                assert_se(implementation = EVP_get_digestbyname(*bank));
+                assert_se(openssl_get_digest(*bank, &md) == 0);
 
                 if (values.count >= ELEMENTSOF(values.digests))
                         return log_debug_errno(SYNTHETIC_ERRNO(E2BIG), "Too many banks selected.");
 
-                if ((size_t) EVP_MD_size(implementation) > sizeof(values.digests[values.count].digest))
+                if ((size_t) EVP_MD_size(md) > sizeof(values.digests[values.count].digest))
                         return log_debug_errno(SYNTHETIC_ERRNO(E2BIG), "Hash result too large for TPM2.");
 
-                id = tpm2_hash_alg_from_string(EVP_MD_name(implementation));
+                id = tpm2_hash_alg_from_string(EVP_MD_name(md));
                 if (id < 0)
                         return log_debug_errno(id, "Can't map hash name to TPM2.");
 
@@ -6380,9 +6379,9 @@ int tpm2_extend_bytes(
                  * some unrelated purpose, who knows). Hence we instead measure an HMAC signature of a
                  * private non-secret string instead. */
                 if (secret_size > 0) {
-                        if (!HMAC(implementation, secret, secret_size, data, data_size, (unsigned char*) &values.digests[values.count].digest, NULL))
+                        if (!HMAC(md, secret, secret_size, data, data_size, (unsigned char*) &values.digests[values.count].digest, NULL))
                                 return log_debug_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE), "Failed to calculate HMAC of data to measure.");
-                } else if (EVP_Digest(data, data_size, (unsigned char*) &values.digests[values.count].digest, NULL, implementation, NULL) != 1)
+                } else if (EVP_Digest(data, data_size, (unsigned char*) &values.digests[values.count].digest, NULL, md, NULL) != 1)
                         return log_debug_errno(SYNTHETIC_ERRNO(ENOTRECOVERABLE), "Failed to hash data to measure.");
 
                 values.count++;

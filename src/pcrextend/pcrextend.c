@@ -107,13 +107,12 @@ static int parse_argv(int argc, char *argv[]) {
                         return version();
 
                 case ARG_BANK: {
-                        const EVP_MD *implementation;
-
-                        implementation = EVP_get_digestbyname(optarg);
-                        if (!implementation)
+                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+                        r = openssl_get_digest(optarg, &md);
+                        if (r < 0)
                                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL), "Unknown bank '%s', refusing.", optarg);
 
-                        if (strv_extend(&arg_banks, EVP_MD_name(implementation)) < 0)
+                        if (strv_extend(&arg_banks, EVP_MD_name(md)) < 0)
                                 return log_oom();
 
                         break;

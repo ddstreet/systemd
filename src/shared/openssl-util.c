@@ -120,14 +120,12 @@ int openssl_digest_size(const char *digest_alg, size_t *ret_digest_size) {
         assert(digest_alg);
         assert(ret_digest_size);
 
-#if OPENSSL_VERSION_MAJOR >= 3
-        _cleanup_(EVP_MD_freep) EVP_MD *md = EVP_MD_fetch(NULL, digest_alg, NULL);
-#else
-        const EVP_MD *md = EVP_get_digestbyname(digest_alg);
-#endif
-        if (!md)
-                return log_debug_errno(SYNTHETIC_ERRNO(EOPNOTSUPP),
-                                       "Digest algorithm '%s' not supported.", digest_alg);
+        int r;
+
+        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+        r = openssl_get_digest(digest_alg, &md);
+        if (r < 0)
+                return r;
 
         size_t digest_size;
 #if OPENSSL_VERSION_MAJOR >= 3
@@ -159,14 +157,10 @@ int openssl_digest_many(
         assert(ret_digest);
         /* ret_digest_size is optional, as caller may already know the digest size */
 
-#if OPENSSL_VERSION_MAJOR >= 3
-        _cleanup_(EVP_MD_freep) EVP_MD *md = EVP_MD_fetch(NULL, digest_alg, NULL);
-#else
-        const EVP_MD *md = EVP_get_digestbyname(digest_alg);
-#endif
-        if (!md)
-                return log_debug_errno(SYNTHETIC_ERRNO(EOPNOTSUPP),
-                                       "Digest algorithm '%s' not supported.", digest_alg);
+        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+        r = openssl_get_digest(digest_alg, &md);
+        if (r < 0)
+                return r;
 
         _cleanup_(EVP_MD_CTX_freep) EVP_MD_CTX *ctx = EVP_MD_CTX_new();
         if (!ctx)
@@ -213,20 +207,18 @@ int openssl_hmac_many(
                 void **ret_digest,
                 size_t *ret_digest_size) {
 
+        int r;
+
         assert(digest_alg);
         assert(key);
         assert(data || n_data == 0);
         assert(ret_digest);
         /* ret_digest_size is optional, as caller may already know the digest size */
 
-#if OPENSSL_VERSION_MAJOR >= 3
-        _cleanup_(EVP_MD_freep) EVP_MD *md = EVP_MD_fetch(NULL, digest_alg, NULL);
-#else
-        const EVP_MD *md = EVP_get_digestbyname(digest_alg);
-#endif
-        if (!md)
-                return log_debug_errno(SYNTHETIC_ERRNO(EOPNOTSUPP),
-                                       "Digest algorithm '%s' not supported.", digest_alg);
+        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+        r = openssl_get_digest(digest_alg, &md);
+        if (r < 0)
+                return r;
 
 #if OPENSSL_VERSION_MAJOR >= 3
         _cleanup_(EVP_MAC_freep) EVP_MAC *mac = EVP_MAC_fetch(NULL, "HMAC", NULL);
@@ -598,6 +590,8 @@ int rsa_oaep_encrypt_bytes(
                 void **ret_encrypt_key,
                 size_t *ret_encrypt_key_size) {
 
+        int r;
+
         assert(pkey);
         assert(digest_alg);
         assert(label);
@@ -606,14 +600,10 @@ int rsa_oaep_encrypt_bytes(
         assert(ret_encrypt_key);
         assert(ret_encrypt_key_size);
 
-#if OPENSSL_VERSION_MAJOR >= 3
-        _cleanup_(EVP_MD_freep) EVP_MD *md = EVP_MD_fetch(NULL, digest_alg, NULL);
-#else
-        const EVP_MD *md = EVP_get_digestbyname(digest_alg);
-#endif
-        if (!md)
-                return log_debug_errno(SYNTHETIC_ERRNO(EOPNOTSUPP),
-                                       "Digest algorithm '%s' not supported.", digest_alg);
+        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+        r = openssl_get_digest(digest_alg, &md);
+        if (r < 0)
+                return r;
 
         _cleanup_(EVP_PKEY_CTX_freep) EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new((EVP_PKEY*) pkey, NULL);
         if (!ctx)
@@ -1182,8 +1172,8 @@ int pkcs7_new(X509 *certificate, EVP_PKEY *private_key, const char *hash_algorit
                 return log_debug_errno(SYNTHETIC_ERRNO(EIO), "Failed to get X509 digest NID: %s",
                                        ERR_error_string(ERR_get_error(), NULL));
 
-        const EVP_MD *md = EVP_get_digestbyname(hash_algorithm ?: "SHA256");
-        if (!md)
+        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+        if (openssl_get_digest(hash_algorithm ?: "SHA256", &md) < 0)
                 return log_debug_errno(SYNTHETIC_ERRNO(EIO), "Failed to get digest algorithm '%s'",
                                        hash_algorithm ?: "SHA256");
 
