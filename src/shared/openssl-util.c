@@ -87,9 +87,139 @@ int openssl_pubkey_to_pem(EVP_PKEY *pkey, char **ret) {
         return memstream_finalize(&m, ret, /* ret_size= */ NULL);
 }
 
+#if OPENSSL_VERSION_MAJOR >= 3
+static void _add_digest_name(const char *name, void *ctx) {
+        assert(name);
+        assert(ctx);
+
+        char ***names = (char ***) ctx;
+
+        if (strv_extend(names, name) < 0)
+                log_oom_debug();
+}
+
+int openssl_digest_names(const EVP_MD *md, char ***ret_names, char **ret_name, char ***ret_aliases, char **ret_asn1) {
+        assert(md);
+
+        _cleanup_strv_free_ char **names = strv_new(NULL), **aliases = strv_new(NULL);
+        _cleanup_free_ char *name = NULL, *asn1 = NULL;
+
+        if (!names || !aliases)
+                return log_oom_debug();
+
+        EVP_MD_names_do_all(md, _add_digest_name, &names);
+        if (strv_isempty(names))
+                return log_oom_debug();
+
+        name = strdup(names[0]);
+        if (!name)
+                return log_oom_debug();
+
+        aliases = strv_copy(&names[1]);
+        if (!aliases)
+                return log_oom_debug();
+
+        STRV_FOREACH(s, aliases) {
+                if (in_charset(*s, "1234567890.")) {
+                        asn1 = strdup(*s);
+                        if (!asn1)
+                                return log_oom_debug();
+
+                        aliases = strv_remove(aliases, *s);
+                        if (!aliases)
+                                return log_oom_debug();
+
+                        break;
+                }
+        }
+
+        if (ret_names)
+                *ret_names = TAKE_PTR(names);
+        if (ret_name)
+                *ret_name = TAKE_PTR(name);
+        if (ret_aliases)
+                *ret_aliases = TAKE_PTR(aliases);
+        if (ret_asn1)
+                *ret_asn1 = TAKE_PTR(asn1);
+
+        return 0;
+}
+
+char *openssl_digest_name(const EVP_MD *md) {
+        assert(md);
+
+        _cleanup_free_ char *name = NULL;
+
+        if (openssl_digest_names(md, /* ret_names= */ NULL, &name, /* ret_aliases= */ NULL, /* ret_asn1= */ NULL) < 0)
+                return NULL;
+
+        return TAKE_PTR(name);
+}
+
+static void _add_digest(EVP_MD *md, void *ctx) {
+        assert(md);
+        assert(ctx);
+
+        struct md_vector *mds = (struct md_vector*) ctx;
+
+        if (greedy_realloc_append((void**) &mds->mds, &mds->size, &md, 1, sizeof(md)))
+                EVP_MD_up_ref(md);
+        else
+                log_oom_debug();
+}
+
+int openssl_supported_digests(struct md_vector **ret_mds) {
+        assert(ret_mds);
+
+        _cleanup_(md_vector_freep) struct md_vector *mds = malloc0(sizeof(*mds));
+        if (!mds)
+                return log_oom_debug();
+
+        EVP_MD_do_all_provided(NULL, _add_digest, mds);
+
+        *ret_mds = TAKE_PTR(mds);
+
+        return 0;
+}
+
+int openssl_supported_digest_names(char ***ret_names) {
+        assert(ret_names);
+
+        _cleanup_strv_free_ char **names = strv_new(NULL);
+        int r;
+
+        _cleanup_(md_vector_freep) struct md_vector *mds = NULL;
+        r = openssl_supported_digests(&mds);
+        if (r < 0)
+                return r;
+
+        for (size_t i=0; i<mds->size; i++) {
+                _cleanup_free_ char *name = openssl_digest_name(mds->mds[i]);
+
+                if (!name || strv_extend(&names, name) < 0)
+                        log_oom_debug();
+        }
+
+        *ret_names = TAKE_PTR(names);
+
+        return 0;
+}
+#else
+int openssl_supported_digests(char ***ret_algs) {
+        return log_debug_errno(SYNTHETIC_ERRNO(EOPNOTSUPP), "Openssl < 3 supported digest list TODO");
+}
+#endif
+
 #if OPENSSL_VERSION_MAJOR < 3
 void EVP_MD_free(EVP_MD *md) { }
 #endif
+
+void md_vector_free(struct md_vector *v) {
+        for (size_t s = 0; v && s < v->size; s++)
+                EVP_MD_free(v->mds[s]);
+
+        free(v);
+}
 
 /* Provides an EVP_MD for the specified digest algorithm, which the caller must free using EVP_MD_free().
  * Returns 0 on success, -EOPNOTSUPP if the algorithm is not supported, or < 0 for any other error. */
@@ -107,6 +237,7 @@ int openssl_get_digest(const char *digest_alg, EVP_MD **ret_md) {
                 return log_debug_errno(SYNTHETIC_ERRNO(EOPNOTSUPP),
                                        "Digest algorithm '%s' not supported.", digest_alg);
 
+        openssl_supported_digests(NULL);
         *ret_md = TAKE_PTR(md);
 
         return 0;

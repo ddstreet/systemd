@@ -122,6 +122,22 @@ void EVP_MD_free(EVP_MD *md);
 
 DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(EVP_MD*, EVP_MD_free, NULL);
 
+struct md_vector {
+        size_t size;
+        EVP_MD **mds;
+};
+
+extern void md_vector_free(struct md_vector *v);
+DEFINE_TRIVIAL_CLEANUP_FUNC_FULL(struct md_vector*, md_vector_free, NULL);
+
+int openssl_digest_names(const EVP_MD *md, char ***ret_names, char **ret_name, char ***ret_aliases, char **ret_asn1);
+
+char *openssl_digest_name(const EVP_MD *md);
+
+int openssl_supported_digests(struct md_vector **ret_mds);
+
+int openssl_supported_digest_names(char ***ret_names);
+
 int openssl_get_digest(const char *digest_alg, EVP_MD **ret_md);
 
 int openssl_digest_size(const char *digest_alg, size_t *ret_digest_size);

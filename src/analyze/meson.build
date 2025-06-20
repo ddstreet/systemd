@@ -10,6 +10,7 @@ systemd_analyze_sources = files(
         'analyze-compare-versions.c',
         'analyze-condition.c',
         'analyze-critical-chain.c',
+        'analyze-digests.c',
         'analyze-dot.c',
         'analyze-dump.c',
         'analyze-exit-status.c',
@@ -51,7 +52,10 @@ executables += [
                         libcore,
                         libshared,
                 ],
-                'dependencies' : libseccomp,
+                'dependencies' : [
+                        libopenssl,
+                        libseccomp,
+                ],
                 'install' : conf.get('ENABLE_ANALYZE') == 1,
         },
         core_test_template + {
