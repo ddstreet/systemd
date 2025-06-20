@@ -33,6 +33,7 @@
 #include "analyze-inspect-elf.h"
 #include "analyze-log-control.h"
 #include "analyze-malloc.h"
+#include "analyze-digests.h"
 #include "analyze-pcrs.h"
 #include "analyze-plot.h"
 #include "analyze-security.h"
@@ -221,6 +222,8 @@ static int help(int argc, char *argv[], void *userdata) {
                "  has-tpm2                   Report whether TPM2 support is available\n"
                "  pcrs [PCR...]              Show TPM2 PCRs and their names\n"
                "  srk [>FILE]                Write TPM2 SRK (to FILE)\n"
+               "\n%3$sOpenSSL Operations:%4$s\n"
+               "  digests                    Show supported digest algorithms\n"
                "\n%3$sOptions:%4$s\n"
                "     --recursive-errors=MODE Control which units are verified\n"
                "     --offline=BOOL          Perform a security review on unit file(s)\n"
@@ -676,6 +679,7 @@ static int run(int argc, char *argv[]) {
                 { "has-tpm2",          VERB_ANY, 1,        0,            verb_has_tpm2          },
                 { "pcrs",              VERB_ANY, VERB_ANY, 0,            verb_pcrs              },
                 { "srk",               VERB_ANY, 1,        0,            verb_srk               },
+                { "digests",           VERB_ANY, VERB_ANY, 0,            verb_digests           },
                 { "architectures",     VERB_ANY, VERB_ANY, 0,            verb_architectures     },
                 { "smbios11",          VERB_ANY, 1,        0,            verb_smbios11          },
                 { "chid",              VERB_ANY, VERB_ANY, 0,            verb_chid              },
