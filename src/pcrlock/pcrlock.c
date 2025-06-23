@@ -3971,26 +3971,6 @@ static int pcr_prediction_add_result(
         return 0;
 }
 
-static int evp_from_tpm2_alg(uint16_t alg, EVP_MD **ret_md) {
-        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
-        const char *name;
-        int r;
-
-        assert(ret_md);
-
-        name = tpm2_hash_alg_to_string(alg);
-        if (!name)
-                return -EINVAL;
-
-        r = openssl_get_digest(name, &md);
-        if (r < 0)
-                return r;
-
-        *ret_md = TAKE_PTR(md);
-
-        return 0;
-}
-
 static int event_log_component_variant_calculate(
                 Tpm2PCRPrediction *context,
                 Tpm2PCRPredictionResult *result,
@@ -4030,9 +4010,11 @@ static int event_log_component_variant_calculate(
                         if (!md_ctx)
                                 return log_oom();
 
-                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+                        const char *a;
+                        assert_se(a = tpm2_hash_alg_to_string(tpm2_hash_algorithms[i]));
 
-                        assert(evp_from_tpm2_alg(tpm2_hash_algorithms[i], &md) == 0);
+                        _cleanup_(EVP_MD_freep) EVP_MD *md = NULL;
+                        assert_se(openssl_get_digest(a, &md) == 0);
 
                         int sz = EVP_MD_size(md);
                         assert(sz > 0);
